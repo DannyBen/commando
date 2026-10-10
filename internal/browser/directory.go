@@ -7,15 +7,17 @@ import (
 	"strings"
 )
 
-// Entry describes a filesystem item or the synthetic parent-directory row.
+// Entry describes a file, folder, parent row, or drive. Path is the absolute
+// navigation target for drives; ordinary directory entries use Name.
 type Entry struct {
-	Name              string
+	Name, Path        string
 	Directory, Parent bool
 	Bytes             int64
 	SizeKnown         bool
 }
 
 type Directory struct {
+	Drives  bool
 	Path    string
 	Entries []Entry
 }

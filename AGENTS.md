@@ -4,6 +4,8 @@ The user authorized an initial native Gio UI evaluation prototype on 2026-10-10.
 The user subsequently authorized Todo 17: initial real folder navigation,
 then type-to-select, Enter to open files, and Alt+D path entry. File-opening
 failures must be silent until their feedback is designed (Todo 19).
+Todo 25 authorizes Backspace at a filesystem root to show drives in the same
+panel; Enter opens a drive and returning reselects the drive just left.
 The current scope is a light-theme window with three independent directory
 panels, type-to-select, Enter to open folders/files, Alt+D path entry,
 Backspace to go up, keyboard file/panel navigation,

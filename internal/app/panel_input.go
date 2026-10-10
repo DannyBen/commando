@@ -73,8 +73,9 @@ func (v *view) selectPrefix(fresh bool) {
 func (v *view) startLocation(gtx layout.Context) {
 	p := &v.panels[v.active]
 	p.prefix = ""
-	v.location.SetText(p.path)
-	v.location.SetCaret(0, utf8.RuneCountInString(p.path))
+	path := p.locationPath()
+	v.location.SetText(path)
+	v.location.SetCaret(0, utf8.RuneCountInString(path))
 	v.editing = true
 	gtx.Execute(key.FocusCmd{Tag: &v.location})
 }
@@ -115,7 +116,7 @@ func (v *view) updateLocation(gtx layout.Context) {
 				return
 			}
 			if !filepath.IsAbs(path) && filepath.VolumeName(path) == "" {
-				base := v.panels[v.active].path
+				base := v.panels[v.active].locationPath()
 				if os.IsPathSeparator(path[0]) {
 					path = filepath.VolumeName(base) + path
 				} else {

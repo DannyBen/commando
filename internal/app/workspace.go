@@ -36,7 +36,8 @@ type entry struct {
 }
 
 type panel struct {
-	path     string
+	path     string // Last physical directory, retained while displaying drives.
+	drives   bool
 	items    []entry
 	rows     map[int]*widget.Clickable
 	list     widget.List
@@ -218,7 +219,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					editor.SelectionColor = rgb(0xffdf00)
 					return editor.Layout(gtx)
 				}
-				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.path), 13, fg, text.Start)
+				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), 13, fg, text.Start)
 			}, index == v.active)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {

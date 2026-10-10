@@ -15,6 +15,9 @@ Open `dist/control.exe` on Windows, or run `op run` on a graphical Linux desktop
   failures are silent for now.
 - Alt+D edits the active panel path. Enter navigates; Escape cancels. Relative
   paths resolve from the current folder.
+- Backspace at a drive root shows the drive list in that panel. Enter opens
+  the selected drive; returning selects the drive you just left. Backspace
+  in the drive list stays there.
 - Going up selects the folder you just left.
 - Each panel keeps its own selection and scroll position.
 - Home/End and Page Up/Down navigate longer lists.

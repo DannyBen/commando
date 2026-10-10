@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"os"
@@ -199,20 +200,111 @@ func TestNavigationWhileLoading(t *testing.T) {
 	}
 }
 
-func TestEmptyRootNavigation(t *testing.T) {
+func TestEmptyRootCanOpenEmptyDriveList(t *testing.T) {
 	root := filepath.VolumeName(t.TempDir()) + string(filepath.Separator)
 	v := newView([]panel{{path: root, selected: -1}})
-	v.loader = newDirectoryLoader(func(string) (browser.Directory, error) {
-		t.Error("root navigation attempted a read")
-		return browser.Directory{}, nil
+	v.loader = newDirectoryLoader(func(path string) (browser.Directory, error) {
+		if path != "" {
+			t.Errorf("unexpected folder read %q", path)
+		}
+		return browser.Directory{Drives: true}, nil
 	}, nil)
 	defer v.loader.close()
-	_, press := navigationFrames(v)
+	frame, press := navigationFrames(v)
+	press(key.NameDeleteBackward)
+	waitLoaded(t, v, 0)
+	frame()
+	if !v.panels[0].drives || v.panels[0].selected != -1 {
+		t.Fatal("empty root did not enter the empty drive list")
+	}
 	for _, name := range []key.Name{key.NameUpArrow, key.NameDownArrow, key.NameReturn, key.NameDeleteBackward} {
 		press(name)
 	}
 	if v.panels[0].selected != -1 || v.panels[0].loading {
-		t.Fatal("empty root navigation changed the selection or requested its parent")
+		t.Fatal("empty drive-list navigation changed selection or queued a read")
+	}
+}
+
+func TestDriveListNavigation(t *testing.T) {
+	root := filepath.VolumeName(t.TempDir()) + string(filepath.Separator)
+	unavailable := filepath.Join(t.TempDir(), "unavailable-drive")
+	entries := []browser.Entry{
+		{Name: "Unavailable", Path: unavailable, Directory: true},
+		{Name: "System", Path: root, Directory: true},
+	}
+	v := newView([]panel{{path: root, selected: -1}, {path: root, selected: -1}})
+	lists := 0
+	v.loader = newDirectoryLoader(func(path string) (browser.Directory, error) {
+		switch path {
+		case "":
+			lists++
+			return browser.Directory{Drives: true, Entries: entries}, nil
+		case root:
+			return browser.Directory{Path: root}, nil
+		case unavailable:
+			return browser.Directory{}, os.ErrPermission
+		default:
+			return browser.Directory{}, fmt.Errorf("unexpected location %q", path)
+		}
+	}, nil)
+	defer v.loader.close()
+	send, _ := panelInputFrames(v)
+	p := &v.panels[0]
+	send(pressed(key.NameDeleteBackward))
+	waitLoaded(t, v, 0)
+	send()
+	if !p.drives || p.locationLabel() != "Drives" || p.selected != 1 || p.items[1].name != "System" {
+		t.Fatal("root Backspace did not show drives and retain the current drive selection")
+	}
+	if v.panels[1].drives || v.panels[1].path != root {
+		t.Fatal("drive list changed another panel")
+	}
+	if status, failed := p.status(); status != "2 drives" || failed {
+		t.Fatalf("drive status=%q failed=%v", status, failed)
+	}
+	send(pressed(key.NameDeleteBackward))
+	if p.loading || lists != 1 {
+		t.Fatal("Backspace left or reloaded the top-level drive list")
+	}
+	send(pressed(key.NameRightArrow))
+	send(pressed(key.NameLeftArrow))
+	if !p.drives || p.selected != 1 {
+		t.Fatal("switching panels lost drive-list selection")
+	}
+	send(pressed(key.NameReturn))
+	waitLoaded(t, v, 0)
+	send()
+	if p.drives || p.path != root || p.selected != -1 {
+		t.Fatal("Enter did not open the selected drive root")
+	}
+	send(pressed(key.NameDeleteBackward))
+	waitLoaded(t, v, 0)
+	send()
+	if lists != 2 || !p.drives || p.selected != 1 {
+		t.Fatal("returning to drives did not refresh the list and reselect the drive left")
+	}
+	send(key.EditEvent{Text: "un"})
+	if p.selected != 0 {
+		t.Fatal("type-to-select did not work in the drive list")
+	}
+	before := slices.Clone(p.items)
+	send(pressed(key.NameReturn))
+	waitLoaded(t, v, 0)
+	send()
+	if !p.drives || p.path != root || p.selected != 0 || !slices.Equal(p.items, before) || !errors.Is(p.err, os.ErrPermission) {
+		t.Fatal("unreadable drive did not retain the list/selection with the existing inline error")
+	}
+	send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
+	if !v.editing || v.location.SelectedText() != unavailable {
+		t.Fatal("Alt+D in the drive list did not use the selected drive path")
+	}
+	send(pressed(key.NameEscape))
+	send(key.EditEvent{Text: "sys"})
+	send(pressed(key.NameReturn))
+	waitLoaded(t, v, 0)
+	send()
+	if p.drives || p.path != root || p.err != nil {
+		t.Fatal("failed drive opening prevented subsequent drive navigation")
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/widget"
@@ -18,7 +19,7 @@ func newBrowserView(paths []string, invalidate func()) *view {
 	}
 	v := newView(panels)
 	v.openFile = browser.OpenFile
-	v.loader = newDirectoryLoader(browser.ReadDirectory, invalidate)
+	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate)
 	for i, path := range paths {
 		v.load(i, path, "")
 	}
@@ -55,7 +56,10 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	p.prefix = ""
-	p.path = result.directory.Path
+	p.drives = result.directory.Drives
+	if !p.drives {
+		p.path = result.directory.Path
+	}
 	p.items = make([]entry, len(result.directory.Entries))
 	p.selected = -1
 	if len(p.items) > 0 {
@@ -64,12 +68,16 @@ func (v *view) acceptLoad(result loadResult) {
 	for i, file := range result.directory.Entries {
 		name, size := file.Name, "?"
 		if file.Directory {
-			name, size = name+"/", "—"
+			size = "—"
+			if file.Path == "" {
+				name += "/"
+			}
 		} else if file.SizeKnown {
 			size = formatSize(file.Bytes)
 		}
 		p.items[i] = entry{name: name, size: size, file: file}
-		if file.Directory && file.Name == result.request.selectName {
+		if file.Directory && (file.Name == result.request.selectName ||
+			file.Path != "" && strings.EqualFold(file.Path, result.request.selectName)) {
 			p.selected = i
 		}
 	}
@@ -91,7 +99,9 @@ func (v *view) activateSelected() {
 		}
 		return
 	}
-	if file.Parent {
+	if file.Path != "" {
+		v.load(v.active, file.Path, "")
+	} else if file.Parent {
 		v.parentFolder()
 	} else {
 		v.load(v.active, filepath.Join(p.path, file.Name), "")
@@ -100,8 +110,12 @@ func (v *view) activateSelected() {
 
 func (v *view) parentFolder() {
 	p := &v.panels[v.active]
+	if p.loading || p.drives {
+		return
+	}
 	parent := filepath.Dir(p.path)
 	if parent == p.path {
+		v.load(v.active, "", p.path)
 		return
 	}
 	v.load(v.active, parent, filepath.Base(p.path))
@@ -129,6 +143,9 @@ func (p *panel) status() (string, bool) {
 			return "Cannot read folder", true
 		}
 	}
+	if p.drives {
+		return fmt.Sprintf("%d drives", len(p.items)), false
+	}
 	return fmt.Sprintf("%d items", p.itemCount()), false
 }
 
@@ -144,4 +161,18 @@ func formatSize(bytes int64) string {
 		unit++
 	}
 	return fmt.Sprintf("%.1f %s", size, units[unit])
+}
+
+func (p *panel) locationLabel() string {
+	if p.drives {
+		return "Drives"
+	}
+	return p.path
+}
+
+func (p *panel) locationPath() string {
+	if p.drives && p.selected >= 0 && p.selected < len(p.items) {
+		return p.items[p.selected].file.Path
+	}
+	return p.path
 }
