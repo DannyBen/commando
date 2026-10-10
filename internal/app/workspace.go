@@ -157,11 +157,8 @@ func (v *view) update(gtx layout.Context) {
 			v.activateSelected()
 			continue
 		case key.NameDeleteBackward:
-			if p.prefix != "" {
-				v.erasePrefix(gtx.Now)
-			} else {
-				v.parentFolder()
-			}
+			p.prefix = ""
+			v.parentFolder()
 			continue
 		case key.NameUpArrow:
 			next--

@@ -10,7 +10,7 @@ Open `dist/control.exe` on Windows, or run `op run` on a graphical Linux desktop
 - Up/Down selects a file; Left/Right switches panels.
 - Type a filename prefix to select it, without filtering the list. Matching is
   case-insensitive; the footer shows the prefix. Escape or a one-second pause
-  clears it. Backspace edits an active prefix, otherwise goes to the parent.
+  clears it. Backspace always goes to the parent when the file list is focused.
 - Enter opens folders or opens files in their associated application. File-opening
   failures are silent for now.
 - Alt+D edits the active panel path. Enter navigates; Escape cancels. Relative

@@ -38,7 +38,9 @@ func Run() error {
 		v := newBrowserView(paths, w.Invalidate)
 		var ops op.Ops
 		for {
-			switch e := w.Event().(type) {
+			e := w.Event()
+			configureNativeWindow(w, e)
+			switch e := e.(type) {
 			case gioapp.DestroyEvent:
 				v.loader.close()
 				done <- e.Err

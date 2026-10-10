@@ -49,16 +49,6 @@ func (v *view) typeToSelect(text string, now time.Time) {
 	v.selectPrefix(fresh)
 }
 
-func (v *view) erasePrefix(now time.Time) {
-	p := &v.panels[v.active]
-	_, size := utf8.DecodeLastRuneInString(p.prefix)
-	p.prefix = p.prefix[:len(p.prefix)-size]
-	p.prefixAt = now
-	if p.prefix != "" {
-		v.selectPrefix(false)
-	}
-}
-
 func (v *view) selectPrefix(fresh bool) {
 	p := &v.panels[v.active]
 	start := max(0, p.selected)

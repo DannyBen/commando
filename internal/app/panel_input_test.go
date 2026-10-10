@@ -84,12 +84,8 @@ func TestTypeToSelect(t *testing.T) {
 		t.Fatal("Unicode prefix did not match case-insensitively")
 	}
 	send(pressed(key.NameDeleteBackward))
-	if v.panels[1].prefix != "å" {
-		t.Fatal("Backspace did not remove one Unicode character")
-	}
-	send(pressed(key.NameDeleteBackward))
-	if v.panels[1].prefix != "" || v.panels[1].selected != 5 {
-		t.Fatal("prefix deletion changed folders or selection")
+	if v.panels[1].prefix != "" {
+		t.Fatal("Backspace did not clear the filename prefix")
 	}
 	send(pressed(key.NameHome))
 	send(key.EditEvent{Text: ".."})
@@ -246,5 +242,37 @@ func TestFileOpeningIsNonblockingAndSilent(t *testing.T) {
 	send()
 	if v.panels[0].err != nil || v.panels[0].path != root || v.panels[0].selected != 1 {
 		t.Fatal("file-opening failure changed panel state or showed an error")
+	}
+}
+
+func TestBackspaceGoesUpWithActivePrefix(t *testing.T) {
+	root := t.TempDir()
+	child := filepath.Join(root, "child")
+	if err := os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(child, "note.txt"), []byte("hello"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	v := newBrowserView([]string{child}, nil)
+	defer v.loader.close()
+	waitLoaded(t, v, 0)
+	send, _ := panelInputFrames(v)
+	send(key.EditEvent{Text: "no"})
+	if v.panels[0].prefix != "no" {
+		t.Fatal("prefix not active")
+	}
+	send(pressed(key.NameDeleteBackward))
+	waitLoaded(t, v, 0)
+	send()
+	p := &v.panels[0]
+	if p.path != root || p.prefix != "" || p.items[p.selected].file.Name != "child" {
+		t.Fatal("Backspace did not immediately go up and reselect the folder")
+	}
+	// In the path editor, Backspace still deletes text instead of navigating.
+	send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
+	send(pressed(key.NameDeleteBackward))
+	if !v.editing || v.location.Text() != "" || p.path != root || p.loading {
+		t.Fatal("Backspace in the path editor navigated instead of editing text")
 	}
 }
