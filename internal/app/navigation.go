@@ -1,0 +1,147 @@
+package app
+
+import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"path/filepath"
+
+	"gioui.org/layout"
+	"gioui.org/widget"
+	"github.com/dannyben/control/internal/browser"
+)
+
+func newBrowserView(paths []string, invalidate func()) *view {
+	panels := make([]panel, len(paths))
+	for i, path := range paths {
+		panels[i].path, panels[i].selected = path, -1
+	}
+	v := newView(panels)
+	v.openFile = browser.OpenFile
+	v.loader = newDirectoryLoader(browser.ReadDirectory, invalidate)
+	for i, path := range paths {
+		v.load(i, path, "")
+	}
+	return v
+}
+
+func (v *view) load(index int, path, selectName string) {
+	p := &v.panels[index]
+	if v.loader == nil || p.loading {
+		return
+	}
+	p.loading, p.err = true, nil
+	v.loader.requests <- loadRequest{panel: index, path: path, selectName: selectName}
+}
+
+func (v *view) pollLoads() {
+	if v.loader == nil {
+		return
+	}
+	for {
+		select {
+		case result := <-v.loader.results:
+			v.acceptLoad(result)
+		default:
+			return
+		}
+	}
+}
+
+func (v *view) acceptLoad(result loadResult) {
+	p := &v.panels[result.request.panel]
+	p.loading, p.err = false, result.err
+	if result.err != nil {
+		return
+	}
+	p.prefix = ""
+	p.path = result.directory.Path
+	p.items = make([]entry, len(result.directory.Entries))
+	p.selected = -1
+	if len(p.items) > 0 {
+		p.selected = 0
+	}
+	for i, file := range result.directory.Entries {
+		name, size := file.Name, "?"
+		if file.Directory {
+			name, size = name+"/", "—"
+		} else if file.SizeKnown {
+			size = formatSize(file.Bytes)
+		}
+		p.items[i] = entry{name: name, size: size, file: file}
+		if file.Directory && file.Name == result.request.selectName {
+			p.selected = i
+		}
+	}
+	p.rows = make(map[int]*widget.Clickable)
+	p.list = widget.List{List: layout.List{Axis: layout.Vertical}}
+	p.reveal = p.selected >= 0
+}
+
+func (v *view) activateSelected() {
+	p := &v.panels[v.active]
+	if p.loading || p.selected < 0 || p.selected >= len(p.items) {
+		return
+	}
+	file := p.items[p.selected].file
+	if !file.Directory {
+		if open := v.openFile; open != nil && file.Name != "" {
+			path := filepath.Join(p.path, file.Name)
+			go func() { _ = open(path) }()
+		}
+		return
+	}
+	if file.Parent {
+		v.parentFolder()
+	} else {
+		v.load(v.active, filepath.Join(p.path, file.Name), "")
+	}
+}
+
+func (v *view) parentFolder() {
+	p := &v.panels[v.active]
+	parent := filepath.Dir(p.path)
+	if parent == p.path {
+		return
+	}
+	v.load(v.active, parent, filepath.Base(p.path))
+}
+
+func (p *panel) itemCount() int {
+	count := len(p.items)
+	if count > 0 && p.items[0].file.Parent {
+		count--
+	}
+	return count
+}
+
+func (p *panel) status() (string, bool) {
+	if p.loading {
+		return "Loading…", false
+	}
+	if p.err != nil {
+		switch {
+		case errors.Is(p.err, fs.ErrPermission):
+			return "Access denied", true
+		case errors.Is(p.err, fs.ErrNotExist):
+			return "Folder not found", true
+		default:
+			return "Cannot read folder", true
+		}
+	}
+	return fmt.Sprintf("%d items", p.itemCount()), false
+}
+
+func formatSize(bytes int64) string {
+	if bytes < 1024 {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	size := float64(bytes)
+	units := [...]string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
+	unit := 0
+	for size >= 1024 && unit < len(units)-1 {
+		size /= 1024
+		unit++
+	}
+	return fmt.Sprintf("%.1f %s", size, units[unit])
+}

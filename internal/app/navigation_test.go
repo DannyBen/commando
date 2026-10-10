@@ -1,0 +1,233 @@
+package app
+
+import (
+	"fmt"
+	"image"
+	"os"
+	"path/filepath"
+	"slices"
+	"testing"
+	"time"
+
+	"gioui.org/io/input"
+	"gioui.org/io/key"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/unit"
+	"github.com/dannyben/control/internal/browser"
+)
+
+func navigationFrames(v *view) (frame func(), press func(key.Name)) {
+	var router input.Router
+	var ops op.Ops
+	frame = func() {
+		ops.Reset()
+		v.layout(layout.Context{Ops: &ops, Source: router.Source(), Now: time.Now(),
+			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+			Constraints: layout.Exact(image.Pt(800, 480)),
+		})
+		router.Frame(&ops)
+	}
+	frame()
+	frame()
+	press = func(name key.Name) {
+		router.Queue(key.Event{Name: name, State: key.Press})
+		frame()
+		frame()
+	}
+	return
+}
+
+func waitLoaded(t *testing.T, v *view, index int) {
+	t.Helper()
+	deadline := time.NewTimer(3 * time.Second)
+	defer deadline.Stop()
+	for v.panels[index].loading {
+		select {
+		case result := <-v.loader.results:
+			v.acceptLoad(result)
+		case <-deadline.C:
+			t.Fatal("directory load did not complete")
+		}
+	}
+}
+
+func selectName(t *testing.T, p *panel, name string) {
+	t.Helper()
+	for i, item := range p.items {
+		if item.file.Name == name {
+			p.selected, p.reveal = i, true
+			return
+		}
+	}
+	t.Fatalf("entry %q missing from %s", name, p.path)
+}
+
+func TestRealFolderNavigation(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "workspace")
+	if err := os.Mkdir(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	names := []string{"child", "empty", "gone", "zz-folder"}
+	for i := 0; i < 25; i++ {
+		names = append(names, fmt.Sprintf("folder-%02d", i))
+	}
+	for _, name := range names {
+		if err := os.Mkdir(filepath.Join(root, name), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "child", "data.bin"), make([]byte, 2048), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "note.txt"), []byte("hello"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	v := newBrowserView([]string{root, root, root}, nil)
+	v.openFile = nil
+	defer v.loader.close()
+	for i := range v.panels {
+		waitLoaded(t, v, i)
+	}
+	frame, press := navigationFrames(v)
+	p := &v.panels[0]
+	if p.itemCount() != 30 {
+		t.Fatalf("item count=%d", p.itemCount())
+	}
+	press(key.NameDownArrow)
+	press(key.NameReturn)
+	waitLoaded(t, v, 0)
+	frame()
+	if p.path != filepath.Join(root, "child") || p.itemCount() != 1 || p.items[1].size != "2.0 KB" {
+		t.Fatalf("Enter did not load real folder/files: path=%s items=%+v", p.path, p.items)
+	}
+	if v.panels[1].path != root || v.panels[2].path != root {
+		t.Fatal("navigation changed another panel's directory")
+	}
+	press(key.NameDeleteBackward)
+	waitLoaded(t, v, 0)
+	frame()
+	if p.path != root || p.items[p.selected].file.Name != "child" {
+		t.Fatal("Backspace did not select the folder just left")
+	}
+	selectName(t, p, "zz-folder")
+	frame()
+	press(key.NameReturn)
+	waitLoaded(t, v, 0)
+	frame()
+	if p.itemCount() != 0 || len(p.items) != 1 || !p.items[0].file.Parent {
+		t.Fatal("empty folder did not retain its parent navigation row")
+	}
+	press(key.NameReturn)
+	waitLoaded(t, v, 0)
+	frame()
+	if p.path != root || p.items[p.selected].file.Name != "zz-folder" || p.list.Position.First == 0 {
+		t.Fatal("Enter on parent did not restore and reveal the folder just left")
+	}
+	position := p.list.Position
+	press(key.NameRightArrow)
+	press(key.NameEnd)
+	press(key.NameReturn)
+	if v.panels[1].loading || v.panels[1].path != root {
+		t.Fatal("Enter on an ordinary file navigated or loaded a folder")
+	}
+	press(key.NameLeftArrow)
+	if p.items[p.selected].file.Name != "zz-folder" || p.list.Position != position {
+		t.Fatal("switching panels lost directory selection/scroll")
+	}
+	if err := os.Remove(filepath.Join(root, "gone")); err != nil {
+		t.Fatal(err)
+	}
+	selectName(t, p, "gone")
+	frame()
+	before := slices.Clone(p.items)
+	selected := p.selected
+	press(key.NameReturn)
+	waitLoaded(t, v, 0)
+	frame()
+	if p.path != root || !slices.Equal(p.items, before) || p.selected != selected {
+		t.Fatal("failed folder load changed the current path, listing, or selection")
+	}
+	if message, failed := p.status(); !failed || message != "Folder not found" {
+		t.Fatalf("missing inline read error: %q %v", message, failed)
+	}
+	press(key.NameDownArrow)
+	if p.err != nil {
+		t.Fatal("continued navigation did not clear the old error")
+	}
+}
+
+func TestNavigationWhileLoading(t *testing.T) {
+	entered, release, notified := make(chan struct{}), make(chan struct{}), make(chan struct{}, 1)
+	released := false
+	v := newPreviewView()
+	v.loader = newDirectoryLoader(func(path string) (browser.Directory, error) {
+		close(entered)
+		<-release
+		return browser.Directory{Path: path, Entries: []browser.Entry{{Name: "result.txt", Bytes: 3, SizeKnown: true}}}, nil
+	}, func() { notified <- struct{}{} })
+	defer v.loader.close()
+	defer func() {
+		if !released {
+			close(release)
+		}
+	}()
+	v.panels[0].items[3].file = browser.Entry{Name: "control", Directory: true}
+	_, press := navigationFrames(v)
+	press(key.NameReturn)
+	select {
+	case <-entered:
+	case <-time.After(3 * time.Second):
+		t.Fatal("background load never started")
+	}
+	press(key.NameReturn) // Ignore repeated activation while the panel is loading.
+	press(key.NameRightArrow)
+	press(key.NameDownArrow)
+	if v.active != 1 || v.panels[1].selected != 6 || !v.panels[0].loading || len(v.loader.requests) != 0 {
+		t.Fatal("pending directory read blocked navigation or queued a duplicate request")
+	}
+	close(release)
+	released = true
+	waitLoaded(t, v, 0)
+	select {
+	case <-notified:
+	case <-time.After(3 * time.Second):
+		t.Fatal("completed load did not invalidate the window")
+	}
+	if v.active != 1 || v.panels[0].items[0].name != "result.txt" {
+		t.Fatal("completed load stole panel focus or failed to update its own panel")
+	}
+}
+
+func TestEmptyRootNavigation(t *testing.T) {
+	root := filepath.VolumeName(t.TempDir()) + string(filepath.Separator)
+	v := newView([]panel{{path: root, selected: -1}})
+	v.loader = newDirectoryLoader(func(string) (browser.Directory, error) {
+		t.Error("root navigation attempted a read")
+		return browser.Directory{}, nil
+	}, nil)
+	defer v.loader.close()
+	_, press := navigationFrames(v)
+	for _, name := range []key.Name{key.NameUpArrow, key.NameDownArrow, key.NameReturn, key.NameDeleteBackward} {
+		press(name)
+	}
+	if v.panels[0].selected != -1 || v.panels[0].loading {
+		t.Fatal("empty root navigation changed the selection or requested its parent")
+	}
+}
+
+func TestLargeListKeepsOnlyVisibleRowWidgets(t *testing.T) {
+	items := make([]entry, 10000)
+	for i := range items {
+		items[i] = entry{name: fmt.Sprintf("file-%05d.txt", i), size: "1 KB"}
+	}
+	v := newView([]panel{{items: items}})
+	_, press := navigationFrames(v)
+	press(key.NameEnd)
+	if v.panels[0].selected != 9999 || v.panels[0].list.Position.First == 0 {
+		t.Fatal("large list did not reveal its last entry")
+	}
+	if count := len(v.panels[0].rows); count > 30 {
+		t.Fatalf("large listing retained %d row widgets", count)
+	}
+}

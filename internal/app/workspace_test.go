@@ -15,7 +15,7 @@ import (
 // Exercise real Gio routing and lists: changing panels must preserve their
 // independent selection/scroll state, and keyboard selection must stay visible.
 func TestWorkspaceKeyboardNavigation(t *testing.T) {
-	v := newView()
+	v := newPreviewView()
 	var router input.Router
 	var ops op.Ops
 	frame := func() {

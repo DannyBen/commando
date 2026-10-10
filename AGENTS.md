@@ -1,16 +1,22 @@
 # Project Status
 
 The user authorized an initial native Gio UI evaluation prototype on 2026-10-10.
-The current scope is a light-theme window with three sample file panels, real
-Gio lists, keyboard file/panel navigation, and ordinary list scrolling.
+The user subsequently authorized Todo 17: initial real folder navigation,
+then type-to-select, Enter to open files, and Alt+D path entry. File-opening
+failures must be silent until their feedback is designed (Todo 19).
+The current scope is a light-theme window with three independent directory
+panels, type-to-select, Enter to open folders/files, Alt+D path entry,
+Backspace to go up, keyboard file/panel navigation,
+nonblocking directory loading, inline read errors, and ordinary scrolling.
+Fixed sample data remains only for the reproducible headless preview.
 
 Confirmed product direction: multi-panel support, a default of two or three
 (still to decide), no tabs for now, a modal command palette, and minimal panel
 headers/footers. The prototype uses three panels for evaluation.
 
-Do not expand this into filesystem browsing/operations, transfer targeting,
+Do not expand this into file mutation operations, transfer targeting,
 palette interactions, persistence, or other product features without agreeing
-on the next scope with the user. Keep sample data distinct from real files.
+on the next scope with the user. Keep preview sample data distinct from the live browser.
 
 Read `docs/project-brief.md` before planning. Keep confirmed requirements,
 prototype evidence, suggestions, and open decisions distinct.

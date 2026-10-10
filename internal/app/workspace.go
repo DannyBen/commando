@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"time"
+
+	"github.com/dannyben/control/internal/browser"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -29,59 +32,85 @@ var colors = struct {
 
 type entry struct {
 	name, size string
+	file       browser.Entry
 }
 
 type panel struct {
 	path     string
 	items    []entry
-	rows     []widget.Clickable
+	rows     map[int]*widget.Clickable
 	list     widget.List
 	selected int
 	reveal   bool
+	loading  bool
+	err      error
+	prefix   string
+	prefixAt time.Time
 }
 
 type view struct {
-	theme   *material.Theme
-	panels  []panel
-	active  int
-	focus   bool
-	started bool
+	theme    *material.Theme
+	panels   []panel
+	active   int
+	focus    bool
+	started  bool
+	loader   *directoryLoader
+	openFile func(string) error
+	editing  bool
+	location widget.Editor
 }
 
-func newView() *view {
+func newPreviewView() *view { return newView(samplePanels()) }
+
+func newView(panels []panel) *view {
 	theme := material.NewTheme()
 	faces := bundledFont()
 	theme.Shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces))
 	theme.Face = faces[0].Font.Typeface
 	theme.Fg, theme.Bg = colors.foreground, colors.surface
 	theme.ContrastBg, theme.ContrastFg = colors.accent, colors.surface
-	v := &view{theme: theme, panels: samplePanels()}
+	v := &view{theme: theme, panels: panels,
+		location: widget.Editor{SingleLine: true, Submit: true},
+	}
 	for i := range v.panels {
 		p := &v.panels[i]
-		p.rows = make([]widget.Clickable, len(p.items))
+		p.rows = make(map[int]*widget.Clickable)
 		p.list.Axis = layout.Vertical
 	}
 	return v
 }
 
 func (v *view) update(gtx layout.Context) {
+	v.pollLoads()
 	if !v.started {
 		gtx.Execute(key.FocusCmd{Tag: &v.focus})
 		v.started = gtx.Focused(&v.focus)
 	}
 	for pi := range v.panels {
 		p := &v.panels[pi]
-		for ri := range p.rows {
-			for p.rows[ri].Clicked(gtx) {
+		for ri, row := range p.rows {
+			for row.Clicked(gtx) {
+				v.stopLocation(gtx)
+				v.panels[v.active].prefix = ""
 				v.active, p.selected = pi, ri
-				p.reveal = true
+				p.prefix = ""
+				p.reveal, p.err = true, nil
 				gtx.Execute(key.FocusCmd{Tag: &v.focus})
 			}
+		}
+	}
+	v.expirePrefix(gtx)
+	if v.editing {
+		v.updateLocation(gtx)
+		if v.editing {
+			return
 		}
 	}
 	for {
 		e, ok := gtx.Event(
 			key.FocusFilter{Target: &v.focus},
+			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: key.NameEscape},
 			key.Filter{Focus: &v.focus, Name: key.NameUpArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameDownArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow},
@@ -90,9 +119,16 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: key.NameEnd},
 			key.Filter{Focus: &v.focus, Name: key.NamePageUp},
 			key.Filter{Focus: &v.focus, Name: key.NamePageDown},
+			key.Filter{Focus: &v.focus, Name: key.NameReturn},
+			key.Filter{Focus: &v.focus, Name: key.NameEnter},
+			key.Filter{Focus: &v.focus, Name: key.NameDeleteBackward},
 		)
 		if !ok {
 			break
+		}
+		if edit, ok := e.(key.EditEvent); ok {
+			v.typeToSelect(edit.Text, gtx.Now)
+			continue
 		}
 		ke, ok := e.(key.Event)
 		if !ok || ke.State != key.Press {
@@ -102,11 +138,30 @@ func (v *view) update(gtx layout.Context) {
 		next := p.selected
 		page := max(1, p.list.Position.Count-1)
 		switch ke.Name {
+		case "D":
+			v.startLocation(gtx)
+			return
+		case key.NameEscape:
+			p.prefix = ""
+			continue
 		case key.NameLeftArrow:
+			p.prefix = ""
 			v.active = max(0, v.active-1)
 			continue
 		case key.NameRightArrow:
+			p.prefix = ""
 			v.active = min(len(v.panels)-1, v.active+1)
+			continue
+		case key.NameReturn, key.NameEnter:
+			p.prefix = ""
+			v.activateSelected()
+			continue
+		case key.NameDeleteBackward:
+			if p.prefix != "" {
+				v.erasePrefix(gtx.Now)
+			} else {
+				v.parentFolder()
+			}
 			continue
 		case key.NameUpArrow:
 			next--
@@ -121,9 +176,14 @@ func (v *view) update(gtx layout.Context) {
 		case key.NamePageDown:
 			next += page
 		}
+		p.prefix = ""
+		if len(p.items) == 0 {
+			continue
+		}
 		p.selected = max(0, min(next, len(p.items)-1))
-		p.reveal = true
+		p.reveal, p.err = true, nil
 	}
+	v.expirePrefix(gtx)
 }
 
 func (v *view) layout(gtx layout.Context) layout.Dimensions {
@@ -155,15 +215,24 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if index == v.active {
 					fg = colors.accent
 				}
+				if v.editing && index == v.active {
+					editor := material.Editor(v.theme, &v.location, "Path")
+					editor.TextSize, editor.Color = 13, colors.accent
+					editor.SelectionColor = rgb(0xffdf00)
+					return editor.Layout(gtx)
+				}
 				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.path), 13, fg, text.Start)
 			}, index == v.active)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, 28, colors.surface, func(gtx layout.Context) layout.Dimensions {
-				return v.columns(gtx, entry{"NAME", "SIZE"}, colors.filename, colors.filesize, 12)
+				return v.columns(gtx, entry{name: "NAME", size: "SIZE"}, colors.filename, colors.filesize, 12)
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			if len(p.items) == 0 {
+				return layout.Dimensions{Size: gtx.Constraints.Max}
+			}
 			if p.reveal {
 				h := gtx.Dp(rowHeight)
 				top := p.list.Position.First*h + p.list.Position.Offset
@@ -180,7 +249,10 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			list.Indicator.MinorWidth = 3
 			list.Indicator.Color = colors.muted
 			list.Indicator.HoverColor = colors.muted
-			return list.Layout(gtx, len(p.items), func(gtx layout.Context, row int) layout.Dimensions {
+			dims := list.Layout(gtx, len(p.items), func(gtx layout.Context, row int) layout.Dimensions {
+				if p.rows[row] == nil {
+					p.rows[row] = new(widget.Clickable)
+				}
 				return p.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					size := image.Pt(gtx.Constraints.Max.X, gtx.Dp(rowHeight))
 					bg := colors.surface
@@ -202,11 +274,26 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 						})
 				})
 			})
+			// Keep row widgets only around the visible viewport.
+			for row := range p.rows {
+				if row < p.list.Position.First-1 || row > p.list.Position.First+p.list.Position.Count {
+					delete(p.rows, row)
+				}
+			}
+			return dims
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, 30, colors.header, func(gtx layout.Context) layout.Dimensions {
-				return v.columns(gtx, entry{fmt.Sprintf("%d items", len(p.items)),
-					fmt.Sprintf("%d / %d", p.selected+1, len(p.items))}, colors.foreground, colors.muted, 12)
+				status, failed := p.status()
+				if index == v.active && p.prefix != "" {
+					status, failed = "> "+p.prefix, false
+				}
+				fg := colors.foreground
+				if failed {
+					fg = rgb(0xc00000)
+				}
+				return v.columns(gtx, entry{name: status,
+					size: fmt.Sprintf("%d / %d", p.selected+1, len(p.items))}, fg, colors.muted, 12)
 			}, false)
 		}),
 	)

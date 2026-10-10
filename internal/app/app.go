@@ -17,10 +17,14 @@ import (
 
 const windowWidth, windowHeight = 800, 480
 
-// Run opens the UI study. Sample entries never access the filesystem.
+// Run opens the native folder browser.
 func Run() error {
 	preview := flag.String("png", "", "render the workspace to a PNG and exit")
 	flag.Parse()
+	paths, err := startingPaths(flag.Args())
+	if err != nil {
+		return err
+	}
 	if *preview != "" {
 		return renderPNG(*preview)
 	}
@@ -31,11 +35,12 @@ func Run() error {
 		w.Option(gioapp.Title("CONTROL"),
 			gioapp.Size(unit.Dp(windowWidth), unit.Dp(windowHeight)),
 			gioapp.MinSize(unit.Dp(720), unit.Dp(360)))
-		v := newView()
+		v := newBrowserView(paths, w.Invalidate)
 		var ops op.Ops
 		for {
 			switch e := w.Event().(type) {
 			case gioapp.DestroyEvent:
+				v.loader.close()
 				done <- e.Err
 				return
 			case gioapp.FrameEvent:
@@ -62,7 +67,7 @@ func renderPNG(path string) error {
 	}
 	defer w.Release()
 	var ops op.Ops
-	newView().layout(layout.Context{
+	newPreviewView().layout(layout.Context{
 		Ops: &ops, Now: time.Now(),
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
 		Constraints: layout.Exact(image.Pt(windowWidth, windowHeight)),
@@ -83,4 +88,20 @@ func renderPNG(path string) error {
 		return err
 	}
 	return f.Close()
+}
+
+func startingPaths(args []string) ([]string, error) {
+	if len(args) > 3 {
+		return nil, fmt.Errorf("provide at most three startup folders")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil && len(args) == 0 {
+		return nil, err
+	}
+	if len(args) > 0 {
+		home = args[0]
+	}
+	paths := []string{home, home, home}
+	copy(paths, args)
+	return paths, nil
 }
