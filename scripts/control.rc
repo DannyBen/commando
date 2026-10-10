@@ -1,3 +1,5 @@
 #define IDI_CONTROL 1
 
 IDI_CONTROL ICON "assets/app-icon/app-icon.ico"
+
+JETBRAINS_MONO_LICENSE RCDATA "internal/app/fonts/OFL.txt"

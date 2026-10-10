@@ -35,7 +35,7 @@ remains open. See [the project brief](docs/project-brief.md).
 
 `op check` formats, vets, and tests the app. `op build-windows` builds the Windows
 amd64 GUI executable with its placeholder icon. `op preview` renders
-`dist/preview.png` through the same Gio layout using fixed sample entries.
+`tmp/preview.png` through the same Gio layout using fixed sample entries.
 
 For this VM's Wayland/OpenGL build:
 
@@ -46,4 +46,5 @@ op build-windows
 ```
 
 The bundled [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) font
-license is in `internal/app/fonts/OFL.txt` and copied into `dist/` for Windows.
+license is in `internal/app/fonts/OFL.txt` and embedded as a Windows resource
+in `control.exe`. The `dist/` folder contains only the executable.
