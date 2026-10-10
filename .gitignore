@@ -1,0 +1,6 @@
+.todo*
+/docs
+/tmp
+
+/dist
+/resource_windows_amd64.syso
