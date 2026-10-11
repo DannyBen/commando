@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
@@ -15,7 +16,8 @@ func (v *view) offerFileConflict() {
 	v.pendingFileConflict = nil
 	panel := result.request.panel
 	p := &v.panels[panel]
-	file := result.fileConflict.DestinationEntry()
+	plan := result.conflictPlan
+	file := plan.Subject
 	first := p.list.Position.First
 	inserted := p.applyTransferredEntry(browser.TransferredItem{Entry: file, Replaced: true})
 	row := 0
@@ -30,15 +32,31 @@ func (v *view) offerFileConflict() {
 	}
 	if errors.Is(result.err, browser.ErrConflictChanged) {
 		v.showFeedback(panel, feedback.Error, "Files changed; choose again")
+	} else {
+		message := "File exists"
+		if !plan.SingleFile {
+			message = fmt.Sprintf("%d files exist", plan.Conflicts)
+			if plan.Conflicts == 1 {
+				message = "1 file exists"
+			}
+		}
+		v.showFeedback(panel, feedback.Warning, message)
 	}
-	v.startInlineActions(panel, row, "", "", []string{"Overwrite", "Cancel"}, func(choice int) {
-		switch choice {
-		case 0:
+	options := []string{"Overwrite", "Cancel"}
+	if !plan.SingleFile {
+		options = []string{"Overwrite all", "Skip existing", "Cancel"}
+	}
+	v.startInlineActions(panel, row, "", "", options, func(choice int) {
+		if choice < len(options)-1 {
 			snapshot := result.clipboard
+			policy := browser.TransferOverwrite
+			if choice == 1 {
+				policy = browser.TransferSkipExisting
+			}
 			v.panels[panel].loading = true
 			v.loader.requests <- loadRequest{panel: panel, path: result.request.path, transfer: &transferRequest{
-				locations: v.fileOperationLocations(), snapshot: &snapshot, overwrite: result.fileConflict}}
-		case 1:
+				locations: v.fileOperationLocations(), snapshot: &snapshot, plan: plan, policy: policy}}
+		} else {
 			v.transferPending = false
 			v.showFeedback(panel, feedback.Info, "Transfer cancelled")
 		}

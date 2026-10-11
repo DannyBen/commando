@@ -25,6 +25,15 @@ type TransferredItem struct {
 type TransferResult struct {
 	Directory string
 	Items     []TransferredItem
+	Changes   []TransferredPath
+	Skipped   int
+}
+
+// TransferredPath records confirmed changes inside merged folders as well as
+// whole-entry transfers, so open descendants can follow completed moves.
+type TransferredPath struct {
+	Source, Destination string
+	Directory, Moved    bool
 }
 
 // Transfer preflights the whole batch, then transfers in clipboard order. Every

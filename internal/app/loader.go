@@ -30,7 +30,8 @@ type loadResult struct {
 	sourceParents []string
 	clipboardErr  error
 	transferMove  bool
-	fileConflict  *browser.FileConflict
+	conflictPlan  *browser.TransferPlan
+	panelUpdates  []transferPanelUpdate
 }
 
 type directoryLoader struct {
@@ -42,7 +43,9 @@ type directoryLoader struct {
 	writeClipboard    func([]string, bool) (browser.FileClipboard, error)
 	completeClipboard func(browser.FileClipboard, []string) (browser.FileClipboard, error)
 	transfer          func([]string, string, bool) (browser.TransferResult, error)
-	overwrite         func(*browser.FileConflict, bool) (browser.TransferResult, error)
+	planTransfer      func([]string, string) (*browser.TransferPlan, error)
+	executeTransfer   func(*browser.TransferPlan, bool, browser.TransferPolicy) (browser.TransferResult, error)
+	readDirectory     func(string) (browser.Directory, error)
 }
 
 // One worker keeps reads and mutations off the UI thread and avoids concurrent
@@ -57,7 +60,9 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		writeClipboard:    browser.WriteFileClipboard,
 		completeClipboard: browser.CompleteFileClipboard,
 		transfer:          browser.Transfer,
-		overwrite:         browser.OverwriteFile,
+		planTransfer:      browser.PlanTransfer,
+		executeTransfer:   browser.ExecuteTransfer,
+		readDirectory:     read,
 	}
 	go func() {
 		for {

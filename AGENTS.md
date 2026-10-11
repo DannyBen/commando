@@ -81,20 +81,31 @@ module/executable and `Commando` for the window title and data-folder name.
   replace a newer clipboard. Cut filename colors belong to the shared file list
   and remain independent of marks. Preserve panel focus, current-item identity,
   surviving marks, and open moved descendants. Preflight the whole batch for
-  destination names. One regular-file collision offers shared inline action
-  rows directly beneath its destination file: Overwrite (default), Cancel.
-  Omit headings and the repeated filename; keep the file and both choices
-  visible together. Ensure the inspected file exists in the cached listing
-  before attaching its actions. Up/Down selects, Enter applies, Escape
+  file conflicts before any mutation; recursively merge existing real folders
+  and preserve destination-only entries. Refuse mismatched file/folder types and
+  final-link collisions before the batch starts. One regular-file transfer
+  offers Overwrite (default), Cancel. Folder contents and batches offer Overwrite
+  all (default), Skip existing, Cancel, with one decision covering the batch.
+  Keep shared inline rows beneath the first conflicting target file, or its
+  top-level folder for nested conflicts. Omit headings and repeated filenames;
+  keep the subject and choices visible together. Ensure the inspected subject
+  exists in the cached listing before attaching actions. Explain ordinary
+  conflicts through Warning feedback: File exists for a single file, a count
+  for batches, without filenames. Up/Down selects, Enter applies, Escape
   or clicking an ordinary row cancels; clicking an option selects it. Closing
-  actions with Overwrite, Cancel or Escape selects and reveals their subject
+  actions with a choice or Escape selects and reveals their subject
   file. An ordinary-row click selects the clicked row instead. Keep the
   choice anchored while Left/Right or Tab/Shift+Tab switches panels. Retain the
   presented clipboard snapshot, stage the replacement fully and recheck file
   identity and metadata before replacing. Overwritten files are not recycled.
-  Batch and folder collisions still refuse the transfer. Stop at runtime failure
-  with partial results in the existing footer. Transfer progress and cancellation
-  require a separate agreed interaction model.
+  Verify the full inspected decision before running it; changed entries require
+  a fresh choice. Never overwrite a late arrival absent from the approved plan.
+  Skipped files stay at the source. Remove only verified, now-empty merged
+  source folders, and keep partly moved folders in the cut selection. Stop at
+  runtime failure with partial results in the existing footer. Refresh affected
+  open folders through the worker, retaining surviving marks, current items and
+  viewport anchors; follow confirmed moved descendants into merged destinations.
+  Transfer progress and cancellation require a separate agreed interaction model.
 - Inline actions are temporary rows in the shared file list, separate from its
   entries, marks, current item and persisted state. Use full-contrast action text
   and the normal selection colors. InlineEdge also identifies new-name drafts;

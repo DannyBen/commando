@@ -16,6 +16,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/dannyben/commando/internal/feedback"
 )
 
 func TestInlineActionsKeepUnderlyingRowsMarksAndSelection(t *testing.T) {
@@ -83,14 +84,28 @@ func TestInlineActionsPreview(t *testing.T) {
 	if directory == "" {
 		t.Skip("optional headless action-row preview")
 	}
-	for _, selected := range []int{0, 1} {
+	for _, fixture := range []struct {
+		name     string
+		row      int
+		options  []string
+		selected int
+		message  string
+	}{
+		{"inline-overwrite.png", 6, []string{"Overwrite", "Cancel"}, 0, "File exists"},
+		{"inline-cancel.png", 6, []string{"Overwrite", "Cancel"}, 1, "File exists"},
+		{"batch-overwrite.png", 5, []string{"Overwrite all", "Skip existing", "Cancel"}, 0, "3 files exist"},
+		{"batch-skip.png", 5, []string{"Overwrite all", "Skip existing", "Cancel"}, 1, "3 files exist"},
+		{"batch-cancel.png", 5, []string{"Overwrite all", "Skip existing", "Cancel"}, 2, "3 files exist"},
+	} {
 		v := newPreviewView()
 		v.active = 1
-		v.startInlineActions(1, 6, "", "", []string{"Overwrite", "Cancel"}, nil, nil)
-		v.actions.subjectRow = 5
-		v.actions.selected = selected
-		name := []string{"inline-overwrite.png", "inline-cancel.png"}[selected]
-		if err := renderViewPNG(filepath.Join(directory, name), v); err != nil {
+		v.startInlineActions(1, fixture.row, "", "", fixture.options, nil, nil)
+		v.actions.subjectRow = fixture.row - 1
+		v.actions.selected = fixture.selected
+		v.showFeedback(1, feedback.Warning, fixture.message)
+		// Capture the held footer text without waiting for its typing animation.
+		v.panels[1].feedback.Frame(time.Now().Add(-time.Minute), v.appearance.Feedback)
+		if err := renderViewPNG(filepath.Join(directory, fixture.name), v); err != nil {
 			t.Fatal(err)
 		}
 	}

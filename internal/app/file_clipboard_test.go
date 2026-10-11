@@ -202,9 +202,10 @@ func TestClipboardConflictRetainsCutSelectionForRetry(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(target, "folder")); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatal("refusal transferred earlier folder")
 	}
-	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Error || message.Text != "Name already exists: a.txt" {
-		t.Fatalf("wrong refusal feedback: %v", message)
+	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Warning || message.Text != "1 file exists" || v.actions == nil {
+		t.Fatalf("wrong conflict feedback: %v", message)
 	}
+	send(pressed(key.NameEscape))
 	if err := os.Remove(filepath.Join(target, "a.txt")); err != nil {
 		t.Fatal(err)
 	}

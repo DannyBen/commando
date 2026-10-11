@@ -47,6 +47,9 @@ func singleFileConflictView(t *testing.T, move bool) (*view, *testFileClipboard,
 	if len(v.actions.headers) != 0 || v.actions.count() != 2 || v.actions.subjectRow != v.actions.row-1 || v.panels[1].items[v.actions.subjectRow].file.Name != "a.txt" {
 		t.Fatal("conflict actions were not attached directly to their file without headings")
 	}
+	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Warning || message.Text != "File exists" {
+		t.Fatal("single conflict did not explain itself briefly in the footer")
+	}
 	// Each caller installs a fresh input router for the interaction under test.
 	v.started = false
 	return v, c, source, target
@@ -225,10 +228,10 @@ func TestConflictArrivingDuringLocationEditingDoesNotStealFocus(t *testing.T) {
 			close(release)
 		}
 	}()
-	v.loader.transfer = func(paths []string, directory string, move bool) (browser.TransferResult, error) {
+	v.loader.planTransfer = func(paths []string, directory string) (*browser.TransferPlan, error) {
 		close(entered)
 		<-release
-		return browser.Transfer(paths, directory, move)
+		return browser.PlanTransfer(paths, directory)
 	}
 	v.active = 1
 	router, send := clipboardFrames(v)
@@ -254,7 +257,7 @@ func TestConflictArrivingDuringLocationEditingDoesNotStealFocus(t *testing.T) {
 	}
 }
 
-func TestFolderConflictStillRefusesInSingleFileRound(t *testing.T) {
+func TestExistingFolderMergesWithoutFileConflictChoice(t *testing.T) {
 	v, source, target := clipboardView(t)
 	c := attachTestFileClipboard(v)
 	if err := os.Mkdir(filepath.Join(target, "folder"), 0700); err != nil {
@@ -269,10 +272,10 @@ func TestFolderConflictStillRefusesInSingleFileRound(t *testing.T) {
 	waitLoaded(t, v, 1)
 	send()
 	if v.actions != nil || v.transferPending {
-		t.Fatal("folder conflict entered single-file interaction")
+		t.Fatal("existing folder alone required a conflict decision")
 	}
-	if message := v.panels[1].feedback.Current(); message == nil || message.Text != "Name already exists: folder" {
-		t.Fatal("folder conflict lost existing refusal")
+	if data, err := os.ReadFile(filepath.Join(target, "folder", "nested", "file")); err != nil || string(data) != "nested" {
+		t.Fatal("existing folder did not merge its new content")
 	}
 }
 

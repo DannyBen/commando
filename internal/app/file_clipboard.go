@@ -23,7 +23,8 @@ type fileClipboardRequest struct {
 type transferRequest struct {
 	locations []string
 	snapshot  *browser.FileClipboard
-	overwrite *browser.FileConflict
+	plan      *browser.TransferPlan
+	policy    browser.TransferPolicy
 }
 
 func (v *view) fileOperationLocations() []string {
@@ -125,16 +126,25 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	}
 	result.clipboard = snapshot
 	result.transferMove = snapshot.Move
-	if conflict := request.transfer.overwrite; conflict != nil {
-		result.transferred, result.err = l.overwrite(conflict, snapshot.Move)
+	if plan := request.transfer.plan; plan != nil {
+		result.transferred, result.err = l.executeTransfer(plan, snapshot.Move, request.transfer.policy)
 	} else {
-		result.transferred, result.err = l.transfer(snapshot.Paths, request.path, snapshot.Move)
+		plan, planErr := l.planTransfer(snapshot.Paths, request.path)
+		if planErr != nil {
+			result.err = planErr
+		} else if plan.Conflicts > 0 {
+			result.conflictPlan = plan
+		} else if plan.Merges {
+			result.transferred, result.err = l.executeTransfer(plan, snapshot.Move, browser.TransferExclusive)
+		} else {
+			result.transferred, result.err = l.transfer(snapshot.Paths, request.path, snapshot.Move)
+		}
 	}
-	if len(snapshot.Paths) == 1 && len(result.transferred.Items) == 0 && (errors.Is(result.err, fs.ErrExist) || errors.Is(result.err, browser.ErrConflictChanged)) {
-		conflict, inspectErr := browser.InspectFileConflict(snapshot.Paths[0], request.path)
-		if inspectErr == nil {
-			result.fileConflict = conflict
-		} else if errors.Is(inspectErr, browser.ErrSameTransferFile) {
+	if len(result.transferred.Items) == 0 && (errors.Is(result.err, fs.ErrExist) || errors.Is(result.err, browser.ErrConflictChanged)) {
+		plan, inspectErr := l.planTransfer(snapshot.Paths, request.path)
+		if inspectErr == nil && plan.Conflicts > 0 {
+			result.conflictPlan = plan
+		} else if inspectErr != nil {
 			result.err = inspectErr
 		}
 	}
@@ -148,6 +158,9 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	}
 	if len(moved) > 0 {
 		result.clipboard, result.clipboardErr = l.completeClipboard(snapshot, moved)
+	}
+	if len(result.transferred.Changes) > 0 {
+		l.refreshTransferPanels(&result)
 	}
 	return result
 }
@@ -171,16 +184,30 @@ func (v *view) acceptFileOperation(result loadResult) {
 		return
 	}
 	v.transferPending = false
-	if result.fileConflict != nil {
+	if result.conflictPlan != nil {
 		v.transferPending = true
 		v.pendingFileConflict = &result
 		v.offerFileConflict()
 		return
 	}
 	locations = result.request.transfer.locations
+	refreshFailed := false
 	for pi := range v.panels {
 		other := &v.panels[pi]
 		if other.drives || pi >= len(locations) || !samePath(other.path, locations[pi]) || pi >= len(result.locations) {
+			continue
+		}
+		if pi < len(result.panelUpdates) && result.panelUpdates[pi].needed {
+			update := result.panelUpdates[pi]
+			if update.path != "" {
+				other.path = update.path
+			}
+			if update.err != nil {
+				refreshFailed = true
+				v.showFeedback(pi, feedback.Warning, "Cannot refresh folder")
+			} else {
+				other.reconcileTransferListing(update.directory)
+			}
 			continue
 		}
 		for index, item := range result.transferred.Items {
@@ -222,6 +249,10 @@ func (v *view) acceptFileOperation(result loadResult) {
 		v.showFeedback(result.request.panel, feedback.Error, message)
 	} else if result.clipboardErr != nil {
 		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d moved; cannot update clipboard", count))
+	} else if refreshFailed {
+		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d transferred; refresh failed", count))
+	} else if result.transferred.Skipped > 0 {
+		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d transferred; %d skipped", count, result.transferred.Skipped))
 	} else {
 		v.showFeedback(result.request.panel, feedback.Success, fmt.Sprintf("%d %s", count, verb))
 	}
@@ -294,7 +325,9 @@ func fileTransferError(err error) string {
 	case errors.Is(err, browser.ErrSameTransferFile):
 		message = "Source and destination are the same file"
 	case errors.Is(err, browser.ErrConflictChanged):
-		message = "Files changed; choose again"
+		return "Files changed; choose again"
+	case errors.Is(err, browser.ErrTransferType):
+		return "File and folder conflict"
 	case errors.Is(err, errors.ErrUnsupported):
 		message = "Unsupported file type"
 	}

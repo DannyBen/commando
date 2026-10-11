@@ -63,7 +63,11 @@ func (p *panel) applyTransferredEntry(item browser.TransferredItem) (inserted bo
 	if item.Replaced {
 		for row, existing := range p.items {
 			if samePath(existing.file.Name, item.Entry.Name) && existing.file.Directory == item.Entry.Directory {
-				p.items[row] = entry{name: item.Entry.Name, size: formatSize(item.Entry.Bytes), file: item.Entry}
+				size := "—"
+				if !item.Entry.Directory {
+					size = formatSize(item.Entry.Bytes)
+				}
+				p.items[row] = entry{name: item.Entry.Name, size: size, file: item.Entry}
 				return false
 			}
 		}

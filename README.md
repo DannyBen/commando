@@ -110,21 +110,29 @@ successful moves remove completed items from the cut selection. Failed and
 unprocessed items remain available for retry. Replacing the clipboard clears
 the cut appearance.
 
-A single regular-file collision inserts Overwrite and Cancel directly beneath
-the conflicting destination file, keeping the file and both choices visible
-together. Overwrite is selected initially. Up/Down selects an
-option; Enter applies it; Escape cancels. Overwrite, Cancel and Escape leave the
-target file selected. Clicking an option selects it, and clicking an ordinary
+Folders merge recursively, preserving destination-only entries. Conflicts are
+checked before transferring anything. A single-file conflict offers Overwrite
+and Cancel beneath the destination file. Folder contents and batches offer
+Overwrite all, Skip existing and Cancel, with one decision covering the entire
+transfer. Skip existing leaves conflicting files untouched and transfers the
+others. Overwrite is selected initially; the footer explains the conflict with
+"File exists" or a file count.
+
+The file or top-level target folder and its actions stay visible together.
+Up/Down selects an option; Enter applies it; Escape cancels the transfer before
+it starts. Overwrite, Skip existing, Cancel and Escape leave the
+target row selected. Clicking an option selects it, and clicking an ordinary
 file row cancels and selects that row. Left/Right and Tab/Shift+Tab let you inspect
 other panels while the choice remains in place. Overwrite replaces the existing
 file without recycling it. If either file changes while awaiting a decision,
 the replacement is refused and a fresh choice is offered when possible.
 
-Batch collisions and folder collisions still refuse the transfer before it
-starts. A runtime failure stops the batch and reports completed transfers in
-the existing footer. Transfers run in the background, retaining panel focus,
+File-versus-folder conflicts are refused before the batch starts. A runtime
+failure stops further work and reports completed transfers in the existing
+footer. Moves retain skipped source files and partly moved folders in the cut
+selection for retry. Transfers run in the background, retaining panel focus and
 surviving marks and current items. There is no transfer progress or cancellation
-interface yet.
+interface during execution yet.
 
 ## Recycling Files and Folders
 
