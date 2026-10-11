@@ -1,67 +1,67 @@
 # Commando File Manager
 
-A native Gio prototype for a keyboard-oriented, multi-panel file manager.
-The light-theme window defaults to 800 × 480 and browses three independent directories, with
-one file list per panel and compact path and status bars. It bundles JetBrains
-Mono.
+A lightweight native file manager with three independent directory panels and
+keyboard navigation. Built with Gio, with a compact monospace interface and
+bundled JetBrains Mono.
 
-Colors, text sizes, and the bundled font are defined in
-[`internal/app/theme.go`](internal/app/theme.go). Edit `defaultTheme` and rebuild
-to adjust the appearance.
-Header/footer and scrollbar colors are independent. `RowPaddingVertical` adds
-space above and below each line; rows grow with the measured font height and
-keep the text vertically centered. `RowPaddingHorizontal` controls side spacing.
+## Build and Run
 
-Open `dist/commando.exe` on Windows, or run `op run` on a graphical Linux desktop.
+The commands below use Go and Opcode (`op`). The Windows build also requires
+MinGW-w64's `x86_64-w64-mingw32-windres` resource compiler.
 
-- Up/Down selects a file; Left/Right or Shift+Tab/Tab switches panels without
-  wrapping. Tab/Shift+Tab keep focus in the location editor while editing.
+```sh
+op build-windows
+```
+
+Run `dist/commando.exe` on Windows. On a graphical Linux desktop, use `op run`.
+Supply up to three folder paths to choose the starting locations; omitted panels
+use the first supplied folder. Without arguments, saved locations are restored,
+or panels start at home.
+
+## Keyboard Navigation
+
+- Up/Down selects a file; Home/End and Page Up/Down navigate longer lists.
+- Left/Right or Shift+Tab/Tab switches panels without wrapping.
 - Ctrl+Left/Right opens the selected folder in the adjacent panel and moves
-  focus there. The source panel stays in place; the outer edges do not wrap.
-- Type a filename prefix to select it, without filtering the list. Matching is
-  case-insensitive; the footer shows the prefix. Escape or a one-second pause
-  clears it. Backspace always goes to the parent when the file list is focused.
-- Enter opens folders or opens files in their associated application. File-opening
-  failures are silent for now.
-- Alt+D edits the active panel path. Enter navigates; Escape cancels. Relative
-  paths resolve from the current folder.
-- On Windows, `d`, `d:`, and `D:\` open the drive root. Use `.\d` for a relative
-  folder named `d`; `\Projects` starts at the current drive's root.
-- Backspace at a drive root shows the drive list in that panel. Enter opens
-  the selected drive; returning selects the drive you just left. Backspace
-  in the drive list stays there.
-- Going up selects the folder you just left.
-- Each panel keeps its own selection and scroll position.
-- Home/End and Page Up/Down navigate longer lists.
-- Mouse selection, wheel scrolling, and scrollbars also work.
-- Alt+Enter fullscreen switching is disabled.
+  focus there, preserving the source panel. The outer edges do not wrap.
+- Type a filename prefix to select it without filtering. Matching is
+  case-insensitive; Escape or a one-second pause clears the prefix.
+- Enter opens a folder or opens a file in its associated application.
+- Alt+D edits the active location. Enter navigates; Escape cancels.
+  Tab/Shift+Tab keep focus in the location editor while editing.
+- Relative paths resolve from the current folder. On Windows, `d`, `d:`, and
+  `D:\` open the drive root; `.\d` opens a relative folder named `d`, and
+  `\Projects` starts at the current drive's root.
+- Backspace goes to the parent folder and selects the folder just left.
+  At a drive root, it shows drives in the same panel. Enter opens a drive;
+  returning selects the drive just left.
 
-The window position, size, maximized state, panel locations, and active panel
-are saved on close and restored at startup. On Windows, state is stored in
-`%LOCALAPPDATA%\Commando\state.json`. Panels start at home on the first run.
-Supply up to three folders with `op run /path/one /path/two /path/three` to
-override saved locations; omitted panels use the first supplied folder.
-Folders appear first, followed by files, in name order. Directory reads
-run in the background; a failed read shows an inline error and keeps the listing.
+Each panel keeps its own selection and scroll position. Mouse selection, wheel
+scrolling and scrollbars are supported. Directory reads run in the background;
+a failed read shows an inline error and retains the listing.
 
-This is a browsing prototype. Copy/move, tabs, and the modal command palette
-are not implemented.
-Three panels is the prototype choice; the product's default of two or three
-remains open. See [the project brief](docs/project-brief.md).
+## Appearance and Saved State
 
-`op check` formats, vets, and tests the app. `op build-windows` builds the Windows
-amd64 GUI executable with its placeholder icon. `op preview` renders
-`tmp/preview.png` through the same Gio layout using fixed sample entries,
+Colors, text sizes, the bundled font and row padding are defined in
+[`internal/app/theme.go`](internal/app/theme.go). Edit `defaultTheme` and rebuild
+to adjust the appearance. Rows grow with the font height and center their text.
+
+Window position, size, maximized state, panel locations and the active panel are
+saved on close. Windows stores state in `%LOCALAPPDATA%\Commando\state.json`.
+
+## Development
+
+`op check` formats, vets and tests the app. `op preview` renders
+`tmp/preview.png` through the same Gio layout with fixed sample entries,
 without reading or writing saved state.
 
-For this VM's Wayland/OpenGL build:
+For Linux environments using Wayland/OpenGL without Vulkan or X11 support:
 
 ```sh
 GOFLAGS='-tags=novulkan,nox11' op check
 EGL_PLATFORM=surfaceless GOFLAGS='-tags=novulkan,nox11' op preview
-op build-windows
 ```
 
 The bundled [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) font
-license is in `internal/app/fonts/OFL.txt` and embedded as a Windows resource
-in `commando.exe`. The `dist/` folder contains only the executable.
+license is in [`internal/app/fonts/OFL.txt`](internal/app/fonts/OFL.txt) and
+embedded as a Windows resource in `commando.exe`.
