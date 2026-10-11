@@ -1,0 +1,161 @@
+package app
+
+import (
+	"errors"
+	"testing"
+	"time"
+	"unicode/utf8"
+
+	"gioui.org/f32"
+	"gioui.org/io/key"
+	"gioui.org/io/pointer"
+	"github.com/dannyben/commando/internal/feedback"
+)
+
+func TestFeedbackNavigationDismissesWithoutConsumingInput(t *testing.T) {
+	v := newPreviewView()
+	send, advance := panelInputFrames(v)
+	p := &v.panels[0]
+	selected, position := p.selected, p.list.Position
+	v.showFeedback(0, feedback.Success, "Renamed")
+	send()
+	advance(time.Hour)
+	if p.feedback.Current() == nil || v.active != 0 || p.selected != selected || p.list.Position != position || len(p.marks) != 3 {
+		t.Fatal("feedback expired or changed panel state")
+	}
+	send(pressed(key.NameRightArrow))
+	if p.feedback.Current() != nil || v.active != 1 {
+		t.Fatal("dismissal consumed panel navigation")
+	}
+}
+
+func TestFeedbackPreviewShortcutsRemoved(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	for _, e := range []key.Event{pressed(key.NameF12), modified(key.NameF12, key.ModShift)} {
+		send(e)
+		if v.panels[0].feedback.Current() != nil {
+			t.Fatal("removed shortcut still emits a preview message")
+		}
+	}
+}
+
+func TestFeedbackKeysStayInEditors(t *testing.T) {
+	for _, name := range []string{"location", "rename"} {
+		t.Run(name, func(t *testing.T) {
+			v := newPreviewView()
+			v.nativeKeys = &nativeKeyInput{invalidate: func() {}}
+			send, advance := panelInputFrames(v)
+			if name == "location" {
+				send(modified("D", key.ModAlt))
+			} else {
+				send(pressed(key.NameF2))
+			}
+			editor := v.activeEditor()
+			before := editor.Text()
+			first, last := editor.Selection()
+			selected := v.panels[0].selected
+			v.showFeedback(v.active, feedback.Info, "Reading folder")
+			send()
+			gotFirst, gotLast := editor.Selection()
+			if v.activeEditor() != editor || editor.Text() != before || gotFirst != first || gotLast != last || v.panels[0].selected != selected || v.panels[0].feedback.Current() == nil {
+				t.Fatal("feedback changed editor or selection")
+			}
+			advance(time.Second)
+			send(key.EditEvent{Range: key.Range{Start: 0, End: utf8.RuneCountInString(before)}, Text: "draft"})
+			if v.panels[0].feedback.Current() != nil || editor.Text() != "draft" {
+				t.Fatal("dismissal consumed text input")
+			}
+			v.showFeedback(v.active, feedback.Info, "Reading folder")
+			send()
+			// A native press notice must not consume the actual editor Ctrl+C.
+			v.nativeKeys.noticeInteraction()
+			send(modified("C", key.ModCtrl))
+			if v.panels[0].feedback.Current() != nil || v.activeEditor() != editor || editor.Text() != "draft" {
+				t.Fatal("editor command did not dismiss safely")
+			}
+			v.showFeedback(v.active, feedback.Info, "Reading folder")
+			send()
+			send(pressed(key.NameEscape))
+			if v.panels[0].feedback.Current() != nil || v.activeEditor() != nil {
+				t.Fatal("Escape did not both dismiss and cancel")
+			}
+		})
+	}
+}
+
+func TestFeedbackClickObserverDoesNotConsumeClick(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	v.showFeedback(v.active, feedback.Info, "Reading folder")
+	send()
+	position := f32.Pt(330, 110)
+	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: position})
+	send(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: position})
+	if v.panels[0].feedback.Current() != nil || v.active != 1 || v.panels[1].selected != 1 {
+		t.Fatal("click was swallowed by feedback")
+	}
+	v.showFeedback(v.active, feedback.Info, "Reading folder")
+	send()
+	send(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: f32.Pt(340, 120)})
+	if v.panels[1].feedback.Current() == nil {
+		t.Fatal("mere pointer movement dismissed feedback")
+	}
+	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(340, 465)})
+	if v.panels[1].feedback.Current() != nil {
+		t.Fatal("click on footer did not dismiss")
+	}
+}
+
+func TestFeedbackUnknownKeyDismissesButReleaseDoesNot(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	v.showFeedback(v.active, feedback.Info, "Reading folder")
+	send()
+	send(key.Event{Name: key.NameF1, State: key.Release})
+	if v.panels[0].feedback.Current() == nil {
+		t.Fatal("release dismissed feedback")
+	}
+	send(pressed(key.NameF1))
+	if v.panels[0].feedback.Current() != nil {
+		t.Fatal("unused key did not dismiss")
+	}
+}
+
+func TestReadFeedbackDismissalDoesNotReappearFromStoredError(t *testing.T) {
+	v := newPreviewView()
+	send, advance := panelInputFrames(v)
+	p := &v.panels[0]
+	v.acceptLoad(loadResult{request: loadRequest{panel: 0}, err: errors.New("read failed")})
+	send()
+	if p.feedback.Current() == nil || p.feedback.Current().Kind != feedback.Error {
+		t.Fatal("read failure did not emit feedback")
+	}
+	advance(time.Hour)
+	if p.feedback.Current() == nil {
+		t.Fatal("error expired without interaction")
+	}
+	send(pressed(key.NameF1))
+	if p.feedback.Current() != nil || p.err == nil {
+		t.Fatal("dismissal changed read result or failed to dismiss")
+	}
+	if status, failed := p.status(); failed || status != "3 marked" {
+		t.Fatalf("normal footer did not resume: %q %v", status, failed)
+	}
+	advance(time.Hour)
+	if p.feedback.Current() != nil {
+		t.Fatal("stored read error resurrected dismissed message")
+	}
+}
+
+func TestCompletedReadDoesNotEraseResultFeedback(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	v.showFeedback(v.active, feedback.Info, "Reading folder")
+	send()
+	message := v.panels[0].feedback.Current()
+	v.acceptLoad(loadResult{request: loadRequest{panel: 0}})
+	if v.panels[0].feedback.Current() != message {
+		t.Fatal("completion erased an unrelated result")
+	}
+}

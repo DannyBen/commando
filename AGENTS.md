@@ -9,6 +9,7 @@ module/executable and `Commando` for the window title and data-folder name.
 - `main.go`: application entrypoint.
 - `internal/app`: UI, keyboard input, navigation, window integration and state.
 - `internal/browser`: directory reads, drive enumeration and file opening.
+- `internal/feedback`: contextual message lifecycle and animation, without Gio.
 - `internal/app/theme.go`: colors, typography, font and row padding.
 - `scripts/build-windows` and `scripts/commando.rc`: Windows build and resources.
 - `dist/`: generated executable only; previews belong in `tmp/`.
@@ -31,6 +32,14 @@ module/executable and `Commando` for the window title and data-folder name.
   cancels the draft. Keep Tab in the editor. Never replace an existing entry.
   Run the mutation through the directory worker; failures use the panel footer
   and retain the editor. Preserve marks and selection after reordering.
+- Feedback owns the entire contextual panel footer, including the count area.
+  Use fixed character timing, binary off/on blinks, then hold until interaction;
+  never expire messages on a timer. Dismissing input must still perform its normal
+  action, and message-producing actions must retain their result. Progress also
+  clears on completion. Route operation feedback through internal/feedback.
+  Keep semantic colors and independent per-kind animation profiles in theme.go;
+  all kinds currently use the same timing. Preserve editor text, selection and
+  focus. Observe native Windows editor keys without consuming them.
 - Location and filename editors share EditorText and TextSelection colors.
   Support Shift+Insert paste through the native Insert bridge on Windows and
   through Gio key events elsewhere; keep browsing marks separate from editors.
@@ -39,7 +48,7 @@ module/executable and `Commando` for the window title and data-folder name.
 - Ctrl+Left/Right opens the selected folder, parent row or drive in the adjacent
   panel and moves focus there. Preserve the source listing, selection and scroll.
   Files, outer edges and busy panels produce no action. Failed reads retain the
-  destination listing and show its inline error.
+  destination listing and show its footer error.
 - On Windows, a bare ASCII drive letter with an optional colon opens its root
   (`d`/`d:` -> `D:\`). Explicit relative paths such as `.\d` retain their meaning.
 - Directory reads run off the UI thread through one worker. Keep file-opening

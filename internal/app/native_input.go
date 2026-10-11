@@ -14,6 +14,25 @@ type nativeKeyInput struct {
 	mu         sync.Mutex
 	events     []key.Event
 	invalidate func()
+	interacted bool
+}
+
+func (q *nativeKeyInput) noticeInteraction() {
+	q.mu.Lock()
+	q.interacted = true
+	q.mu.Unlock()
+	q.invalidate()
+}
+
+func (q *nativeKeyInput) takeInteraction() bool {
+	if q == nil {
+		return false
+	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	interacted := q.interacted
+	q.interacted = false
+	return interacted
 }
 
 func (q *nativeKeyInput) push(e key.Event) {

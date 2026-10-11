@@ -100,6 +100,7 @@ func (v *view) updateLocation(gtx layout.Context) {
 			break
 		}
 		if ke, ok := e.(key.Event); ok && ke.State == key.Press {
+			v.dismissFeedback()
 			if ke.Name == key.NameEscape {
 				v.stopLocation(gtx)
 				return
@@ -112,7 +113,11 @@ func (v *view) updateLocation(gtx layout.Context) {
 		if !ok {
 			return
 		}
+		if _, ok := e.(widget.ChangeEvent); ok {
+			v.dismissFeedback()
+		}
 		if submit, ok := e.(widget.SubmitEvent); ok {
+			v.dismissFeedback()
 			path := submit.Text
 			if path == "" || v.panels[v.active].loading {
 				return

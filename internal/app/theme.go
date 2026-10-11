@@ -3,10 +3,12 @@ package app
 import (
 	_ "embed"
 	"image/color"
+	"time"
 
 	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	"github.com/dannyben/commando/internal/feedback"
 )
 
 // Change this asset to choose a different bundled font.
@@ -22,6 +24,7 @@ type Theme struct {
 	TextSize, SmallTextSize unit.Sp
 	RowPaddingVertical      unit.Dp // Above and below the measured text height.
 	RowPaddingHorizontal    unit.Dp // Left and right of the row contents.
+	Feedback                feedback.Animations
 }
 
 type ThemeColors struct {
@@ -31,8 +34,17 @@ type ThemeColors struct {
 	Filename, Metadata                                 color.NRGBA
 	Selected, SelectedName, SelectedMetadata           color.NRGBA
 	TextSelection, Error                               color.NRGBA
+	Info, Success, Warning                             color.NRGBA
 	RenameRow, EditorText                              color.NRGBA
 	Scrollbar, ScrollbarHover, ScrollbarTrack          color.NRGBA
+}
+
+// Each kind starts with the same profile. The theme stores independent copies.
+var defaultFeedbackAnimation = feedback.Animation{
+	Enabled:        true,
+	CharacterDelay: 35 * time.Millisecond,
+	BlinkInterval:  160 * time.Millisecond,
+	Blinks:         2,
 }
 
 // Edit these values to adjust the application's theme, then rebuild.
@@ -57,6 +69,9 @@ var defaultTheme = Theme{
 		RenameRow:        rgb(0xffffff), // Surrounding row while renaming; match Surface to hide its highlight.
 		EditorText:       rgb(0x111111), // Shared by the location and filename editors, including selected text.
 		Error:            rgb(0xc00000),
+		Info:             rgb(0x3366cc),
+		Success:          rgb(0x008800),
+		Warning:          rgb(0xff8800),
 		Scrollbar:        rgb(0xcccccc),
 		ScrollbarHover:   rgb(0xaaaaaa),
 		ScrollbarTrack:   color.NRGBA{}, // Transparent; shows the panel surface.
@@ -66,6 +81,13 @@ var defaultTheme = Theme{
 	SmallTextSize:        12, // Column headings and panel footers.
 	RowPaddingVertical:   4,  // dp per side; row height grows with the font.
 	RowPaddingHorizontal: 14,
+	Feedback: feedback.Animations{
+		Enabled: true,
+		Info:    defaultFeedbackAnimation,
+		Success: defaultFeedbackAnimation,
+		Warning: defaultFeedbackAnimation,
+		Error:   defaultFeedbackAnimation,
+	},
 }
 
 func (t Theme) materialTheme() *material.Theme {

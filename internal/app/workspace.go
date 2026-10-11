@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/feedback"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -40,6 +42,7 @@ type panel struct {
 	err       error
 	prefix    string
 	prefixAt  time.Time
+	feedback  feedback.Channel
 }
 
 type view struct {
@@ -57,6 +60,7 @@ type view struct {
 	renameEditor      widget.Editor
 	nativeKeys        *nativeKeyInput
 	suppressSpaceText bool
+	feedbackPointer   bool
 }
 
 func newPreviewView() *view {
@@ -86,6 +90,8 @@ func newView(panels []panel) *view {
 }
 
 func (v *view) update(gtx layout.Context) {
+	v.updateFeedbackInput(gtx)
+	defer v.dismissUnhandledFeedbackKeys(gtx)
 	v.pollLoads()
 	if !v.started {
 		gtx.Execute(key.FocusCmd{Tag: &v.focus})
@@ -99,6 +105,7 @@ func (v *view) update(gtx layout.Context) {
 				if !ok {
 					break
 				}
+				v.dismissFeedback()
 				if v.renaming != nil {
 					if v.renaming.pending {
 						continue
@@ -118,6 +125,9 @@ func (v *view) update(gtx layout.Context) {
 	v.expirePrefix(gtx)
 	// Windows Insert uses the native bridge; route Shift+Insert to editor paste.
 	for _, ke := range v.nativeKeys.drain() {
+		if ke.State == key.Press {
+			v.dismissFeedback()
+		}
 		if editor := v.activeEditor(); editor != nil {
 			pasteWithInsert(gtx, editor, ke)
 		} else {
@@ -127,18 +137,22 @@ func (v *view) update(gtx layout.Context) {
 	if v.editing || v.renaming != nil {
 		// Consume Tab in the editor without changing its text or focus.
 		for {
-			if _, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift}); !ok {
+			e, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift})
+			if !ok {
 				break
+			}
+			if ke, ok := e.(key.Event); ok && ke.State == key.Press {
+				v.dismissFeedback()
 			}
 		}
 		if v.renaming != nil {
-			updateEditorPaste(gtx, &v.renameEditor)
+			v.updateEditorPaste(gtx, &v.renameEditor)
 			v.updateRename(gtx)
 			if v.renaming != nil {
 				return
 			}
 		} else {
-			updateEditorPaste(gtx, &v.location)
+			v.updateEditorPaste(gtx, &v.location)
 			v.updateLocation(gtx)
 		}
 		if v.editing {
@@ -175,6 +189,7 @@ func (v *view) update(gtx layout.Context) {
 			break
 		}
 		if edit, ok := e.(key.EditEvent); ok {
+			v.dismissFeedback()
 			if v.suppressSpaceText {
 				v.suppressSpaceText = false
 				if edit.Text == " " {
@@ -200,6 +215,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	if ke.State != key.Press {
 		return
 	}
+	v.dismissFeedback()
 	v.suppressSpaceText = false
 	p := &v.panels[v.active]
 	next := p.selected
@@ -318,7 +334,13 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 			return v.panel(gtx, i)
 		}))
 	}
-	return layout.Flex{}.Layout(gtx, children...)
+	dims := layout.Flex{}.Layout(gtx, children...)
+	area := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	event.Op(gtx.Ops, &v.feedbackPointer)
+	pass.Pop()
+	area.Pop()
+	return dims
 }
 
 func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
@@ -410,28 +432,13 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, max(gtx.Dp(30), smallTextHeight+gtx.Dp(12)), v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
-				status, failed := p.status()
-				if r := v.renaming; r != nil && r.panel == index {
-					if r.pending {
-						status, failed = "Renaming…", false
-					}
-					if r.err != nil {
-						status, failed = renameError(r.err), true
-					}
-				}
-				if index == v.active && p.prefix != "" {
-					status, failed = "> "+p.prefix, false
-				}
-				fg := v.appearance.Colors.Foreground
-				if failed {
-					fg = v.appearance.Colors.Error
-				}
-				return v.columns(gtx, entry{name: status,
-					size: fmt.Sprintf("%d / %d", p.selected+1, len(p.items))}, fg, v.appearance.Colors.Muted, v.appearance.SmallTextSize, gtx.Dp(84))
+				return v.footerContents(gtx, index)
 			}, false)
 		}),
 	)
 }
+
+func (p *panel) positionLabel() string { return fmt.Sprintf("%d / %d", p.selected+1, len(p.items)) }
 
 func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn) layout.Dimensions {
 	padding := max(0, v.appearance.RowPaddingHorizontal)

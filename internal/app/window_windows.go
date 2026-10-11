@@ -146,6 +146,14 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 	const wmSysChar, wmNCDestroy = 0x0106, 0x0082
 	const wmClose, wmDestroy, wmWindowPosChanged = 0x0010, 0x0002, 0x0047
 	const wmKeyDown, wmKeyUp, vkInsert = 0x0100, 0x0101, 0x2d
+	const wmSysKeyDown = 0x0104
+	if (message == wmKeyDown || message == wmSysKeyDown) && wParam != vkInsert {
+		if native, ok := nativeWindows.Load(hwnd); ok {
+			if keys := native.(*nativeWindow).keys; keys != nil {
+				keys.noticeInteraction()
+			}
+		}
+	}
 	if (message == wmKeyDown || message == wmKeyUp) && wParam == vkInsert {
 		if native, ok := nativeWindows.Load(hwnd); ok {
 			n := native.(*nativeWindow)

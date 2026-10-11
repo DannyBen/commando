@@ -11,6 +11,7 @@ import (
 
 	"gioui.org/io/key"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/feedback"
 )
 
 func replaceRename(v *view, text string) key.EditEvent {
@@ -156,6 +157,9 @@ func TestRenameFailureRetainsEditorAndCanRetry(t *testing.T) {
 	send()
 	if v.renaming == nil || !errors.Is(v.renaming.err, fs.ErrExist) || v.renameEditor.ReadOnly {
 		t.Fatal("collision did not retain editable field")
+	}
+	if message := v.panels[0].feedback.Current(); message == nil || message.Kind != feedback.Error || message.Text != "Name already exists" {
+		t.Fatal("collision did not use the animated feedback channel")
 	}
 	send(replaceRename(v, "../outside"))
 	send(pressed(key.NameReturn))

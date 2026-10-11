@@ -17,6 +17,7 @@ import (
 	"gioui.org/text"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/feedback"
 )
 
 type renameRequest struct{ oldName, newName string }
@@ -82,6 +83,7 @@ func (v *view) updateRename(gtx layout.Context) {
 			break
 		}
 		if ke, ok := e.(key.Event); ok && ke.State == key.Press && !r.pending {
+			v.dismissFeedback()
 			if ke.Name == key.NameF2 {
 				v.renameEditor.SetCaret(0, utf8.RuneCountInString(v.renameEditor.Text()))
 			} else {
@@ -97,8 +99,10 @@ func (v *view) updateRename(gtx layout.Context) {
 		}
 		switch e := e.(type) {
 		case widget.ChangeEvent:
+			v.dismissFeedback()
 			r.err = nil
 		case widget.SubmitEvent:
+			v.dismissFeedback()
 			if r.pending {
 				continue
 			}
@@ -108,13 +112,16 @@ func (v *view) updateRename(gtx layout.Context) {
 			}
 			if err := browser.ValidateName(e.Text); err != nil {
 				r.err = err
+				v.showFeedback(r.panel, feedback.Error, renameError(err))
 				continue
 			}
 			if v.loader == nil {
 				r.err = errors.ErrUnsupported
+				v.showFeedback(r.panel, feedback.Error, renameError(r.err))
 				continue
 			}
 			r.err, r.pending, v.renameEditor.ReadOnly = nil, true, true
+			v.panels[r.panel].feedback.Progress("Renaming")
 			v.loader.requests <- loadRequest{panel: r.panel, path: v.panels[r.panel].path,
 				rename: &renameRequest{oldName: r.oldName, newName: e.Text}}
 		}
@@ -128,10 +135,12 @@ func (v *view) acceptRename(result loadResult) {
 	}
 	r.pending, r.err, v.renameEditor.ReadOnly = false, result.err, false
 	if result.err != nil {
+		v.showFeedback(r.panel, feedback.Error, renameError(result.err))
 		return
 	}
 	request := result.request.rename
 	v.applyRename(result.request.path, request.oldName, request.newName)
+	v.showFeedback(r.panel, feedback.Success, "Renamed")
 	r.finished = true
 }
 

@@ -27,13 +27,16 @@ func pasteWithInsert(gtx layout.Context, editor *widget.Editor, ke key.Event) {
 	}
 }
 
-func updateEditorPaste(gtx layout.Context, editor *widget.Editor) {
+func (v *view) updateEditorPaste(gtx layout.Context, editor *widget.Editor) {
 	for {
 		e, ok := gtx.Event(key.Filter{Focus: editor, Name: insertKey, Required: key.ModShift})
 		if !ok {
 			return
 		}
 		if ke, ok := e.(key.Event); ok {
+			if ke.State == key.Press {
+				v.dismissFeedback()
+			}
 			pasteWithInsert(gtx, editor, ke)
 		}
 	}

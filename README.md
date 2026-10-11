@@ -39,7 +39,7 @@ or panels start at home.
 Each panel keeps its own selection and scroll position. Mouse selection, wheel
 scrolling and scrollbars are supported. Folders appear first, with names displayed
 without a trailing slash. The parent row is `..`. Directory reads run in the
-background; a failed read shows an inline error and retains the listing.
+background; a failed read shows an error in the panel footer and retains the listing.
 
 ## Metadata Column
 
@@ -78,6 +78,25 @@ in the panel footer and keeps the editor open for correction.
 Renaming keeps the item selected and preserves marks as the list reorders.
 Both the filename and location editors support Ctrl+C, Ctrl+X and Ctrl+V;
 Shift+Insert also pastes text.
+
+## Feedback
+
+Messages take over the panel footer, replacing its status and counts. They type
+at a fixed speed, blink fully off/on twice, then remain until the next key press
+or mouse click. That input still performs its normal action. Progress messages
+also clear when their operation finishes.
+
+Info is blue, success green, warnings orange and errors red. Feedback preserves
+editor text, selection and focus.
+
+`defaultTheme.Feedback` in [`internal/app/theme.go`](internal/app/theme.go)
+holds independent `Info`, `Success`, `Warning` and `Error` animation profiles.
+All start with a 35 ms `CharacterDelay`, 160 ms `BlinkInterval` and 2 `Blinks`.
+Set its `Enabled` to false to disable animation globally, or disable an individual
+profile. The corresponding theme colors define each kind's foreground.
+
+The toolkit-independent [`internal/feedback`](internal/feedback/README.md) package
+owns messages and animation; the app renders them in the contextual footer.
 
 ## Appearance and Saved State
 

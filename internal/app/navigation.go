@@ -1,15 +1,14 @@
 package app
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"path/filepath"
 	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/feedback"
 )
 
 func newBrowserView(paths []string, invalidate func()) *view {
@@ -47,6 +46,7 @@ func (v *view) load(index int, path, selectName string) {
 		return
 	}
 	p.loading, p.err = true, nil
+	p.feedback.Progress("Reading folder")
 	v.loader.requests <- loadRequest{panel: index, path: path, selectName: selectName}
 }
 
@@ -72,8 +72,10 @@ func (v *view) acceptLoad(result loadResult) {
 	p := &v.panels[result.request.panel]
 	p.loading, p.err = false, result.err
 	if result.err != nil {
+		v.showFeedback(result.request.panel, feedback.Error, readError(result.err))
 		return
 	}
+	p.feedback.Complete()
 	p.clearMarks()
 	p.prefix = ""
 	p.drives = result.directory.Drives
@@ -169,18 +171,8 @@ func (p *panel) itemCount() int {
 }
 
 func (p *panel) status() (string, bool) {
-	if p.loading {
-		return "Loading…", false
-	}
-	if p.err != nil {
-		switch {
-		case errors.Is(p.err, fs.ErrPermission):
-			return "Access denied", true
-		case errors.Is(p.err, fs.ErrNotExist):
-			return "Folder not found", true
-		default:
-			return "Cannot read folder", true
-		}
+	if message := p.feedback.Current(); message != nil {
+		return message.Text, message.Kind == feedback.Error
 	}
 	if p.drives {
 		return fmt.Sprintf("%d drives", len(p.items)), false
