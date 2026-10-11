@@ -58,6 +58,9 @@ func (v *view) refreshPanel() {
 }
 
 func (v *view) queueLoad(request loadRequest) {
+	if v.actions != nil && v.actions.panel == request.panel || v.pendingFileConflict != nil && v.pendingFileConflict.request.panel == request.panel {
+		return
+	}
 	p := &v.panels[request.panel]
 	if v.loader == nil || p.loading {
 		return

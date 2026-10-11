@@ -82,13 +82,17 @@ func Run() error {
 }
 
 func renderPNG(path string) error {
+	return renderViewPNG(path, newPreviewView())
+}
+
+func renderViewPNG(path string, view *view) error {
 	w, err := headless.NewWindow(windowWidth, windowHeight)
 	if err != nil {
 		return err
 	}
 	defer w.Release()
 	var ops op.Ops
-	newPreviewView().layout(layout.Context{
+	view.layout(layout.Context{
 		Ops: &ops, Now: time.Now(),
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
 		Constraints: layout.Exact(image.Pt(windowWidth, windowHeight)),

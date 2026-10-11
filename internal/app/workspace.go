@@ -47,26 +47,28 @@ type panel struct {
 }
 
 type view struct {
-	appearance        Theme
-	theme             *material.Theme
-	panels            []panel
-	active            int
-	focus             bool
-	started           bool
-	loader            *directoryLoader
-	openFile          func(string) error
-	editing           bool
-	location          widget.Editor
-	naming            *nameSession
-	nameEditor        widget.Editor
-	nativeKeys        *nativeKeyInput
-	suppressSpaceText bool
-	feedbackPointer   bool
-	cutClipboard      browser.FileClipboard
-	cutLocations      []string
-	cutPanelPaths     []string
-	transferPending   bool
-	clipboardSequence func() uint32
+	appearance          Theme
+	theme               *material.Theme
+	panels              []panel
+	active              int
+	focus               bool
+	started             bool
+	loader              *directoryLoader
+	openFile            func(string) error
+	editing             bool
+	location            widget.Editor
+	naming              *nameSession
+	nameEditor          widget.Editor
+	nativeKeys          *nativeKeyInput
+	suppressSpaceText   bool
+	feedbackPointer     bool
+	cutClipboard        browser.FileClipboard
+	cutLocations        []string
+	cutPanelPaths       []string
+	transferPending     bool
+	clipboardSequence   func() uint32
+	actions             *inlineActionSession
+	pendingFileConflict *loadResult
 }
 
 func newPreviewView() *view {
@@ -101,6 +103,7 @@ func (v *view) update(gtx layout.Context) {
 	v.updateFeedbackInput(gtx)
 	defer v.dismissUnhandledFeedbackKeys(gtx)
 	v.pollLoads()
+	v.offerFileConflict()
 	if !v.started {
 		gtx.Execute(key.FocusCmd{Tag: &v.focus})
 		v.started = gtx.Focused(&v.focus)
@@ -114,9 +117,16 @@ func (v *view) update(gtx layout.Context) {
 					break
 				}
 				v.dismissFeedback()
+				if v.inlineActionRow(pi, ri) {
+					v.clickInlineAction(gtx, pi, ri)
+					continue
+				}
 				storedRow := v.storedRow(pi, ri)
 				if storedRow < 0 {
 					continue
+				}
+				if v.actions != nil {
+					v.cancelInlineActions()
 				}
 				if v.naming != nil {
 					if v.naming.pending {
@@ -171,6 +181,7 @@ func (v *view) update(gtx layout.Context) {
 			return
 		}
 	}
+	v.offerFileConflict()
 	for {
 		e, ok := gtx.Event(
 			key.FocusFilter{Target: &v.focus},
@@ -208,6 +219,9 @@ func (v *view) update(gtx layout.Context) {
 		}
 		if edit, ok := e.(key.EditEvent); ok {
 			v.dismissFeedback()
+			if v.actions != nil && v.actions.panel == v.active {
+				continue
+			}
 			if v.suppressSpaceText {
 				v.suppressSpaceText = false
 				if edit.Text == " " {
@@ -235,6 +249,10 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	}
 	v.dismissFeedback()
 	v.suppressSpaceText = false
+	if v.actions != nil && v.actions.panel == v.active {
+		v.inlineActionKey(ke)
+		return
+	}
 	p := &v.panels[v.active]
 	next := p.selected
 	page := max(1, p.list.Position.Count-1)
@@ -409,24 +427,31 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			draft := v.draftRow(index)
-			count := len(p.items)
-			if draft >= 0 {
-				count++
-			}
+			transient, extra := v.transientRows(index)
+			count := len(p.items) + extra
 			if count == 0 {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			if p.reveal {
+			if p.reveal || v.actions != nil && v.actions.panel == index {
 				selected := p.selected
-				if draft >= 0 {
-					selected = draft
+				end := selected + 1
+				if transient >= 0 {
+					selected, end = transient, transient+extra
+					if a := v.actions; a != nil && a.panel == index {
+						if a.subjectRow >= 0 {
+							selected = a.subjectRow
+						}
+						if (end-selected)*rowHeight > gtx.Constraints.Max.Y {
+							selected = transient + len(a.headers) + a.selected
+							end = selected + 1
+						}
+					}
 				}
 				h := rowHeight
 				top := p.list.Position.First*h + p.list.Position.Offset
 				if y := selected * h; y < top {
 					p.list.ScrollTo(selected)
-				} else if bottom := (selected + 1) * h; bottom > top+gtx.Constraints.Max.Y {
+				} else if bottom := end * h; bottom > top+gtx.Constraints.Max.Y {
 					top = max(0, bottom-gtx.Constraints.Max.Y)
 					p.list.Position.First, p.list.Position.Offset = top/h, top%h
 				}
@@ -444,24 +469,29 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if p.rows[row] == nil {
 					p.rows[row] = new(widget.Clickable)
 				}
+				if v.inlineActionRow(index, row) {
+					return p.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions { return v.inlineActionContents(gtx, row, rowHeight) })
+				}
 				contents := func(gtx layout.Context) layout.Dimensions {
 					size := image.Pt(gtx.Constraints.Max.X, rowHeight)
 					bg := v.appearance.Colors.Surface
 					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Metadata
 					if naming {
 						bg = v.appearance.Colors.NameRow
-					} else if storedRow == p.selected && index == v.active && draft < 0 {
+					} else if storedRow == p.selected && index == v.active && transient < 0 {
 						bg = v.appearance.Colors.Selected
 						nameColor, sizeColor = v.appearance.Colors.SelectedName, v.appearance.Colors.SelectedMetadata
 					}
 					if !naming && v.cutEntry(index, storedRow) {
 						nameColor = v.appearance.Colors.CutFilename
-						if storedRow == p.selected && index == v.active && draft < 0 {
+						if storedRow == p.selected && index == v.active && transient < 0 {
 							nameColor = v.appearance.Colors.SelectedCutFilename
 						}
 					}
 					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
-					if p.marks[storedRow] {
+					if naming && v.naming.draft() {
+						paint.FillShape(gtx.Ops, v.appearance.Colors.InlineEdge, clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
+					} else if p.marks[storedRow] {
 						paint.FillShape(gtx.Ops, v.appearance.Colors.Marked,
 							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
 					} else if storedRow == p.selected && index != v.active {

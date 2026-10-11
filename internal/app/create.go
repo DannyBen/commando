@@ -57,6 +57,21 @@ func (p *panel) insertCreatedEntry(file browser.Entry, selectCreated bool) {
 	p.rows = make(map[int]*widget.Clickable)
 }
 
+// Refresh an overwritten file's metadata without treating its cached row as a
+// removed entry. Marks, selection and viewport belong to its destination path.
+func (p *panel) applyTransferredEntry(item browser.TransferredItem) (inserted bool) {
+	if item.Replaced {
+		for row, existing := range p.items {
+			if samePath(existing.file.Name, item.Entry.Name) && existing.file.Directory == item.Entry.Directory {
+				p.items[row] = entry{name: item.Entry.Name, size: formatSize(item.Entry.Bytes), file: item.Entry}
+				return false
+			}
+		}
+	}
+	p.insertCreatedEntry(item.Entry, false)
+	return true
+}
+
 func (p *panel) shiftRows(row, delta int) {
 	marks := make(map[int]bool, len(p.marks))
 	for index, marked := range p.marks {

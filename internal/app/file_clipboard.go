@@ -20,7 +20,11 @@ type fileClipboardRequest struct {
 	locations []string
 }
 
-type transferRequest struct{ locations []string }
+type transferRequest struct {
+	locations []string
+	snapshot  *browser.FileClipboard
+	overwrite *browser.FileConflict
+}
 
 func (v *view) fileOperationLocations() []string {
 	paths := make([]string, len(v.panels))
@@ -104,7 +108,13 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 		result.clipboard, result.err = l.writeClipboard(paths, capture.move)
 		return result
 	}
-	snapshot, err := l.readClipboard()
+	var snapshot browser.FileClipboard
+	var err error
+	if request.transfer.snapshot != nil {
+		snapshot = *request.transfer.snapshot
+	} else {
+		snapshot, err = l.readClipboard()
+	}
 	if err != nil {
 		result.err = err
 		return result
@@ -115,7 +125,19 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	}
 	result.clipboard = snapshot
 	result.transferMove = snapshot.Move
-	result.transferred, result.err = l.transfer(snapshot.Paths, request.path, snapshot.Move)
+	if conflict := request.transfer.overwrite; conflict != nil {
+		result.transferred, result.err = l.overwrite(conflict, snapshot.Move)
+	} else {
+		result.transferred, result.err = l.transfer(snapshot.Paths, request.path, snapshot.Move)
+	}
+	if len(snapshot.Paths) == 1 && len(result.transferred.Items) == 0 && (errors.Is(result.err, fs.ErrExist) || errors.Is(result.err, browser.ErrConflictChanged)) {
+		conflict, inspectErr := browser.InspectFileConflict(snapshot.Paths[0], request.path)
+		if inspectErr == nil {
+			result.fileConflict = conflict
+		} else if errors.Is(inspectErr, browser.ErrSameTransferFile) {
+			result.err = inspectErr
+		}
+	}
 	var moved []string
 	for _, item := range result.transferred.Items {
 		parent, _ := resolveFileLocation(filepath.Dir(item.Source))
@@ -149,6 +171,12 @@ func (v *view) acceptFileOperation(result loadResult) {
 		return
 	}
 	v.transferPending = false
+	if result.fileConflict != nil {
+		v.transferPending = true
+		v.pendingFileConflict = &result
+		v.offerFileConflict()
+		return
+	}
 	locations = result.request.transfer.locations
 	for pi := range v.panels {
 		other := &v.panels[pi]
@@ -167,9 +195,9 @@ func (v *view) acceptFileOperation(result loadResult) {
 			}
 			if samePath(result.locations[pi], result.transferred.Directory) {
 				first := other.list.Position.First
-				other.insertCreatedEntry(item.Entry, false)
+				inserted := other.applyTransferredEntry(item)
 				// Preserve the visible item when insertion sorts above the viewport.
-				if first > 0 {
+				if inserted && first > 0 {
 					for row, entry := range other.items {
 						if entry.file.Name == item.Entry.Name && row <= first {
 							other.list.Position.First++
@@ -263,6 +291,10 @@ func fileTransferError(err error) string {
 		message = "Clipboard contains overlapping items"
 	case errors.Is(err, browser.ErrSourceChanged):
 		message = "Source changed; copied item retained"
+	case errors.Is(err, browser.ErrSameTransferFile):
+		message = "Source and destination are the same file"
+	case errors.Is(err, browser.ErrConflictChanged):
+		message = "Files changed; choose again"
 	case errors.Is(err, errors.ErrUnsupported):
 		message = "Unsupported file type"
 	}

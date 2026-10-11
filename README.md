@@ -110,11 +110,21 @@ successful moves remove completed items from the cut selection. Failed and
 unprocessed items remain available for retry. Replacing the clipboard clears
 the cut appearance.
 
-Existing destination names refuse the entire batch before it starts; folders
-are never merged and files are never overwritten. A runtime failure stops the
-batch and reports completed transfers in the existing footer. Transfers run in
-the background, retaining panel focus and surviving marks and current items.
-There is no transfer progress or cancellation interface yet.
+A single regular-file collision inserts Overwrite and Cancel directly beneath
+the conflicting destination file, keeping the file and both choices visible
+together. Overwrite is selected initially. Up/Down selects an
+option; Enter applies it; Escape cancels. Overwrite, Cancel and Escape leave the
+target file selected. Clicking an option selects it, and clicking an ordinary
+file row cancels and selects that row. Left/Right and Tab/Shift+Tab let you inspect
+other panels while the choice remains in place. Overwrite replaces the existing
+file without recycling it. If either file changes while awaiting a decision,
+the replacement is refused and a fresh choice is offered when possible.
+
+Batch collisions and folder collisions still refuse the transfer before it
+starts. A runtime failure stops the batch and reports completed transfers in
+the existing footer. Transfers run in the background, retaining panel focus,
+surviving marks and current items. There is no transfer progress or cancellation
+interface yet.
 
 ## Recycling Files and Folders
 

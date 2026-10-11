@@ -16,9 +16,10 @@ var (
 )
 
 type TransferredItem struct {
-	Source string
-	Entry  Entry
-	Moved  bool
+	Source   string
+	Entry    Entry
+	Moved    bool
+	Replaced bool
 }
 
 type TransferResult struct {

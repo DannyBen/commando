@@ -30,6 +30,7 @@ type loadResult struct {
 	sourceParents []string
 	clipboardErr  error
 	transferMove  bool
+	fileConflict  *browser.FileConflict
 }
 
 type directoryLoader struct {
@@ -41,6 +42,7 @@ type directoryLoader struct {
 	writeClipboard    func([]string, bool) (browser.FileClipboard, error)
 	completeClipboard func(browser.FileClipboard, []string) (browser.FileClipboard, error)
 	transfer          func([]string, string, bool) (browser.TransferResult, error)
+	overwrite         func(*browser.FileConflict, bool) (browser.TransferResult, error)
 }
 
 // One worker keeps reads and mutations off the UI thread and avoids concurrent
@@ -55,6 +57,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		writeClipboard:    browser.WriteFileClipboard,
 		completeClipboard: browser.CompleteFileClipboard,
 		transfer:          browser.Transfer,
+		overwrite:         browser.OverwriteFile,
 	}
 	go func() {
 		for {

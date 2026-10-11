@@ -81,9 +81,25 @@ module/executable and `Commando` for the window title and data-folder name.
   replace a newer clipboard. Cut filename colors belong to the shared file list
   and remain independent of marks. Preserve panel focus, current-item identity,
   surviving marks, and open moved descendants. Preflight the whole batch for
-  destination names; never overwrite or merge, including late conflicts. Stop
-  at runtime failure with partial results in the existing footer. Transfer
-  progress and cancellation require a separate agreed interaction model.
+  destination names. One regular-file collision offers shared inline action
+  rows directly beneath its destination file: Overwrite (default), Cancel.
+  Omit headings and the repeated filename; keep the file and both choices
+  visible together. Ensure the inspected file exists in the cached listing
+  before attaching its actions. Up/Down selects, Enter applies, Escape
+  or clicking an ordinary row cancels; clicking an option selects it. Closing
+  actions with Overwrite, Cancel or Escape selects and reveals their subject
+  file. An ordinary-row click selects the clicked row instead. Keep the
+  choice anchored while Left/Right or Tab/Shift+Tab switches panels. Retain the
+  presented clipboard snapshot, stage the replacement fully and recheck file
+  identity and metadata before replacing. Overwritten files are not recycled.
+  Batch and folder collisions still refuse the transfer. Stop at runtime failure
+  with partial results in the existing footer. Transfer progress and cancellation
+  require a separate agreed interaction model.
+- Inline actions are temporary rows in the shared file list, separate from its
+  entries, marks, current item and persisted state. Use full-contrast action text
+  and the normal selection colors. InlineEdge also identifies new-name drafts;
+  keep editor placeholders distinct from actionable options. Defer arriving
+  choices until an active editor closes, preserving its text, selection and focus.
 - Delete recycles marked entries, otherwise the current file/folder, through the
   single worker. Exclude parents and drives; keep Delete in editors and ignore
   modifier variants. Resolve SUBST backing paths freshly and verify identity.

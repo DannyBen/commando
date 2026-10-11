@@ -213,12 +213,12 @@ func (v *view) draftRow(panel int) int {
 }
 
 func (v *view) storedRow(panel, row int) int {
-	if draft := v.draftRow(panel); draft >= 0 {
-		if row == draft {
+	if start, count := v.transientRows(panel); start >= 0 {
+		if row >= start && row < start+count {
 			return -1
 		}
-		if row > draft {
-			return row - 1
+		if row >= start+count {
+			return row - count
 		}
 	}
 	return row
