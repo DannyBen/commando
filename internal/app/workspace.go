@@ -110,6 +110,8 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: key.NameDownArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameRightArrow},
+			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: key.NameRightArrow, Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameHome},
 			key.Filter{Focus: &v.focus, Name: key.NameEnd},
 			key.Filter{Focus: &v.focus, Name: key.NamePageUp},
@@ -139,13 +141,17 @@ func (v *view) update(gtx layout.Context) {
 		case key.NameEscape:
 			p.prefix = ""
 			continue
-		case key.NameLeftArrow:
-			p.prefix = ""
-			v.active = max(0, v.active-1)
-			continue
-		case key.NameRightArrow:
-			p.prefix = ""
-			v.active = min(len(v.panels)-1, v.active+1)
+		case key.NameLeftArrow, key.NameRightArrow:
+			direction := 1
+			if ke.Name == key.NameLeftArrow {
+				direction = -1
+			}
+			if ke.Modifiers&key.ModCtrl != 0 {
+				v.openAdjacent(direction)
+			} else {
+				p.prefix = ""
+				v.active = max(0, min(len(v.panels)-1, v.active+direction))
+			}
 			continue
 		case key.NameReturn, key.NameEnter:
 			p.prefix = ""

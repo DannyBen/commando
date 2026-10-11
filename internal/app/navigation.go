@@ -136,6 +136,28 @@ func (v *view) parentFolder() {
 	v.load(v.active, parent, filepath.Base(p.path))
 }
 
+func (v *view) openAdjacent(direction int) {
+	target := v.active + direction
+	if target < 0 || target >= len(v.panels) || v.loader == nil || v.panels[target].loading {
+		return
+	}
+	p := &v.panels[v.active]
+	if p.loading || p.selected < 0 || p.selected >= len(p.items) {
+		return
+	}
+	file := p.items[p.selected].file
+	if !file.Directory {
+		return
+	}
+	path := file.Path
+	if path == "" {
+		path = filepath.Join(p.path, file.Name)
+	}
+	v.load(target, path, "")
+	p.prefix, v.panels[target].prefix = "", ""
+	v.active = target
+}
+
 func (p *panel) itemCount() int {
 	count := len(p.items)
 	if count > 0 && p.items[0].file.Parent {

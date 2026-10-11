@@ -12,6 +12,12 @@ Backspace to go up, keyboard file/panel navigation,
 nonblocking directory loading, inline read errors, and ordinary scrolling.
 Fixed sample data remains only for the reproducible headless preview.
 
+Todo 32: Ctrl+Left/Right opens the selected folder (including a parent row or
+drive) in the adjacent panel and moves focus there, preserving the source
+listing/selection/scroll. No wrapping for v0.1.0. At an outer edge, on a file,
+or while either involved panel is loading, do nothing. Read errors appear in
+the destination and retain its previous listing, with focus there.
+
 Todo 35: in the Windows location editor, bare ASCII drive letters with an
 optional colon always open the drive root (`d`/`d:` -> `D:\`). Explicit relative
 paths such as `.\d` retain their meaning. Other operating systems keep ordinary

@@ -15,6 +15,8 @@ keep the text vertically centered. `RowPaddingHorizontal` controls side spacing.
 Open `dist/control.exe` on Windows, or run `op run` on a graphical Linux desktop.
 
 - Up/Down selects a file; Left/Right switches panels.
+- Ctrl+Left/Right opens the selected folder in the adjacent panel and moves
+  focus there. The source panel stays in place; the outer edges do not wrap.
 - Type a filename prefix to select it, without filtering the list. Matching is
   case-insensitive; the footer shows the prefix. Escape or a one-second pause
   clears it. Backspace always goes to the parent when the file list is focused.
