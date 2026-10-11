@@ -65,6 +65,20 @@ Each panel retains its marks when switching panels. Enter opens only the current
 row. Entering a directory clears marks; failed reads retain them. Drives cannot
 be marked.
 
+## Renaming
+
+F2 edits the current file or folder name inline, even when other items are marked.
+For files, the name before the final extension is selected; folders and names
+such as `.gitignore` are selected in full. The extension remains editable.
+Press F2 again to select the entire filename, including its extension.
+Enter applies; Escape or clicking another row cancels. Tab/Shift+Tab keep editor
+focus. An existing destination is never replaced; a failed rename shows an error
+in the panel footer and keeps the editor open for correction.
+
+Renaming keeps the item selected and preserves marks as the list reorders.
+Both the filename and location editors support Ctrl+C, Ctrl+X and Ctrl+V;
+Shift+Insert also pastes text.
+
 ## Appearance and Saved State
 
 Colors, text sizes, the bundled font and row padding are defined in
@@ -72,6 +86,9 @@ Colors, text sizes, the bundled font and row padding are defined in
 to adjust the appearance. Rows grow with the font height and center their text.
 `Marked` controls the mark bars independently of filename colors.
 `Metadata` and `SelectedMetadata` control the optional column's text colors.
+`RenameRow` controls the surrounding row during inline rename; matching `Surface`
+hides the row highlight. `EditorText` controls text in both the filename and
+location editors; `TextSelection` controls their shared selection background.
 
 Window position, size, maximized state, panel locations and the active panel are
 saved on close. Windows stores state in `%LOCALAPPDATA%\Commando\state.json`.

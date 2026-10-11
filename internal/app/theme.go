@@ -31,6 +31,7 @@ type ThemeColors struct {
 	Filename, Metadata                                 color.NRGBA
 	Selected, SelectedName, SelectedMetadata           color.NRGBA
 	TextSelection, Error                               color.NRGBA
+	RenameRow, EditorText                              color.NRGBA
 	Scrollbar, ScrollbarHover, ScrollbarTrack          color.NRGBA
 }
 
@@ -53,6 +54,8 @@ var defaultTheme = Theme{
 		SelectedName:     rgb(0xffffff),
 		SelectedMetadata: rgb(0xffffff),
 		TextSelection:    rgb(0xaaaaff),
+		RenameRow:        rgb(0xffffff), // Surrounding row while renaming; match Surface to hide its highlight.
+		EditorText:       rgb(0x111111), // Shared by the location and filename editors, including selected text.
 		Error:            rgb(0xc00000),
 		Scrollbar:        rgb(0xcccccc),
 		ScrollbarHover:   rgb(0xaaaaaa),

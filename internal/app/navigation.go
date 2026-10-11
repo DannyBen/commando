@@ -65,6 +65,10 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	if result.request.rename != nil {
+		v.acceptRename(result)
+		return
+	}
 	p := &v.panels[result.request.panel]
 	p.loading, p.err = false, result.err
 	if result.err != nil {

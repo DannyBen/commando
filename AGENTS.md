@@ -25,6 +25,15 @@ module/executable and `Commando` for the window title and data-folder name.
   persisted. Preserve them during navigation within a listing and failed reads;
   clear them on successful listing changes. Exclude parent rows and drives.
   Keep mark bars independent of filename colors. Enter opens only the current row.
+- F2 renames only the current file or folder inline. Select the basename for
+  files and the whole name for folders; F2 in the editor selects the full name.
+  Enter applies; Escape or another row
+  cancels the draft. Keep Tab in the editor. Never replace an existing entry.
+  Run the mutation through the directory worker; failures use the panel footer
+  and retain the editor. Preserve marks and selection after reordering.
+- Location and filename editors share EditorText and TextSelection colors.
+  Support Shift+Insert paste through the native Insert bridge on Windows and
+  through Gio key events elsewhere; keep browsing marks separate from editors.
 - Left/Right and Shift+Tab/Tab switch panels without wrapping. While editing a
   location, Tab/Shift+Tab retain editor text, selection and focus.
 - Ctrl+Left/Right opens the selected folder, parent row or drive in the adjacent

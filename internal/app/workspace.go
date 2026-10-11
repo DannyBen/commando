@@ -53,6 +53,8 @@ type view struct {
 	openFile          func(string) error
 	editing           bool
 	location          widget.Editor
+	renaming          *renameSession
+	renameEditor      widget.Editor
 	nativeKeys        *nativeKeyInput
 	suppressSpaceText bool
 }
@@ -71,7 +73,8 @@ func newPreviewView() *view {
 func newView(panels []panel) *view {
 	appearance := defaultTheme
 	v := &view{appearance: appearance, theme: appearance.materialTheme(), panels: panels,
-		location: widget.Editor{SingleLine: true, Submit: true},
+		location:     widget.Editor{SingleLine: true, Submit: true},
+		renameEditor: widget.Editor{SingleLine: true, Submit: true},
 	}
 	for i := range v.panels {
 		p := &v.panels[i]
@@ -96,6 +99,12 @@ func (v *view) update(gtx layout.Context) {
 				if !ok {
 					break
 				}
+				if v.renaming != nil {
+					if v.renaming.pending {
+						continue
+					}
+					v.stopRename(gtx)
+				}
 				v.stopLocation(gtx)
 				v.panels[v.active].prefix = ""
 				v.active = pi
@@ -107,20 +116,31 @@ func (v *view) update(gtx layout.Context) {
 		}
 	}
 	v.expirePrefix(gtx)
-	// Native Insert events are queued on the window thread. Ignore them in editors.
+	// Windows Insert uses the native bridge; route Shift+Insert to editor paste.
 	for _, ke := range v.nativeKeys.drain() {
-		if !v.editing {
+		if editor := v.activeEditor(); editor != nil {
+			pasteWithInsert(gtx, editor, ke)
+		} else {
 			v.browseKey(gtx, ke)
 		}
 	}
-	if v.editing {
+	if v.editing || v.renaming != nil {
 		// Consume Tab in the editor without changing its text or focus.
 		for {
 			if _, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift}); !ok {
 				break
 			}
 		}
-		v.updateLocation(gtx)
+		if v.renaming != nil {
+			updateEditorPaste(gtx, &v.renameEditor)
+			v.updateRename(gtx)
+			if v.renaming != nil {
+				return
+			}
+		} else {
+			updateEditorPaste(gtx, &v.location)
+			v.updateLocation(gtx)
+		}
 		if v.editing {
 			return
 		}
@@ -131,6 +151,7 @@ func (v *view) update(gtx layout.Context) {
 			// Consume Tab alongside browsing keys to retain their event order.
 			key.Filter{Name: key.NameTab, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: key.NameF2},
 			key.Filter{Focus: &v.focus, Name: key.NameEscape},
 			key.Filter{Focus: &v.focus, Name: key.NameUpArrow, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameDownArrow, Optional: key.ModShift},
@@ -168,7 +189,7 @@ func (v *view) update(gtx layout.Context) {
 			continue
 		}
 		v.browseKey(gtx, ke)
-		if v.editing {
+		if v.editing || v.renaming != nil {
 			return
 		}
 	}
@@ -184,6 +205,9 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	next := p.selected
 	page := max(1, p.list.Position.Count-1)
 	switch ke.Name {
+	case key.NameF2:
+		v.startRename(gtx)
+		return
 	case key.NameTab:
 		direction := 1
 		if ke.Modifiers&key.ModShift != 0 {
@@ -310,10 +334,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					fg = v.appearance.Colors.ActiveLocation
 				}
 				if v.editing && index == v.active {
-					editor := material.Editor(v.theme, &v.location, "Path")
-					editor.TextSize, editor.Color = v.appearance.TextSize, v.appearance.Colors.ActiveLocation
-					editor.SelectionColor = v.appearance.Colors.TextSelection
-					return editor.Layout(gtx)
+					return v.textEditor(&v.location, "Path").Layout(gtx)
 				}
 				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), v.appearance.TextSize, fg, text.Start)
 			}, index == v.active)
@@ -348,11 +369,14 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if p.rows[row] == nil {
 					p.rows[row] = new(widget.Clickable)
 				}
-				return p.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				contents := func(gtx layout.Context) layout.Dimensions {
 					size := image.Pt(gtx.Constraints.Max.X, rowHeight)
 					bg := v.appearance.Colors.Surface
 					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Metadata
-					if row == p.selected && index == v.active {
+					renaming := v.renaming != nil && !v.renaming.finished && v.renaming.panel == index && v.renaming.row == row
+					if renaming {
+						bg = v.appearance.Colors.RenameRow
+					} else if row == p.selected && index == v.active {
 						bg = v.appearance.Colors.Selected
 						nameColor, sizeColor = v.appearance.Colors.SelectedName, v.appearance.Colors.SelectedMetadata
 					}
@@ -366,8 +390,15 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
 					}
 					gtx.Constraints = layout.Exact(size)
+					if renaming {
+						return v.renameContents(gtx, p.items[row], sizeColor, p.metadata)
+					}
 					return v.rowContents(gtx, p.items[row], nameColor, sizeColor, p.metadata)
-				})
+				}
+				if v.renaming != nil && !v.renaming.finished && v.renaming.panel == index && v.renaming.row == row {
+					return contents(gtx)
+				}
+				return p.rows[row].Layout(gtx, contents)
 			})
 			// Keep row widgets only around the visible viewport.
 			for row := range p.rows {
@@ -380,6 +411,14 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, max(gtx.Dp(30), smallTextHeight+gtx.Dp(12)), v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
 				status, failed := p.status()
+				if r := v.renaming; r != nil && r.panel == index {
+					if r.pending {
+						status, failed = "Renaming…", false
+					}
+					if r.err != nil {
+						status, failed = renameError(r.err), true
+					}
+				}
 				if index == v.active && p.prefix != "" {
 					status, failed = "> "+p.prefix, false
 				}
@@ -423,18 +462,22 @@ func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layo
 }
 
 func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, width int) layout.Dimensions {
-	if width == 0 {
+	return v.columnLayout(gtx, width, func(gtx layout.Context) layout.Dimensions {
 		return v.label(gtx, item.name, size, fg, text.Start)
+	}, func(gtx layout.Context) layout.Dimensions {
+		return v.label(gtx, item.size, size, secondary, text.End)
+	})
+}
+
+func (v *view) columnLayout(gtx layout.Context, width int, name, metadata layout.Widget) layout.Dimensions {
+	if width == 0 {
+		return name(gtx)
 	}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			return v.label(gtx, item.name, size, fg, text.Start)
-		}),
+		layout.Flexed(1, name),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.X, gtx.Constraints.Max.X = width, width
-			return layout.Inset{Left: unit.Dp(8)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return v.label(gtx, item.size, size, secondary, text.End)
-			})
+			return layout.Inset{Left: unit.Dp(8)}.Layout(gtx, metadata)
 		}),
 	)
 }

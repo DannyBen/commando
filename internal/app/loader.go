@@ -5,6 +5,7 @@ import "github.com/dannyben/commando/internal/browser"
 type loadRequest struct {
 	panel            int
 	path, selectName string
+	rename           *renameRequest
 }
 
 type loadResult struct {
@@ -19,8 +20,8 @@ type directoryLoader struct {
 	done     chan struct{}
 }
 
-// A single worker keeps directory reads off the UI thread and avoids concurrent
-// access to the VM's shared folders. Each panel allows only one pending request.
+// One worker keeps reads and renames off the UI thread and avoids concurrent
+// filesystem access. Each panel allows only one pending directory read.
 func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate func()) *directoryLoader {
 	l := &directoryLoader{
 		requests: make(chan loadRequest, 3),
@@ -33,7 +34,13 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
-				directory, err := read(request.path)
+				var directory browser.Directory
+				var err error
+				if r := request.rename; r != nil {
+					err = browser.Rename(request.path, r.oldName, r.newName)
+				} else {
+					directory, err = read(request.path)
+				}
 				select {
 				case <-l.done:
 					return

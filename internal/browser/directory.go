@@ -50,20 +50,29 @@ func ReadDirectory(path string) (Directory, error) {
 		}
 		items = append(items, item)
 	}
-	slices.SortFunc(items, func(a, b Entry) int {
-		if a.Directory != b.Directory {
-			if a.Directory {
-				return -1
-			}
-			return 1
-		}
-		if order := strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name)); order != 0 {
-			return order
-		}
-		return strings.Compare(a.Name, b.Name)
-	})
+	slices.SortFunc(items, CompareEntries)
 	if filepath.Dir(absolute) != absolute {
 		items = append([]Entry{{Name: "..", Directory: true, Parent: true}}, items...)
 	}
 	return Directory{Path: absolute, Entries: items}, nil
+}
+
+// CompareEntries orders parent rows, folders, then files by name.
+func CompareEntries(a, b Entry) int {
+	if a.Parent != b.Parent {
+		if a.Parent {
+			return -1
+		}
+		return 1
+	}
+	if a.Directory != b.Directory {
+		if a.Directory {
+			return -1
+		}
+		return 1
+	}
+	if order := strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name)); order != 0 {
+		return order
+	}
+	return strings.Compare(a.Name, b.Name)
 }
