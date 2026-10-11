@@ -40,7 +40,7 @@ func panelInputFrames(v *view) (send func(...event.Event), advance func(time.Dur
 
 func pressed(name key.Name) key.Event { return key.Event{Name: name, State: key.Press} }
 
-func TestTabKeepsKeyboardFocus(t *testing.T) {
+func TestTabSwitchesPanels(t *testing.T) {
 	v := newPreviewView()
 	var router input.Router
 	var ops op.Ops
@@ -54,58 +54,104 @@ func TestTabKeepsKeyboardFocus(t *testing.T) {
 	send := func(e event.Event) { router.Queue(e); frame(); frame() }
 	frame()
 	frame()
-	for _, editing := range []bool{false, true} {
-		if editing {
-			send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
-		} else {
-			send(key.EditEvent{Text: "r"})
+	// Give all three panels distinct selections and scroll positions.
+	for i := range v.panels {
+		send(pressed(key.NameEnd))
+		for j := 0; j < i; j++ {
+			send(pressed(key.NameUpArrow))
 		}
-		p := &v.panels[v.active]
-		selected, prefix, position := p.selected, p.prefix, p.list.Position
-		text, start, end := v.location.Text(), 0, 0
-		if editing {
-			start, end = v.location.Selection()
+		send(pressed(key.NameRightArrow))
+	}
+	send(pressed(key.NameLeftArrow))
+	send(pressed(key.NameLeftArrow))
+	selections := make([]int, len(v.panels))
+	positions := make([]layout.Position, len(v.panels))
+	for i := range v.panels {
+		selections[i], positions[i] = v.panels[i].selected, v.panels[i].list.Position
+	}
+	for _, tc := range []struct {
+		modifiers key.Modifiers
+		want      int
+	}{{0, 1}, {0, 2}, {0, 2}, {key.ModShift, 1}, {key.ModShift, 0}, {key.ModShift, 0}} {
+		// Mirror Gio's Window: unhandled system Tab invokes widget focus traversal.
+		router.WakeupTime()
+		router.Queue(input.SystemEvent{Event: key.Event{
+			Name: key.NameTab, Modifiers: tc.modifiers, State: key.Press,
+		}})
+		if _, handled := router.WakeupTime(); !handled {
+			t.Fatal("Tab was not consumed")
 		}
-		for _, modifiers := range []key.Modifiers{0, key.ModShift} {
-			// Mirror Gio's Window: unhandled system Tab triggers default focus
-			// traversal. A raw key event alone cannot reproduce this bug.
-			router.WakeupTime()
-			router.Queue(input.SystemEvent{Event: key.Event{
-				Name: key.NameTab, Modifiers: modifiers, State: key.Press,
-			}})
-			if _, handled := router.WakeupTime(); !handled {
-				t.Fatalf("Tab was not consumed (editing=%v, modifiers=%v)", editing, modifiers)
-			}
-			frame()
-			frame()
-			send(key.Event{Name: key.NameTab, Modifiers: modifiers, State: key.Release})
-			focus := event.Tag(&v.focus)
-			if editing {
-				focus = &v.location
-			}
-			if !router.Source().Focused(focus) || v.active != 0 || v.editing != editing ||
-				p.selected != selected || p.prefix != prefix || p.list.Position != position {
-				t.Fatalf("Tab changed focus or panel state (editing=%v, modifiers=%v)", editing, modifiers)
-			}
-			if editing {
-				gotStart, gotEnd := v.location.Selection()
-				if v.location.Text() != text || gotStart != start || gotEnd != end {
-					t.Fatal("Tab changed the path editor text or selection")
-				}
+		frame()
+		frame()
+		send(key.Event{Name: key.NameTab, Modifiers: tc.modifiers, State: key.Release})
+		if v.active != tc.want || !router.Source().Focused(&v.focus) {
+			t.Fatalf("Tab changed panel/focus incorrectly: active=%d want=%d", v.active, tc.want)
+		}
+		for i := range v.panels {
+			if v.panels[i].selected != selections[i] || v.panels[i].list.Position != positions[i] {
+				t.Fatalf("Tab changed panel %d selection or scroll", i)
 			}
 		}
-		if editing {
-			send(pressed(key.NameDeleteBackward))
-			if v.location.Text() != "" || !v.editing {
-				t.Fatal("path editor lost keyboard input after Tab")
-			}
-			send(pressed(key.NameEscape))
-		} else {
-			send(pressed(key.NameDownArrow))
-			if p.selected != selected+1 {
-				t.Fatal("list lost keyboard input after Tab")
-			}
+	}
+	send(pressed(key.NameUpArrow))
+	if v.panels[0].selected != selections[0]-1 || v.panels[1].selected != selections[1] {
+		t.Fatal("list lost keyboard input after Tab")
+	}
+	send(key.EditEvent{Text: "c"})
+	if v.panels[0].prefix != "c" {
+		t.Fatal("test prefix was not entered")
+	}
+	send(pressed(key.NameTab))
+	if v.active != 1 || v.panels[0].prefix != "" {
+		t.Fatal("Tab did not clear source prefix like Right")
+	}
+}
+
+func TestTabKeepsLocationEditorFocus(t *testing.T) {
+	v := newPreviewView()
+	var router input.Router
+	var ops op.Ops
+	frame := func() {
+		ops.Reset()
+		v.layout(layout.Context{Ops: &ops, Source: router.Source(), Now: time.Now(),
+			Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(800, 480)),
+		})
+		router.Frame(&ops)
+	}
+	send := func(e event.Event) { router.Queue(e); frame(); frame() }
+	frame()
+	frame()
+	send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
+	p := &v.panels[v.active]
+	selected, position := p.selected, p.list.Position
+	text := v.location.Text()
+	start, end := v.location.Selection()
+	for _, modifiers := range []key.Modifiers{0, key.ModShift} {
+		router.WakeupTime()
+		router.Queue(input.SystemEvent{Event: key.Event{
+			Name: key.NameTab, Modifiers: modifiers, State: key.Press,
+		}})
+		if _, handled := router.WakeupTime(); !handled {
+			t.Fatal("editor Tab was not consumed")
 		}
+		frame()
+		frame()
+		send(key.Event{Name: key.NameTab, Modifiers: modifiers, State: key.Release})
+		gotStart, gotEnd := v.location.Selection()
+		if !v.editing || v.active != 0 || !router.Source().Focused(&v.location) ||
+			v.location.Text() != text || gotStart != start || gotEnd != end ||
+			p.selected != selected || p.list.Position != position {
+			t.Fatal("Tab changed editor or panel state/focus")
+		}
+	}
+	send(pressed(key.NameDeleteBackward))
+	if v.location.Text() != "" || !v.editing {
+		t.Fatal("path editor lost keyboard input after Tab")
+	}
+	send(pressed(key.NameEscape))
+	send(pressed(key.NameTab))
+	if v.active != 1 || !router.Source().Focused(&v.focus) {
+		t.Fatal("Tab did not switch panels after leaving the editor")
 	}
 }
 

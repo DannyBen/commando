@@ -88,11 +88,18 @@ func (v *view) update(gtx layout.Context) {
 	}
 	v.expirePrefix(gtx)
 	// Explicitly matching Tab prevents Gio from moving focus to a row widget.
-	// Reserve it in both browsing and path editing for later use.
+	// Switch panels while browsing; keep focus in the editor while editing.
 	for {
-		_, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift})
+		e, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift})
 		if !ok {
 			break
+		}
+		if ke, ok := e.(key.Event); ok && ke.State == key.Press && !v.editing {
+			direction := 1
+			if ke.Modifiers&key.ModShift != 0 {
+				direction = -1
+			}
+			v.switchPanel(direction)
 		}
 	}
 	if v.editing {
@@ -149,8 +156,7 @@ func (v *view) update(gtx layout.Context) {
 			if ke.Modifiers&key.ModCtrl != 0 {
 				v.openAdjacent(direction)
 			} else {
-				p.prefix = ""
-				v.active = max(0, min(len(v.panels)-1, v.active+direction))
+				v.switchPanel(direction)
 			}
 			continue
 		case key.NameReturn, key.NameEnter:
@@ -182,6 +188,11 @@ func (v *view) update(gtx layout.Context) {
 		p.reveal, p.err = true, nil
 	}
 	v.expirePrefix(gtx)
+}
+
+func (v *view) switchPanel(direction int) {
+	v.panels[v.active].prefix = ""
+	v.active = max(0, min(len(v.panels)-1, v.active+direction))
 }
 
 func (v *view) layout(gtx layout.Context) layout.Dimensions {

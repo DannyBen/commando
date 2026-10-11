@@ -12,6 +12,11 @@ Backspace to go up, keyboard file/panel navigation,
 nonblocking directory loading, inline read errors, and ordinary scrolling.
 Fixed sample data remains only for the reproducible headless preview.
 
+Todo 34: Tab/Shift+Tab switches to the next/previous panel while browsing,
+without wrapping, matching Right/Left. Preserve each panel's selection and
+scroll and keep keyboard focus on browsing. While editing a location, consume
+Tab/Shift+Tab without changing the panel, editor text, selection or focus.
+
 Todo 32: Ctrl+Left/Right opens the selected folder (including a parent row or
 drive) in the adjacent panel and moves focus there, preserving the source
 listing/selection/scroll. No wrapping for v0.1.0. At an outer edge, on a file,

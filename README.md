@@ -14,7 +14,8 @@ keep the text vertically centered. `RowPaddingHorizontal` controls side spacing.
 
 Open `dist/control.exe` on Windows, or run `op run` on a graphical Linux desktop.
 
-- Up/Down selects a file; Left/Right switches panels.
+- Up/Down selects a file; Left/Right or Shift+Tab/Tab switches panels without
+  wrapping. Tab/Shift+Tab keep focus in the location editor while editing.
 - Ctrl+Left/Right opens the selected folder in the adjacent panel and moves
   focus there. The source panel stays in place; the outer edges do not wrap.
 - Type a filename prefix to select it, without filtering the list. Matching is
@@ -33,7 +34,7 @@ Open `dist/control.exe` on Windows, or run `op run` on a graphical Linux desktop
 - Each panel keeps its own selection and scroll position.
 - Home/End and Page Up/Down navigate longer lists.
 - Mouse selection, wheel scrolling, and scrollbars also work.
-- Tab/Shift+Tab are reserved. Alt+Enter fullscreen switching is disabled.
+- Alt+Enter fullscreen switching is disabled.
 
 The window position, size, maximized state, panel locations, and active panel
 are saved on close and restored at startup. On Windows, state is stored in
