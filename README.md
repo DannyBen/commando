@@ -44,6 +44,11 @@ scrolling and scrollbars are supported. Folders appear first, with names display
 without a trailing slash. The parent row is `..`. Directory reads run in the
 background; a failed read shows an error in the panel footer and retains the listing.
 
+Files sort by name before their final extension, so originals precede longer
+variations and copies. Names compare case-insensitively, with numbers in numeric
+order (`file2` before `file10`). Folder names compare whole; dotfiles such as
+`.env` retain their full name.
+
 ## Metadata Column
 
 Ctrl+M cycles the active panel through None, Extension, Size and Modified;

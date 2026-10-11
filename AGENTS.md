@@ -19,6 +19,12 @@ module/executable and `Commando` for the window title and data-folder name.
 ## Behavior to Preserve
 
 - Three independent panels retain their own selection and scroll position.
+- Use browser.CompareEntries for reads, renames and inserted entries. Keep
+  parents and folders first; compare files by stem, then final extension, and
+  folders by whole name. Ignore case and compare ASCII number runs by value
+  without integer overflow. Dotfiles such as .env have no extension. Break
+  equivalent numeric names by fewer leading zeros, then exact names for case
+  ties. Preserve current-item identity and marks when entries reorder.
 - Ctrl+M/Ctrl+Shift+M cycles the optional metadata column forward/backward:
   None, Extension, Size, Modified. Save and restore each panel's choice in the
   shared state store, independently of startup paths. Missing or unknown choices
