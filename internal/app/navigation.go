@@ -58,7 +58,7 @@ func (v *view) refreshPanel() {
 }
 
 func (v *view) queueLoad(request loadRequest) {
-	if v.actions != nil && v.actions.panel == request.panel || v.pendingFileConflict != nil && v.pendingFileConflict.request.panel == request.panel {
+	if v.actions != nil && v.actions.panel == request.panel || v.pendingFileConflict != nil && v.pendingFileConflict.request.panel == request.panel || v.pendingDuplicate != nil && v.pendingDuplicate.request.panel == request.panel {
 		return
 	}
 	p := &v.panels[request.panel]
@@ -93,7 +93,7 @@ func (v *view) acceptLoad(result loadResult) {
 		v.acceptRecycle(result)
 		return
 	}
-	if result.request.create != nil || result.request.rename != nil {
+	if result.request.create != nil || result.request.rename != nil || result.request.duplicate != nil {
 		v.acceptName(result)
 		return
 	}

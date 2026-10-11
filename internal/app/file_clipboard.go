@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -22,6 +21,7 @@ type fileClipboardRequest struct {
 
 type transferRequest struct {
 	locations []string
+	duplicate bool // Direct duplication does not read or change the clipboard.
 	snapshot  *browser.FileClipboard
 	plan      *browser.TransferPlan
 	policy    browser.TransferPolicy
@@ -42,16 +42,7 @@ func (v *view) clipboardSelected(move bool) {
 	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || p.path == "" || v.transferPending {
 		return
 	}
-	var paths []string
-	if len(p.marks) > 0 {
-		for row, item := range p.items {
-			if p.marks[row] && p.markable(row) {
-				paths = append(paths, filepath.Join(p.path, item.file.Name))
-			}
-		}
-	} else if p.markable(p.selected) {
-		paths = append(paths, filepath.Join(p.path, p.items[p.selected].file.Name))
-	}
+	paths := p.selectedPaths()
 	if len(paths) == 0 {
 		return
 	}
@@ -126,6 +117,28 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	}
 	result.clipboard = snapshot
 	result.transferMove = snapshot.Move
+	if request.transfer.plan == nil {
+		sameFolder, checkErr := browser.SourcesInDirectory(snapshot.Paths, request.path)
+		if checkErr != nil {
+			result.err = checkErr
+			return result
+		}
+		if sameFolder && snapshot.Move {
+			result.alreadyHere = true
+			return result
+		}
+		if request.transfer.duplicate || sameFolder {
+			plan, planErr := browser.PlanDuplicate(snapshot.Paths, request.path)
+			if planErr != nil {
+				result.err = planErr
+			} else if len(snapshot.Paths) == 1 {
+				result.duplicatePlan = plan
+			} else {
+				result.transferred, result.err = l.executeTransfer(plan, false, browser.TransferExclusive)
+			}
+			return result
+		}
+	}
 	if plan := request.transfer.plan; plan != nil {
 		result.transferred, result.err = l.executeTransfer(plan, snapshot.Move, request.transfer.policy)
 	} else {
@@ -184,6 +197,15 @@ func (v *view) acceptFileOperation(result loadResult) {
 		return
 	}
 	v.transferPending = false
+	if result.alreadyHere {
+		v.showFeedback(result.request.panel, feedback.Info, "Already in this folder")
+		return
+	}
+	if result.duplicatePlan != nil {
+		v.transferPending = true
+		v.pendingDuplicate = &result
+		return
+	}
 	if result.conflictPlan != nil {
 		v.transferPending = true
 		v.pendingFileConflict = &result
@@ -235,7 +257,9 @@ func (v *view) acceptFileOperation(result loadResult) {
 			}
 		}
 	}
-	v.rememberCutClipboard(result.clipboard, locations, result.locations)
+	if !result.request.transfer.duplicate {
+		v.rememberCutClipboard(result.clipboard, locations, result.locations)
+	}
 	verb := "copied"
 	if result.transferMove {
 		verb = "moved"
@@ -248,7 +272,7 @@ func (v *view) acceptFileOperation(result loadResult) {
 		}
 		v.showFeedback(result.request.panel, feedback.Error, message)
 	} else if result.clipboardErr != nil {
-		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d moved; cannot update clipboard", count))
+		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d moved; clipboard update failed", count))
 	} else if refreshFailed {
 		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d transferred; refresh failed", count))
 	} else if result.transferred.Skipped > 0 {
@@ -309,7 +333,9 @@ func fileTransferError(err error) string {
 	message := "Cannot transfer"
 	switch {
 	case errors.Is(err, browser.ErrNoClipboardFiles):
-		return "Clipboard contains no files"
+		return "No clipboard files"
+	case errors.Is(err, browser.ErrInvalidName):
+		return "Invalid filename"
 	case errors.Is(err, fs.ErrExist):
 		message = "Name already exists"
 	case errors.Is(err, fs.ErrPermission):
@@ -317,23 +343,21 @@ func fileTransferError(err error) string {
 	case errors.Is(err, fs.ErrNotExist):
 		message = "Item not found"
 	case errors.Is(err, browser.ErrTransferIntoSelf):
-		message = "Cannot paste a folder into itself"
+		message = "Destination inside source"
 	case errors.Is(err, browser.ErrOverlappingSources):
-		message = "Clipboard contains overlapping items"
+		message = "Overlapping clipboard items"
 	case errors.Is(err, browser.ErrSourceChanged):
-		message = "Source changed; copied item retained"
+		message = "Copied; source changed"
 	case errors.Is(err, browser.ErrSameTransferFile):
-		message = "Source and destination are the same file"
+		message = "Same file"
 	case errors.Is(err, browser.ErrConflictChanged):
-		return "Files changed; choose again"
+		return "Files changed; retry"
 	case errors.Is(err, browser.ErrTransferType):
-		return "File and folder conflict"
+		return "File/folder type conflict"
+	case errors.Is(err, browser.ErrDriveMapping), errors.Is(err, browser.ErrDriveMappingCycle), errors.Is(err, browser.ErrPathIdentity):
+		return "Backing path unavailable"
 	case errors.Is(err, errors.ErrUnsupported):
 		message = "Unsupported file type"
-	}
-	var pathError *os.PathError
-	if errors.As(err, &pathError) {
-		message += ": " + filepath.Base(pathError.Path)
 	}
 	return message
 }

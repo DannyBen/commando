@@ -110,6 +110,18 @@ successful moves remove completed items from the cut selection. Failed and
 unprocessed items remain available for retry. Replacing the clipboard clears
 the cut appearance.
 
+Ctrl+D duplicates marked items, otherwise the current file or folder, without
+changing the clipboard. Copying and pasting into the same folder uses the same
+duplication behavior. A single item opens an inline name draft beneath its
+source, suggesting `name - Copy.ext` (or `folder - Copy`). The basename is
+selected for files, the full name for folders. Enter creates and selects the
+copy; Escape or clicking another row cancels before copying. Tab retains the
+editor. Existing names produce an error and retain the draft.
+
+Batches duplicate directly with available copy names; subsequent names use
+`name - Copy (2).ext`, and so on. Copies never replace existing entries. Cutting
+and pasting into the same folder does nothing and shows "Already in this folder".
+
 Folders merge recursively, preserving destination-only entries. Conflicts are
 checked before transferring anything. A single-file conflict offers Overwrite
 and Cancel beneath the destination file. Folder contents and batches offer

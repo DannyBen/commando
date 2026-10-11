@@ -12,6 +12,7 @@ type loadRequest struct {
 	refresh          bool
 	rename           *renameRequest
 	create           *createRequest
+	duplicate        *duplicateRequest
 	recycle          *recycleRequest
 	clipboard        *fileClipboardRequest
 	transfer         *transferRequest
@@ -31,6 +32,8 @@ type loadResult struct {
 	clipboardErr  error
 	transferMove  bool
 	conflictPlan  *browser.TransferPlan
+	duplicatePlan *browser.TransferPlan
+	alreadyHere   bool
 	panelUpdates  []transferPanelUpdate
 }
 
@@ -70,8 +73,13 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
-				if request.clipboard != nil || request.transfer != nil {
-					result := l.fileOperation(request)
+				if request.clipboard != nil || request.transfer != nil || request.duplicate != nil {
+					var result loadResult
+					if request.duplicate != nil {
+						result = l.duplicateOperation(request)
+					} else {
+						result = l.fileOperation(request)
+					}
 					select {
 					case <-l.done:
 						return

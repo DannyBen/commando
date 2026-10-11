@@ -243,7 +243,7 @@ func TestClipboardPartialMoveRetainsFailedItemForRetry(t *testing.T) {
 	if !v.cutEntry(0, v.panels[0].selected) || len(v.panels[0].marks) != 1 || !v.panels[0].marks[v.panels[0].selected] {
 		t.Fatal("failed cut item lost its mark or dimming")
 	}
-	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Error || message.Text != "1 transferred; Access denied: a.txt" {
+	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Error || message.Text != "1 transferred; Access denied" {
 		t.Fatalf("wrong partial feedback: %v", message)
 	}
 }
@@ -286,8 +286,9 @@ func TestFileClipboardShortcutsSkipBusyDrivesAndEditors(t *testing.T) {
 				if editor.Text() != "replacement" {
 					t.Fatal("Ctrl+V stopped pasting editor text")
 				}
+				send(modified("D", key.ModCtrl))
 			} else {
-				send(modified("C", key.ModCtrl), modified("X", key.ModCtrl))
+				send(modified("C", key.ModCtrl), modified("X", key.ModCtrl), modified("D", key.ModCtrl))
 			}
 			if len(v.loader.requests) != 0 {
 				t.Fatal("ignored/editor clipboard shortcut queued file operation")

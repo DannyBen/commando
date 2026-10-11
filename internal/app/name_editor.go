@@ -22,6 +22,7 @@ const (
 	nameRename nameOperation = iota
 	nameCreateFolder
 	nameCreateFile
+	nameDuplicate
 )
 
 // One inline file-list editor handles existing names and temporary draft rows.
@@ -32,6 +33,8 @@ type nameSession struct {
 	pending, finished bool
 	focused           bool
 	err               error
+	duplicate         *browser.TransferPlan
+	folder            bool
 	previousPosition  layout.Position
 	previousReveal    bool
 }
@@ -45,19 +48,13 @@ func (v *view) startName(gtx layout.Context, kind nameOperation) {
 	}
 	r := &nameSession{kind: kind, panel: v.active, path: p.path, row: p.selected,
 		previousPosition: p.list.Position, previousReveal: p.reveal}
-	selectionEnd := 0
 	if kind == nameRename {
 		if !p.markable(p.selected) || p.items[p.selected].file.Name == "" {
 			return
 		}
 		item := p.items[p.selected].file
 		r.oldName = item.Name
-		selectionEnd = len(item.Name)
-		if !item.Directory {
-			if ext := filepath.Ext(item.Name); ext != item.Name {
-				selectionEnd -= len(ext)
-			}
-		}
+		r.folder = item.Directory
 		p.markRange = nil
 	} else {
 		if p.drives || p.path == "" {
@@ -65,13 +62,26 @@ func (v *view) startName(gtx layout.Context, kind nameOperation) {
 		}
 		// Keep the draft next to the current row until successful creation.
 		r.row = max(0, min(p.selected+1, len(p.items)))
+	}
+	v.beginName(gtx, r, r.oldName, r.folder)
+}
+
+func (v *view) beginName(gtx layout.Context, r *nameSession, name string, folder bool) {
+	p := &v.panels[r.panel]
+	if r.draft() {
 		p.rows = make(map[int]*widget.Clickable)
 	}
 	p.prefix, p.reveal = "", true
 	v.naming = r
-	v.nameEditor.SetText(r.oldName)
+	v.nameEditor.SetText(name)
 	v.nameEditor.ReadOnly = false
-	v.nameEditor.SetCaret(0, utf8.RuneCountInString(r.oldName[:selectionEnd]))
+	selectionEnd := len(name)
+	if !folder {
+		if ext := filepath.Ext(name); ext != name {
+			selectionEnd -= len(ext)
+		}
+	}
+	v.nameEditor.SetCaret(0, utf8.RuneCountInString(name[:selectionEnd]))
 	gtx.Execute(key.FocusCmd{Tag: &v.nameEditor})
 }
 
@@ -83,6 +93,12 @@ func (v *view) stopName(gtx layout.Context) {
 		p.rows = make(map[int]*widget.Clickable)
 	}
 	v.naming = nil
+	if r.kind == nameDuplicate {
+		v.transferPending = false
+		if !r.finished {
+			v.showFeedback(r.panel, feedback.Info, "Copy cancelled")
+		}
+	}
 	v.nameEditor.ReadOnly = false
 	gtx.Execute(key.FocusCmd{Tag: &v.focus})
 }
@@ -152,6 +168,9 @@ func (v *view) updateName(gtx layout.Context) {
 			progress := "Renaming"
 			if r.kind == nameRename {
 				request.rename = &renameRequest{oldName: r.oldName, newName: e.Text}
+			} else if r.kind == nameDuplicate {
+				request.duplicate = &duplicateRequest{plan: r.duplicate, name: e.Text, locations: v.fileOperationLocations()}
+				progress = "Copying"
 			} else {
 				request.create = &createRequest{name: e.Text, folder: r.kind == nameCreateFolder}
 				progress = "Creating " + r.noun()
@@ -169,7 +188,7 @@ func (v *view) acceptName(result loadResult) {
 		return
 	}
 	r.pending, r.err, v.nameEditor.ReadOnly = false, result.err, false
-	if result.err != nil {
+	if result.err != nil && result.created.Name == "" {
 		v.showFeedback(r.panel, feedback.Error, r.errorText(result.err))
 		v.panels[r.panel].reveal = true
 		r.focused = false
@@ -178,6 +197,9 @@ func (v *view) acceptName(result loadResult) {
 	success := "Renamed"
 	if request := result.request.rename; request != nil {
 		v.applyRename(result.request.path, request.oldName, request.newName)
+	} else if result.request.duplicate != nil {
+		v.applyDuplicate(result)
+		success = "Copied"
 	} else {
 		v.applyCreatedEntry(result.request.panel, result.request.path, result.created)
 		success = "File created"
@@ -186,11 +208,15 @@ func (v *view) acceptName(result loadResult) {
 		}
 	}
 	r.finished = true
-	v.showFeedback(r.panel, feedback.Success, success)
+	if result.err != nil {
+		v.showFeedback(r.panel, feedback.Warning, "Copied; cleanup failed")
+	} else {
+		v.showFeedback(r.panel, feedback.Success, success)
+	}
 }
 
 func (n *nameSession) noun() string {
-	if n.kind == nameCreateFolder {
+	if n.kind == nameCreateFolder || n.kind == nameDuplicate && n.folder {
 		return "folder"
 	}
 	return "file"
@@ -199,6 +225,9 @@ func (n *nameSession) noun() string {
 func (n *nameSession) errorText(err error) string {
 	if n.kind == nameRename {
 		return renameError(err)
+	}
+	if n.kind == nameDuplicate {
+		return fileTransferError(err)
 	}
 	return createError(err, n.noun())
 }
@@ -228,7 +257,7 @@ func (v *view) nameContents(gtx layout.Context, metadata string, metaColor color
 	hint := ""
 	if v.naming.draft() {
 		hint = "File name"
-		if v.naming.kind == nameCreateFolder {
+		if v.naming.noun() == "folder" {
 			hint = "Folder name"
 		}
 	}

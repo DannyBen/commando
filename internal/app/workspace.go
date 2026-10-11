@@ -69,6 +69,7 @@ type view struct {
 	clipboardSequence   func() uint32
 	actions             *inlineActionSession
 	pendingFileConflict *loadResult
+	pendingDuplicate    *loadResult
 }
 
 func newPreviewView() *view {
@@ -104,6 +105,7 @@ func (v *view) update(gtx layout.Context) {
 	defer v.dismissUnhandledFeedbackKeys(gtx)
 	v.pollLoads()
 	v.offerFileConflict()
+	v.offerDuplicate(gtx)
 	if !v.started {
 		gtx.Execute(key.FocusCmd{Tag: &v.focus})
 		v.started = gtx.Focused(&v.focus)
@@ -182,12 +184,14 @@ func (v *view) update(gtx layout.Context) {
 		}
 	}
 	v.offerFileConflict()
+	v.offerDuplicate(gtx)
 	for {
 		e, ok := gtx.Event(
 			key.FocusFilter{Target: &v.focus},
 			// Consume Tab alongside browsing keys to retain their event order.
 			key.Filter{Name: key.NameTab, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameF2},
 			key.Filter{Focus: &v.focus, Name: key.NameEscape},
 			key.Filter{Focus: &v.focus, Name: key.NameUpArrow, Optional: key.ModShift},
@@ -289,7 +293,11 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		p.metadata = p.metadata.cycle(direction)
 		return
 	case "D":
-		v.startLocation(gtx)
+		if ke.Modifiers == key.ModCtrl {
+			v.duplicateSelected()
+		} else if ke.Modifiers == key.ModAlt {
+			v.startLocation(gtx)
+		}
 		return
 	case "R":
 		v.refreshPanel()

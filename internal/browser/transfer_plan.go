@@ -45,6 +45,10 @@ type transferNode struct {
 }
 
 func PlanTransfer(paths []string, directory string) (*TransferPlan, error) {
+	return planTransfer(paths, directory, false)
+}
+
+func planTransfer(paths []string, directory string, duplicate bool) (*TransferPlan, error) {
 	if len(paths) == 0 {
 		return nil, fs.ErrInvalid
 	}
@@ -85,19 +89,35 @@ func PlanTransfer(paths []string, directory string) (*TransferPlan, error) {
 		if err := ValidateName(name); err != nil {
 			return nil, &os.PathError{Op: "paste", Path: source, Err: err}
 		}
-		if names[strings.ToUpper(name)] {
+		destinationName := name
+		if duplicate {
+			info, err := os.Lstat(source)
+			if err != nil {
+				return nil, err
+			}
+			destinationName, err = availableCopyName(target, name, info.IsDir(), names)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if names[strings.ToUpper(destinationName)] {
 			return nil, &os.PathError{Op: "paste", Path: source, Err: fs.ErrExist}
 		}
-		names[strings.ToUpper(name)] = true
+		names[strings.ToUpper(destinationName)] = true
 		for _, previous := range plan.groups {
 			if pathWithin(previous.node.source, source) || pathWithin(source, previous.node.source) {
 				return nil, ErrOverlappingSources
 			}
 		}
 		before := plan.Conflicts
-		node, err := plan.inspectNode(source, filepath.Join(target, name))
+		node, err := plan.inspectNode(source, filepath.Join(target, destinationName))
 		if err != nil {
 			return nil, err
+		}
+		if duplicate && node.targetInfo != nil {
+			// A name can arrive between suggestion and inspection. Duplicating
+			// must never turn that arrival into an overwrite or folder merge.
+			return nil, &os.PathError{Op: "copy", Path: node.destination, Err: fs.ErrExist}
 		}
 		if node.info.IsDir() && pathWithin(source, target) {
 			return nil, ErrTransferIntoSelf

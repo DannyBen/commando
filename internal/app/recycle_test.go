@@ -111,7 +111,7 @@ func TestRecycleWorkerPartialFailureUpdatesAliasListings(t *testing.T) {
 		t.Fatal("completion affected an unrelated panel or feedback")
 	}
 	message := p.feedback.Current()
-	if message == nil || message.Kind != feedback.Error || message.Text != "1 recycled; Access denied: b.txt" {
+	if message == nil || message.Kind != feedback.Error || message.Text != "1 recycled; Access denied" {
 		t.Fatalf("wrong partial feedback: %v", message)
 	}
 }
@@ -134,7 +134,7 @@ func TestRecycleRefusalPreservesListingAndMarks(t *testing.T) {
 		t.Fatal("refusal changed cached state")
 	}
 	message := p.feedback.Current()
-	if message == nil || message.Kind != feedback.Error || message.Text != "Recycle Bin unavailable: assets" {
+	if message == nil || message.Kind != feedback.Error || message.Text != "Recycle Bin unavailable" {
 		t.Fatalf("wrong refusal feedback: %v", message)
 	}
 }
@@ -251,7 +251,7 @@ func TestRecycleErrorDetails(t *testing.T) {
 		want string
 	}{
 		{browser.ErrRecycleUnconfirmed, "Cannot confirm recycling"}, {os.ErrNotExist, "Item not found"},
-		{browser.ErrDriveMappingCycle, "Cannot resolve backing path"}, {errors.New("other"), "Cannot recycle"},
+		{browser.ErrDriveMappingCycle, "Backing path unavailable"}, {errors.New("other"), "Cannot recycle"},
 	} {
 		if got := recycleError(tc.err); got != tc.want {
 			t.Fatalf("%q, want %q", got, tc.want)

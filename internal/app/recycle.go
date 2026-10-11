@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -149,11 +147,7 @@ func recycleError(err error) string {
 	case errors.Is(err, fs.ErrNotExist):
 		message = "Item not found"
 	case errors.Is(err, browser.ErrDriveMapping), errors.Is(err, browser.ErrDriveMappingCycle), errors.Is(err, browser.ErrPathIdentity):
-		message = "Cannot resolve backing path"
-	}
-	var pathError *os.PathError
-	if errors.As(err, &pathError) {
-		message += ": " + filepath.Base(pathError.Path)
+		message = "Backing path unavailable"
 	}
 	return message
 }

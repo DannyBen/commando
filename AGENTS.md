@@ -36,6 +36,8 @@ module/executable and `Commando` for the window title and data-folder name.
   Run the mutation through the directory worker; failures use the panel footer
   and retain the editor. Preserve marks and selection after reordering.
 - Feedback owns the entire contextual panel footer, including the count area.
+  Keep messages within five short words, including partial-result counts;
+  omit filenames. Preserve specific failure reasons rather than truncating text.
   Use fixed character timing, binary off/on blinks, then hold until interaction;
   never expire messages on a timer. Dismissing input must still perform its normal
   action, and message-producing actions must retain their result. Progress also
@@ -114,6 +116,19 @@ module/executable and `Commando` for the window title and data-folder name.
   and the normal selection colors. InlineEdge also identifies new-name drafts;
   keep editor placeholders distinct from actionable options. Defer arriving
   choices until an active editor closes, preserving its text, selection and focus.
+- Ctrl+D duplicates marks, otherwise the current file/folder, without reading
+  or changing the clipboard or cut appearance. Same-folder copy/paste uses the
+  same flow, resolving SUBST and parent aliases through the worker. One item
+  uses the shared inline name editor beneath its source, suggesting an available
+  name - Copy.ext; select the basename for files and the full name for folders.
+  Enter creates/selects the copy; Escape or another row cancels before copying;
+  Tab retains the editor. Existing names retain an editable draft with an error.
+  Batches use available names directly, numbering further copies with (2), (3),
+  and so on. Stage copies and publish exclusively; never replace or merge an
+  existing duplicate destination. Preserve marks and other panes' current rows,
+  updating alias listings through worker-resolved locations. Defer arriving
+  name drafts behind editors and cancel if their pane has been left. Same-folder
+  cut/paste is a no-op with Already in this folder feedback; retain the clipboard.
 - Delete recycles marked entries, otherwise the current file/folder, through the
   single worker. Exclude parents and drives; keep Delete in editors and ignore
   modifier variants. Resolve SUBST backing paths freshly and verify identity.
