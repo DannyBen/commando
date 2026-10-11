@@ -37,8 +37,9 @@ or panels start at home.
   returning selects the drive just left.
 
 Each panel keeps its own selection and scroll position. Mouse selection, wheel
-scrolling and scrollbars are supported. Directory reads run in the background;
-a failed read shows an inline error and retains the listing.
+scrolling and scrollbars are supported. Folders appear first, with names displayed
+without a trailing slash. The parent row is `..`. Directory reads run in the
+background; a failed read shows an inline error and retains the listing.
 
 ## Marking Files
 

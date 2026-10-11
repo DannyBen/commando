@@ -63,7 +63,7 @@ func (v *view) selectPrefix(fresh bool) {
 		item := p.items[index]
 		name := item.file.Name
 		if name == "" {
-			name = strings.TrimSuffix(item.name, "/")
+			name = item.name
 		}
 		if !item.file.Parent && name != ".." && strings.HasPrefix(strings.ToLower(name), prefix) {
 			p.selected, p.reveal, p.err = index, true, nil

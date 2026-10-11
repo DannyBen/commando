@@ -16,7 +16,7 @@ import (
 
 func selectionView() *view {
 	items := []entry{
-		{name: "../", file: browser.Entry{Name: "..", Parent: true, Directory: true}},
+		{name: "..", file: browser.Entry{Name: "..", Parent: true, Directory: true}},
 		{name: "alpha", file: browser.Entry{Name: "alpha", Directory: true}},
 		{name: "alpha beta.txt", file: browser.Entry{Name: "alpha beta.txt"}},
 		{name: "charlie.txt", file: browser.Entry{Name: "charlie.txt"}},

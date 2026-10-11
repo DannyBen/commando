@@ -85,9 +85,6 @@ func (v *view) acceptLoad(result loadResult) {
 		name, size := file.Name, "?"
 		if file.Directory {
 			size = "—"
-			if file.Path == "" {
-				name += "/"
-			}
 		} else if file.SizeKnown {
 			size = formatSize(file.Bytes)
 		}

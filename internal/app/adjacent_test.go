@@ -96,7 +96,7 @@ func TestAdjacentOpeningNoAction(t *testing.T) {
 			base := t.TempDir()
 			v := newView([]panel{{path: base}, {path: base}, {path: base}})
 			for i := range v.panels {
-				v.panels[i].items = []entry{{name: "folder/", file: browser.Entry{Name: "folder", Directory: true}}}
+				v.panels[i].items = []entry{{name: "folder", file: browser.Entry{Name: "folder", Directory: true}}}
 			}
 			v.active = tc.active
 			// A loader without a worker makes unexpected queued reads observable.

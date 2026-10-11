@@ -1,9 +1,6 @@
 package app
 
-import (
-	"maps"
-	"strings"
-)
+import "maps"
 
 // Marks belong to the displayed listing and are separate from the current row.
 // A range keeps its starting marks so reversing it only removes its own additions.
@@ -14,7 +11,7 @@ type selectionRange struct {
 
 func (p *panel) markable(row int) bool {
 	return !p.drives && row >= 0 && row < len(p.items) &&
-		!p.items[row].file.Parent && strings.TrimSuffix(p.items[row].name, "/") != ".."
+		!p.items[row].file.Parent && p.items[row].name != ".."
 }
 
 func (p *panel) toggleMark(row int) {

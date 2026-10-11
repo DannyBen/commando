@@ -4,10 +4,10 @@ package app
 func samplePanels() []panel {
 	return []panel{
 		{path: `C:\Work\Projects`, selected: 3, items: []entry{
-			{name: "../", size: "—"}, {name: "assets/", size: "—"}, {name: "caretaker/", size: "—"},
-			{name: "commando/", size: "—"}, {name: "docs/", size: "—"}, {name: "experiments/", size: "—"},
-			{name: "fontview/", size: "—"}, {name: "moxel/", size: "—"}, {name: "scripts/", size: "—"},
-			{name: "shirei-grid/", size: "—"}, {name: "todo/", size: "—"}, {name: "trinity/", size: "—"},
+			{name: "..", size: "—"}, {name: "assets", size: "—"}, {name: "caretaker", size: "—"},
+			{name: "commando", size: "—"}, {name: "docs", size: "—"}, {name: "experiments", size: "—"},
+			{name: "fontview", size: "—"}, {name: "moxel", size: "—"}, {name: "scripts", size: "—"},
+			{name: "shirei-grid", size: "—"}, {name: "todo", size: "—"}, {name: "trinity", size: "—"},
 			{name: "AGENTS.md", size: "3.2 KB"}, {name: "CHANGELOG.md", size: "8.7 KB"},
 			{name: "README.md", size: "2.4 KB"}, {name: "architecture-notes.md", size: "6.1 KB"},
 			{name: "build.ps1", size: "1.8 KB"}, {name: "config.yml", size: "840 B"},
@@ -16,8 +16,8 @@ func samplePanels() []panel {
 			{name: "op.conf", size: "920 B"}, {name: "workspace.code-workspace", size: "480 B"},
 		}},
 		{path: `D:\Downloads`, selected: 5, items: []entry{
-			{name: "../", size: "—"}, {name: "documents/", size: "—"}, {name: "fonts/", size: "—"},
-			{name: "images/", size: "—"}, {name: "installers/", size: "—"},
+			{name: "..", size: "—"}, {name: "documents", size: "—"}, {name: "fonts", size: "—"},
+			{name: "images", size: "—"}, {name: "installers", size: "—"},
 			{name: "commando-reference.png", size: "824 KB"}, {name: "data-export.csv", size: "2.8 MB"},
 			{name: "design-reference.pdf", size: "4.2 MB"}, {name: "go-mono.zip", size: "1.3 MB"},
 			{name: "invoice-2026-10.pdf", size: "128 KB"}, {name: "meeting-notes.txt", size: "3.1 KB"},
@@ -35,8 +35,8 @@ func samplePanels() []panel {
 			{name: "workspace-sample.yml", size: "4.8 KB"}, {name: "zip-format-notes.txt", size: "2.2 KB"},
 		}},
 		{path: `E:\Archive\2026`, selected: 4, items: []entry{
-			{name: "../", size: "—"}, {name: "07-july/", size: "—"}, {name: "08-august/", size: "—"},
-			{name: "09-september/", size: "—"}, {name: "10-october/", size: "—"},
+			{name: "..", size: "—"}, {name: "07-july", size: "—"}, {name: "08-august", size: "—"},
+			{name: "09-september", size: "—"}, {name: "10-october", size: "—"},
 			{name: "assets-2026-08.zip", size: "42.8 MB"}, {name: "assets-2026-09.zip", size: "48.2 MB"},
 			{name: "caretaker-0.1.0.zip", size: "6.4 MB"}, {name: "commando-mockups.zip", size: "2.8 MB"},
 			{name: "documents-2026-09.zip", size: "12.6 MB"}, {name: "font-collection.zip", size: "8.4 MB"},

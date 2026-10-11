@@ -157,7 +157,7 @@ func TestTabKeepsLocationEditorFocus(t *testing.T) {
 
 func TestTypeToSelect(t *testing.T) {
 	items := []entry{
-		{name: "../", file: browser.Entry{Name: "..", Directory: true, Parent: true}},
+		{name: "..", file: browser.Entry{Name: "..", Directory: true, Parent: true}},
 		{name: "Alpha.txt"}, {name: "alpine.txt"}, {name: "archive.txt"}, {name: "Beta.txt"}, {name: "Ångström.txt"},
 	}
 	v := newView([]panel{{items: items, selected: 0}, {items: items, selected: 3}})
