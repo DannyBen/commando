@@ -6,6 +6,7 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -259,6 +260,75 @@ func TestLocationEditing(t *testing.T) {
 	send(pressed(key.NameDownArrow))
 	if v.editing || v.active != 1 || v.panels[1].selected != 2 {
 		t.Fatal("row click did not cancel editing and restore keyboard focus")
+	}
+}
+
+func TestNormalizeDriveShortcut(t *testing.T) {
+	for letter := byte('A'); letter <= 'Z'; letter++ {
+		want := string(letter) + `:\`
+		for _, input := range []string{string(letter), string(letter + 'a' - 'A'), string(letter) + ":", string(letter+'a'-'A') + ":"} {
+			if got := normalizeDriveShortcut(input); got != want {
+				t.Errorf("%q resolved to %q, want %q", input, got, want)
+			}
+		}
+	}
+	for _, path := range []string{"", ".", "..", "1", "1:", ":", "é", " d", "d ", "d::", "docs", `D:\`, `D:/`, `D:\Projects`, `D:Projects`, `\Projects`, `.\d`, "./d", `\\server\share`} {
+		if got := normalizeDriveShortcut(path); got != path {
+			t.Errorf("ordinary path %q changed to %q", path, got)
+		}
+	}
+}
+
+func TestLocationDriveShortcutSubmission(t *testing.T) {
+	base := filepath.Join(t.TempDir(), "work")
+	for _, tc := range []struct {
+		input, windows, other string
+		failed                bool
+	}{
+		{"d", `D:\`, filepath.Join(base, "d"), false},
+		{"D", `D:\`, filepath.Join(base, "D"), false},
+		{"d:", `D:\`, filepath.Join(base, "d:"), false},
+		{"D:", `D:\`, filepath.Join(base, "D:"), false},
+		{"./d", filepath.Join(base, "d"), filepath.Join(base, "d"), false},
+		{`.\d`, filepath.Join(base, "d"), filepath.Join(base, `.\d`), false},
+		{filepath.Join(base, "docs"), filepath.Join(base, "docs"), filepath.Join(base, "docs"), false},
+		{string(filepath.Separator) + "Projects", filepath.VolumeName(base) + `\Projects`, "/Projects", false},
+		{"z:", `Z:\`, filepath.Join(base, "z:"), true},
+	} {
+		t.Run(tc.input, func(t *testing.T) {
+			want := tc.other
+			if runtime.GOOS == "windows" {
+				want = tc.windows
+			}
+			v := newView([]panel{{path: base}, {path: base}})
+			v.loader = newDirectoryLoader(func(path string) (browser.Directory, error) {
+				if path != want {
+					return browser.Directory{}, fmt.Errorf("submitted %q, want %q", path, want)
+				}
+				if tc.failed {
+					return browser.Directory{}, os.ErrNotExist
+				}
+				return browser.Directory{Path: path}, nil
+			}, nil)
+			defer v.loader.close()
+			send, _ := panelInputFrames(v)
+			send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
+			send(key.EditEvent{Range: key.Range{Start: 0, End: utf8.RuneCountInString(v.location.Text())}, Text: tc.input})
+			send(pressed(key.NameReturn))
+			waitLoaded(t, v, 0)
+			send()
+			p := &v.panels[0]
+			if tc.failed {
+				if p.path != base || !errors.Is(p.err, os.ErrNotExist) {
+					t.Fatalf("failed navigation changed the folder or error: path=%q err=%v", p.path, p.err)
+				}
+			} else if p.path != want || p.err != nil {
+				t.Fatalf("submission failed: path=%q want=%q err=%v", p.path, want, p.err)
+			}
+			if v.editing || v.panels[1].path != base {
+				t.Fatal("submission left editor open or changed another panel")
+			}
+		})
 	}
 }
 

@@ -12,6 +12,11 @@ Backspace to go up, keyboard file/panel navigation,
 nonblocking directory loading, inline read errors, and ordinary scrolling.
 Fixed sample data remains only for the reproducible headless preview.
 
+Todo 35: in the Windows location editor, bare ASCII drive letters with an
+optional colon always open the drive root (`d`/`d:` -> `D:\`). Explicit relative
+paths such as `.\d` retain their meaning. Other operating systems keep ordinary
+relative-path behavior; unavailable drives use the existing inline read error.
+
 The user authorized Todos 15 and 30 on 2026-10-11: save window position, normal
 size and maximized state, panel locations (including Drives), and the active
 panel on close; restore on startup. Explicit startup paths override saved

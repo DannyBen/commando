@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 	"unicode"
@@ -115,6 +116,9 @@ func (v *view) updateLocation(gtx layout.Context) {
 			if path == "" || v.panels[v.active].loading {
 				return
 			}
+			if runtime.GOOS == "windows" {
+				path = normalizeDriveShortcut(path)
+			}
 			if !filepath.IsAbs(path) && filepath.VolumeName(path) == "" {
 				base := v.panels[v.active].locationPath()
 				if os.IsPathSeparator(path[0]) {
@@ -128,4 +132,20 @@ func (v *view) updateLocation(gtx layout.Context) {
 			return
 		}
 	}
+}
+
+// Bare drive letters are explicit root shortcuts in the location editor.
+// Other paths, including .\d and drive-relative D:folder, keep their meaning.
+func normalizeDriveShortcut(path string) string {
+	if len(path) != 1 && !(len(path) == 2 && path[1] == ':') {
+		return path
+	}
+	letter := path[0]
+	if letter >= 'a' && letter <= 'z' {
+		letter -= 'a' - 'A'
+	}
+	if letter < 'A' || letter > 'Z' {
+		return path
+	}
+	return string(letter) + `:\`
 }

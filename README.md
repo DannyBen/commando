@@ -22,6 +22,8 @@ Open `dist/control.exe` on Windows, or run `op run` on a graphical Linux desktop
   failures are silent for now.
 - Alt+D edits the active panel path. Enter navigates; Escape cancels. Relative
   paths resolve from the current folder.
+- On Windows, `d`, `d:`, and `D:\` open the drive root. Use `.\d` for a relative
+  folder named `d`; `\Projects` starts at the current drive's root.
 - Backspace at a drive root shows the drive list in that panel. Enter opens
   the selected drive; returning selects the drive you just left. Backspace
   in the drive list stays there.
