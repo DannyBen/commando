@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -151,7 +152,7 @@ func TestSingleFileConflictCancelAndEscapeLeaveDestinationUntouched(t *testing.T
 	}
 }
 
-func TestPendingInlineConflictOwnsItsKeysAndAllowsPanelInspection(t *testing.T) {
+func TestPendingInlineConflictOwnsItsKeys(t *testing.T) {
 	v, _, _, _ := singleFileConflictView(t, false)
 	selected := v.panels[1].selected
 	send, _ := panelInputFrames(v)
@@ -159,13 +160,59 @@ func TestPendingInlineConflictOwnsItsKeysAndAllowsPanelInspection(t *testing.T) 
 	if v.actions == nil || v.naming != nil || v.panels[1].selected != selected || len(v.panels[1].marks) != 1 || v.panels[1].prefix != "" || len(v.loader.requests) != 0 {
 		t.Fatal("pending choice leaked file commands or changed list state")
 	}
-	send(pressed(key.NameLeftArrow), pressed(key.NameDownArrow))
-	if v.actions == nil || v.active != 0 {
-		t.Fatal("pending choice prevented panel inspection")
-	}
-	send(pressed(key.NameRightArrow), pressed(key.NameEscape))
+	send(pressed(key.NameEscape))
 	if v.actions != nil || v.transferPending {
-		t.Fatal("returning to pending choice could not cancel")
+		t.Fatal("pending choice could not cancel")
+	}
+}
+
+func TestLeavingConflictPanelCancelsTransfer(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		event  key.Event
+		target int
+	}{
+		{"Left", pressed(key.NameLeftArrow), 0},
+		{"Right", pressed(key.NameRightArrow), 2},
+		{"Tab", pressed(key.NameTab), 2},
+		{"ShiftTab", modified(key.NameTab, key.ModShift), 0},
+		{"Mouse", key.Event{}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v, c, source, target := singleFileConflictView(t, true)
+			before, _ := c.read()
+			send, _ := panelInputFrames(v)
+			if tc.name == "Mouse" {
+				v.panels[0].rows[1].Click()
+				send()
+				if v.panels[0].selected != 1 {
+					t.Fatal("panel switch lost clicked row selection")
+				}
+			} else {
+				send(tc.event)
+			}
+			current, _ := c.read()
+			if v.active != tc.target || v.actions != nil || v.transferPending || v.panels[1].loading || !reflect.DeepEqual(current, before) {
+				t.Fatal("leaving pane did not cancel transfer and preserve clipboard")
+			}
+			if p := &v.panels[1]; p.items[p.selected].name != "a.txt" || !p.marks[p.selected] {
+				t.Fatal("leaving pane lost subject selection or marks")
+			}
+			assertBatchFile(t, filepath.Join(source, "a.txt"), "alpha")
+			assertBatchFile(t, filepath.Join(target, "a.txt"), "old version")
+			if message := v.panels[1].feedback.Current(); message == nil || message.Text != "Transfer cancelled" {
+				t.Fatal("leaving pane did not report cancellation")
+			}
+			// Returning to the target cannot revive the old decision.
+			if tc.target == 0 {
+				send(pressed(key.NameRightArrow))
+			} else {
+				send(pressed(key.NameLeftArrow))
+			}
+			if v.actions != nil || v.transferPending {
+				t.Fatal("navigation revived a cancelled transfer")
+			}
+		})
 	}
 }
 
@@ -212,48 +259,63 @@ func TestChangedFileRequiresNewOverwriteDecision(t *testing.T) {
 }
 
 func TestConflictArrivingDuringLocationEditingDoesNotStealFocus(t *testing.T) {
-	v, source, target := clipboardView(t)
-	c := attachTestFileClipboard(v)
-	if err := os.WriteFile(filepath.Join(target, "a.txt"), []byte("old"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := c.write([]string{filepath.Join(source, "a.txt")}, false); err != nil {
-		t.Fatal(err)
-	}
-	entered, release := make(chan struct{}), make(chan struct{})
-	defer func() {
-		select {
-		case <-release:
-		default:
+	for _, leave := range []bool{false, true} {
+		t.Run(fmt.Sprint("leave=", leave), func(t *testing.T) {
+			v, source, target := clipboardView(t)
+			c := attachTestFileClipboard(v)
+			if err := os.WriteFile(filepath.Join(target, "a.txt"), []byte("old"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := c.write([]string{filepath.Join(source, "a.txt")}, false); err != nil {
+				t.Fatal(err)
+			}
+			entered, release := make(chan struct{}), make(chan struct{})
+			defer func() {
+				select {
+				case <-release:
+				default:
+					close(release)
+				}
+			}()
+			v.loader.planTransfer = func(paths []string, directory string) (*browser.TransferPlan, error) {
+				close(entered)
+				<-release
+				return browser.PlanTransfer(paths, directory)
+			}
+			v.active = 1
+			router, send := clipboardFrames(v)
+			send(modified("V", key.ModCtrl))
+			select {
+			case <-entered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("transfer worker did not start")
+			}
+			if leave {
+				send(pressed(key.NameLeftArrow))
+			}
+			send(modified("D", key.ModAlt))
+			v.location.SetText("draft path")
+			v.location.SetCaret(1, 4)
 			close(release)
-		}
-	}()
-	v.loader.planTransfer = func(paths []string, directory string) (*browser.TransferPlan, error) {
-		close(entered)
-		<-release
-		return browser.PlanTransfer(paths, directory)
-	}
-	v.active = 1
-	router, send := clipboardFrames(v)
-	send(modified("V", key.ModCtrl))
-	select {
-	case <-entered:
-	case <-time.After(5 * time.Second):
-		t.Fatal("transfer worker did not start")
-	}
-	send(pressed(key.NameLeftArrow), modified("D", key.ModAlt))
-	v.location.SetText("draft path")
-	v.location.SetCaret(1, 4)
-	close(release)
-	waitLoaded(t, v, 1)
-	send()
-	first, last := v.location.Selection()
-	if v.actions != nil || v.pendingFileConflict == nil || !v.editing || v.active != 0 || v.location.Text() != "draft path" || first != 1 || last != 4 || !router.Source().Focused(&v.location) {
-		t.Fatal("conflict stole editor text, selection or focus")
-	}
-	send(pressed(key.NameEscape))
-	if v.actions == nil || v.pendingFileConflict != nil || v.active != 0 || !router.Source().Focused(&v.focus) {
-		t.Fatal("deferred conflict did not appear without stealing panel focus")
+			waitLoaded(t, v, 1)
+			send()
+			first, last := v.location.Selection()
+			if v.actions != nil || !v.editing || v.location.Text() != "draft path" || first != 1 || last != 4 || !router.Source().Focused(&v.location) {
+				t.Fatal("conflict stole editor text, selection or focus")
+			}
+			if leave {
+				if v.active != 0 || v.pendingFileConflict != nil || v.transferPending {
+					t.Fatal("arriving conflict retained a decision after leaving its pane")
+				}
+				assertBatchFile(t, filepath.Join(target, "a.txt"), "old")
+			} else if v.active != 1 || v.pendingFileConflict == nil || !v.transferPending {
+				t.Fatal("arriving conflict was not deferred behind its pane's editor")
+			}
+			send(pressed(key.NameEscape))
+			if (v.actions == nil) != leave || v.pendingFileConflict != nil || !router.Source().Focused(&v.focus) {
+				t.Fatal("deferred conflict did not appear without stealing panel focus")
+			}
+		})
 	}
 }
 

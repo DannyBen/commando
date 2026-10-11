@@ -9,7 +9,16 @@ import (
 )
 
 func (v *view) offerFileConflict() {
-	if v.pendingFileConflict == nil || v.activeEditor() != nil || v.actions != nil {
+	if v.pendingFileConflict == nil {
+		return
+	}
+	if panel := v.pendingFileConflict.request.panel; panel != v.active {
+		v.pendingFileConflict = nil
+		v.transferPending = false
+		v.showFeedback(panel, feedback.Info, "Transfer cancelled")
+		return
+	}
+	if v.activeEditor() != nil || v.actions != nil {
 		return
 	}
 	result := *v.pendingFileConflict

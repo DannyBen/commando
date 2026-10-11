@@ -122,8 +122,8 @@ The file or top-level target folder and its actions stay visible together.
 Up/Down selects an option; Enter applies it; Escape cancels the transfer before
 it starts. Overwrite, Skip existing, Cancel and Escape leave the
 target row selected. Clicking an option selects it, and clicking an ordinary
-file row cancels and selects that row. Left/Right and Tab/Shift+Tab let you inspect
-other panels while the choice remains in place. Overwrite replaces the existing
+file row cancels and selects that row. Switching panels cancels the pending
+choice and leaves its target row selected. Overwrite replaces the existing
 file without recycling it. If either file changes while awaiting a decision,
 the replacement is refused and a fresh choice is offered when possible.
 

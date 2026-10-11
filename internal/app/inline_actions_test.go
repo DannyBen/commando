@@ -125,6 +125,28 @@ func TestInlineSingleActionUsesSameListInteraction(t *testing.T) {
 	}
 }
 
+func TestInlineActionsStayOpenWhenPanelSwitchHitsOuterEdge(t *testing.T) {
+	for _, tc := range []struct {
+		panel int
+		event key.Event
+	}{
+		{0, pressed(key.NameLeftArrow)},
+		{0, modified(key.NameTab, key.ModShift)},
+		{2, pressed(key.NameRightArrow)},
+		{2, pressed(key.NameTab)},
+	} {
+		v := newPreviewView()
+		v.active = tc.panel
+		cancelled := false
+		v.startInlineActions(tc.panel, 4, "", "", []string{"Overwrite", "Cancel"}, nil, func() { cancelled = true })
+		send, _ := panelInputFrames(v)
+		send(tc.event)
+		if v.active != tc.panel || v.actions == nil || cancelled {
+			t.Fatal("blocked panel switch cancelled the choice without leaving")
+		}
+	}
+}
+
 func TestCompactInlineActionsKeepSubjectAndChoicesVisible(t *testing.T) {
 	for _, size := range []unit.Sp{15, 32, 48} {
 		v := newPreviewView()
@@ -153,7 +175,7 @@ func TestCompactInlineActionsKeepSubjectAndChoicesVisible(t *testing.T) {
 			}
 		}
 		assertVisible()
-		for _, name := range []key.Name{key.NameHome, key.NameDownArrow, key.NameEnd, key.NameUpArrow, key.NameHome, key.NameRightArrow} {
+		for _, name := range []key.Name{key.NameHome, key.NameDownArrow, key.NameEnd, key.NameUpArrow, key.NameHome} {
 			router.Queue(key.Event{Name: name, State: key.Press})
 			frame()
 			frame()

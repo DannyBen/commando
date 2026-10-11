@@ -95,8 +95,11 @@ module/executable and `Commando` for the window title and data-folder name.
   or clicking an ordinary row cancels; clicking an option selects it. Closing
   actions with a choice or Escape selects and reveals their subject
   file. An ordinary-row click selects the clicked row instead. Keep the
-  choice anchored while Left/Right or Tab/Shift+Tab switches panels. Retain the
-  presented clipboard snapshot, stage the replacement fully and recheck file
+  target selected when switching panels cancels a pending choice. At outer
+  edges, a switch that cannot move focus retains the choice. Cancel arriving
+  conflicts if the user has already left the target panel; never open an
+  inactive choice. Retain the presented clipboard snapshot, stage the replacement
+  fully and recheck file
   identity and metadata before replacing. Overwritten files are not recycled.
   Verify the full inspected decision before running it; changed entries require
   a fresh choice. Never overwrite a late arrival absent from the approved plan.

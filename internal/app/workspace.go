@@ -373,8 +373,12 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 }
 
 func (v *view) switchPanel(direction int) {
+	target := max(0, min(len(v.panels)-1, v.active+direction))
+	if target != v.active && v.actions != nil {
+		v.cancelInlineActions()
+	}
 	v.panels[v.active].prefix = ""
-	v.active = max(0, min(len(v.panels)-1, v.active+direction))
+	v.active = target
 }
 
 func (v *view) layout(gtx layout.Context) layout.Dimensions {

@@ -207,9 +207,9 @@ func (v *view) openAdjacent(direction int) {
 	if path == "" {
 		path = filepath.Join(p.path, file.Name)
 	}
+	v.switchPanel(direction)
 	v.load(target, path, "")
 	p.prefix, v.panels[target].prefix = "", ""
-	v.active = target
 }
 
 func (p *panel) itemCount() int {

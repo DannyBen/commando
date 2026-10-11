@@ -142,15 +142,18 @@ func TestBatchCopyAndMoveOverwriteOrSkipExisting(t *testing.T) {
 	}
 }
 
-func TestBatchCancelAndEscapeLeaveEntireTransferUntouched(t *testing.T) {
-	for _, escape := range []bool{false, true} {
+func TestBatchCancellationLeavesEntireTransferUntouched(t *testing.T) {
+	for _, events := range [][]key.Event{
+		{pressed(key.NameEnd), pressed(key.NameReturn)},
+		{pressed(key.NameEscape)},
+		{pressed(key.NameLeftArrow)},
+		{pressed(key.NameTab)},
+	} {
 		v, c, source, target := batchConflictView(t, true)
 		before, _ := c.read()
 		send, _ := panelInputFrames(v)
-		if escape {
-			send(pressed(key.NameEscape))
-		} else {
-			send(pressed(key.NameEnd), pressed(key.NameReturn))
+		for _, event := range events {
+			send(event)
 		}
 		current, _ := c.read()
 		if v.actions != nil || v.transferPending || !reflect.DeepEqual(current, before) || v.panels[1].items[v.panels[1].selected].name != "folder" {
