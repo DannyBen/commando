@@ -1,0 +1,5 @@
+#define IDI_COMMANDO 1
+
+IDI_COMMANDO ICON "assets/app-icon/app-icon.ico"
+
+JETBRAINS_MONO_LICENSE RCDATA "internal/app/fonts/OFL.txt"

@@ -17,7 +17,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
-	"github.com/dannyben/control/internal/browser"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 func panelInputFrames(v *view) (send func(...event.Event), advance func(time.Duration)) {

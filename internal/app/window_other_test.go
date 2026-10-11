@@ -44,7 +44,7 @@ func TestDefaultDevelopmentDataFolder(t *testing.T) {
 	chosen := filepath.Join(t.TempDir(), "data")
 	t.Setenv("XDG_DATA_HOME", chosen)
 	got, err := defaultDataDir()
-	if err != nil || got != filepath.Join(chosen, "CONTROL") {
+	if err != nil || got != filepath.Join(chosen, "Commando") {
 		t.Fatalf("data folder=%q err=%v", got, err)
 	}
 	if _, err := os.Stat(chosen); !os.IsNotExist(err) {
@@ -57,7 +57,7 @@ func TestDefaultDevelopmentDataFolder(t *testing.T) {
 	for _, base := range []string{"", "relative-path"} {
 		t.Setenv("XDG_DATA_HOME", base)
 		got, err := defaultDataDir()
-		if err != nil || got != filepath.Join(home, ".local", "share", "CONTROL") {
+		if err != nil || got != filepath.Join(home, ".local", "share", "Commando") {
 			t.Fatalf("default data folder=%q err=%v", got, err)
 		}
 	}

@@ -43,7 +43,7 @@ func Run() error {
 		w := new(gioapp.Window)
 		tracker := windowTracker{value: saved.Window}
 		native := nativeWindow{state: &tracker}
-		w.Option(gioapp.Title("CONTROL"),
+		w.Option(gioapp.Title("Commando"),
 			gioapp.Size(unit.Dp(windowWidth), unit.Dp(windowHeight)),
 			gioapp.MinSize(unit.Dp(720), unit.Dp(360)))
 		w.Option(native.options()...)

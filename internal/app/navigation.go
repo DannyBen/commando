@@ -9,7 +9,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/widget"
-	"github.com/dannyben/control/internal/browser"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 func newBrowserView(paths []string, invalidate func()) *view {

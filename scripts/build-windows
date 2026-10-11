@@ -7,7 +7,7 @@ resource_file=resource_windows_amd64.syso
 trap 'rm -f "$resource_file"' EXIT
 
 x86_64-w64-mingw32-windres \
-  --input scripts/control.rc \
+  --input scripts/commando.rc \
   --output "$resource_file" \
   --output-format coff \
   --target pe-x86-64
@@ -16,5 +16,5 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build \
   -buildvcs=false \
   -trimpath \
   -ldflags="-H windowsgui" \
-  -o dist/control.exe \
+  -o dist/commando.exe \
   .

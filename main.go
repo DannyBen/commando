@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/dannyben/control/internal/app"
+	"github.com/dannyben/commando/internal/app"
 	"log"
 )
 

@@ -5,7 +5,7 @@ func samplePanels() []panel {
 	return []panel{
 		{path: `C:\Work\Projects`, selected: 3, items: []entry{
 			{name: "../", size: "—"}, {name: "assets/", size: "—"}, {name: "caretaker/", size: "—"},
-			{name: "control/", size: "—"}, {name: "docs/", size: "—"}, {name: "experiments/", size: "—"},
+			{name: "commando/", size: "—"}, {name: "docs/", size: "—"}, {name: "experiments/", size: "—"},
 			{name: "fontview/", size: "—"}, {name: "moxel/", size: "—"}, {name: "scripts/", size: "—"},
 			{name: "shirei-grid/", size: "—"}, {name: "todo/", size: "—"}, {name: "trinity/", size: "—"},
 			{name: "AGENTS.md", size: "3.2 KB"}, {name: "CHANGELOG.md", size: "8.7 KB"},
@@ -18,7 +18,7 @@ func samplePanels() []panel {
 		{path: `D:\Downloads`, selected: 5, items: []entry{
 			{name: "../", size: "—"}, {name: "documents/", size: "—"}, {name: "fonts/", size: "—"},
 			{name: "images/", size: "—"}, {name: "installers/", size: "—"},
-			{name: "control-reference.png", size: "824 KB"}, {name: "data-export.csv", size: "2.8 MB"},
+			{name: "commando-reference.png", size: "824 KB"}, {name: "data-export.csv", size: "2.8 MB"},
 			{name: "design-reference.pdf", size: "4.2 MB"}, {name: "go-mono.zip", size: "1.3 MB"},
 			{name: "invoice-2026-10.pdf", size: "128 KB"}, {name: "meeting-notes.txt", size: "3.1 KB"},
 			{name: "mockup-light.png", size: "640 KB"}, {name: "project-assets.zip", size: "18.6 MB"},
@@ -38,7 +38,7 @@ func samplePanels() []panel {
 			{name: "../", size: "—"}, {name: "07-july/", size: "—"}, {name: "08-august/", size: "—"},
 			{name: "09-september/", size: "—"}, {name: "10-october/", size: "—"},
 			{name: "assets-2026-08.zip", size: "42.8 MB"}, {name: "assets-2026-09.zip", size: "48.2 MB"},
-			{name: "caretaker-0.1.0.zip", size: "6.4 MB"}, {name: "control-mockups.zip", size: "2.8 MB"},
+			{name: "caretaker-0.1.0.zip", size: "6.4 MB"}, {name: "commando-mockups.zip", size: "2.8 MB"},
 			{name: "documents-2026-09.zip", size: "12.6 MB"}, {name: "font-collection.zip", size: "8.4 MB"},
 			{name: "moxel-0.1.0.zip", size: "3.2 MB"}, {name: "project-notes.zip", size: "1.6 MB"},
 			{name: "release-checklist.md", size: "3.1 KB"}, {name: "source-backup-2026-09.zip", size: "84.6 MB"},

@@ -1,6 +1,6 @@
 package app
 
-import "github.com/dannyben/control/internal/browser"
+import "github.com/dannyben/commando/internal/browser"
 
 type loadRequest struct {
 	panel            int

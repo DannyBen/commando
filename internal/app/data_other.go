@@ -14,7 +14,7 @@ func defaultDataDir() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return filepath.Join(base, "CONTROL"), nil
+		return filepath.Join(base, "Commando"), nil
 	}
 	base := os.Getenv("XDG_DATA_HOME")
 	if !filepath.IsAbs(base) {
@@ -24,5 +24,5 @@ func defaultDataDir() (string, error) {
 		}
 		base = filepath.Join(home, ".local", "share")
 	}
-	return filepath.Join(base, "CONTROL"), nil
+	return filepath.Join(base, "Commando"), nil
 }

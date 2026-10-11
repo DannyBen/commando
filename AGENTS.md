@@ -1,5 +1,9 @@
 # Project Status
 
+The confirmed product name is Commando; the full public caption is Commando
+File Manager. Use `commando` for the module/executable and `Commando` for the
+window title and default data-folder name.
+
 The user authorized an initial native Gio UI evaluation prototype on 2026-10-10.
 The user subsequently authorized Todo 17: initial real folder navigation,
 then type-to-select, Enter to open files, and Alt+D path entry. File-opening
@@ -32,7 +36,7 @@ The user authorized Todos 15 and 30 on 2026-10-11: save window position, normal
 size and maximized state, panel locations (including Drives), and the active
 panel on close; restore on startup. Explicit startup paths override saved
 locations. Use one shared `dataDir`, defaulting to the user's application data
-folder (`%LOCALAPPDATA%\CONTROL` on Windows), for state and future settings/data.
+folder (`%LOCALAPPDATA%\Commando` on Windows), for state and future settings/data.
 User-configurable location and its bootstrap pointer are future scope; no
 settings UI or relocation is authorized yet. Previews must bypass persistence.
 

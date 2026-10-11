@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"gioui.org/io/key"
-	"github.com/dannyben/control/internal/browser"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 func adjacentKey(direction int) key.Event {

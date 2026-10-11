@@ -6,7 +6,7 @@ import (
 	"image/color"
 	"time"
 
-	"github.com/dannyben/control/internal/browser"
+	"github.com/dannyben/commando/internal/browser"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"

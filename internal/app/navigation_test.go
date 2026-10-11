@@ -15,7 +15,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
-	"github.com/dannyben/control/internal/browser"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 func navigationFrames(v *view) (frame func(), press func(key.Name)) {
@@ -173,7 +173,7 @@ func TestNavigationWhileLoading(t *testing.T) {
 			close(release)
 		}
 	}()
-	v.panels[0].items[3].file = browser.Entry{Name: "control", Directory: true}
+	v.panels[0].items[3].file = browser.Entry{Name: "commando", Directory: true}
 	_, press := navigationFrames(v)
 	press(key.NameReturn)
 	select {

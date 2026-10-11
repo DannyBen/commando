@@ -1,4 +1,4 @@
-module github.com/dannyben/control
+module github.com/dannyben/commando
 
 go 1.26
 

@@ -1,4 +1,4 @@
-# CONTROL
+# Commando File Manager
 
 A native Gio prototype for a keyboard-oriented, multi-panel file manager.
 The light-theme window defaults to 800 × 480 and browses three independent directories, with
@@ -12,7 +12,7 @@ Header/footer and scrollbar colors are independent. `RowPaddingVertical` adds
 space above and below each line; rows grow with the measured font height and
 keep the text vertically centered. `RowPaddingHorizontal` controls side spacing.
 
-Open `dist/control.exe` on Windows, or run `op run` on a graphical Linux desktop.
+Open `dist/commando.exe` on Windows, or run `op run` on a graphical Linux desktop.
 
 - Up/Down selects a file; Left/Right or Shift+Tab/Tab switches panels without
   wrapping. Tab/Shift+Tab keep focus in the location editor while editing.
@@ -38,7 +38,7 @@ Open `dist/control.exe` on Windows, or run `op run` on a graphical Linux desktop
 
 The window position, size, maximized state, panel locations, and active panel
 are saved on close and restored at startup. On Windows, state is stored in
-`%LOCALAPPDATA%\CONTROL\state.json`. Panels start at home on the first run.
+`%LOCALAPPDATA%\Commando\state.json`. Panels start at home on the first run.
 Supply up to three folders with `op run /path/one /path/two /path/three` to
 override saved locations; omitted panels use the first supplied folder.
 Folders appear first, followed by files, in name order. Directory reads
@@ -64,4 +64,4 @@ op build-windows
 
 The bundled [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) font
 license is in `internal/app/fonts/OFL.txt` and embedded as a Windows resource
-in `control.exe`. The `dist/` folder contains only the executable.
+in `commando.exe`. The `dist/` folder contains only the executable.

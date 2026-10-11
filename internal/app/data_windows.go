@@ -11,5 +11,5 @@ func defaultDataDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(base, "CONTROL"), nil
+	return filepath.Join(base, "Commando"), nil
 }
