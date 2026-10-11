@@ -173,6 +173,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: key.NameSpace},
 			key.Filter{Focus: &v.focus, Name: "A", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "M", Required: key.ModCtrl, Optional: key.ModShift},
+			key.Filter{Focus: &v.focus, Name: "R", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameRightArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Required: key.ModCtrl},
@@ -240,6 +241,9 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		return
 	case "D":
 		v.startLocation(gtx)
+		return
+	case "R":
+		v.refreshPanel()
 		return
 	case key.NameEscape:
 		if p.prefix != "" {

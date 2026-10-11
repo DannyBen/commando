@@ -5,6 +5,7 @@ import "github.com/dannyben/commando/internal/browser"
 type loadRequest struct {
 	panel            int
 	path, selectName string
+	refresh          bool
 	rename           *renameRequest
 }
 

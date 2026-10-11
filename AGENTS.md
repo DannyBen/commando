@@ -54,6 +54,12 @@ module/executable and `Commando` for the window title and data-folder name.
   (`d`/`d:` -> `D:\`). Explicit relative paths such as `.\d` retain their meaning.
 - Directory reads run off the UI thread through one worker. Keep file-opening
   failures silent unless changing their feedback is part of the requested scope.
+- Ctrl+R refreshes only the active folder or drive list, retaining the current
+  item by name (drive by path) and the viewport where possible. Missing items
+  select the nearest remaining row; empty lists select none. Busy panels and
+  editors ignore refresh. Failed reads retain listing, selection, scroll and
+  marks with footer feedback; successful reads clear marks. Completion must
+  preserve subsequent selection changes and never steal panel focus.
 - Resolve one shared `dataDir` for state and other application data. Windows uses
   `%LOCALAPPDATA%\Commando`. Previews use fixed sample entries and bypass persistence.
 

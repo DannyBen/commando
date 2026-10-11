@@ -35,6 +35,9 @@ or panels start at home.
 - Backspace goes to the parent folder and selects the folder just left.
   At a drive root, it shows drives in the same panel. Enter opens a drive;
   returning selects the drive just left.
+- Ctrl+R refreshes the active folder or drive list, retaining the current item
+  and scroll where possible. If the item disappeared, the nearest row is selected.
+  Busy panels and editors ignore the shortcut.
 
 Each panel keeps its own selection and scroll position. Mouse selection, wheel
 scrolling and scrollbars are supported. Folders appear first, with names displayed
@@ -63,8 +66,8 @@ Marks use a left-edge bar and remain separate from the current-row highlight.
   prefix is active.
 
 Each panel retains its marks when switching panels. Enter opens only the current
-row. Entering a directory clears marks; failed reads retain them. Drives cannot
-be marked.
+row. Entering a directory or refreshing clears marks; failed reads retain them.
+Drives cannot be marked.
 
 ## Renaming
 

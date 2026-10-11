@@ -42,13 +42,29 @@ func newRestoredView(locations []panelState, active int, invalidate func()) *vie
 }
 
 func (v *view) load(index int, path, selectName string) {
-	p := &v.panels[index]
+	v.queueLoad(loadRequest{panel: index, path: path, selectName: selectName})
+}
+
+func (v *view) refreshPanel() {
+	if v.editing || v.renaming != nil {
+		return
+	}
+	p := &v.panels[v.active]
+	path := p.path
+	if p.drives {
+		path = ""
+	}
+	v.queueLoad(loadRequest{panel: v.active, path: path, refresh: true})
+}
+
+func (v *view) queueLoad(request loadRequest) {
+	p := &v.panels[request.panel]
 	if v.loader == nil || p.loading {
 		return
 	}
 	p.loading, p.err = true, nil
 	p.feedback.Progress("Reading folder")
-	v.loader.requests <- loadRequest{panel: index, path: path, selectName: selectName}
+	v.loader.requests <- request
 }
 
 func (v *view) pollLoads() {
@@ -77,6 +93,11 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	p.feedback.Complete()
+	previousRow := p.selected
+	var previousItem browser.Entry
+	if previousRow >= 0 && previousRow < len(p.items) {
+		previousItem = p.items[previousRow].file
+	}
 	p.clearMarks()
 	p.prefix = ""
 	p.drives = result.directory.Drives
@@ -87,6 +108,9 @@ func (v *view) acceptLoad(result loadResult) {
 	p.selected = -1
 	if len(p.items) > 0 {
 		p.selected = 0
+		if result.request.refresh {
+			p.selected = max(0, min(previousRow, len(p.items)-1))
+		}
 	}
 	for i, file := range result.directory.Entries {
 		name, size := file.Name, "?"
@@ -96,14 +120,28 @@ func (v *view) acceptLoad(result loadResult) {
 			size = formatSize(file.Bytes)
 		}
 		p.items[i] = entry{name: name, size: size, file: file}
+		if result.request.refresh && previousRow >= 0 {
+			sameItem := file.Name == previousItem.Name && file.Parent == previousItem.Parent
+			if p.drives {
+				sameItem = previousItem.Path != "" && samePath(file.Path, previousItem.Path)
+			}
+			if sameItem {
+				p.selected = i
+			}
+		}
 		if file.Directory && (file.Name == result.request.selectName ||
 			file.Path != "" && strings.EqualFold(file.Path, result.request.selectName)) {
 			p.selected = i
 		}
 	}
 	p.rows = make(map[int]*widget.Clickable)
-	p.list = widget.List{List: layout.List{Axis: layout.Vertical}}
-	p.reveal = p.selected >= 0
+	if result.request.refresh {
+		// Keep the viewport unless the current item moved or disappeared.
+		p.reveal = p.reveal || p.selected != previousRow
+	} else {
+		p.list = widget.List{List: layout.List{Axis: layout.Vertical}}
+		p.reveal = p.selected >= 0
+	}
 }
 
 func (v *view) activateSelected() {
