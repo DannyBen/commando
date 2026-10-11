@@ -19,7 +19,7 @@ func TestStateStoreRoundTrip(t *testing.T) {
 	}
 	want := sessionState{
 		Window:      windowState{X: -1200, Y: 42, Width: 960, Height: 540, Positioned: true, Maximized: true},
-		Panels:      []panelState{{Path: filepath.Join(t.TempDir(), "Å folder")}, {Path: "/", Drives: true}},
+		Panels:      []panelState{{Path: filepath.Join(t.TempDir(), "Å folder"), Metadata: "none"}, {Path: "/", Drives: true, Metadata: "modified"}},
 		ActivePanel: 1,
 	}
 	for i := 0; i < 2; i++ {
@@ -161,6 +161,15 @@ func TestWorkspaceStateRestoresRealLocationsAndActivePanel(t *testing.T) {
 		waitLoaded(t, v, i)
 	}
 	send, _ := panelInputFrames(v)
+	// Pick different column choices through the real key routing before saving.
+	send(modified("M", key.ModCtrl))
+	send(modified("M", key.ModCtrl)) // None.
+	send(pressed(key.NameRightArrow))
+	send(modified("M", key.ModCtrl|key.ModShift)) // Extension.
+	send(pressed(key.NameRightArrow))
+	send(modified("M", key.ModCtrl)) // Modified.
+	send(pressed(key.NameLeftArrow))
+	send(pressed(key.NameLeftArrow))
 	selectName(t, &v.panels[0], "child")
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
@@ -192,10 +201,71 @@ func TestWorkspaceStateRestoresRealLocationsAndActivePanel(t *testing.T) {
 		restored.panels[1].path != other || restored.panels[2].path != root || saved.Window != window {
 		t.Fatalf("session did not restore: %+v", restored.sessionState(saved.Window))
 	}
+	for i, want := range []metadataColumn{metadataNone, metadataExtension, metadataModified} {
+		if got := restored.panels[i].metadata; got != want {
+			t.Fatalf("panel %d restored column %v, want %v", i, got, want)
+		}
+	}
 	send, _ = panelInputFrames(restored)
 	send(pressed(key.NameDownArrow))
 	if restored.panels[1].selected != 1 || restored.panels[0].selected != 0 {
 		t.Fatal("restored active panel did not receive keyboard input")
+	}
+}
+
+func TestStartingLocationsPreserveSavedMetadata(t *testing.T) {
+	first, second := t.TempDir(), t.TempDir()
+	saved := []panelState{
+		{Path: first, Metadata: "none"},
+		{Path: second, Drives: true, Metadata: "extension"},
+		{Path: "relative-invalid-path", Metadata: "modified"},
+	}
+	for _, args := range [][]string{nil, {second}, {second, first}} {
+		locations, err := startingLocations(args, saved)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := range saved {
+			if locations[i].Metadata != saved[i].Metadata {
+				t.Fatalf("startup args %v lost panel %d column: %+v", args, i, locations[i])
+			}
+		}
+		if len(args) > 0 && (locations[0].Path != second || locations[1].Drives) {
+			t.Fatal("saved column choices prevented startup location overrides")
+		}
+	}
+}
+
+func TestRestoreMetadataDefaultsAndDrives(t *testing.T) {
+	root := filepath.VolumeName(t.TempDir()) + string(filepath.Separator)
+	for _, tc := range []struct {
+		name string
+		want metadataColumn
+	}{
+		{"", metadataSize},
+		{"unknown", metadataSize},
+		{"none", metadataNone},
+		{"extension", metadataExtension},
+		{"size", metadataSize},
+		{"modified", metadataModified},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dataDir := t.TempDir()
+			// Empty metadata is omitted, matching a state with no saved choice.
+			if err := saveState(dataDir, sessionState{Panels: []panelState{{Path: root, Drives: true, Metadata: tc.name}}}); err != nil {
+				t.Fatal(err)
+			}
+			saved, err := loadState(dataDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			v := newRestoredView(saved.Panels, 0, nil)
+			defer v.loader.close()
+			waitLoaded(t, v, 0)
+			if !v.panels[0].drives || v.panels[0].metadata != tc.want {
+				t.Fatalf("drive panel lost location or column: %+v", v.sessionState(windowState{}))
+			}
+		})
 	}
 }
 

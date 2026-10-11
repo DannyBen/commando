@@ -44,8 +44,9 @@ background; a failed read shows an error in the panel footer and retains the lis
 ## Metadata Column
 
 Ctrl+M cycles the active panel through None, Extension, Size and Modified;
-Ctrl+Shift+M cycles backward. Each panel starts on Size and retains its own choice
-while browsing. The header follows the column; None gives filenames the full
+Ctrl+Shift+M cycles backward. Each panel remembers its own choice across restarts,
+defaulting to Size. Startup folder arguments preserve those choices.
+The header follows the column; None gives filenames the full
 width and keeps only the NAME heading. Modified shows local dates as `YYYY-MM-DD`.
 Changing the column preserves name ordering, marks, the current row and scrolling.
 
@@ -109,8 +110,9 @@ to adjust the appearance. Rows grow with the font height and center their text.
 hides the row highlight. `EditorText` controls text in both the filename and
 location editors; `TextSelection` controls their shared selection background.
 
-Window position, size, maximized state, panel locations and the active panel are
-saved on close. Windows stores state in `%LOCALAPPDATA%\Commando\state.json`.
+Window position, size, maximized state, panel locations, metadata columns and the
+active panel are saved on close. Windows stores state in
+`%LOCALAPPDATA%\Commando\state.json`.
 
 ## Development
 

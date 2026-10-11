@@ -18,8 +18,9 @@ type sessionState struct {
 }
 
 type panelState struct {
-	Path   string `json:"path"`
-	Drives bool   `json:"drives,omitempty"`
+	Path     string `json:"path"`
+	Drives   bool   `json:"drives,omitempty"`
+	Metadata string `json:"metadata,omitempty"`
 }
 
 type windowState struct {
@@ -117,6 +118,10 @@ func startingLocations(args []string, saved []panelState) ([]panelState, error) 
 		}
 		// Keep the existing CLI contract: supplied paths define all panels,
 		// with omitted paths repeating the first supplied folder.
+		// Column choices belong to the panel independently of its location.
+		if i < len(saved) {
+			locations[i].Metadata = saved[i].Metadata
+		}
 		if len(args) == 0 && i < len(saved) && filepath.IsAbs(saved[i].Path) {
 			locations[i] = saved[i]
 		}
@@ -127,7 +132,7 @@ func startingLocations(args []string, saved []panelState) ([]panelState, error) 
 func (v *view) sessionState(window windowState) sessionState {
 	state := sessionState{Window: window, ActivePanel: v.active, Panels: make([]panelState, len(v.panels))}
 	for i, p := range v.panels {
-		state.Panels[i] = panelState{Path: p.path, Drives: p.drives}
+		state.Panels[i] = panelState{Path: p.path, Drives: p.drives, Metadata: p.metadata.stateName()}
 	}
 	return state
 }

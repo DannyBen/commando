@@ -19,6 +19,33 @@ const (
 	metadataColumnCount
 )
 
+func (m metadataColumn) stateName() string {
+	switch m {
+	case metadataNone:
+		return "none"
+	case metadataExtension:
+		return "extension"
+	case metadataModified:
+		return "modified"
+	default:
+		return "size"
+	}
+}
+
+func metadataFromState(name string) metadataColumn {
+	switch name {
+	case "none":
+		return metadataNone
+	case "extension":
+		return metadataExtension
+	case "modified":
+		return metadataModified
+	default:
+		// Missing or unknown choices retain the first-run Size default.
+		return metadataSize
+	}
+}
+
 func (m metadataColumn) cycle(direction int) metadataColumn {
 	return metadataColumn((int(m) + direction + int(metadataColumnCount)) % int(metadataColumnCount))
 }
