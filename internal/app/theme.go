@@ -28,8 +28,8 @@ type ThemeColors struct {
 	Surface, Header, Footer, Border, Foreground, Muted color.NRGBA
 	Edge, ActiveLocation                               color.NRGBA
 	Marked                                             color.NRGBA // Left-edge bar for marked files and folders.
-	Filename, Filesize                                 color.NRGBA
-	Selected, SelectedName, SelectedSize               color.NRGBA
+	Filename, Metadata                                 color.NRGBA
+	Selected, SelectedName, SelectedMetadata           color.NRGBA
 	TextSelection, Error                               color.NRGBA
 	Scrollbar, ScrollbarHover, ScrollbarTrack          color.NRGBA
 }
@@ -38,25 +38,25 @@ type ThemeColors struct {
 // Text sizes use scale-independent pixels (sp); colors use RGB hex values.
 var defaultTheme = Theme{
 	Colors: ThemeColors{
-		Surface:        rgb(0xffffff),
-		Header:         rgb(0xdddddd),
-		Footer:         rgb(0xdddddd),
-		Border:         rgb(0xcccccc),
-		Foreground:     rgb(0x111111),
-		Muted:          rgb(0x333333),
-		Edge:           rgb(0x0000ff),
-		ActiveLocation: rgb(0x0000ff),
-		Marked:         rgb(0xff8800),
-		Filename:       rgb(0x0000ff),
-		Filesize:       rgb(0x0000ff),
-		Selected:       rgb(0x0055ff),
-		SelectedName:   rgb(0xffffff),
-		SelectedSize:   rgb(0xffffff),
-		TextSelection:  rgb(0xaaaaff),
-		Error:          rgb(0xc00000),
-		Scrollbar:      rgb(0xcccccc),
-		ScrollbarHover: rgb(0xaaaaaa),
-		ScrollbarTrack: color.NRGBA{}, // Transparent; shows the panel surface.
+		Surface:          rgb(0xffffff),
+		Header:           rgb(0xdddddd),
+		Footer:           rgb(0xdddddd),
+		Border:           rgb(0xcccccc),
+		Foreground:       rgb(0x111111),
+		Muted:            rgb(0x333333),
+		Edge:             rgb(0x0000ff),
+		ActiveLocation:   rgb(0x0000ff),
+		Marked:           rgb(0xff8800),
+		Filename:         rgb(0x0000ff),
+		Metadata:         rgb(0x0000ff),
+		Selected:         rgb(0x0055ff),
+		SelectedName:     rgb(0xffffff),
+		SelectedMetadata: rgb(0xffffff),
+		TextSelection:    rgb(0xaaaaff),
+		Error:            rgb(0xc00000),
+		Scrollbar:        rgb(0xcccccc),
+		ScrollbarHover:   rgb(0xaaaaaa),
+		ScrollbarTrack:   color.NRGBA{}, // Transparent; shows the panel surface.
 	},
 	Font:                 themeFont,
 	TextSize:             15, // File rows and panel paths.

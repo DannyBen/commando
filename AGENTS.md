@@ -16,6 +16,11 @@ module/executable and `Commando` for the window title and data-folder name.
 ## Behavior to Preserve
 
 - Three independent panels retain their own selection and scroll position.
+- Ctrl+M/Ctrl+Shift+M cycles the optional metadata column forward/backward:
+  None, Extension, Size, Modified. Each panel starts on Size and retains its
+  choice while browsing; choices are transient. Keep the header synchronized
+  with the column. None reserves no metadata width. Preserve listing order,
+  marks, current row and scroll. Handle browsing keys in event order.
 - File marks are separate from the current row, local to each panel, and not
   persisted. Preserve them during navigation within a listing and failed reads;
   clear them on successful listing changes. Exclude parent rows and drives.

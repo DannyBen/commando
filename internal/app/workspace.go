@@ -34,6 +34,7 @@ type panel struct {
 	selected  int
 	marks     map[int]bool
 	markRange *selectionRange
+	metadata  metadataColumn
 	reveal    bool
 	loading   bool
 	err       error
@@ -76,6 +77,7 @@ func newView(panels []panel) *view {
 		p := &v.panels[i]
 		p.rows = make(map[int]*widget.Clickable)
 		p.list.Axis = layout.Vertical
+		p.metadata = metadataSize
 	}
 	return v
 }
@@ -111,22 +113,13 @@ func (v *view) update(gtx layout.Context) {
 			v.browseKey(gtx, ke)
 		}
 	}
-	// Explicitly matching Tab prevents Gio from moving focus to a row widget.
-	// Switch panels while browsing; keep focus in the editor while editing.
-	for {
-		e, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift})
-		if !ok {
-			break
-		}
-		if ke, ok := e.(key.Event); ok && ke.State == key.Press && !v.editing {
-			direction := 1
-			if ke.Modifiers&key.ModShift != 0 {
-				direction = -1
-			}
-			v.switchPanel(direction)
-		}
-	}
 	if v.editing {
+		// Consume Tab in the editor without changing its text or focus.
+		for {
+			if _, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift}); !ok {
+				break
+			}
+		}
 		v.updateLocation(gtx)
 		if v.editing {
 			return
@@ -135,6 +128,8 @@ func (v *view) update(gtx layout.Context) {
 	for {
 		e, ok := gtx.Event(
 			key.FocusFilter{Target: &v.focus},
+			// Consume Tab alongside browsing keys to retain their event order.
+			key.Filter{Name: key.NameTab, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModAlt},
 			key.Filter{Focus: &v.focus, Name: key.NameEscape},
 			key.Filter{Focus: &v.focus, Name: key.NameUpArrow, Optional: key.ModShift},
@@ -142,6 +137,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: insertKey},
 			key.Filter{Focus: &v.focus, Name: key.NameSpace},
 			key.Filter{Focus: &v.focus, Name: "A", Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: "M", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameRightArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Required: key.ModCtrl},
@@ -188,6 +184,20 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	next := p.selected
 	page := max(1, p.list.Position.Count-1)
 	switch ke.Name {
+	case key.NameTab:
+		direction := 1
+		if ke.Modifiers&key.ModShift != 0 {
+			direction = -1
+		}
+		v.switchPanel(direction)
+		return
+	case "M":
+		direction := 1
+		if ke.Modifiers&key.ModShift != 0 {
+			direction = -1
+		}
+		p.metadata = p.metadata.cycle(direction)
+		return
 	case "D":
 		v.startLocation(gtx)
 		return
@@ -310,7 +320,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, max(gtx.Dp(28), smallTextHeight+gtx.Dp(12)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
-				return v.columns(gtx, entry{name: "NAME", size: "SIZE"}, v.appearance.Colors.Filename, v.appearance.Colors.Filesize, v.appearance.SmallTextSize)
+				return v.columns(gtx, entry{name: "NAME", size: p.metadata.heading()}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize, v.metadataWidth(gtx, p.metadata))
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -341,10 +351,10 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				return p.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					size := image.Pt(gtx.Constraints.Max.X, rowHeight)
 					bg := v.appearance.Colors.Surface
-					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Filesize
+					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Metadata
 					if row == p.selected && index == v.active {
 						bg = v.appearance.Colors.Selected
-						nameColor, sizeColor = v.appearance.Colors.SelectedName, v.appearance.Colors.SelectedSize
+						nameColor, sizeColor = v.appearance.Colors.SelectedName, v.appearance.Colors.SelectedMetadata
 					}
 					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 					if p.marks[row] {
@@ -356,7 +366,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
 					}
 					gtx.Constraints = layout.Exact(size)
-					return v.rowContents(gtx, p.items[row], nameColor, sizeColor)
+					return v.rowContents(gtx, p.items[row], nameColor, sizeColor, p.metadata)
 				})
 			})
 			// Keep row widgets only around the visible viewport.
@@ -378,18 +388,18 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					fg = v.appearance.Colors.Error
 				}
 				return v.columns(gtx, entry{name: status,
-					size: fmt.Sprintf("%d / %d", p.selected+1, len(p.items))}, fg, v.appearance.Colors.Muted, v.appearance.SmallTextSize)
+					size: fmt.Sprintf("%d / %d", p.selected+1, len(p.items))}, fg, v.appearance.Colors.Muted, v.appearance.SmallTextSize, gtx.Dp(84))
 			}, false)
 		}),
 	)
 }
 
-func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA) layout.Dimensions {
+func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn) layout.Dimensions {
 	padding := max(0, v.appearance.RowPaddingHorizontal)
 	return layout.Inset{Left: padding, Right: padding}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
-			return v.columns(gtx, item, nameColor, sizeColor, v.appearance.TextSize)
+			return v.columns(gtx, entry{name: item.name, size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize, v.metadataWidth(gtx, mode))
 		})
 	})
 }
@@ -412,15 +422,19 @@ func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layo
 	return layout.Dimensions{Size: size}
 }
 
-func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp) layout.Dimensions {
+func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, width int) layout.Dimensions {
+	if width == 0 {
+		return v.label(gtx, item.name, size, fg, text.Start)
+	}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return v.label(gtx, item.name, size, fg, text.Start)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			width := gtx.Dp(84)
 			gtx.Constraints.Min.X, gtx.Constraints.Max.X = width, width
-			return v.label(gtx, item.size, size, secondary, text.End)
+			return layout.Inset{Left: unit.Dp(8)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return v.label(gtx, item.size, size, secondary, text.End)
+			})
 		}),
 	)
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestReadDirectory(t *testing.T) {
@@ -24,6 +25,10 @@ func TestReadDirectory(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	modified := time.Date(2024, time.March, 12, 12, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(filepath.Join(root, "A.txt"), modified, modified); err != nil {
+		t.Fatal(err)
+	}
 	directory, err := ReadDirectory(root)
 	if err != nil {
 		t.Fatal(err)
@@ -41,6 +46,9 @@ func TestReadDirectory(t *testing.T) {
 	}
 	if item := directory.Entries[3]; !item.SizeKnown || item.Bytes != 3 {
 		t.Fatalf("file metadata=%+v", item)
+	}
+	if !directory.Entries[3].Modified.Equal(modified) || !directory.Entries[0].Modified.IsZero() {
+		t.Fatal("modification time was lost or fabricated for the parent row")
 	}
 	if item := directory.Entries[4]; !item.SizeKnown || item.Bytes != 0 {
 		t.Fatalf("empty file metadata=%+v", item)

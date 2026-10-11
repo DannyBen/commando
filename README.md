@@ -41,6 +41,14 @@ scrolling and scrollbars are supported. Folders appear first, with names display
 without a trailing slash. The parent row is `..`. Directory reads run in the
 background; a failed read shows an inline error and retains the listing.
 
+## Metadata Column
+
+Ctrl+M cycles the active panel through None, Extension, Size and Modified;
+Ctrl+Shift+M cycles backward. Each panel starts on Size and retains its own choice
+while browsing. The header follows the column; None gives filenames the full
+width and keeps only the NAME heading. Modified shows local dates as `YYYY-MM-DD`.
+Changing the column preserves name ordering, marks, the current row and scrolling.
+
 ## Marking Files
 
 Marks use a left-edge bar and remain separate from the current-row highlight.
@@ -63,6 +71,7 @@ Colors, text sizes, the bundled font and row padding are defined in
 [`internal/app/theme.go`](internal/app/theme.go). Edit `defaultTheme` and rebuild
 to adjust the appearance. Rows grow with the font height and center their text.
 `Marked` controls the mark bars independently of filename colors.
+`Metadata` and `SelectedMetadata` control the optional column's text colors.
 
 Window position, size, maximized state, panel locations and the active panel are
 saved on close. Windows stores state in `%LOCALAPPDATA%\Commando\state.json`.

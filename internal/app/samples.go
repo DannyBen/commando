@@ -1,8 +1,10 @@
 package app
 
+import "time"
+
 // These directories and files are illustrative, not read from the host machine.
 func samplePanels() []panel {
-	return []panel{
+	panels := []panel{
 		{path: `C:\Work\Projects`, selected: 3, items: []entry{
 			{name: "..", size: "—"}, {name: "assets", size: "—"}, {name: "caretaker", size: "—"},
 			{name: "commando", size: "—"}, {name: "docs", size: "—"}, {name: "experiments", size: "—"},
@@ -49,4 +51,16 @@ func samplePanels() []panel {
 			{name: "workspace-index.txt", size: "8.2 KB"},
 		}},
 	}
+	for pi := range panels {
+		for row := range panels[pi].items {
+			item := &panels[pi].items[row]
+			item.file.Name = item.name
+			item.file.Directory = item.size == "—"
+			item.file.Parent = item.name == ".."
+			if !item.file.Parent {
+				item.file.Modified = time.Date(2026, time.October, 1+row%10, 12, 0, 0, 0, time.UTC)
+			}
+		}
+	}
+	return panels
 }

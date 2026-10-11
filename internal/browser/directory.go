@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 )
 
 // Entry describes a file, folder, parent row, or drive. Path is the absolute
@@ -14,6 +15,7 @@ type Entry struct {
 	Directory, Parent bool
 	Bytes             int64
 	SizeKnown         bool
+	Modified          time.Time // Zero when metadata is unavailable.
 }
 
 type Directory struct {
@@ -44,6 +46,7 @@ func ReadDirectory(path string) (Directory, error) {
 		if err == nil {
 			item.Directory = info.IsDir()
 			item.Bytes, item.SizeKnown = info.Size(), info.Mode().IsRegular()
+			item.Modified = info.ModTime()
 		}
 		items = append(items, item)
 	}
