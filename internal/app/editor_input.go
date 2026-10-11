@@ -9,8 +9,8 @@ import (
 )
 
 func (v *view) activeEditor() *widget.Editor {
-	if v.renaming != nil {
-		return &v.renameEditor
+	if v.naming != nil {
+		return &v.nameEditor
 	}
 	if v.editing {
 		return &v.location

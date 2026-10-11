@@ -56,8 +56,8 @@ type view struct {
 	openFile          func(string) error
 	editing           bool
 	location          widget.Editor
-	renaming          *renameSession
-	renameEditor      widget.Editor
+	naming            *nameSession
+	nameEditor        widget.Editor
 	nativeKeys        *nativeKeyInput
 	suppressSpaceText bool
 	feedbackPointer   bool
@@ -77,8 +77,8 @@ func newPreviewView() *view {
 func newView(panels []panel) *view {
 	appearance := defaultTheme
 	v := &view{appearance: appearance, theme: appearance.materialTheme(), panels: panels,
-		location:     widget.Editor{SingleLine: true, Submit: true},
-		renameEditor: widget.Editor{SingleLine: true, Submit: true},
+		location:   widget.Editor{SingleLine: true, Submit: true},
+		nameEditor: widget.Editor{SingleLine: true, Submit: true},
 	}
 	for i := range v.panels {
 		p := &v.panels[i]
@@ -106,16 +106,20 @@ func (v *view) update(gtx layout.Context) {
 					break
 				}
 				v.dismissFeedback()
-				if v.renaming != nil {
-					if v.renaming.pending {
+				storedRow := v.storedRow(pi, ri)
+				if storedRow < 0 {
+					continue
+				}
+				if v.naming != nil {
+					if v.naming.pending {
 						continue
 					}
-					v.stopRename(gtx)
+					v.stopName(gtx)
 				}
 				v.stopLocation(gtx)
 				v.panels[v.active].prefix = ""
 				v.active = pi
-				p.clickRow(ri, click.Modifiers&key.ModShift != 0, click.Modifiers&key.ModCtrl != 0)
+				p.clickRow(storedRow, click.Modifiers&key.ModShift != 0, click.Modifiers&key.ModCtrl != 0)
 				p.prefix = ""
 				p.reveal, p.err = true, nil
 				gtx.Execute(key.FocusCmd{Tag: &v.focus})
@@ -134,7 +138,7 @@ func (v *view) update(gtx layout.Context) {
 			v.browseKey(gtx, ke)
 		}
 	}
-	if v.editing || v.renaming != nil {
+	if v.activeEditor() != nil {
 		// Consume Tab in the editor without changing its text or focus.
 		for {
 			e, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift})
@@ -145,10 +149,10 @@ func (v *view) update(gtx layout.Context) {
 				v.dismissFeedback()
 			}
 		}
-		if v.renaming != nil {
-			v.updateEditorPaste(gtx, &v.renameEditor)
-			v.updateRename(gtx)
-			if v.renaming != nil {
+		if v.naming != nil {
+			v.updateEditorPaste(gtx, &v.nameEditor)
+			v.updateName(gtx)
+			if v.naming != nil {
 				return
 			}
 		} else {
@@ -174,6 +178,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: "A", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "M", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "R", Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: "N", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameRightArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Required: key.ModCtrl},
@@ -205,7 +210,7 @@ func (v *view) update(gtx layout.Context) {
 			continue
 		}
 		v.browseKey(gtx, ke)
-		if v.editing || v.renaming != nil {
+		if v.activeEditor() != nil {
 			return
 		}
 	}
@@ -223,7 +228,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	page := max(1, p.list.Position.Count-1)
 	switch ke.Name {
 	case key.NameF2:
-		v.startRename(gtx)
+		v.startName(gtx, nameRename)
 		return
 	case key.NameTab:
 		direction := 1
@@ -244,6 +249,13 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		return
 	case "R":
 		v.refreshPanel()
+		return
+	case "N":
+		kind := nameCreateFile
+		if ke.Modifiers&key.ModShift != 0 {
+			kind = nameCreateFolder
+		}
+		v.startName(gtx, kind)
 		return
 	case key.NameEscape:
 		if p.prefix != "" {
@@ -371,15 +383,24 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			if len(p.items) == 0 {
+			draft := v.draftRow(index)
+			count := len(p.items)
+			if draft >= 0 {
+				count++
+			}
+			if count == 0 {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
 			if p.reveal {
+				selected := p.selected
+				if draft >= 0 {
+					selected = draft
+				}
 				h := rowHeight
 				top := p.list.Position.First*h + p.list.Position.Offset
-				if y := p.selected * h; y < top {
-					p.list.ScrollTo(p.selected)
-				} else if bottom := (p.selected + 1) * h; bottom > top+gtx.Constraints.Max.Y {
+				if y := selected * h; y < top {
+					p.list.ScrollTo(selected)
+				} else if bottom := (selected + 1) * h; bottom > top+gtx.Constraints.Max.Y {
 					top = max(0, bottom-gtx.Constraints.Max.Y)
 					p.list.Position.First, p.list.Position.Offset = top/h, top%h
 				}
@@ -391,7 +412,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			list.Indicator.Color = v.appearance.Colors.Scrollbar
 			list.Indicator.HoverColor = v.appearance.Colors.ScrollbarHover
 			list.Track.Color = v.appearance.Colors.ScrollbarTrack
-			dims := list.Layout(gtx, len(p.items), func(gtx layout.Context, row int) layout.Dimensions {
+			dims := list.Layout(gtx, count, func(gtx layout.Context, row int) layout.Dimensions {
+				storedRow := v.storedRow(index, row)
+				naming := v.naming != nil && !v.naming.finished && v.naming.panel == index && v.naming.row == row
 				if p.rows[row] == nil {
 					p.rows[row] = new(widget.Clickable)
 				}
@@ -399,29 +422,32 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					size := image.Pt(gtx.Constraints.Max.X, rowHeight)
 					bg := v.appearance.Colors.Surface
 					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Metadata
-					renaming := v.renaming != nil && !v.renaming.finished && v.renaming.panel == index && v.renaming.row == row
-					if renaming {
-						bg = v.appearance.Colors.RenameRow
-					} else if row == p.selected && index == v.active {
+					if naming {
+						bg = v.appearance.Colors.NameRow
+					} else if storedRow == p.selected && index == v.active && draft < 0 {
 						bg = v.appearance.Colors.Selected
 						nameColor, sizeColor = v.appearance.Colors.SelectedName, v.appearance.Colors.SelectedMetadata
 					}
 					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
-					if p.marks[row] {
+					if p.marks[storedRow] {
 						paint.FillShape(gtx.Ops, v.appearance.Colors.Marked,
 							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
-					} else if row == p.selected && index != v.active {
+					} else if storedRow == p.selected && index != v.active {
 						// Keep the last selection visible without an active-row fill.
 						paint.FillShape(gtx.Ops, v.appearance.Colors.Edge,
 							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
 					}
 					gtx.Constraints = layout.Exact(size)
-					if renaming {
-						return v.renameContents(gtx, p.items[row], sizeColor, p.metadata)
+					if naming {
+						metadata := ""
+						if storedRow >= 0 {
+							metadata = p.metadata.value(p.items[storedRow])
+						}
+						return v.nameContents(gtx, metadata, sizeColor, p.metadata)
 					}
-					return v.rowContents(gtx, p.items[row], nameColor, sizeColor, p.metadata)
+					return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata)
 				}
-				if v.renaming != nil && !v.renaming.finished && v.renaming.panel == index && v.renaming.row == row {
+				if naming {
 					return contents(gtx)
 				}
 				return p.rows[row].Layout(gtx, contents)

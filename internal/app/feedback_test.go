@@ -41,15 +41,17 @@ func TestFeedbackPreviewShortcutsRemoved(t *testing.T) {
 }
 
 func TestFeedbackKeysStayInEditors(t *testing.T) {
-	for _, name := range []string{"location", "rename"} {
+	for _, name := range []string{"location", "rename", "create"} {
 		t.Run(name, func(t *testing.T) {
 			v := newPreviewView()
 			v.nativeKeys = &nativeKeyInput{invalidate: func() {}}
 			send, advance := panelInputFrames(v)
 			if name == "location" {
 				send(modified("D", key.ModAlt))
-			} else {
+			} else if name == "rename" {
 				send(pressed(key.NameF2))
+			} else {
+				send(newFolderKey())
 			}
 			editor := v.activeEditor()
 			before := editor.Text()

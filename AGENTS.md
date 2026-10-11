@@ -41,7 +41,7 @@ module/executable and `Commando` for the window title and data-folder name.
   Keep semantic colors and independent per-kind animation profiles in theme.go;
   all kinds currently use the same timing. Preserve editor text, selection and
   focus. Observe native Windows editor keys without consuming them.
-- Location and filename editors share EditorText and TextSelection colors.
+- Location and name editors share EditorText and TextSelection colors.
   Support Shift+Insert paste through the native Insert bridge on Windows and
   through Gio key events elsewhere; keep browsing marks separate from editors.
 - Left/Right and Shift+Tab/Tab switch panels without wrapping. While editing a
@@ -60,10 +60,24 @@ module/executable and `Commando` for the window title and data-folder name.
   editors ignore refresh. Failed reads retain listing, selection, scroll and
   marks with footer feedback; successful reads clear marks. Completion must
   preserve subsequent selection changes and never steal panel focus.
+- Ctrl+Shift+N/Ctrl+N creates a folder/empty file through a temporary inline row
+  and the directory worker. Reuse the same name editor as Rename. Put the draft
+  after the current row and keep it stationary while typing. Enter submits;
+  Escape removes the draft and restores selection/scroll; another row cancels
+  and selects that row. Tab retains editor focus. Busy panels, drives and other
+  editors ignore these shortcuts.
+  Never reuse an existing entry. Errors use the panel footer and retain the draft.
+  Select the created item and preserve existing marks; update other panels
+  showing the directory without changing their current item.
 - Resolve one shared `dataDir` for state and other application data. Windows uses
   `%LOCALAPPDATA%\Commando`. Previews use fixed sample entries and bypass persistence.
 
 ## Changes and Documentation
+
+- Discuss new interaction models with the user before implementing them.
+- All UI models must be reusable, with either a general purpose (such as a modal
+  or message channel) or a semantic purpose (such as a file list or search bar).
+  Extend the appropriate shared model instead of adding an operation-specific UI.
 
 Keep changes within the requested scope. Preserve existing behavior unless the
 change calls for adjusting it. Keep public documentation focused on usage,

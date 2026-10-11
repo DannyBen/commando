@@ -83,6 +83,21 @@ Renaming keeps the item selected and preserves marks as the list reorders.
 Both the filename and location editors support Ctrl+C, Ctrl+X and Ctrl+V;
 Shift+Insert also pastes text.
 
+## Creating Files and Folders
+
+Ctrl+Shift+N adds a draft folder row after the current row; Ctrl+N adds a draft
+empty file. Both reuse Rename's inline name editor. The draft stays stationary
+while typing. Enter creates the item, sorts it into place and selects it.
+Escape removes the draft and restores the previous selection and scroll;
+clicking another row cancels and selects that row. Tab/Shift+Tab retain editor
+focus. Ctrl+C, Ctrl+X, Ctrl+V and Shift+Insert paste are supported.
+
+Use a single name. Existing entries are never replaced; errors appear in
+the panel footer and keep the name editable for correction. Creation preserves
+existing marks and updates other panels displaying the same directory. Busy
+panels and drive lists ignore the shortcut. Submitted creation finishes before
+the editor closes.
+
 ## Feedback
 
 Messages take over the panel footer, replacing its status and counts. They type
@@ -109,8 +124,8 @@ Colors, text sizes, the bundled font and row padding are defined in
 to adjust the appearance. Rows grow with the font height and center their text.
 `Marked` controls the mark bars independently of filename colors.
 `Metadata` and `SelectedMetadata` control the optional column's text colors.
-`RenameRow` controls the surrounding row during inline rename; matching `Surface`
-hides the row highlight. `EditorText` controls text in both the filename and
+`NameRow` controls the surrounding row during inline name editing; matching
+`Surface` hides the row highlight. `EditorText` controls text in both the filename and
 location editors; `TextSelection` controls their shared selection background.
 
 Window position, size, maximized state, panel locations, metadata columns and the

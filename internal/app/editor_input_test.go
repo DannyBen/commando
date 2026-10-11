@@ -35,7 +35,7 @@ func clipboardData(text string) transfer.DataEvent {
 }
 
 func TestEditorCopyAndPaste(t *testing.T) {
-	for _, editorName := range []string{"rename", "location"} {
+	for _, editorName := range []string{"rename", "location", "create"} {
 		for _, shortcut := range []string{"native Shift+Insert", "routed Shift+Insert", "Ctrl+V"} {
 			t.Run(editorName+"/"+shortcut, func(t *testing.T) {
 				v := newPreviewView()
@@ -45,12 +45,18 @@ func TestEditorCopyAndPaste(t *testing.T) {
 				start := func() {
 					if editorName == "rename" {
 						send(pressed(key.NameF2))
-					} else {
+					} else if editorName == "location" {
 						send(modified("D", key.ModAlt))
+					} else {
+						send(newFolderKey())
 					}
 				}
 				start()
 				editor := v.activeEditor()
+				if editorName == "create" {
+					send(replaceCreate(v, "copied folder"))
+					editor.SetCaret(0, len("copied folder"))
+				}
 				selected := editor.SelectedText()
 				send(modified("C", key.ModCtrl))
 				mime, content, ok := router.WriteClipboard()
@@ -110,7 +116,7 @@ func TestNativeInsertPasteRequiresShiftAndWritableEditor(t *testing.T) {
 				send(pressed(key.NameF2))
 			}
 			if name == "pending rename" {
-				v.renaming.pending, v.renameEditor.ReadOnly = true, true
+				v.naming.pending, v.nameEditor.ReadOnly = true, true
 			}
 			before := v.activeEditor().Text()
 			keys := []key.Event{pressed(insertKey), modified(insertKey, key.ModCtrl), modified(insertKey, key.ModAlt|key.ModShift),

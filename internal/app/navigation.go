@@ -46,7 +46,7 @@ func (v *view) load(index int, path, selectName string) {
 }
 
 func (v *view) refreshPanel() {
-	if v.editing || v.renaming != nil {
+	if v.activeEditor() != nil {
 		return
 	}
 	p := &v.panels[v.active]
@@ -82,8 +82,8 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
-	if result.request.rename != nil {
-		v.acceptRename(result)
+	if result.request.create != nil || result.request.rename != nil {
+		v.acceptName(result)
 		return
 	}
 	p := &v.panels[result.request.panel]
