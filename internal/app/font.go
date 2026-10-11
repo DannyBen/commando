@@ -1,17 +1,12 @@
 package app
 
 import (
-	_ "embed"
-
 	"gioui.org/font"
 	"gioui.org/font/opentype"
 )
 
-//go:embed fonts/JetBrainsMonoNL-Regular.ttf
-var monoFont []byte
-
-func bundledFont() []font.FontFace {
-	faces, err := opentype.ParseCollection(monoFont)
+func bundledFont(data []byte) []font.FontFace {
+	faces, err := opentype.ParseCollection(data)
 	if err != nil {
 		panic(err)
 	}

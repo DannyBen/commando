@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"image"
@@ -21,34 +22,50 @@ const windowWidth, windowHeight = 800, 480
 func Run() error {
 	preview := flag.String("png", "", "render the workspace to a PNG and exit")
 	flag.Parse()
-	paths, err := startingPaths(flag.Args())
+	if *preview != "" {
+		return renderPNG(*preview)
+	}
+	dataDir, err := defaultDataDir()
 	if err != nil {
 		return err
 	}
-	if *preview != "" {
-		return renderPNG(*preview)
+	saved, err := loadState(dataDir)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cannot load state:", err)
+	}
+	locations, err := startingLocations(flag.Args(), saved.Panels)
+	if err != nil {
+		return err
 	}
 
 	done := make(chan error, 1)
 	go func() {
 		w := new(gioapp.Window)
+		tracker := windowTracker{value: saved.Window}
+		native := nativeWindow{state: &tracker}
 		w.Option(gioapp.Title("CONTROL"),
 			gioapp.Size(unit.Dp(windowWidth), unit.Dp(windowHeight)),
 			gioapp.MinSize(unit.Dp(720), unit.Dp(360)))
-		v := newBrowserView(paths, w.Invalidate)
+		w.Option(native.options()...)
+		v := newRestoredView(locations, saved.ActivePanel, w.Invalidate)
 		var ops op.Ops
 		for {
 			e := w.Event()
-			configureNativeWindow(w, e)
 			switch e := e.(type) {
 			case gioapp.DestroyEvent:
+				v.pollLoads()
 				v.loader.close()
-				done <- e.Err
+				if err := saveState(dataDir, v.sessionState(tracker.snapshot())); err != nil {
+					done <- errors.Join(e.Err, fmt.Errorf("cannot save state: %w", err))
+				} else {
+					done <- e.Err
+				}
 				return
 			case gioapp.FrameEvent:
 				v.layout(gioapp.NewContext(&ops, e))
 				e.Frame(&ops)
 			}
+			native.configure(w, e)
 		}
 	}()
 	go func() {

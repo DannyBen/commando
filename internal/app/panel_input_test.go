@@ -39,6 +39,75 @@ func panelInputFrames(v *view) (send func(...event.Event), advance func(time.Dur
 
 func pressed(name key.Name) key.Event { return key.Event{Name: name, State: key.Press} }
 
+func TestTabKeepsKeyboardFocus(t *testing.T) {
+	v := newPreviewView()
+	var router input.Router
+	var ops op.Ops
+	frame := func() {
+		ops.Reset()
+		v.layout(layout.Context{Ops: &ops, Source: router.Source(), Now: time.Now(),
+			Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(800, 480)),
+		})
+		router.Frame(&ops)
+	}
+	send := func(e event.Event) { router.Queue(e); frame(); frame() }
+	frame()
+	frame()
+	for _, editing := range []bool{false, true} {
+		if editing {
+			send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
+		} else {
+			send(key.EditEvent{Text: "r"})
+		}
+		p := &v.panels[v.active]
+		selected, prefix, position := p.selected, p.prefix, p.list.Position
+		text, start, end := v.location.Text(), 0, 0
+		if editing {
+			start, end = v.location.Selection()
+		}
+		for _, modifiers := range []key.Modifiers{0, key.ModShift} {
+			// Mirror Gio's Window: unhandled system Tab triggers default focus
+			// traversal. A raw key event alone cannot reproduce this bug.
+			router.WakeupTime()
+			router.Queue(input.SystemEvent{Event: key.Event{
+				Name: key.NameTab, Modifiers: modifiers, State: key.Press,
+			}})
+			if _, handled := router.WakeupTime(); !handled {
+				t.Fatalf("Tab was not consumed (editing=%v, modifiers=%v)", editing, modifiers)
+			}
+			frame()
+			frame()
+			send(key.Event{Name: key.NameTab, Modifiers: modifiers, State: key.Release})
+			focus := event.Tag(&v.focus)
+			if editing {
+				focus = &v.location
+			}
+			if !router.Source().Focused(focus) || v.active != 0 || v.editing != editing ||
+				p.selected != selected || p.prefix != prefix || p.list.Position != position {
+				t.Fatalf("Tab changed focus or panel state (editing=%v, modifiers=%v)", editing, modifiers)
+			}
+			if editing {
+				gotStart, gotEnd := v.location.Selection()
+				if v.location.Text() != text || gotStart != start || gotEnd != end {
+					t.Fatal("Tab changed the path editor text or selection")
+				}
+			}
+		}
+		if editing {
+			send(pressed(key.NameDeleteBackward))
+			if v.location.Text() != "" || !v.editing {
+				t.Fatal("path editor lost keyboard input after Tab")
+			}
+			send(pressed(key.NameEscape))
+		} else {
+			send(pressed(key.NameDownArrow))
+			if p.selected != selected+1 {
+				t.Fatal("list lost keyboard input after Tab")
+			}
+		}
+	}
+}
+
 func TestTypeToSelect(t *testing.T) {
 	items := []entry{
 		{name: "../", file: browser.Entry{Name: "..", Directory: true, Parent: true}},

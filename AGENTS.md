@@ -12,28 +12,51 @@ Backspace to go up, keyboard file/panel navigation,
 nonblocking directory loading, inline read errors, and ordinary scrolling.
 Fixed sample data remains only for the reproducible headless preview.
 
+The user authorized Todos 15 and 30 on 2026-10-11: save window position, normal
+size and maximized state, panel locations (including Drives), and the active
+panel on close; restore on startup. Explicit startup paths override saved
+locations. Use one shared `dataDir`, defaulting to the user's application data
+folder (`%LOCALAPPDATA%\CONTROL` on Windows), for state and future settings/data.
+User-configurable location and its bootstrap pointer are future scope; no
+settings UI or relocation is authorized yet. Previews must bypass persistence.
+
 Confirmed product direction: multi-panel support, a default of two or three
 (still to decide), no tabs for now, a modal command palette, and minimal panel
 headers/footers. The prototype uses three panels for evaluation.
 
 Do not expand this into file mutation operations, transfer targeting,
-palette interactions, persistence, or other product features without agreeing
+palette interactions, additional persisted state, or other product features without agreeing
 on the next scope with the user. Keep preview sample data distinct from the live browser.
 
 Read `docs/project-brief.md` before planning. Keep confirmed requirements,
 prototype evidence, suggestions, and open decisions distinct.
+
+# Backlog and v0.1.0
+
+Classify open Todo items with simple category tags: `+visual`, `+keys`,
+`+selection`, `+actions`, `+feedback`, `+settings`, `+palette`, or `+release`.
+Use at least one category; use more when the task crosses categories. Existing
+tags such as `+plan`, `+discuss`, and `+maybe` describe status or uncertainty.
+`+v1` marks v0.1.0 scope, `+now` marks current work, and `+done` marks completion.
+Milestone membership does not make an item current work automatically.
+
+The agreed v0.1.0 target is three functional, satisfying panels: one theme
+defined in code, keyboard navigation and selection, opening/external editing,
+copy/move, rename, new folder, Recycle Bin deletion, and clear operation
+feedback. Adjacent-panel opening and pane swapping follow the core actions.
+Settings, command palette, icons, decorative additions, archives, and panel
+count/arrangement controls are outside this milestone. Keep tasks broad at
+first; define the detailed behavior as each task becomes current work.
 
 # Machine Constraints
 
 Parallel file access under `/vagrant` can hang the VM. Run commands that scan,
 test, build, format, generate, render, use git, or walk many files sequentially.
 
-# Documentation Mockups
+# Documentation and UI Evaluation
 
-- Establish a clear product definition and reviewed mockups before application code.
+- Agree on the next product scope before implementing it. Evaluate UI changes
+  directly in the native Gio prototype and its headless preview.
 - Use the Todo CLI; every task description must start with a lowercase letter.
-- `docs/` is the local PRD and mockup space and must remain ignored by Git.
-- Documentation mockups use Slim/Slimview, a light theme, HTML tables for layout, and one shared
-  stylesheet with the smallest practical CSS. Do not use flex or grid layouts.
-- Use JavaScript only to demonstrate an agreed interaction.
-- Keep mockup proposals distinct from confirmed product requirements.
+- `docs/` is the local PRD and discussion space and must remain ignored by Git.
+- Keep UI proposals and prototype evidence distinct from confirmed product requirements.

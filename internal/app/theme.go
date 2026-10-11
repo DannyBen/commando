@@ -1,0 +1,78 @@
+package app
+
+import (
+	_ "embed"
+	"image/color"
+
+	"gioui.org/text"
+	"gioui.org/unit"
+	"gioui.org/widget/material"
+)
+
+// Change this asset to choose a different bundled font.
+//
+//go:embed fonts/JetBrainsMonoNL-Regular.ttf
+var themeFont []byte
+
+// Theme holds the appearance choices independently of Gio's widget theme.
+// A future configuration loader can supply these values before creating a view.
+type Theme struct {
+	Colors                  ThemeColors
+	Font                    []byte
+	TextSize, SmallTextSize unit.Sp
+	RowPaddingVertical      unit.Dp // Above and below the measured text height.
+	RowPaddingHorizontal    unit.Dp // Left and right of the row contents.
+}
+
+type ThemeColors struct {
+	Surface, Header, Footer, Border, Foreground, Muted color.NRGBA
+	Edge, ActiveLocation                               color.NRGBA
+	Filename, Filesize                                 color.NRGBA
+	Selected, SelectedName, SelectedSize               color.NRGBA
+	TextSelection, Error                               color.NRGBA
+	Scrollbar, ScrollbarHover, ScrollbarTrack          color.NRGBA
+}
+
+// Edit these values to adjust the application's theme, then rebuild.
+// Text sizes use scale-independent pixels (sp); colors use RGB hex values.
+var defaultTheme = Theme{
+	Colors: ThemeColors{
+		Surface:        rgb(0xffffff),
+		Header:         rgb(0xdddddd),
+		Footer:         rgb(0xdddddd),
+		Border:         rgb(0xcccccc),
+		Foreground:     rgb(0x111111),
+		Muted:          rgb(0x333333),
+		Edge:           rgb(0x0000ff),
+		ActiveLocation: rgb(0x0000ff),
+		Filename:       rgb(0x0000ff),
+		Filesize:       rgb(0x0000ff),
+		Selected:       rgb(0x0055ff),
+		SelectedName:   rgb(0xffffff),
+		SelectedSize:   rgb(0xffffff),
+		TextSelection:  rgb(0xaaaaff),
+		Error:          rgb(0xc00000),
+		Scrollbar:      rgb(0xcccccc),
+		ScrollbarHover: rgb(0xaaaaaa),
+		ScrollbarTrack: color.NRGBA{}, // Transparent; shows the panel surface.
+	},
+	Font:                 themeFont,
+	TextSize:             15, // File rows and panel paths.
+	SmallTextSize:        12, // Column headings and panel footers.
+	RowPaddingVertical:   4,  // dp per side; row height grows with the font.
+	RowPaddingHorizontal: 14,
+}
+
+func (t Theme) materialTheme() *material.Theme {
+	theme := material.NewTheme()
+	faces := bundledFont(t.Font)
+	theme.Shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces))
+	theme.Face = faces[0].Font.Typeface
+	theme.Fg, theme.Bg = t.Colors.Foreground, t.Colors.Surface
+	theme.ContrastBg, theme.ContrastFg = t.Colors.Selected, t.Colors.SelectedName
+	return theme
+}
+
+func rgb(value uint32) color.NRGBA {
+	return color.NRGBA{R: uint8(value >> 16), G: uint8(value >> 8), B: uint8(value), A: 255}
+}

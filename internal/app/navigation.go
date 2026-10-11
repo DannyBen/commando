@@ -13,15 +13,30 @@ import (
 )
 
 func newBrowserView(paths []string, invalidate func()) *view {
-	panels := make([]panel, len(paths))
+	locations := make([]panelState, len(paths))
 	for i, path := range paths {
-		panels[i].path, panels[i].selected = path, -1
+		locations[i].Path = path
+	}
+	return newRestoredView(locations, 0, invalidate)
+}
+
+func newRestoredView(locations []panelState, active int, invalidate func()) *view {
+	panels := make([]panel, len(locations))
+	for i, location := range locations {
+		panels[i].path, panels[i].drives, panels[i].selected = location.Path, location.Drives, -1
 	}
 	v := newView(panels)
+	if active >= 0 && active < len(panels) {
+		v.active = active
+	}
 	v.openFile = browser.OpenFile
 	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate)
-	for i, path := range paths {
-		v.load(i, path, "")
+	for i, location := range locations {
+		if location.Drives {
+			v.load(i, "", location.Path)
+		} else {
+			v.load(i, location.Path, "")
+		}
 	}
 	return v
 }

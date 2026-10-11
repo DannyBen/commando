@@ -11,6 +11,7 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
@@ -18,17 +19,6 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
-
-const rowHeight unit.Dp = 28
-
-var colors = struct {
-	surface, header, border, foreground, muted, accent, selected, filename, filesize color.NRGBA
-}{
-	surface: rgb(0xffffff), header: rgb(0xffffff), border: rgb(0x8c8c8c),
-	foreground: rgb(0x111111), muted: rgb(0x333333), accent: rgb(0x0057d9),
-	selected: rgb(0x0057d9),
-	filename: rgb(0x0057d9), filesize: rgb(0x9d7300),
-}
 
 type entry struct {
 	name, size string
@@ -50,27 +40,23 @@ type panel struct {
 }
 
 type view struct {
-	theme    *material.Theme
-	panels   []panel
-	active   int
-	focus    bool
-	started  bool
-	loader   *directoryLoader
-	openFile func(string) error
-	editing  bool
-	location widget.Editor
+	appearance Theme
+	theme      *material.Theme
+	panels     []panel
+	active     int
+	focus      bool
+	started    bool
+	loader     *directoryLoader
+	openFile   func(string) error
+	editing    bool
+	location   widget.Editor
 }
 
 func newPreviewView() *view { return newView(samplePanels()) }
 
 func newView(panels []panel) *view {
-	theme := material.NewTheme()
-	faces := bundledFont()
-	theme.Shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces))
-	theme.Face = faces[0].Font.Typeface
-	theme.Fg, theme.Bg = colors.foreground, colors.surface
-	theme.ContrastBg, theme.ContrastFg = colors.accent, colors.surface
-	v := &view{theme: theme, panels: panels,
+	appearance := defaultTheme
+	v := &view{appearance: appearance, theme: appearance.materialTheme(), panels: panels,
 		location: widget.Editor{SingleLine: true, Submit: true},
 	}
 	for i := range v.panels {
@@ -101,6 +87,14 @@ func (v *view) update(gtx layout.Context) {
 		}
 	}
 	v.expirePrefix(gtx)
+	// Explicitly matching Tab prevents Gio from moving focus to a row widget.
+	// Reserve it in both browsing and path editing for later use.
+	for {
+		_, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift})
+		if !ok {
+			break
+		}
+	}
 	if v.editing {
 		v.updateLocation(gtx)
 		if v.editing {
@@ -186,14 +180,14 @@ func (v *view) update(gtx layout.Context) {
 
 func (v *view) layout(gtx layout.Context) layout.Dimensions {
 	v.update(gtx)
-	paint.Fill(gtx.Ops, colors.surface)
+	paint.Fill(gtx.Ops, v.appearance.Colors.Surface)
 	event.Op(gtx.Ops, &v.focus)
 	children := make([]layout.FlexChild, 0, len(v.panels)*2-1)
 	for i := range v.panels {
 		if i > 0 {
 			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				size := image.Pt(gtx.Dp(1), gtx.Constraints.Max.Y)
-				paint.FillShape(gtx.Ops, colors.border, clip.Rect{Max: size}.Op())
+				paint.FillShape(gtx.Ops, v.appearance.Colors.Border, clip.Rect{Max: size}.Op())
 				return layout.Dimensions{Size: size}
 			}))
 		}
@@ -206,25 +200,28 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 
 func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 	p := &v.panels[index]
+	textHeight := v.textHeight(gtx, v.appearance.TextSize)
+	smallTextHeight := v.textHeight(gtx, v.appearance.SmallTextSize)
+	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.band(gtx, 40, colors.header, func(gtx layout.Context) layout.Dimensions {
-				fg := colors.foreground
+			return v.band(gtx, max(gtx.Dp(40), textHeight+gtx.Dp(12)), v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
+				fg := v.appearance.Colors.Foreground
 				if index == v.active {
-					fg = colors.accent
+					fg = v.appearance.Colors.ActiveLocation
 				}
 				if v.editing && index == v.active {
 					editor := material.Editor(v.theme, &v.location, "Path")
-					editor.TextSize, editor.Color = 13, colors.accent
-					editor.SelectionColor = rgb(0xffdf00)
+					editor.TextSize, editor.Color = v.appearance.TextSize, v.appearance.Colors.ActiveLocation
+					editor.SelectionColor = v.appearance.Colors.TextSelection
 					return editor.Layout(gtx)
 				}
-				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), 13, fg, text.Start)
+				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), v.appearance.TextSize, fg, text.Start)
 			}, index == v.active)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.band(gtx, 28, colors.surface, func(gtx layout.Context) layout.Dimensions {
-				return v.columns(gtx, entry{name: "NAME", size: "SIZE"}, colors.filename, colors.filesize, 12)
+			return v.band(gtx, max(gtx.Dp(28), smallTextHeight+gtx.Dp(12)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
+				return v.columns(gtx, entry{name: "NAME", size: "SIZE"}, v.appearance.Colors.Filename, v.appearance.Colors.Filesize, v.appearance.SmallTextSize)
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -232,7 +229,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
 			if p.reveal {
-				h := gtx.Dp(rowHeight)
+				h := rowHeight
 				top := p.list.Position.First*h + p.list.Position.Offset
 				if y := p.selected * h; y < top {
 					p.list.ScrollTo(p.selected)
@@ -245,31 +242,29 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			list := material.List(v.theme, &p.list)
 			list.AnchorStrategy = material.Occupy
 			list.Indicator.MinorWidth = 3
-			list.Indicator.Color = colors.muted
-			list.Indicator.HoverColor = colors.muted
+			list.Indicator.Color = v.appearance.Colors.Scrollbar
+			list.Indicator.HoverColor = v.appearance.Colors.ScrollbarHover
+			list.Track.Color = v.appearance.Colors.ScrollbarTrack
 			dims := list.Layout(gtx, len(p.items), func(gtx layout.Context, row int) layout.Dimensions {
 				if p.rows[row] == nil {
 					p.rows[row] = new(widget.Clickable)
 				}
 				return p.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					size := image.Pt(gtx.Constraints.Max.X, gtx.Dp(rowHeight))
-					bg := colors.surface
-					nameColor, sizeColor := colors.filename, colors.filesize
+					size := image.Pt(gtx.Constraints.Max.X, rowHeight)
+					bg := v.appearance.Colors.Surface
+					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Filesize
 					if row == p.selected && index == v.active {
-						bg = colors.selected
-						nameColor, sizeColor = colors.surface, rgb(0xffdf00)
+						bg = v.appearance.Colors.Selected
+						nameColor, sizeColor = v.appearance.Colors.SelectedName, v.appearance.Colors.SelectedSize
 					}
 					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 					if row == p.selected && index != v.active {
 						// Keep the last selection visible without an active-row fill.
-						paint.FillShape(gtx.Ops, colors.accent,
+						paint.FillShape(gtx.Ops, v.appearance.Colors.Edge,
 							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
 					}
 					gtx.Constraints = layout.Exact(size)
-					return layout.Inset{Top: 6, Bottom: 6, Left: 14, Right: 14}.Layout(gtx,
-						func(gtx layout.Context) layout.Dimensions {
-							return v.columns(gtx, p.items[row], nameColor, sizeColor, 13)
-						})
+					return v.rowContents(gtx, p.items[row], nameColor, sizeColor)
 				})
 			})
 			// Keep row widgets only around the visible viewport.
@@ -281,29 +276,39 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			return dims
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.band(gtx, 30, colors.header, func(gtx layout.Context) layout.Dimensions {
+			return v.band(gtx, max(gtx.Dp(30), smallTextHeight+gtx.Dp(12)), v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
 				status, failed := p.status()
 				if index == v.active && p.prefix != "" {
 					status, failed = "> "+p.prefix, false
 				}
-				fg := colors.foreground
+				fg := v.appearance.Colors.Foreground
 				if failed {
-					fg = rgb(0xc00000)
+					fg = v.appearance.Colors.Error
 				}
 				return v.columns(gtx, entry{name: status,
-					size: fmt.Sprintf("%d / %d", p.selected+1, len(p.items))}, fg, colors.muted, 12)
+					size: fmt.Sprintf("%d / %d", p.selected+1, len(p.items))}, fg, v.appearance.Colors.Muted, v.appearance.SmallTextSize)
 			}, false)
 		}),
 	)
 }
 
-func (v *view) band(gtx layout.Context, height unit.Dp, bg color.NRGBA, content layout.Widget, active bool) layout.Dimensions {
-	size := image.Pt(gtx.Constraints.Max.X, gtx.Dp(height))
+func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA) layout.Dimensions {
+	padding := max(0, v.appearance.RowPaddingHorizontal)
+	return layout.Inset{Left: padding, Right: padding}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints.Min.Y = 0
+			return v.columns(gtx, item, nameColor, sizeColor, v.appearance.TextSize)
+		})
+	})
+}
+
+func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layout.Widget, active bool) layout.Dimensions {
+	size := image.Pt(gtx.Constraints.Max.X, height)
 	paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
-	paint.FillShape(gtx.Ops, colors.border,
+	paint.FillShape(gtx.Ops, v.appearance.Colors.Border,
 		clip.Rect{Min: image.Pt(0, size.Y-gtx.Dp(1)), Max: size}.Op())
 	if active {
-		paint.FillShape(gtx.Ops, colors.accent, clip.Rect{Max: image.Pt(size.X, gtx.Dp(2))}.Op())
+		paint.FillShape(gtx.Ops, v.appearance.Colors.Edge, clip.Rect{Max: image.Pt(size.X, gtx.Dp(2))}.Op())
 	}
 	gtx.Constraints = layout.Exact(size)
 	layout.Inset{Left: 14, Right: 14}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -334,6 +339,12 @@ func (v *view) label(gtx layout.Context, value string, size unit.Sp, fg color.NR
 	return label.Layout(gtx)
 }
 
-func rgb(value uint32) color.NRGBA {
-	return color.NRGBA{R: uint8(value >> 16), G: uint8(value >> 8), B: uint8(value), A: 255}
+// Measure an unconstrained line using the same font and layout as the rows.
+// Discard its drawing operations; only the height is needed.
+func (v *view) textHeight(gtx layout.Context, size unit.Sp) int {
+	gtx.Constraints = layout.Constraints{Max: image.Pt(1_000_000, 1_000_000)}
+	macro := op.Record(gtx.Ops)
+	dims := v.label(gtx, "Mg", size, v.appearance.Colors.Foreground, text.Start)
+	macro.Stop()
+	return dims.Size.Y
 }
