@@ -39,6 +39,7 @@ type panel struct {
 	metadata  metadataColumn
 	reveal    bool
 	loading   bool
+	recycling bool
 	err       error
 	prefix    string
 	prefixAt  time.Time
@@ -190,6 +191,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: key.NameReturn},
 			key.Filter{Focus: &v.focus, Name: key.NameEnter},
 			key.Filter{Focus: &v.focus, Name: key.NameDeleteBackward},
+			key.Filter{Focus: &v.focus, Name: key.NameDeleteForward},
 		)
 		if !ok {
 			break
@@ -229,6 +231,11 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	switch ke.Name {
 	case key.NameF2:
 		v.startName(gtx, nameRename)
+		return
+	case key.NameDeleteForward:
+		if ke.Modifiers == 0 {
+			v.recycleSelected()
+		}
 		return
 	case key.NameTab:
 		direction := 1

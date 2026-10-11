@@ -1,6 +1,10 @@
 package app
 
-import "github.com/dannyben/commando/internal/browser"
+import (
+	"path/filepath"
+
+	"github.com/dannyben/commando/internal/browser"
+)
 
 type loadRequest struct {
 	panel            int
@@ -8,19 +12,23 @@ type loadRequest struct {
 	refresh          bool
 	rename           *renameRequest
 	create           *createRequest
+	recycle          *recycleRequest
 }
 
 type loadResult struct {
-	request   loadRequest
-	directory browser.Directory
-	created   browser.Entry
-	err       error
+	request       loadRequest
+	directory     browser.Directory
+	created       browser.Entry
+	recycled      browser.RecycleResult
+	sameDirectory []bool
+	err           error
 }
 
 type directoryLoader struct {
 	requests chan loadRequest
 	results  chan loadResult
 	done     chan struct{}
+	recycle  func(string, []string) (browser.RecycleResult, error)
 }
 
 // One worker keeps reads and mutations off the UI thread and avoids concurrent
@@ -30,6 +38,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		requests: make(chan loadRequest, 3),
 		results:  make(chan loadResult, 3),
 		done:     make(chan struct{}),
+		recycle:  browser.Recycle,
 	}
 	go func() {
 		for {
@@ -39,6 +48,8 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case request := <-l.requests:
 				var directory browser.Directory
 				var created browser.Entry
+				var recycled browser.RecycleResult
+				var sameDirectory []bool
 				var err error
 				if r := request.rename; r != nil {
 					err = browser.Rename(request.path, r.oldName, r.newName)
@@ -48,13 +59,25 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					} else {
 						created, err = browser.CreateFile(request.path, request.create.name)
 					}
+				} else if request.recycle != nil {
+					recycled, err = l.recycle(request.path, request.recycle.names)
+					sameDirectory = make([]bool, len(request.recycle.locations))
+					if len(recycled.Names) > 0 {
+						for pi, path := range request.recycle.locations {
+							if path == "" {
+								continue
+							}
+							resolved, resolveErr := browser.ResolveOperationPath(path)
+							sameDirectory[pi] = resolveErr == nil && samePath(filepath.Clean(resolved), recycled.Directory)
+						}
+					}
 				} else {
 					directory, err = read(request.path)
 				}
 				select {
 				case <-l.done:
 					return
-				case l.results <- loadResult{request: request, directory: directory, created: created, err: err}:
+				case l.results <- loadResult{request: request, directory: directory, created: created, recycled: recycled, sameDirectory: sameDirectory, err: err}:
 					if invalidate != nil {
 						invalidate()
 					}

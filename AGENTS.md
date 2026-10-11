@@ -12,7 +12,9 @@ module/executable and `Commando` for the window title and data-folder name.
 - `internal/feedback`: contextual message lifecycle and animation, without Gio.
 - `internal/app/theme.go`: colors, typography, font and row padding.
 - `scripts/build-windows` and `scripts/commando.rc`: Windows build and resources.
-- `dist/`: generated executable only; previews belong in `tmp/`.
+- `dist/`: generated executable only. Agent-generated screenshots go in
+  `tmp/agent/screenshots/`; temporary binaries go in `tmp/agent/bin/`.
+  Keep the `tmp/` root free for user contributions. Private notes stay in `tmp/docs/`.
 
 ## Behavior to Preserve
 
@@ -71,6 +73,15 @@ module/executable and `Commando` for the window title and data-folder name.
   showing the directory without changing their current item.
 - Resolve one shared `dataDir` for state and other application data. Windows uses
   `%LOCALAPPDATA%\Commando`. Previews use fixed sample entries and bypass persistence.
+- Delete recycles marked entries, otherwise the current file/folder, through the
+  single worker. Exclude parents and drives; keep Delete in editors and ignore
+  modifier variants. Resolve SUBST backing paths freshly and verify identity.
+  Use Windows IFileOperation with RECYCLEONDELETE and a pre-delete recycle veto;
+  never fall back to permanent deletion or a legacy undo-if-possible API. Only
+  confirmed recycled entries leave cached listings. Stop at the first failure
+  and report partial success in the existing footer. Preserve surviving marks,
+  current-item identity, scroll and focus in all panels showing the directory,
+  including aliases. Hold new name mutations while recycling is pending.
 
 ## Changes and Documentation
 

@@ -82,6 +82,10 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	if result.request.recycle != nil {
+		v.acceptRecycle(result)
+		return
+	}
 	if result.request.create != nil || result.request.rename != nil {
 		v.acceptName(result)
 		return

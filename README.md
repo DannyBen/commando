@@ -98,6 +98,23 @@ existing marks and updates other panels displaying the same directory. Busy
 panels and drive lists ignore the shortcut. Submitted creation finishes before
 the editor closes.
 
+## Recycling Files and Folders
+
+Delete sends marked files and folders to the Windows Recycle Bin, or the current
+item when nothing is marked. Parent rows and drives are excluded. Shift+Delete
+does not perform permanent deletion; Delete inside an editor still edits text.
+
+SUBST drives use their backing paths for recycling. Windows Restore returns
+items to those backing locations, making them visible through the aliases again.
+If recycling is unavailable, the operation is refused; there is no permanent-delete
+fallback. A batch stops at the first failure and reports any items already recycled.
+Failed and unprocessed items retain their marks. Other panels showing the same
+directory update without losing their surviving current items or marks.
+
+Recycling runs in the background and uses the panel footer for progress and
+results. Busy panels ignore Delete. New name mutations wait for recycling to
+finish. Recycling is unavailable on the Linux development build.
+
 ## Feedback
 
 Messages take over the panel footer, replacing its status and counts. They type
@@ -135,7 +152,7 @@ active panel are saved on close. Windows stores state in
 ## Development
 
 `op check` formats, vets and tests the app. `op preview` renders
-`tmp/preview.png` through the same Gio layout with fixed sample entries,
+`tmp/agent/screenshots/preview.png` through the same Gio layout with fixed sample entries,
 without reading or writing saved state.
 
 For Linux environments using Wayland/OpenGL without Vulkan or X11 support:
