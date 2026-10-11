@@ -8,6 +8,7 @@ import (
 
 	gioapp "gioui.org/app"
 	"gioui.org/io/event"
+	"gioui.org/io/key"
 	"golang.org/x/sys/windows"
 )
 
@@ -24,6 +25,7 @@ var (
 	keyboardCallback     uintptr
 	getWindowPlacement   = user32.NewProc("GetWindowPlacement")
 	setWindowPlacement   = user32.NewProc("SetWindowPlacement")
+	getKeyState          = user32.NewProc("GetKeyState")
 	nativeWindows        sync.Map // HWND -> *nativeWindow, held until WM_NCDESTROY.
 )
 
@@ -31,6 +33,7 @@ const shortcutSubclassID = 1
 
 type nativeWindow struct {
 	state      *windowTracker
+	keys       *nativeKeyInput
 	hwnd       uintptr
 	configured bool
 }
@@ -142,6 +145,31 @@ func shortcutKeyboardProc(code int32, wParam, lParam uintptr) uintptr {
 func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintptr) uintptr {
 	const wmSysChar, wmNCDestroy = 0x0106, 0x0082
 	const wmClose, wmDestroy, wmWindowPosChanged = 0x0010, 0x0002, 0x0047
+	const wmKeyDown, wmKeyUp, vkInsert = 0x0100, 0x0101, 0x2d
+	if (message == wmKeyDown || message == wmKeyUp) && wParam == vkInsert {
+		if native, ok := nativeWindows.Load(hwnd); ok {
+			n := native.(*nativeWindow)
+			if n.keys != nil {
+				e := key.Event{Name: insertKey, State: key.Press}
+				if message == wmKeyUp {
+					e.State = key.Release
+				}
+				for _, modifier := range []struct {
+					vk  uintptr
+					mod key.Modifiers
+				}{
+					{0x10, key.ModShift}, {0x11, key.ModCtrl}, {0x12, key.ModAlt},
+					{0x5b, key.ModSuper}, {0x5c, key.ModSuper},
+				} {
+					state, _, _ := getKeyState.Call(modifier.vk)
+					if state&0x8000 != 0 {
+						e.Modifiers |= modifier.mod
+					}
+				}
+				n.keys.push(e)
+			}
+		}
+	}
 	// Capture before destruction while the HWND is still valid. Position/size
 	// changes also keep a snapshot if the window is destroyed without WM_CLOSE.
 	if message == wmClose || message == wmDestroy || message == wmWindowPosChanged {

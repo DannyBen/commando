@@ -42,12 +42,14 @@ func Run() error {
 	go func() {
 		w := new(gioapp.Window)
 		tracker := windowTracker{value: saved.Window}
-		native := nativeWindow{state: &tracker}
+		keys := &nativeKeyInput{invalidate: w.Invalidate}
+		native := nativeWindow{state: &tracker, keys: keys}
 		w.Option(gioapp.Title("Commando"),
 			gioapp.Size(unit.Dp(windowWidth), unit.Dp(windowHeight)),
 			gioapp.MinSize(unit.Dp(720), unit.Dp(360)))
 		w.Option(native.options()...)
 		v := newRestoredView(locations, saved.ActivePanel, w.Invalidate)
+		v.nativeKeys = keys
 		var ops op.Ops
 		for {
 			e := w.Event()

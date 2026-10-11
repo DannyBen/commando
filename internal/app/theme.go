@@ -27,6 +27,7 @@ type Theme struct {
 type ThemeColors struct {
 	Surface, Header, Footer, Border, Foreground, Muted color.NRGBA
 	Edge, ActiveLocation                               color.NRGBA
+	Marked                                             color.NRGBA // Left-edge bar for marked files and folders.
 	Filename, Filesize                                 color.NRGBA
 	Selected, SelectedName, SelectedSize               color.NRGBA
 	TextSelection, Error                               color.NRGBA
@@ -45,6 +46,7 @@ var defaultTheme = Theme{
 		Muted:          rgb(0x333333),
 		Edge:           rgb(0x0000ff),
 		ActiveLocation: rgb(0x0000ff),
+		Marked:         rgb(0xff8800),
 		Filename:       rgb(0x0000ff),
 		Filesize:       rgb(0x0000ff),
 		Selected:       rgb(0x0055ff),

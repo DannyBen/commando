@@ -16,6 +16,10 @@ module/executable and `Commando` for the window title and data-folder name.
 ## Behavior to Preserve
 
 - Three independent panels retain their own selection and scroll position.
+- File marks are separate from the current row, local to each panel, and not
+  persisted. Preserve them during navigation within a listing and failed reads;
+  clear them on successful listing changes. Exclude parent rows and drives.
+  Keep mark bars independent of filename colors. Enter opens only the current row.
 - Left/Right and Shift+Tab/Tab switch panels without wrapping. While editing a
   location, Tab/Shift+Tab retain editor text, selection and focus.
 - Ctrl+Left/Right opens the selected folder, parent row or drive in the adjacent

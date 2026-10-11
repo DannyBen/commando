@@ -40,11 +40,28 @@ Each panel keeps its own selection and scroll position. Mouse selection, wheel
 scrolling and scrollbars are supported. Directory reads run in the background;
 a failed read shows an inline error and retains the listing.
 
+## Marking Files
+
+Marks use a left-edge bar and remain separate from the current-row highlight.
+
+- Insert toggles a mark and moves down; Space toggles without moving.
+- Shift+Up/Down extends a range; reversing direction shrinks it.
+- Ctrl+A marks all files and folders, excluding the parent row.
+- Escape clears a typing prefix first, otherwise it clears marks.
+- Ctrl+click toggles a mark; Shift+click extends a range. Ordinary clicks and
+  navigation preserve marks. Space remains part of filename typing while a
+  prefix is active.
+
+Each panel retains its marks when switching panels. Enter opens only the current
+row. Entering a directory clears marks; failed reads retain them. Drives cannot
+be marked.
+
 ## Appearance and Saved State
 
 Colors, text sizes, the bundled font and row padding are defined in
 [`internal/app/theme.go`](internal/app/theme.go). Edit `defaultTheme` and rebuild
 to adjust the appearance. Rows grow with the font height and center their text.
+`Marked` controls the mark bars independently of filename colors.
 
 Window position, size, maximized state, panel locations and the active panel are
 saved on close. Windows stores state in `%LOCALAPPDATA%\Commando\state.json`.

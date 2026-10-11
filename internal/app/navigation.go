@@ -70,6 +70,7 @@ func (v *view) acceptLoad(result loadResult) {
 	if result.err != nil {
 		return
 	}
+	p.clearMarks()
 	p.prefix = ""
 	p.drives = result.directory.Drives
 	if !p.drives {
@@ -182,6 +183,9 @@ func (p *panel) status() (string, bool) {
 	}
 	if p.drives {
 		return fmt.Sprintf("%d drives", len(p.items)), false
+	}
+	if len(p.marks) > 0 {
+		return fmt.Sprintf("%d marked", len(p.marks)), false
 	}
 	return fmt.Sprintf("%d items", p.itemCount()), false
 }

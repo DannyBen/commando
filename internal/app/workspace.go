@@ -26,33 +26,46 @@ type entry struct {
 }
 
 type panel struct {
-	path     string // Last physical directory, retained while displaying drives.
-	drives   bool
-	items    []entry
-	rows     map[int]*widget.Clickable
-	list     widget.List
-	selected int
-	reveal   bool
-	loading  bool
-	err      error
-	prefix   string
-	prefixAt time.Time
+	path      string // Last physical directory, retained while displaying drives.
+	drives    bool
+	items     []entry
+	rows      map[int]*widget.Clickable
+	list      widget.List
+	selected  int
+	marks     map[int]bool
+	markRange *selectionRange
+	reveal    bool
+	loading   bool
+	err       error
+	prefix    string
+	prefixAt  time.Time
 }
 
 type view struct {
-	appearance Theme
-	theme      *material.Theme
-	panels     []panel
-	active     int
-	focus      bool
-	started    bool
-	loader     *directoryLoader
-	openFile   func(string) error
-	editing    bool
-	location   widget.Editor
+	appearance        Theme
+	theme             *material.Theme
+	panels            []panel
+	active            int
+	focus             bool
+	started           bool
+	loader            *directoryLoader
+	openFile          func(string) error
+	editing           bool
+	location          widget.Editor
+	nativeKeys        *nativeKeyInput
+	suppressSpaceText bool
 }
 
-func newPreviewView() *view { return newView(samplePanels()) }
+func newPreviewView() *view {
+	v := newView(samplePanels())
+	for _, row := range []int{1, 3, 4} {
+		v.panels[0].toggleMark(row)
+	}
+	for _, row := range []int{2, 5} {
+		v.panels[1].toggleMark(row)
+	}
+	return v
+}
 
 func newView(panels []panel) *view {
 	appearance := defaultTheme
@@ -76,10 +89,15 @@ func (v *view) update(gtx layout.Context) {
 	for pi := range v.panels {
 		p := &v.panels[pi]
 		for ri, row := range p.rows {
-			for row.Clicked(gtx) {
+			for {
+				click, ok := row.Update(gtx)
+				if !ok {
+					break
+				}
 				v.stopLocation(gtx)
 				v.panels[v.active].prefix = ""
-				v.active, p.selected = pi, ri
+				v.active = pi
+				p.clickRow(ri, click.Modifiers&key.ModShift != 0, click.Modifiers&key.ModCtrl != 0)
 				p.prefix = ""
 				p.reveal, p.err = true, nil
 				gtx.Execute(key.FocusCmd{Tag: &v.focus})
@@ -87,6 +105,12 @@ func (v *view) update(gtx layout.Context) {
 		}
 	}
 	v.expirePrefix(gtx)
+	// Native Insert events are queued on the window thread. Ignore them in editors.
+	for _, ke := range v.nativeKeys.drain() {
+		if !v.editing {
+			v.browseKey(gtx, ke)
+		}
+	}
 	// Explicitly matching Tab prevents Gio from moving focus to a row widget.
 	// Switch panels while browsing; keep focus in the editor while editing.
 	for {
@@ -113,8 +137,11 @@ func (v *view) update(gtx layout.Context) {
 			key.FocusFilter{Target: &v.focus},
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModAlt},
 			key.Filter{Focus: &v.focus, Name: key.NameEscape},
-			key.Filter{Focus: &v.focus, Name: key.NameUpArrow},
-			key.Filter{Focus: &v.focus, Name: key.NameDownArrow},
+			key.Filter{Focus: &v.focus, Name: key.NameUpArrow, Optional: key.ModShift},
+			key.Filter{Focus: &v.focus, Name: key.NameDownArrow, Optional: key.ModShift},
+			key.Filter{Focus: &v.focus, Name: insertKey},
+			key.Filter{Focus: &v.focus, Name: key.NameSpace},
+			key.Filter{Focus: &v.focus, Name: "A", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameRightArrow},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Required: key.ModCtrl},
@@ -131,6 +158,12 @@ func (v *view) update(gtx layout.Context) {
 			break
 		}
 		if edit, ok := e.(key.EditEvent); ok {
+			if v.suppressSpaceText {
+				v.suppressSpaceText = false
+				if edit.Text == " " {
+					continue
+				}
+			}
 			v.typeToSelect(edit.Text, gtx.Now)
 			continue
 		}
@@ -138,56 +171,95 @@ func (v *view) update(gtx layout.Context) {
 		if !ok || ke.State != key.Press {
 			continue
 		}
-		p := &v.panels[v.active]
-		next := p.selected
-		page := max(1, p.list.Position.Count-1)
-		switch ke.Name {
-		case "D":
-			v.startLocation(gtx)
+		v.browseKey(gtx, ke)
+		if v.editing {
 			return
-		case key.NameEscape:
-			p.prefix = ""
-			continue
-		case key.NameLeftArrow, key.NameRightArrow:
-			direction := 1
-			if ke.Name == key.NameLeftArrow {
-				direction = -1
-			}
-			if ke.Modifiers&key.ModCtrl != 0 {
-				v.openAdjacent(direction)
-			} else {
-				v.switchPanel(direction)
-			}
-			continue
-		case key.NameReturn, key.NameEnter:
-			p.prefix = ""
-			v.activateSelected()
-			continue
-		case key.NameDeleteBackward:
-			p.prefix = ""
-			v.parentFolder()
-			continue
-		case key.NameUpArrow:
-			next--
-		case key.NameDownArrow:
-			next++
-		case key.NameHome:
-			next = 0
-		case key.NameEnd:
-			next = len(p.items) - 1
-		case key.NamePageUp:
-			next -= page
-		case key.NamePageDown:
-			next += page
 		}
-		p.prefix = ""
-		if len(p.items) == 0 {
-			continue
-		}
-		p.selected = max(0, min(next, len(p.items)-1))
-		p.reveal, p.err = true, nil
 	}
 	v.expirePrefix(gtx)
+}
+
+func (v *view) browseKey(gtx layout.Context, ke key.Event) {
+	if ke.State != key.Press {
+		return
+	}
+	v.suppressSpaceText = false
+	p := &v.panels[v.active]
+	next := p.selected
+	page := max(1, p.list.Position.Count-1)
+	switch ke.Name {
+	case "D":
+		v.startLocation(gtx)
+		return
+	case key.NameEscape:
+		if p.prefix != "" {
+			p.prefix = ""
+		} else {
+			p.clearMarks()
+		}
+		return
+	case "A":
+		p.prefix = ""
+		p.markAll()
+		return
+	case key.NameSpace:
+		if p.prefix == "" {
+			p.toggleMark(p.selected)
+			v.suppressSpaceText = true
+		}
+		return
+	case insertKey:
+		if ke.Modifiers != 0 || p.loading {
+			return
+		}
+		p.toggleMark(p.selected)
+		next++
+	case key.NameLeftArrow, key.NameRightArrow:
+		direction := 1
+		if ke.Name == key.NameLeftArrow {
+			direction = -1
+		}
+		if ke.Modifiers&key.ModCtrl != 0 {
+			v.openAdjacent(direction)
+		} else {
+			v.switchPanel(direction)
+		}
+		return
+	case key.NameReturn, key.NameEnter:
+		p.prefix = ""
+		v.activateSelected()
+		return
+	case key.NameDeleteBackward:
+		p.prefix = ""
+		v.parentFolder()
+		return
+	case key.NameUpArrow:
+		next--
+	case key.NameDownArrow:
+		next++
+	case key.NameHome:
+		next = 0
+	case key.NameEnd:
+		next = len(p.items) - 1
+	case key.NamePageUp:
+		next -= page
+	case key.NamePageDown:
+		next += page
+	default:
+		return
+	}
+	p.prefix = ""
+	if len(p.items) == 0 {
+		return
+	}
+	next = max(0, min(next, len(p.items)-1))
+	if ke.Modifiers&key.ModShift != 0 {
+		p.markTo(next)
+	} else {
+		p.markRange = nil
+	}
+	p.selected = next
+	p.reveal, p.err = true, nil
 }
 
 func (v *view) switchPanel(direction int) {
@@ -275,7 +347,10 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 						nameColor, sizeColor = v.appearance.Colors.SelectedName, v.appearance.Colors.SelectedSize
 					}
 					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
-					if row == p.selected && index != v.active {
+					if p.marks[row] {
+						paint.FillShape(gtx.Ops, v.appearance.Colors.Marked,
+							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
+					} else if row == p.selected && index != v.active {
 						// Keep the last selection visible without an active-row fill.
 						paint.FillShape(gtx.Ops, v.appearance.Colors.Edge,
 							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())

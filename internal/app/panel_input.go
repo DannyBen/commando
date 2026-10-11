@@ -41,6 +41,7 @@ func (v *view) typeToSelect(text string, now time.Time) {
 	if text == "" {
 		return
 	}
+	p.markRange = nil
 	if now.Sub(p.prefixAt) >= prefixDelay {
 		p.prefix = ""
 	}
