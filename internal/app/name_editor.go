@@ -40,7 +40,7 @@ func (n *nameSession) draft() bool { return n.kind != nameRename && !n.finished 
 
 func (v *view) startName(gtx layout.Context, kind nameOperation) {
 	p := &v.panels[v.active]
-	if p.loading || v.activeEditor() != nil || v.recyclingInProgress() {
+	if p.loading || v.activeEditor() != nil || v.recyclingInProgress() || v.transferPending {
 		return
 	}
 	r := &nameSession{kind: kind, panel: v.active, path: p.path, row: p.selected,

@@ -21,7 +21,7 @@ type recycleRequest struct {
 
 func (v *view) recycleSelected() {
 	p := &v.panels[v.active]
-	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives {
+	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || v.transferPending {
 		return
 	}
 	var names []string
@@ -73,7 +73,7 @@ func (v *view) acceptRecycle(result loadResult) {
 			matches = true
 		}
 		if matches {
-			other.removeRecycledEntries(result.recycled.Names)
+			other.removeEntries(result.recycled.Names)
 		}
 	}
 	count := len(result.recycled.Names)
@@ -92,7 +92,7 @@ func (v *view) acceptRecycle(result loadResult) {
 	v.showFeedback(result.request.panel, feedback.Success, message)
 }
 
-func (p *panel) removeRecycledEntries(names []string) {
+func (p *panel) removeEntries(names []string) {
 	if len(names) == 0 {
 		return
 	}

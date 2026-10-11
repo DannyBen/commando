@@ -73,6 +73,17 @@ module/executable and `Commando` for the window title and data-folder name.
   showing the directory without changing their current item.
 - Resolve one shared `dataDir` for state and other application data. Windows uses
   `%LOCALAPPDATA%\Commando`. Previews use fixed sample entries and bypass persistence.
+- Ctrl+C/Ctrl+X puts marked files/folders, otherwise the current item, on the
+  Windows file clipboard; preserve ordinary text clipboard keys inside editors.
+  Ctrl+V transfers into the active folder, never its highlighted child. Read the
+  current system clipboard through the single directory worker. Copy selections
+  stay reusable; remove only confirmed moved items from cut selections and never
+  replace a newer clipboard. Cut filename colors belong to the shared file list
+  and remain independent of marks. Preserve panel focus, current-item identity,
+  surviving marks, and open moved descendants. Preflight the whole batch for
+  destination names; never overwrite or merge, including late conflicts. Stop
+  at runtime failure with partial results in the existing footer. Transfer
+  progress and cancellation require a separate agreed interaction model.
 - Delete recycles marked entries, otherwise the current file/folder, through the
   single worker. Exclude parents and drives; keep Delete in editors and ignore
   modifier variants. Resolve SUBST backing paths freshly and verify identity.

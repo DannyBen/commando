@@ -82,6 +82,10 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	if result.request.clipboard != nil || result.request.transfer != nil {
+		v.acceptFileOperation(result)
+		return
+	}
 	if result.request.recycle != nil {
 		v.acceptRecycle(result)
 		return

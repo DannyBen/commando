@@ -98,6 +98,24 @@ existing marks and updates other panels displaying the same directory. Busy
 panels and drive lists ignore the shortcut. Submitted creation finishes before
 the editor closes.
 
+## Copying, Cutting and Pasting
+
+Ctrl+C copies marked files and folders to the clipboard; Ctrl+X cuts them.
+With no marks, both use the current item. Ctrl+V pastes into the active panel's
+folder, regardless of its highlighted row. Windows shares file selections with
+Explorer and other file managers. Inside editors, these shortcuts still edit text.
+
+Cut filenames are dimmed independently of marks. Copy selections remain reusable;
+successful moves remove completed items from the cut selection. Failed and
+unprocessed items remain available for retry. Replacing the clipboard clears
+the cut appearance.
+
+Existing destination names refuse the entire batch before it starts; folders
+are never merged and files are never overwritten. A runtime failure stops the
+batch and reports completed transfers in the existing footer. Transfers run in
+the background, retaining panel focus and surviving marks and current items.
+There is no transfer progress or cancellation interface yet.
+
 ## Recycling Files and Folders
 
 Delete sends marked files and folders to the Windows Recycle Bin, or the current
@@ -141,6 +159,8 @@ Colors, text sizes, the bundled font and row padding are defined in
 to adjust the appearance. Rows grow with the font height and center their text.
 `Marked` controls the mark bars independently of filename colors.
 `Metadata` and `SelectedMetadata` control the optional column's text colors.
+`CutFilename` and `SelectedCutFilename` control cut filenames in ordinary and
+selected rows.
 `NameRow` controls the surrounding row during inline name editing; matching
 `Surface` hides the row highlight. `EditorText` controls text in both the filename and
 location editors; `TextSelection` controls their shared selection background.
@@ -154,6 +174,12 @@ active panel are saved on close. Windows stores state in
 `op check` formats, vets and tests the app. `op preview` renders
 `tmp/agent/screenshots/preview.png` through the same Gio layout with fixed sample entries,
 without reading or writing saved state.
+
+Filesystem transfer tests use disposable directories. For Windows file-clipboard
+integration on a desktop, set `COMMANDO_TEST_CLIPBOARD=1` and run
+`go test ./internal/browser -run WindowsFileClipboard`.
+This optional test replaces the system clipboard. Explorer interoperability
+still requires desktop testing. Linux development uses an in-process file clipboard.
 
 For Linux environments using Wayland/OpenGL without Vulkan or X11 support:
 

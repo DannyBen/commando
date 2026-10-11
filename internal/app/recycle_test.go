@@ -173,7 +173,7 @@ func TestRecycledRowsRetainCurrentIdentityAndViewport(t *testing.T) {
 	} {
 		p := panel{items: slices.Clone(files), selected: tc.selected, marks: map[int]bool{4: true}}
 		p.list.Position = layout.Position{First: 3, Offset: 7}
-		p.removeRecycledEntries(tc.removed)
+		p.removeEntries(tc.removed)
 		if p.items[p.selected].file.Name != tc.want {
 			t.Fatalf("selected %q, want %q", p.items[p.selected].file.Name, tc.want)
 		}
@@ -183,12 +183,12 @@ func TestRecycledRowsRetainCurrentIdentityAndViewport(t *testing.T) {
 	}
 	p := panel{items: slices.Clone(files), selected: 1}
 	p.list.Position = layout.Position{First: 3, Offset: 7}
-	p.removeRecycledEntries([]string{"b"})
+	p.removeEntries([]string{"b"})
 	if p.list.Position.First != 2 || p.reveal {
 		t.Fatal("removing a row jumped to a surviving offscreen selection")
 	}
 	p = panel{items: files[1:2], selected: 0}
-	p.removeRecycledEntries([]string{"a"})
+	p.removeEntries([]string{"a"})
 	if len(p.items) != 0 || p.selected != -1 {
 		t.Fatal("empty listing retained a current row")
 	}

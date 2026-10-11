@@ -62,6 +62,11 @@ type view struct {
 	nativeKeys        *nativeKeyInput
 	suppressSpaceText bool
 	feedbackPointer   bool
+	cutClipboard      browser.FileClipboard
+	cutLocations      []string
+	cutPanelPaths     []string
+	transferPending   bool
+	clipboardSequence func() uint32
 }
 
 func newPreviewView() *view {
@@ -78,8 +83,9 @@ func newPreviewView() *view {
 func newView(panels []panel) *view {
 	appearance := defaultTheme
 	v := &view{appearance: appearance, theme: appearance.materialTheme(), panels: panels,
-		location:   widget.Editor{SingleLine: true, Submit: true},
-		nameEditor: widget.Editor{SingleLine: true, Submit: true},
+		location:          widget.Editor{SingleLine: true, Submit: true},
+		nameEditor:        widget.Editor{SingleLine: true, Submit: true},
+		clipboardSequence: browser.FileClipboardSequence,
 	}
 	for i := range v.panels {
 		p := &v.panels[i]
@@ -91,6 +97,7 @@ func newView(panels []panel) *view {
 }
 
 func (v *view) update(gtx layout.Context) {
+	v.updateCutClipboard(gtx)
 	v.updateFeedbackInput(gtx)
 	defer v.dismissUnhandledFeedbackKeys(gtx)
 	v.pollLoads()
@@ -177,6 +184,9 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: insertKey},
 			key.Filter{Focus: &v.focus, Name: key.NameSpace},
 			key.Filter{Focus: &v.focus, Name: "A", Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: "C", Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: "X", Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: "V", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "M", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "R", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "N", Required: key.ModCtrl, Optional: key.ModShift},
@@ -229,6 +239,15 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	next := p.selected
 	page := max(1, p.list.Position.Count-1)
 	switch ke.Name {
+	case "C", "X", "V":
+		if ke.Modifiers == key.ModCtrl {
+			if ke.Name == "V" {
+				v.pasteFiles()
+			} else {
+				v.clipboardSelected(ke.Name == "X")
+			}
+		}
+		return
 	case key.NameF2:
 		v.startName(gtx, nameRename)
 		return
@@ -434,6 +453,12 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					} else if storedRow == p.selected && index == v.active && draft < 0 {
 						bg = v.appearance.Colors.Selected
 						nameColor, sizeColor = v.appearance.Colors.SelectedName, v.appearance.Colors.SelectedMetadata
+					}
+					if !naming && v.cutEntry(index, storedRow) {
+						nameColor = v.appearance.Colors.CutFilename
+						if storedRow == p.selected && index == v.active && draft < 0 {
+							nameColor = v.appearance.Colors.SelectedCutFilename
+						}
 					}
 					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 					if p.marks[storedRow] {

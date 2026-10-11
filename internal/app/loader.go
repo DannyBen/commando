@@ -13,6 +13,8 @@ type loadRequest struct {
 	rename           *renameRequest
 	create           *createRequest
 	recycle          *recycleRequest
+	clipboard        *fileClipboardRequest
+	transfer         *transferRequest
 }
 
 type loadResult struct {
@@ -22,23 +24,37 @@ type loadResult struct {
 	recycled      browser.RecycleResult
 	sameDirectory []bool
 	err           error
+	clipboard     browser.FileClipboard
+	transferred   browser.TransferResult
+	locations     []string
+	sourceParents []string
+	clipboardErr  error
+	transferMove  bool
 }
 
 type directoryLoader struct {
-	requests chan loadRequest
-	results  chan loadResult
-	done     chan struct{}
-	recycle  func(string, []string) (browser.RecycleResult, error)
+	requests          chan loadRequest
+	results           chan loadResult
+	done              chan struct{}
+	recycle           func(string, []string) (browser.RecycleResult, error)
+	readClipboard     func() (browser.FileClipboard, error)
+	writeClipboard    func([]string, bool) (browser.FileClipboard, error)
+	completeClipboard func(browser.FileClipboard, []string) (browser.FileClipboard, error)
+	transfer          func([]string, string, bool) (browser.TransferResult, error)
 }
 
 // One worker keeps reads and mutations off the UI thread and avoids concurrent
 // filesystem access. Each panel allows only one pending directory read.
 func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate func()) *directoryLoader {
 	l := &directoryLoader{
-		requests: make(chan loadRequest, 3),
-		results:  make(chan loadResult, 3),
-		done:     make(chan struct{}),
-		recycle:  browser.Recycle,
+		requests:          make(chan loadRequest, 3),
+		results:           make(chan loadResult, 3),
+		done:              make(chan struct{}),
+		recycle:           browser.Recycle,
+		readClipboard:     browser.ReadFileClipboard,
+		writeClipboard:    browser.WriteFileClipboard,
+		completeClipboard: browser.CompleteFileClipboard,
+		transfer:          browser.Transfer,
 	}
 	go func() {
 		for {
@@ -46,6 +62,18 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
+				if request.clipboard != nil || request.transfer != nil {
+					result := l.fileOperation(request)
+					select {
+					case <-l.done:
+						return
+					case l.results <- result:
+						if invalidate != nil {
+							invalidate()
+						}
+					}
+					continue
+				}
 				var directory browser.Directory
 				var created browser.Entry
 				var recycled browser.RecycleResult
