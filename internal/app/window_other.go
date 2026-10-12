@@ -42,3 +42,5 @@ func (n *nativeWindow) configure(_ *gioapp.Window, e event.Event) {
 	}
 	n.state.set(state)
 }
+
+func (*nativeWindow) owner() uintptr { return 0 }

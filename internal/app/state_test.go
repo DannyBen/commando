@@ -271,7 +271,8 @@ func TestRestoreMetadataDefaultsAndDrives(t *testing.T) {
 
 func TestRestoreDrivesAndUnavailableFolder(t *testing.T) {
 	root := filepath.VolumeName(t.TempDir()) + string(filepath.Separator)
-	missing := filepath.Join(t.TempDir(), "missing")
+	parent := t.TempDir()
+	missing := filepath.Join(parent, "missing", "nested")
 	for _, active := range []int{-1, 50} {
 		v := newRestoredView([]panelState{{Path: root, Drives: true}, {Path: missing}}, active, nil)
 		for i := range v.panels {
@@ -279,12 +280,61 @@ func TestRestoreDrivesAndUnavailableFolder(t *testing.T) {
 		}
 		state := v.sessionState(windowState{})
 		if v.active != 0 || !state.Panels[0].Drives || state.Panels[0].Path != root ||
-			state.Panels[1].Path != missing || v.panels[1].err == nil || v.panels[1].loading {
-			t.Fatal("restore lost the drive location or failed folder")
+			state.Panels[1].Path != parent || v.panels[1].err != nil || v.panels[1].loading {
+			t.Fatal("restore lost the drive location or surviving parent")
 		}
-		if status, failed := v.panels[1].status(); !failed || status != "Folder not found" {
-			t.Fatal("unavailable saved folder did not show the existing inline error")
+		if _, failed := v.panels[1].status(); failed {
+			t.Fatal("recovered folder showed an error")
 		}
 		v.loader.close()
+	}
+}
+
+func TestRestoreDeletedFolderSavesSurvivingParent(t *testing.T) {
+	parent := t.TempDir()
+	deleted := filepath.Join(parent, "deleted")
+	child := filepath.Join(deleted, "child")
+	if err := os.MkdirAll(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	dataDir := t.TempDir()
+	saved := sessionState{ActivePanel: 1, Panels: []panelState{
+		{Path: parent, Metadata: "none"}, {Path: child, Metadata: "modified"},
+	}}
+	if err := saveState(dataDir, saved); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(deleted); err != nil {
+		t.Fatal(err)
+	}
+	saved, err := loadState(dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := newRestoredView(saved.Panels, saved.ActivePanel, nil)
+	defer v.loader.close()
+	for i := range v.panels {
+		waitLoaded(t, v, i)
+	}
+	if v.panels[1].path != parent || v.panels[1].err != nil ||
+		v.active != 1 || v.panels[1].metadata != metadataModified {
+		t.Fatalf("deleted folder was not recovered: %+v", v.sessionState(windowState{}))
+	}
+	if err := saveState(dataDir, v.sessionState(windowState{})); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := loadState(dataDir)
+	if err != nil || reopened.Panels[1].Path != parent {
+		t.Fatalf("recovered path was not saved: %+v, err=%v", reopened, err)
+	}
+}
+
+func TestExplicitMissingStartupFolderKeepsError(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing")
+	v := newBrowserView([]string{missing}, nil)
+	defer v.loader.close()
+	waitLoaded(t, v, 0)
+	if v.panels[0].path != missing || v.panels[0].err == nil {
+		t.Fatal("explicit startup folder unexpectedly recovered to its parent")
 	}
 }

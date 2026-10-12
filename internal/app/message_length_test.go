@@ -15,8 +15,7 @@ import (
 func TestOperationErrorsFitShortPanelFooter(t *testing.T) {
 	errorsToReport := []error{
 		browser.ErrNoClipboardFiles, browser.ErrInvalidName, fs.ErrExist, fs.ErrPermission, fs.ErrNotExist,
-		browser.ErrTransferIntoSelf, browser.ErrOverlappingSources, browser.ErrSourceChanged,
-		browser.ErrSameTransferFile, browser.ErrConflictChanged, browser.ErrTransferType,
+		browser.ErrTransferUnavailable,
 		browser.ErrDriveMapping, browser.ErrDriveMappingCycle, browser.ErrPathIdentity,
 		browser.ErrRecycleUnavailable, browser.ErrRecycleUnconfirmed, errors.ErrUnsupported, errors.New("other"),
 	}

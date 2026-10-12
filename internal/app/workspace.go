@@ -27,7 +27,6 @@ type panel struct {
 	metadata  metadataColumn
 	reveal    bool
 	loading   bool
-	recycling bool
 	err       error
 	prefix    string
 	prefixAt  time.Time
@@ -35,29 +34,29 @@ type panel struct {
 }
 
 type view struct {
-	appearance          Theme
-	theme               *material.Theme
-	panels              []panel
-	active              int
-	focus               bool
-	started             bool
-	loader              *directoryLoader
-	openFile            func(string) error
-	editing             bool
-	location            widget.Editor
-	naming              *nameSession
-	nameEditor          widget.Editor
-	nativeKeys          *nativeKeyInput
-	suppressSpaceText   bool
-	feedbackPointer     bool
-	cutClipboard        browser.FileClipboard
-	cutLocations        []string
-	cutPanelPaths       []string
-	transferPending     bool
-	clipboardSequence   func() uint32
-	actions             *inlineActionSession
-	pendingFileConflict *loadResult
-	pendingDuplicate    *loadResult
+	appearance        Theme
+	theme             *material.Theme
+	panels            []panel
+	active            int
+	focus             bool
+	started           bool
+	loader            *directoryLoader
+	openFile          func(string) error
+	editing           bool
+	location          widget.Editor
+	naming            *nameSession
+	nameEditor        widget.Editor
+	nativeKeys        *nativeKeyInput
+	suppressSpaceText bool
+	feedbackPointer   bool
+	cutClipboard      browser.FileClipboard
+	cutLocations      []string
+	cutPanelPaths     []string
+	transferPending   bool
+	clipboardSequence func() uint32
+	ownerWindow       uintptr
+	actions           *inlineActionSession
+	pendingDuplicate  *loadResult
 }
 
 func newPreviewView() *view {

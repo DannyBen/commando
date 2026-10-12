@@ -200,3 +200,5 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 	result, _, _ := defSubclassProc.Call(hwnd, uintptr(message), wParam, lParam)
 	return result
 }
+
+func (n *nativeWindow) owner() uintptr { return n.hwnd }

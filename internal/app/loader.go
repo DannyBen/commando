@@ -1,7 +1,11 @@
 package app
 
 import (
+	"errors"
+	"io/fs"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 
 	"github.com/dannyben/commando/internal/browser"
 )
@@ -10,6 +14,9 @@ type loadRequest struct {
 	panel            int
 	path, selectName string
 	refresh          bool
+	restore          bool
+	tracked          bool
+	action           actionClass
 	locations        []string // Captured panel paths for create/rename alias reconciliation.
 	rename           *renameRequest
 	create           *createRequest
@@ -29,11 +36,9 @@ type loadResult struct {
 	clipboard         browser.FileClipboard
 	transferred       browser.TransferResult
 	locations         []string
-	sourceParents     []string
 	clipboardErr      error
 	transferMove      bool
-	conflictPlan      *browser.TransferPlan
-	duplicatePlan     *browser.TransferPlan
+	duplicatePlan     *browser.DuplicatePlan
 	alreadyHere       bool
 	panelUpdates      []transferPanelUpdate
 	mutationDirectory string
@@ -47,9 +52,11 @@ type directoryLoader struct {
 	readClipboard     func() (browser.FileClipboard, error)
 	writeClipboard    func([]string, bool) (browser.FileClipboard, error)
 	completeClipboard func(browser.FileClipboard, []string) (browser.FileClipboard, error)
-	planTransfer      func([]string, string) (*browser.TransferPlan, error)
-	executeTransfer   func(*browser.TransferPlan, bool, browser.TransferPolicy) (browser.TransferResult, error)
+	transfer          func(browser.TransferRequest) (browser.TransferResult, error)
 	readDirectory     func(string) (browser.Directory, error)
+	busy              atomic.Int32
+	stopOnce          sync.Once
+	stopped           chan struct{}
 }
 
 // One worker keeps reads and mutations off the UI thread and avoids concurrent
@@ -63,12 +70,18 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		readClipboard:     browser.ReadFileClipboard,
 		writeClipboard:    browser.WriteFileClipboard,
 		completeClipboard: browser.CompleteFileClipboard,
-		planTransfer:      browser.PlanTransfer,
-		executeTransfer:   browser.ExecuteTransfer,
+		transfer:          browser.Transfer,
+		stopped:           make(chan struct{}),
 		readDirectory:     read,
 	}
 	go func() {
+		defer close(l.stopped)
 		for {
+			select {
+			case <-l.done:
+				return
+			default:
+			}
 			select {
 			case <-l.done:
 				return
@@ -80,13 +93,9 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					} else {
 						result = l.fileOperation(request)
 					}
-					select {
-					case <-l.done:
-						return
-					case l.results <- result:
-						if invalidate != nil {
-							invalidate()
-						}
+					l.results <- result
+					if invalidate != nil {
+						invalidate()
 					}
 					continue
 				}
@@ -126,17 +135,17 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 						}
 					}
 				} else {
-					directory, err = read(request.path)
+					if request.restore {
+						directory, err = l.readExistingParent(request.path)
+					} else {
+						directory, err = read(request.path)
+					}
 				}
 				result.directory, result.created, result.recycled = directory, created, recycled
 				result.sameDirectory, result.err = sameDirectory, err
-				select {
-				case <-l.done:
-					return
-				case l.results <- result:
-					if invalidate != nil {
-						invalidate()
-					}
+				l.results <- result
+				if invalidate != nil {
+					invalidate()
 				}
 			}
 		}
@@ -144,4 +153,17 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 	return l
 }
 
-func (l *directoryLoader) close() { close(l.done) }
+func (l *directoryLoader) close() { l.stopOnce.Do(func() { close(l.done) }) }
+
+// Missing locations can recover at their closest surviving ancestor. Other
+// read failures retain their usual feedback rather than changing the location.
+// Run this only on the directory worker.
+func (l *directoryLoader) readExistingParent(path string) (browser.Directory, error) {
+	for {
+		directory, err := l.readDirectory(path)
+		if !errors.Is(err, fs.ErrNotExist) || filepath.Dir(path) == path {
+			return directory, err
+		}
+		path = filepath.Dir(path)
+	}
+}

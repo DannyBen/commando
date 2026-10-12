@@ -2,50 +2,124 @@ package browser
 
 import (
 	"errors"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 )
 
-var (
-	ErrTransferIntoSelf   = errors.New("cannot transfer a folder into itself")
-	ErrOverlappingSources = errors.New("overlapping transfer sources")
-	ErrSourceChanged      = errors.New("source changed during transfer")
-)
+var ErrTransferUnavailable = errors.New("file transfers require Windows")
+
+// TransferRequest dispatches a selection to the Windows shell. Names is used
+// for duplication; ordinary copy/move lets Windows resolve destination names.
+type TransferRequest struct {
+	OpenFolders     []string // Resolved UI locations needing descendant move tracking.
+	Paths           []string
+	Directory       string
+	Names           []string
+	Move, Duplicate bool
+	Owner           uintptr
+}
 
 type TransferredItem struct {
-	Source   string
-	Entry    Entry
-	Moved    bool
-	Replaced bool
+	Source          string
+	Entry           Entry
+	Moved, Replaced bool
 }
 
-type TransferResult struct {
-	Directory string
-	Items     []TransferredItem
-	Changes   []TransferredPath
-	Skipped   int
-}
-
-// TransferredPath records whole entries and confirmed child changes during
-// partial moves and folder merges, so open descendants can follow completed moves.
 type TransferredPath struct {
 	Source, Destination string
 	Directory, Moved    bool
 }
 
-// Transfer uses the same inspected pipeline as transfers awaiting a conflict
-// decision. Without an overwrite policy, file collisions refuse the whole batch.
-func Transfer(paths []string, directory string, move bool) (TransferResult, error) {
-	return transfer(paths, directory, move, transferOne)
+type TransferResult struct {
+	Directory          string
+	Items              []TransferredItem
+	Changes            []TransferredPath
+	Skipped            int
+	Aborted, Attempted bool
 }
 
-func transfer(paths []string, directory string, move bool, perform transferPerformer) (TransferResult, error) {
-	plan, err := PlanTransfer(paths, directory)
+// Transfer has one execution backend. Windows owns progress, conflict/error
+// dialogs and cancellation; Commando only observes and reconciles its results.
+func Transfer(request TransferRequest) (TransferResult, error) {
+	prepared, err := prepareTransfer(request)
 	if err != nil {
 		return TransferResult{}, err
 	}
-	return executeTransfer(plan, move, TransferExclusive, perform)
+	return transferNative(prepared, request.Paths)
+}
+
+// Resolve SUBST and parent aliases without scanning file contents or deciding
+// conflicts. The shell receives backing paths so same-volume aliases stay fast.
+func prepareTransfer(request TransferRequest) (TransferRequest, error) {
+	if len(request.Paths) == 0 || len(request.Names) != 0 && len(request.Names) != len(request.Paths) || request.Duplicate && request.Move {
+		return request, fs.ErrInvalid
+	}
+	target, err := ResolveOperationPath(request.Directory)
+	if err != nil {
+		return request, err
+	}
+	target, err = filepath.EvalSymlinks(target)
+	if err != nil {
+		return request, err
+	}
+	info, err := os.Stat(target)
+	if err != nil {
+		return request, err
+	}
+	if !info.IsDir() {
+		return request, fs.ErrInvalid
+	}
+	request.Directory = target
+	paths := make([]string, len(request.Paths))
+	names := append([]string(nil), request.Names...)
+	reserved := make(map[string]bool)
+	for i, path := range request.Paths {
+		if !filepath.IsAbs(path) {
+			return request, fs.ErrInvalid
+		}
+		resolved, err := ResolveOperationPath(path)
+		if err != nil {
+			return request, err
+		}
+		parent, err := filepath.EvalSymlinks(filepath.Dir(resolved))
+		if err != nil {
+			return request, err
+		}
+		paths[i] = filepath.Join(parent, filepath.Base(resolved))
+		if request.Duplicate && len(request.Names) == 0 {
+			info, err := os.Lstat(paths[i])
+			if err != nil {
+				return request, err
+			}
+			name, err := availableCopyName(target, filepath.Base(paths[i]), info.IsDir(), reserved)
+			if err != nil {
+				return request, err
+			}
+			names = append(names, name)
+			reserved[strings.ToUpper(name)] = true
+		}
+	}
+	for _, name := range names {
+		if err := ValidateName(name); err != nil {
+			return request, err
+		}
+	}
+	request.Paths, request.Names = paths, names
+	return request, nil
+}
+
+func entryFromInfo(path string, info fs.FileInfo) Entry {
+	return Entry{Name: filepath.Base(path), Directory: info.IsDir(), Bytes: info.Size(), SizeKnown: info.Mode().IsRegular(), Modified: info.ModTime()}
+}
+
+func sameTransferPath(a, b string) bool {
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(a, b)
+	}
+	return a == b
 }
 
 func pathWithin(parent, path string) bool {

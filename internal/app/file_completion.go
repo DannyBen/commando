@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/dannyben/commando/internal/feedback"
 )
@@ -10,11 +9,9 @@ import (
 func (v *view) acceptFileOperation(result loadResult) {
 	p := &v.panels[result.request.panel]
 	p.loading = false
-	locations := []string(nil)
 	if capture := result.request.clipboard; capture != nil {
-		locations = capture.locations
 		if result.err == nil {
-			v.rememberCutClipboard(result.clipboard, locations, result.locations)
+			v.rememberCutClipboard(result.clipboard, capture.locations, result.locations)
 			verb := "copied"
 			if capture.move {
 				verb = "cut"
@@ -35,68 +32,63 @@ func (v *view) acceptFileOperation(result loadResult) {
 		v.pendingDuplicate = &result
 		return
 	}
-	if result.conflictPlan != nil {
-		v.transferPending = true
-		v.pendingFileConflict = &result
-		v.offerFileConflict()
-		return
-	}
-	locations = result.request.transfer.locations
-	refreshFailed := false
-	for pi := range v.panels {
-		other := &v.panels[pi]
-		if other.drives || pi >= len(locations) || !samePath(other.path, locations[pi]) || pi >= len(result.locations) {
-			continue
-		}
-		if pi < len(result.panelUpdates) && result.panelUpdates[pi].needed {
-			update := result.panelUpdates[pi]
-			if update.path != "" {
-				other.path = update.path
-			}
-			if update.err != nil {
-				refreshFailed = true
-				v.showFeedback(pi, feedback.Warning, "Cannot refresh folder")
-			} else {
-				other.reconcileTransferListing(update.directory)
-			}
-			continue
-		}
-		for index, item := range result.transferred.Items {
-			if item.Moved && item.Entry.Directory && index < len(result.sourceParents) {
-				source := filepath.Join(result.sourceParents[index], filepath.Base(item.Source))
-				if relative, ok := movedLocationSuffix(source, result.locations[pi]); ok {
-					other.path = filepath.Join(result.transferred.Directory, item.Entry.Name, relative)
-				}
-			}
-			if item.Moved && index < len(result.sourceParents) && samePath(result.locations[pi], result.sourceParents[index]) {
-				other.removeEntries([]string{filepath.Base(item.Source)})
-			}
-			if samePath(result.locations[pi], result.transferred.Directory) {
-				other.applyTransferredEntry(item)
-			}
-		}
-	}
+	locations := result.request.transfer.locations
+	refreshFailed := v.applyTransferPanels(result, locations)
 	if !result.request.transfer.duplicate {
 		v.rememberCutClipboard(result.clipboard, locations, result.locations)
 	}
-	verb := "copied"
-	if result.transferMove {
-		verb = "moved"
+	v.showTransferResult(result, refreshFailed)
+}
+
+func (v *view) applyTransferPanels(result loadResult, locations []string) (refreshFailed bool) {
+	for pi := range v.panels {
+		p := &v.panels[pi]
+		if p.drives || pi >= len(locations) || !samePath(p.path, locations[pi]) || pi >= len(result.panelUpdates) {
+			continue
+		}
+		update := result.panelUpdates[pi]
+		if !update.needed {
+			continue
+		}
+		if update.path != "" {
+			p.path = update.path
+		}
+		if update.err != nil {
+			refreshFailed = true
+			v.showFeedback(pi, feedback.Warning, "Cannot refresh folder")
+		} else {
+			p.reconcileTransferListing(update.directory)
+		}
 	}
+	return
+}
+
+func (v *view) showTransferResult(result loadResult, refreshFailed bool) {
 	count := len(result.transferred.Items)
+	panel := result.request.panel
 	if result.err != nil {
 		message := fileTransferError(result.err)
 		if count > 0 {
 			message = fmt.Sprintf("%d transferred; %s", count, message)
 		}
-		v.showFeedback(result.request.panel, feedback.Error, message)
+		v.showFeedback(panel, feedback.Error, message)
 	} else if result.clipboardErr != nil {
-		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d moved; clipboard update failed", count))
+		v.showFeedback(panel, feedback.Warning, fmt.Sprintf("%d moved; clipboard update failed", count))
 	} else if refreshFailed {
-		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d transferred; refresh failed", count))
+		v.showFeedback(panel, feedback.Warning, fmt.Sprintf("%d transferred; refresh failed", count))
+	} else if result.transferred.Aborted {
+		message := "Transfer stopped"
+		if count > 0 {
+			message = fmt.Sprintf("%d transferred; operation stopped", count)
+		}
+		v.showFeedback(panel, feedback.Info, message)
 	} else if result.transferred.Skipped > 0 {
-		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d transferred; %d skipped", count, result.transferred.Skipped))
+		v.showFeedback(panel, feedback.Warning, fmt.Sprintf("%d transferred; %d skipped", count, result.transferred.Skipped))
 	} else {
-		v.showFeedback(result.request.panel, feedback.Success, fmt.Sprintf("%d %s", count, verb))
+		verb := "copied"
+		if result.transferMove {
+			verb = "moved"
+		}
+		v.showFeedback(panel, feedback.Success, fmt.Sprintf("%d %s", count, verb))
 	}
 }

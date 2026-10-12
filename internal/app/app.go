@@ -48,15 +48,19 @@ func Run() error {
 			gioapp.Size(unit.Dp(windowWidth), unit.Dp(windowHeight)),
 			gioapp.MinSize(unit.Dp(720), unit.Dp(360)))
 		w.Option(native.options()...)
-		v := newRestoredView(locations, saved.ActivePanel, w.Invalidate)
+		v := newLocationView(locations, saved.ActivePanel, w.Invalidate, len(flag.Args()) == 0)
 		v.nativeKeys = keys
 		var ops op.Ops
 		for {
 			e := w.Event()
 			switch e := e.(type) {
+			case *gioapp.ClosingEvent:
+				if !v.requestClose() {
+					e.Abort()
+					w.Invalidate()
+				}
 			case gioapp.DestroyEvent:
-				v.pollLoads()
-				v.loader.close()
+				v.finishOperations()
 				if err := saveState(dataDir, v.sessionState(tracker.snapshot())); err != nil {
 					done <- errors.Join(e.Err, fmt.Errorf("cannot save state: %w", err))
 				} else {
@@ -68,6 +72,7 @@ func Run() error {
 				e.Frame(&ops)
 			}
 			native.configure(w, e)
+			v.ownerWindow = native.owner()
 		}
 	}()
 	go func() {

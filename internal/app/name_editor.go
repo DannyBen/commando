@@ -33,7 +33,7 @@ type nameSession struct {
 	pending, finished bool
 	focused           bool
 	err               error
-	duplicate         *browser.TransferPlan
+	duplicate         *browser.DuplicatePlan
 	folder            bool
 	previousPosition  layout.Position
 	previousReveal    bool
@@ -43,7 +43,7 @@ func (n *nameSession) draft() bool { return n.kind != nameRename && !n.finished 
 
 func (v *view) startName(gtx layout.Context, kind nameOperation) {
 	p := &v.panels[v.active]
-	if p.loading || v.activeEditor() != nil || v.recyclingInProgress() || v.transferPending {
+	if p.loading || v.activeEditor() != nil || !v.actionAllowed(actionMutation) {
 		return
 	}
 	r := &nameSession{kind: kind, panel: v.active, path: p.path, row: p.selected,
@@ -169,7 +169,7 @@ func (v *view) updateName(gtx layout.Context) {
 			if r.kind == nameRename {
 				request.rename = &renameRequest{oldName: r.oldName, newName: e.Text}
 			} else if r.kind == nameDuplicate {
-				request.duplicate = &duplicateRequest{plan: r.duplicate, name: e.Text, locations: v.fileOperationLocations()}
+				request.duplicate = &duplicateRequest{plan: r.duplicate, name: e.Text, locations: v.fileOperationLocations(), owner: v.ownerWindow}
 				progress = "Copying"
 			} else {
 				request.create = &createRequest{name: e.Text, folder: r.kind == nameCreateFolder}
@@ -177,7 +177,7 @@ func (v *view) updateName(gtx layout.Context) {
 			}
 			r.err, r.pending, v.nameEditor.ReadOnly = nil, true, true
 			v.panels[r.panel].feedback.Progress(progress)
-			v.loader.requests <- request
+			v.loader.submit(request)
 		}
 	}
 }
@@ -188,6 +188,15 @@ func (v *view) acceptName(result loadResult) {
 		return
 	}
 	r.pending, r.err, v.nameEditor.ReadOnly = false, result.err, false
+	if result.request.duplicate != nil && result.transferred.Attempted {
+		refreshFailed := v.applyTransferPanels(result, result.request.duplicate.locations)
+		r.finished = true
+		if result.created.Name != "" {
+			v.applyDuplicate(result)
+		}
+		v.showTransferResult(result, refreshFailed)
+		return
+	}
 	if result.err != nil && result.created.Name == "" {
 		v.showFeedback(r.panel, feedback.Error, r.errorText(result.err))
 		v.panels[r.panel].reveal = true

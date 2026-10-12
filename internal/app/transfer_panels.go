@@ -25,30 +25,24 @@ func (l *directoryLoader) refreshTransferPanels(result *loadResult) {
 			continue
 		}
 		path := original
-		needed := samePath(original, result.transferred.Directory)
+		// Windows may leave partial changes even when no successful item callback
+		// was delivered. Refresh every captured open folder after an attempted batch.
+		longest := -1
 		for _, change := range result.transferred.Changes {
-			if samePath(original, filepath.Dir(change.Destination)) || change.Moved && samePath(original, filepath.Dir(change.Source)) {
-				needed = true
-			}
-			if change.Moved && change.Directory {
+			if change.Moved && change.Directory && len(change.Source) > longest {
 				if relative, ok := movedLocationSuffix(change.Source, original); ok {
-					path, needed = filepath.Join(change.Destination, relative), true
+					path, longest = filepath.Join(change.Destination, relative), len(change.Source)
 				}
 			}
 		}
-		if result.transferMove {
-			for _, parent := range result.sourceParents {
-				needed = needed || samePath(original, parent)
-			}
-		}
-		if !needed {
-			continue
-		}
 		update := transferPanelUpdate{needed: true}
+		update.directory, update.err = l.readExistingParent(path)
+		if update.err == nil {
+			path = update.directory.Path
+		}
 		if !samePath(original, path) {
 			update.path = path
 		}
-		update.directory, update.err = l.readDirectory(path)
 		result.panelUpdates[pi] = update
 	}
 }

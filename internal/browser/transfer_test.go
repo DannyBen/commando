@@ -2,217 +2,143 @@ package browser
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
-	"time"
 )
 
-func transferFixture(t *testing.T) (string, string, []string) {
+func TestShellJournalBoundsLargeFolderBookkeepingAndTracksOpenDescendants(t *testing.T) {
+	root, target := filepath.Join(t.TempDir(), "folder"), filepath.Join(t.TempDir(), "folder (2)")
+	journal := newTransferJournal(TransferRequest{Paths: []string{root}, OpenFolders: []string{filepath.Join(root, "nested", "open")}})
+	for i := range 10000 {
+		name := fmt.Sprintf("file-%d", i)
+		journal.observe(transferObservation{source: filepath.Join(root, "other", name), destination: filepath.Join(target, "other", name)})
+	}
+	if len(journal.snapshot()) != 1 {
+		t.Fatal("journal grew with unrelated child files")
+	}
+	if journal.needs(filepath.Join(root, "other", "another-file")) {
+		t.Fatal("unrelated children still require filesystem metadata")
+	}
+	nested := filepath.Join(root, "nested")
+	if !journal.needs(nested) {
+		t.Fatal("open descendant ancestor must still be observed")
+	}
+	journal.observe(transferObservation{source: nested, destination: filepath.Join(target, "renamed-nested"), directory: true})
+	if len(journal.snapshot()) != 2 {
+		t.Fatal("open descendant mapping not retained")
+	}
+	// A root completion supplies its definitive destination after partial child
+	// observations; native collision names must win over inferred names.
+	actual := filepath.Join(filepath.Dir(target), "actual-root")
+	journal.observe(transferObservation{source: root, destination: actual, directory: true})
+	if journal.observations[transferPathKey(root)].destination != actual {
+		t.Fatal("final root name did not replace inference")
+	}
+}
+
+func writeTransferFiles(t *testing.T, root string, files map[string]string) {
 	t.Helper()
+	for name, data := range files {
+		path := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestTransferPreparationDispatchesConflictsWithoutMutating(t *testing.T) {
 	source, target := t.TempDir(), t.TempDir()
-	if err := os.MkdirAll(filepath.Join(source, "folder", "nested"), 0700); err != nil {
+	writeTransferFiles(t, source, map[string]string{"same.txt": "source"})
+	writeTransferFiles(t, target, map[string]string{"same.txt": "target"})
+	request, err := prepareTransfer(TransferRequest{Paths: []string{filepath.Join(source, "same.txt")}, Directory: target, Move: true, Owner: 42})
+	if err != nil || request.Owner != 42 || !request.Move || request.Paths[0] != filepath.Join(source, "same.txt") || request.Directory != target {
+		t.Fatalf("dispatch preparation: %+v %v", request, err)
+	}
+	for path, want := range map[string]string{request.Paths[0]: "source", filepath.Join(target, "same.txt"): "target"} {
+		data, err := os.ReadFile(path)
+		if err != nil || string(data) != want {
+			t.Fatal("preparation changed files")
+		}
+	}
+}
+
+func TestDuplicatePreparationKeepsEditableNamesAndClipboardIndependent(t *testing.T) {
+	root := t.TempDir()
+	writeTransferFiles(t, root, map[string]string{"résumé.txt": "source", "résumé - Copy.txt": "existing", ".env": "dotfile"})
+	plan, err := PlanDuplicate([]string{filepath.Join(root, "résumé.txt")}, root)
+	if err != nil {
 		t.Fatal(err)
 	}
-	for path, data := range map[string]string{"Å file.txt": "hello", "folder/nested/data": "nested contents"} {
-		if err := os.WriteFile(filepath.Join(source, filepath.FromSlash(path)), []byte(data), 0600); err != nil {
-			t.Fatal(err)
-		}
+	entry, name := plan.DuplicateSubject()
+	if name != "résumé - Copy (2).txt" || entry.Name != "résumé.txt" || entry.Directory {
+		t.Fatal("wrong suggestion or subject")
 	}
-	return source, target, []string{filepath.Join(source, "Å file.txt"), filepath.Join(source, "folder")}
-}
-
-func TestTransferRealMixedFilesAndFolders(t *testing.T) {
-	for _, move := range []bool{false, true} {
-		source, target, paths := transferFixture(t)
-		result, err := Transfer(paths, target, move)
-		if err != nil || result.Directory != target || len(result.Items) != 2 {
-			t.Fatalf("transfer: %+v %v", result, err)
-		}
-		for i, item := range result.Items {
-			if item.Source != paths[i] || item.Moved != move || item.Entry.Name != filepath.Base(paths[i]) {
-				t.Fatalf("wrong confirmation: %+v", item)
-			}
-		}
-		for name, want := range map[string]string{"Å file.txt": "hello", "folder/nested/data": "nested contents"} {
-			data, err := os.ReadFile(filepath.Join(target, filepath.FromSlash(name)))
-			if err != nil || string(data) != want {
-				t.Fatalf("wrong destination %q: %q %v", name, data, err)
-			}
-			_, err = os.Stat(filepath.Join(source, filepath.FromSlash(name)))
-			if move && !errors.Is(err, fs.ErrNotExist) || !move && err != nil {
-				t.Fatalf("wrong source retention: %v", err)
-			}
-		}
-		if !result.Items[1].Entry.Directory || !result.Items[0].Entry.SizeKnown {
-			t.Fatal("missing transferred metadata")
-		}
+	request, err := plan.Request("edited.txt", 72)
+	if err != nil || request.Move || !request.Duplicate || request.Owner != 72 || request.Names[0] != "edited.txt" {
+		t.Fatalf("named dispatch: %+v %v", request, err)
+	}
+	if _, err := plan.Request("../outside", 0); !errors.Is(err, ErrInvalidName) {
+		t.Fatal("path accepted as a name")
+	}
+	if _, err := plan.Request("résumé - Copy.txt", 0); !errors.Is(err, fs.ErrExist) {
+		t.Fatal("existing name accepted in editor")
+	}
+	batch, err := prepareTransfer(TransferRequest{Paths: []string{filepath.Join(root, ".env"), filepath.Join(root, "résumé.txt")}, Directory: root, Duplicate: true})
+	if err != nil || batch.Names[0] != ".env - Copy" || batch.Names[1] != name {
+		t.Fatalf("batch names: %+v %v", batch, err)
 	}
 }
 
-func TestTransferConflictsPreflightWholeBatch(t *testing.T) {
-	for _, move := range []bool{false, true} {
-		source, target, paths := transferFixture(t)
-		if err := os.MkdirAll(filepath.Join(target, "folder", "nested"), 0700); err != nil {
-			t.Fatal(err)
-		}
-		keep := filepath.Join(target, "folder", "nested", "data")
-		if err := os.WriteFile(keep, []byte("original"), 0600); err != nil {
-			t.Fatal(err)
-		}
-		result, err := Transfer(paths, target, move)
-		if !errors.Is(err, fs.ErrExist) || len(result.Items) != 0 {
-			t.Fatalf("conflict was not refused: %+v %v", result, err)
-		}
-		if _, err := os.Stat(filepath.Join(target, "Å file.txt")); !errors.Is(err, fs.ErrNotExist) {
-			t.Fatal("first item transferred before later conflict")
-		}
-		if data, err := os.ReadFile(keep); err != nil || string(data) != "original" {
-			t.Fatal("existing folder changed")
-		}
-		if _, err := os.Stat(filepath.Join(source, "Å file.txt")); err != nil {
-			t.Fatal("conflict removed source")
-		}
-	}
-}
-
-func TestTransferRejectsMissingDuplicatesAndOverlappingSources(t *testing.T) {
-	source, target, paths := transferFixture(t)
-	for _, tc := range []struct {
-		paths  []string
-		target string
-		want   error
-	}{
-		{append(paths[:1:1], filepath.Join(source, "missing")), target, fs.ErrNotExist},
-		{[]string{paths[0], paths[0]}, target, fs.ErrExist},
-		{[]string{paths[1], filepath.Join(paths[1], "nested", "data")}, target, ErrOverlappingSources},
-		{[]string{paths[1]}, filepath.Join(paths[1], "nested"), ErrTransferIntoSelf},
-		{[]string{"relative-file"}, target, fs.ErrInvalid},
-	} {
-		calls := 0
-		result, err := transfer(tc.paths, tc.target, true, func(string, string, bool) (transferOutcome, error) { calls++; return transferOutcome{}, nil })
-		if !errors.Is(err, tc.want) || calls != 0 || len(result.Items) != 0 {
-			t.Fatalf("preflight: %+v %v calls=%d", result, err, calls)
-		}
-	}
-}
-
-func TestTransferRuntimeFailureRetainsConfirmedPrefix(t *testing.T) {
-	_, target, paths := transferFixture(t)
-	result, err := transfer(paths, target, false, func(source, destination string, move bool) (transferOutcome, error) {
-		if filepath.Base(source) == "folder" {
-			return transferOutcome{}, fs.ErrPermission
-		}
-		return transferOne(source, destination, move)
-	})
-	if !errors.Is(err, fs.ErrPermission) || len(result.Items) != 1 || result.Items[0].Source != paths[0] {
-		t.Fatalf("partial result: %+v %v", result, err)
-	}
-	if _, err := os.Stat(filepath.Join(target, "folder")); !errors.Is(err, fs.ErrNotExist) {
-		t.Fatal("failed folder appeared")
-	}
-}
-
-func TestTransferLateConflictNeverReplacesDestination(t *testing.T) {
-	for _, move := range []bool{false, true} {
-		_, target, paths := transferFixture(t)
-		if err := os.Chmod(paths[0], 0444); err != nil {
-			t.Fatal(err)
-		}
-		result, err := transfer(paths[:1], target, move, func(source, destination string, move bool) (transferOutcome, error) {
-			if err := os.WriteFile(destination, []byte("late arrival"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			return transferOne(source, destination, move)
-		})
-		if !errors.Is(err, fs.ErrExist) || len(result.Items) != 0 {
-			t.Fatalf("late conflict: %+v %v", result, err)
-		}
-		data, err := os.ReadFile(filepath.Join(target, filepath.Base(paths[0])))
-		if err != nil || string(data) != "late arrival" {
-			t.Fatal("late arrival replaced")
-		}
-		if _, err := os.Stat(paths[0]); err != nil {
-			t.Fatal("late conflict removed source")
-		}
-		entries, _ := os.ReadDir(target)
-		if len(entries) != 1 {
-			t.Fatal("staging leaked after conflict")
-		}
-	}
-}
-
-func TestCopyTransferCrossVolumeMovePath(t *testing.T) {
-	_, target, paths := transferFixture(t)
-	outcome, err := copyTransfer(paths[1], filepath.Join(target, "folder"), true)
-	if err != nil || !outcome.created || !outcome.moved {
-		t.Fatalf("copy/delete move: %t %t %v", outcome.created, outcome.moved, err)
-	}
-	if _, err := os.Stat(paths[1]); !errors.Is(err, fs.ErrNotExist) {
-		t.Fatal("source tree retained after successful move")
-	}
-	if data, err := os.ReadFile(filepath.Join(target, "folder", "nested", "data")); err != nil || string(data) != "nested contents" {
-		t.Fatal("copy/delete move lost nested data")
-	}
-}
-
-func TestSourceMutationPreventsMoveDeletion(t *testing.T) {
-	_, target, paths := transferFixture(t)
-	var manifest []sourceEntry
-	if err := copyTree(paths[1], filepath.Join(target, "folder"), &manifest); err != nil {
-		t.Fatal(err)
-	}
-	file := filepath.Join(paths[1], "nested", "data")
-	if err := os.WriteFile(file, []byte("new contents"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := removeCopiedEntries(manifest, "", "", os.Remove); !errors.Is(err, ErrSourceChanged) {
-		t.Fatalf("changed source not refused: %v", err)
-	}
-	if data, err := os.ReadFile(file); err != nil || string(data) != "new contents" {
-		t.Fatal("changed source was deleted")
-	}
-}
-
-func TestCopyPreservesModifiedTimeAndFinalLinks(t *testing.T) {
-	_, target, paths := transferFixture(t)
-	modified := time.Date(2020, 2, 3, 4, 5, 6, 0, time.UTC)
-	if err := os.Chtimes(paths[0], modified, modified); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Transfer(paths[:1], target, false); err != nil {
-		t.Fatal(err)
-	}
-	info, err := os.Stat(filepath.Join(target, filepath.Base(paths[0])))
-	if err != nil || !info.ModTime().Equal(modified) {
-		t.Fatal("copy lost modified time")
-	}
-	link := filepath.Join(filepath.Dir(paths[0]), "link")
-	if err := os.Symlink("missing-target", link); err != nil {
-		t.Skip("symlinks unavailable:", err)
-	}
-	if _, err := Transfer([]string{link}, target, false); err != nil {
-		t.Fatal(err)
-	}
-	if value, err := os.Readlink(filepath.Join(target, "link")); err != nil || value != "missing-target" {
-		t.Fatal("copy followed or altered final link")
-	}
-}
-
-func TestTransferDirectoryAliasAndDestinationSelf(t *testing.T) {
-	source, target, paths := transferFixture(t)
+func TestTransferPreparationResolvesParentAliasesAndKeepsFinalLinks(t *testing.T) {
+	source, target := t.TempDir(), t.TempDir()
+	writeTransferFiles(t, source, map[string]string{"file": "data"})
 	alias := filepath.Join(t.TempDir(), "alias")
 	if err := os.Symlink(source, alias); err != nil {
-		t.Skip("symlinks unavailable:", err)
+		t.Skip(err)
 	}
-	result, err := Transfer([]string{filepath.Join(alias, "folder")}, filepath.Join(paths[1], "nested"), true)
-	if !errors.Is(err, ErrTransferIntoSelf) || len(result.Items) != 0 {
-		t.Fatalf("alias self-copy: %+v %v", result, err)
+	link := filepath.Join(source, "link")
+	if err := os.Symlink("file", link); err != nil {
+		t.Skip(err)
 	}
-	result, err = Transfer([]string{filepath.Join(alias, filepath.Base(paths[0]))}, target, false)
-	if err != nil || !reflect.DeepEqual([]string{result.Items[0].Source}, []string{filepath.Join(alias, filepath.Base(paths[0]))}) {
-		t.Fatalf("clipboard source identity lost: %+v %v", result, err)
+	request, err := prepareTransfer(TransferRequest{Paths: []string{filepath.Join(alias, "link")}, Directory: target})
+	if err != nil || request.Paths[0] != link {
+		t.Fatalf("alias/final-link dispatch: %+v %v", request, err)
+	}
+}
+
+func TestPartialShellMoveAcceptsStateAndReportsMovedDescendants(t *testing.T) {
+	source, target := t.TempDir(), t.TempDir()
+	writeTransferFiles(t, source, map[string]string{"folder/remaining": "untouched"})
+	writeTransferFiles(t, target, map[string]string{"folder (2)/nested/child": "moved"})
+	root := filepath.Join(source, "folder")
+	child := filepath.Join(root, "nested")
+	result := transferResults(TransferRequest{Paths: []string{root}, Directory: target, Move: true}, []string{"clipboard-alias"}, []transferObservation{
+		{source: filepath.Join(child, "child"), destination: filepath.Join(target, "folder (2)", "nested", "child")},
+		{source: child, destination: filepath.Join(target, "folder (2)", "nested"), directory: true},
+	}, true, 1)
+	if !result.Attempted || !result.Aborted || result.Skipped != 1 || len(result.Items) != 1 || result.Items[0].Moved || result.Items[0].Source != "clipboard-alias" || result.Items[0].Entry.Name != "folder (2)" {
+		t.Fatalf("partial outcome: %+v", result)
+	}
+	if len(result.Changes) != 2 || !result.Changes[1].Moved || !result.Changes[1].Directory {
+		t.Fatal("confirmed child folder not followed")
+	}
+	if data, err := os.ReadFile(filepath.Join(root, "remaining")); err != nil || string(data) != "untouched" {
+		t.Fatal("reconciliation mutated the source")
+	}
+}
+
+func TestShellCompletionRetainsClipboardOriginalAndActualDestinationName(t *testing.T) {
+	source, target := filepath.Join(t.TempDir(), "old.txt"), t.TempDir()
+	writeTransferFiles(t, target, map[string]string{"actual.txt": "data"})
+	request := TransferRequest{Paths: []string{source}, Directory: target, Move: true}
+	result := transferResults(request, []string{"alias-path"}, []transferObservation{{source: source, destination: filepath.Join(target, "actual.txt")}}, false, 0)
+	if len(result.Items) != 1 || result.Items[0].Source != "alias-path" || !result.Items[0].Moved || result.Items[0].Entry.Name != "actual.txt" || !result.Changes[0].Moved {
+		t.Fatalf("completion mapping: %+v", result)
 	}
 }

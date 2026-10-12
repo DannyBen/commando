@@ -88,35 +88,20 @@ module/executable and `Commando` for the window title and data-folder name.
   stay reusable; remove only confirmed moved items from cut selections and never
   replace a newer clipboard. Cut filename colors belong to the shared file list
   and remain independent of marks. Preserve panel focus, current-item identity,
-  surviving marks, and open moved descendants. Preflight the whole batch for
-  file conflicts before any mutation; recursively merge existing real folders
-  and preserve destination-only entries. Refuse mismatched file/folder types and
-  final-link collisions before the batch starts. One regular-file transfer
-  offers Overwrite (default), Cancel. Folder contents and batches offer Overwrite
-  all (default), Skip existing, Cancel, with one decision covering the batch.
-  Keep shared inline rows beneath the first conflicting target file, or its
-  top-level folder for nested conflicts. Omit headings and repeated filenames;
-  keep the subject and choices visible together. Ensure the inspected subject
-  exists in the cached listing before attaching actions. Explain ordinary
-  conflicts through Warning feedback: File exists for a single file, a count
-  for batches, without filenames. Up/Down selects, Enter applies, Escape
-  or clicking an ordinary row cancels; clicking an option selects it. Closing
-  actions with a choice or Escape selects and reveals their subject
-  file. An ordinary-row click selects the clicked row instead. Keep the
-  target selected when switching panels cancels a pending choice. At outer
-  edges, a switch that cannot move focus retains the choice. Cancel arriving
-  conflicts if the user has already left the target panel; never open an
-  inactive choice. Retain the presented clipboard snapshot, stage the replacement
-  fully and recheck file
-  identity and metadata before replacing. Overwritten files are not recycled.
-  Verify the full inspected decision before running it; changed entries require
-  a fresh choice. Never overwrite a late arrival absent from the approved plan.
-  Skipped files stay at the source. Remove only verified, now-empty merged
-  source folders, and keep partly moved folders in the cut selection. Stop at
-  runtime failure with partial results in the existing footer. Refresh affected
-  open folders through the worker, retaining surviving marks, current items and
-  viewport anchors; follow confirmed moved descendants into merged destinations.
-  Transfer progress and cancellation require a separate agreed interaction model.
+  surviving marks, and open moved descendants. Windows IFileOperation is the
+  only copy/move/duplicate engine. It owns native progress, cancellation,
+  conflicts, merges and error dialogs. Accept its resulting filesystem state
+  after cancellation; never perform rollback, cleanup or source deletion after
+  the shell operation. Do not retain an internal transfer fallback. Resolve
+  SUBST and parent aliases before dispatch. Observe actual per-item results,
+  including names changed by Windows and partially completed folder moves.
+  Refresh captured open folders after every attempted batch, retaining surviving
+  marks, current items and viewport anchors. Follow confirmed moved descendants.
+  Linux supports development/previews and refuses actual transfers.
+  Categorize requests as browsing, mutation or file-clipboard writes through
+  the shared busy policy. Block new mutations and file-clipboard writes until
+  reconciliation completes. Keep normal close requests blocked while mutations
+  are pending; on destruction, drain active results before saving state and exit.
 - Inline actions are temporary rows in the shared file list, separate from its
   entries, marks, current item and persisted state. Use full-contrast action text
   and the normal selection colors. InlineEdge also identifies new-name drafts;
@@ -130,8 +115,8 @@ module/executable and `Commando` for the window title and data-folder name.
   Enter creates/selects the copy; Escape or another row cancels before copying;
   Tab retains the editor. Existing names retain an editable draft with an error.
   Batches use available names directly, numbering further copies with (2), (3),
-  and so on. Stage copies and publish exclusively; never replace or merge an
-  existing duplicate destination. Preserve marks and other panes' current rows,
+  and so on. Dispatch duplicates through the same Windows engine with collision
+  renaming, so existing duplicate destinations are preserved. Preserve marks and other panes' current rows,
   updating alias listings through worker-resolved locations. Defer arriving
   name drafts behind editors and cancel if their pane has been left. Same-folder
   cut/paste is a no-op with Already in this folder feedback; retain the clipboard.
@@ -148,6 +133,8 @@ module/executable and `Commando` for the window title and data-folder name.
 ## Changes and Documentation
 
 - Discuss new interaction models with the user before implementing them.
+- Do not add tooltips. App-owned decisions use in-panel UI; Windows transfer
+  dialogs are the explicit native-shell exception.
 - All UI models must be reusable, with either a general purpose (such as a modal
   or message channel) or a semantic purpose (such as a file list or search bar).
   Extend the appropriate shared model instead of adding an operation-specific UI.

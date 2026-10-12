@@ -10,7 +10,6 @@ func (v *view) update(gtx layout.Context) {
 	v.updateFeedbackInput(gtx)
 	defer v.dismissUnhandledFeedbackKeys(gtx)
 	v.pollLoads()
-	v.offerFileConflict()
 	v.offerDuplicate(gtx)
 	if !v.started {
 		gtx.Execute(key.FocusCmd{Tag: &v.focus})
@@ -89,7 +88,6 @@ func (v *view) update(gtx layout.Context) {
 			return
 		}
 	}
-	v.offerFileConflict()
 	v.offerDuplicate(gtx)
 	for {
 		e, ok := gtx.Event(

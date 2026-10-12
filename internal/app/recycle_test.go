@@ -39,7 +39,7 @@ func TestDeleteQueuesStableMarkedOrCurrentSelection(t *testing.T) {
 			t.Fatal("modifier or release queued deletion")
 		}
 		send(pressed(key.NameDeleteForward), pressed(key.NameDeleteForward))
-		if len(v.loader.requests) != 1 || !p.loading || !p.recycling {
+		if len(v.loader.requests) != 1 || !p.loading || !v.mutationsBusy() {
 			t.Fatal("Delete was not queued once while busy")
 		}
 		request := <-v.loader.requests
@@ -53,7 +53,7 @@ func TestDeleteQueuesStableMarkedOrCurrentSelection(t *testing.T) {
 		}
 		v.acceptLoad(loadResult{request: request, recycled: browser.RecycleResult{Names: want}})
 		send()
-		if p.loading || p.recycling || v.active != 1 || v.panels[1].feedback.Current() != nil {
+		if p.loading || v.mutationsBusy() || v.active != 1 || v.panels[1].feedback.Current() != nil {
 			t.Fatal("completion retained busy state or stole focus/feedback")
 		}
 		message := p.feedback.Current()

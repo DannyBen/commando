@@ -73,6 +73,7 @@ func clipboardView(t *testing.T) (*view, string, string) {
 		}
 	}
 	v := newBrowserView([]string{source, target, source}, nil)
+	v.loader.transfer = fixtureTransfer
 	t.Cleanup(v.loader.close)
 	for pi := range v.panels {
 		waitLoaded(t, v, pi)
@@ -177,58 +178,15 @@ func TestClipboardCutMoveUpdatesAliasPanelsAndRetainsSurvivors(t *testing.T) {
 	}
 }
 
-func TestClipboardConflictRetainsCutSelectionForRetry(t *testing.T) {
-	v, _, target := clipboardView(t)
-	c := attachTestFileClipboard(v)
-	markClipboardItems(t, &v.panels[0])
-	if err := os.WriteFile(filepath.Join(target, "a.txt"), []byte("original"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	send, _ := panelInputFrames(v)
-	send(modified("X", key.ModCtrl))
-	waitLoaded(t, v, 0)
-	send()
-	before, _ := c.read()
-	send(pressed(key.NameRightArrow), modified("V", key.ModCtrl))
-	waitLoaded(t, v, 1)
-	send()
-	after, _ := c.read()
-	if !reflect.DeepEqual(before, after) || len(v.panels[0].marks) != 2 || len(v.cutClipboard.Paths) != 2 {
-		t.Fatal("refusal consumed cut selection")
-	}
-	if data, err := os.ReadFile(filepath.Join(target, "a.txt")); err != nil || string(data) != "original" {
-		t.Fatal("refusal replaced existing file")
-	}
-	if _, err := os.Stat(filepath.Join(target, "folder")); !errors.Is(err, fs.ErrNotExist) {
-		t.Fatal("refusal transferred earlier folder")
-	}
-	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Warning || message.Text != "1 file exists" || v.actions == nil {
-		t.Fatalf("wrong conflict feedback: %v", message)
-	}
-	send(pressed(key.NameEscape))
-	if err := os.Remove(filepath.Join(target, "a.txt")); err != nil {
-		t.Fatal(err)
-	}
-	send(modified("V", key.ModCtrl))
-	waitLoaded(t, v, 1)
-	send()
-	if len(v.cutClipboard.Paths) != 0 {
-		t.Fatal("retry did not complete retained cut")
-	}
-}
-
 func TestClipboardPartialMoveRetainsFailedItemForRetry(t *testing.T) {
 	v, _, _ := clipboardView(t)
 	c := attachTestFileClipboard(v)
 	markClipboardItems(t, &v.panels[0])
-	source := v.panels[0].path
-	v.loader.executeTransfer = func(plan *browser.TransferPlan, move bool, policy browser.TransferPolicy) (browser.TransferResult, error) {
-		paths, directory := []string{filepath.Join(source, "folder"), filepath.Join(source, "a.txt")}, plan.Directory
-		result, err := browser.Transfer(paths[:1], directory, move)
-		if err != nil {
-			return result, err
-		}
-		return result, &os.PathError{Op: "paste", Path: paths[1], Err: fs.ErrPermission}
+	v.loader.transfer = func(request browser.TransferRequest) (browser.TransferResult, error) {
+		request.Paths = request.Paths[:1]
+		result, err := fixtureTransfer(request)
+		result.Aborted = true
+		return result, err
 	}
 	send, _ := panelInputFrames(v)
 	send(modified("X", key.ModCtrl))
@@ -245,7 +203,7 @@ func TestClipboardPartialMoveRetainsFailedItemForRetry(t *testing.T) {
 	if !v.cutEntry(0, v.panels[0].selected) || len(v.panels[0].marks) != 1 || !v.panels[0].marks[v.panels[0].selected] {
 		t.Fatal("failed cut item lost its mark or dimming")
 	}
-	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Error || message.Text != "1 transferred; Access denied" {
+	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Info || message.Text != "1 transferred; operation stopped" {
 		t.Fatalf("wrong partial feedback: %v", message)
 	}
 }
@@ -392,8 +350,8 @@ func TestMoveCompletionDoesNotChangeNewClipboardOrMisreportOperation(t *testing.
 	if _, err := c.write([]string{filepath.Join(source, "a.txt")}, true); err != nil {
 		t.Fatal(err)
 	}
-	v.loader.executeTransfer = func(plan *browser.TransferPlan, move bool, policy browser.TransferPolicy) (browser.TransferResult, error) {
-		result, err := browser.ExecuteTransfer(plan, move, policy)
+	v.loader.transfer = func(request browser.TransferRequest) (browser.TransferResult, error) {
+		result, err := fixtureTransfer(request)
 		_, writeErr := c.write([]string{filepath.Join(source, "z.txt")}, false)
 		return result, errors.Join(err, writeErr)
 	}

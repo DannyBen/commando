@@ -19,7 +19,7 @@ type recycleRequest struct {
 
 func (v *view) recycleSelected() {
 	p := &v.panels[v.active]
-	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || v.transferPending {
+	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || !v.actionAllowed(actionMutation) {
 		return
 	}
 	var names []string
@@ -41,25 +41,14 @@ func (v *view) recycleSelected() {
 			request.locations[pi] = v.panels[pi].path
 		}
 	}
-	p.loading, p.recycling, p.prefix = true, true, ""
+	p.loading, p.prefix = true, ""
 	p.feedback.Progress("Recycling")
-	v.loader.requests <- loadRequest{panel: v.active, path: p.path, recycle: request}
-}
-
-// Allow location editing and navigation during recycling, but hold off on new
-// name mutations until cached alias listings have received the removal result.
-func (v *view) recyclingInProgress() bool {
-	for i := range v.panels {
-		if v.panels[i].recycling {
-			return true
-		}
-	}
-	return false
+	v.loader.submit(loadRequest{panel: v.active, path: p.path, recycle: request})
 }
 
 func (v *view) acceptRecycle(result loadResult) {
 	p := &v.panels[result.request.panel]
-	p.loading, p.recycling = false, false
+	p.loading = false
 	for pi := range v.panels {
 		other := &v.panels[pi]
 		if other.drives {

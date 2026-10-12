@@ -14,8 +14,7 @@ type transferRequest struct {
 	locations []string
 	duplicate bool // Direct duplication does not read or change the clipboard.
 	snapshot  *browser.FileClipboard
-	plan      *browser.TransferPlan
-	policy    browser.TransferPolicy
+	owner     uintptr
 }
 
 func (v *view) fileOperationLocations() []string {
@@ -30,7 +29,7 @@ func (v *view) fileOperationLocations() []string {
 
 func (v *view) clipboardSelected(move bool) {
 	p := &v.panels[v.active]
-	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || p.path == "" || v.transferPending {
+	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionClipboard) {
 		return
 	}
 	paths := p.selectedPaths()
@@ -38,15 +37,15 @@ func (v *view) clipboardSelected(move bool) {
 		return
 	}
 	p.loading, p.prefix = true, ""
-	v.loader.requests <- loadRequest{panel: v.active, path: p.path, clipboard: &fileClipboardRequest{paths: paths, move: move, locations: v.fileOperationLocations()}}
+	v.loader.submit(loadRequest{panel: v.active, path: p.path, action: actionClipboard, clipboard: &fileClipboardRequest{paths: paths, move: move, locations: v.fileOperationLocations()}})
 }
 
 func (v *view) pasteFiles() {
 	p := &v.panels[v.active]
-	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || p.path == "" || v.transferPending || v.recyclingInProgress() {
+	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
 		return
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true
-	// No transfer-progress UI until its interaction model has been agreed.
-	v.loader.requests <- loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{locations: v.fileOperationLocations()}}
+	// Windows owns the transfer UI, including progress and cancellation.
+	v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{locations: v.fileOperationLocations(), owner: v.ownerWindow}})
 }

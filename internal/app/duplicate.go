@@ -9,9 +9,10 @@ import (
 )
 
 type duplicateRequest struct {
-	plan      *browser.TransferPlan
+	plan      *browser.DuplicatePlan
 	name      string
 	locations []string
+	owner     uintptr
 }
 
 func (p *panel) selectedPaths() []string {
@@ -30,7 +31,7 @@ func (p *panel) selectedPaths() []string {
 
 func (v *view) duplicateSelected() {
 	p := &v.panels[v.active]
-	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || p.path == "" || v.transferPending || v.recyclingInProgress() {
+	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
 		return
 	}
 	paths := p.selectedPaths()
@@ -39,8 +40,8 @@ func (v *view) duplicateSelected() {
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true
 	snapshot := browser.FileClipboard{Paths: paths}
-	v.loader.requests <- loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{
-		locations: v.fileOperationLocations(), snapshot: &snapshot, duplicate: true}}
+	v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{
+		locations: v.fileOperationLocations(), snapshot: &snapshot, duplicate: true, owner: v.ownerWindow}})
 }
 
 func (v *view) offerDuplicate(gtx layout.Context) {
@@ -76,29 +77,29 @@ func (v *view) offerDuplicate(gtx layout.Context) {
 
 func (l *directoryLoader) duplicateOperation(request loadRequest) loadResult {
 	r := request.duplicate
-	result := loadResult{request: request}
-	result.transferred, result.err = browser.DuplicateWithName(r.plan, r.name)
+	result := loadResult{request: request, locations: resolveFileLocations(r.locations)}
+	nativeRequest, err := r.plan.Request(r.name, r.owner)
+	if err != nil {
+		result.err = err
+		return result
+	}
+	nativeRequest.OpenFolders = result.locations
+	result.transferred, result.err = l.transfer(nativeRequest)
+	if result.transferred.Attempted {
+		l.refreshTransferPanels(&result)
+	}
 	if len(result.transferred.Items) > 0 {
 		result.created = result.transferred.Items[0].Entry
-		result.sameDirectory = make([]bool, len(r.locations))
-		for pi, path := range r.locations {
-			if path == "" {
-				continue
-			}
-			resolved, err := resolveFileLocation(path)
-			result.sameDirectory[pi] = err == nil && samePath(resolved, result.transferred.Directory)
-		}
 	}
 	return result
 }
 
 func (v *view) applyDuplicate(result loadResult) {
-	for pi := range v.panels {
-		p := &v.panels[pi]
-		locations := result.request.duplicate.locations
-		if p.drives || pi >= len(locations) || !samePath(p.path, locations[pi]) || pi >= len(result.sameDirectory) || !result.sameDirectory[pi] {
-			continue
+	p := &v.panels[result.request.panel]
+	for row, item := range p.items {
+		if samePath(item.file.Name, result.created.Name) {
+			p.selected, p.reveal = row, true
+			break
 		}
-		p.insertCreatedEntry(result.created, pi == result.request.panel)
 	}
 }

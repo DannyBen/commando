@@ -16,10 +16,14 @@ func newBrowserView(paths []string, invalidate func()) *view {
 	for i, path := range paths {
 		locations[i].Path = path
 	}
-	return newRestoredView(locations, 0, invalidate)
+	return newLocationView(locations, 0, invalidate, false)
 }
 
 func newRestoredView(locations []panelState, active int, invalidate func()) *view {
+	return newLocationView(locations, active, invalidate, true)
+}
+
+func newLocationView(locations []panelState, active int, invalidate func(), restore bool) *view {
 	panels := make([]panel, len(locations))
 	for i, location := range locations {
 		panels[i].path, panels[i].drives, panels[i].selected = location.Path, location.Drives, -1
@@ -35,7 +39,7 @@ func newRestoredView(locations []panelState, active int, invalidate func()) *vie
 		if location.Drives {
 			v.load(i, "", location.Path)
 		} else {
-			v.load(i, location.Path, "")
+			v.queueLoad(loadRequest{panel: i, path: location.Path, restore: restore})
 		}
 	}
 	return v
@@ -58,7 +62,8 @@ func (v *view) refreshPanel() {
 }
 
 func (v *view) queueLoad(request loadRequest) {
-	if v.actions != nil && v.actions.panel == request.panel || v.pendingFileConflict != nil && v.pendingFileConflict.request.panel == request.panel || v.pendingDuplicate != nil && v.pendingDuplicate.request.panel == request.panel {
+	request.action = actionBrowse
+	if v.actions != nil && v.actions.panel == request.panel || v.pendingDuplicate != nil && v.pendingDuplicate.request.panel == request.panel {
 		return
 	}
 	p := &v.panels[request.panel]
@@ -67,7 +72,7 @@ func (v *view) queueLoad(request loadRequest) {
 	}
 	p.loading, p.err = true, nil
 	p.feedback.Progress("Reading folder")
-	v.loader.requests <- request
+	v.loader.submit(request)
 }
 
 func (v *view) pollLoads() {
@@ -85,6 +90,9 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	if v.loader != nil {
+		defer v.loader.complete(result.request)
+	}
 	if result.request.clipboard != nil || result.request.transfer != nil {
 		v.acceptFileOperation(result)
 		return

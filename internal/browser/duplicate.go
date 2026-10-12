@@ -45,10 +45,29 @@ func SourcesInDirectory(paths []string, directory string) (bool, error) {
 	return true, nil
 }
 
-// PlanDuplicate uses the ordinary inspected, exclusive transfer machinery with
-// available copy names. It never merges folders or approves replacements.
-func PlanDuplicate(paths []string, directory string) (*TransferPlan, error) {
-	return planTransfer(paths, directory, true)
+// DuplicatePlan retains the selection and name suggestions for the inline
+// editor. All copying is delegated to the native transfer backend.
+type DuplicatePlan struct {
+	Directory string
+	Paths     []string
+	Names     []string
+	subject   Entry
+}
+
+func PlanDuplicate(paths []string, directory string) (*DuplicatePlan, error) {
+	request, err := prepareTransfer(TransferRequest{Paths: paths, Directory: directory, Duplicate: true})
+	if err != nil {
+		return nil, err
+	}
+	plan := &DuplicatePlan{Directory: directory, Paths: append([]string(nil), paths...), Names: request.Names}
+	if len(paths) == 1 {
+		info, err := os.Lstat(request.Paths[0])
+		if err != nil {
+			return nil, err
+		}
+		plan.subject = entryFromInfo(request.Paths[0], info)
+	}
+	return plan, nil
 }
 
 func availableCopyName(directory, name string, folder bool, reserved map[string]bool) (string, error) {
@@ -76,35 +95,25 @@ func availableCopyName(directory, name string, folder bool, reserved map[string]
 	}
 }
 
-// DuplicateSubject describes the original entry and its suggested new name for
-// the shared inline name editor. Only a single new destination is editable.
-func (plan *TransferPlan) DuplicateSubject() (Entry, string) {
-	if plan == nil || len(plan.groups) != 1 {
+func (plan *DuplicatePlan) DuplicateSubject() (Entry, string) {
+	if plan == nil || len(plan.Paths) != 1 {
 		return Entry{}, ""
 	}
-	node := plan.groups[0].node
-	return transferEntry(node.source, node.info), filepath.Base(node.destination)
+	return plan.subject, plan.Names[0]
 }
 
-// DuplicateWithName binds the edited name to the inspected source/directory.
-// A name appearing since inspection is an error, never an overwrite choice.
-func DuplicateWithName(plan *TransferPlan, name string) (TransferResult, error) {
+func (plan *DuplicatePlan) Request(name string, owner uintptr) (TransferRequest, error) {
+	if plan == nil || len(plan.Paths) != 1 {
+		return TransferRequest{}, fs.ErrInvalid
+	}
 	if err := ValidateName(name); err != nil {
-		return TransferResult{}, err
+		return TransferRequest{}, err
 	}
-	if plan == nil || len(plan.groups) != 1 || plan.Conflicts != 0 || plan.Merges {
-		return TransferResult{}, fs.ErrInvalid
-	}
-	destination := filepath.Join(plan.Directory, name)
-	if _, err := os.Lstat(destination); !errors.Is(err, fs.ErrNotExist) {
+	if _, err := os.Lstat(filepath.Join(plan.Directory, name)); !errors.Is(err, fs.ErrNotExist) {
 		if err == nil {
 			err = fs.ErrExist
 		}
-		return TransferResult{}, err
+		return TransferRequest{}, err
 	}
-	copyPlan := *plan
-	copyNode := *plan.groups[0].node
-	copyNode.destination = destination
-	copyPlan.groups = []transferGroup{{original: plan.groups[0].original, node: &copyNode}}
-	return ExecuteTransfer(&copyPlan, false, TransferExclusive)
+	return TransferRequest{Paths: plan.Paths, Directory: plan.Directory, Names: []string{name}, Duplicate: true, Owner: owner}, nil
 }
