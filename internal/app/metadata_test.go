@@ -105,6 +105,40 @@ func TestMetadataValues(t *testing.T) {
 	}
 }
 
+func TestExtensionDisplayNames(t *testing.T) {
+	for _, tc := range []struct {
+		name, want string
+		file       browser.Entry
+	}{
+		{"report.pdf", "report", browser.Entry{}},
+		{"notes.TXT", "notes", browser.Entry{}},
+		{"archive.tar.gz", "archive.tar", browser.Entry{}},
+		{"project.sublime-project", "project", browser.Entry{}},
+		{".env", ".env", browser.Entry{}},
+		{".config.json", ".config", browser.Entry{}},
+		{"README", "README", browser.Entry{}},
+		{"trailing.", "trailing.", browser.Entry{}},
+		{"résumé.txt", "résumé", browser.Entry{}},
+		{"folder.ext", "folder.ext", browser.Entry{Directory: true}},
+		{"..", "..", browser.Entry{Parent: true}},
+		{`C:\`, `C:\`, browser.Entry{Path: `C:\`}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			item := entry{name: tc.name, file: tc.file}
+			item.file.Name = tc.name
+			for _, mode := range []metadataColumn{metadataNone, metadataExtension, metadataSize, metadataModified} {
+				want := tc.name
+				if mode == metadataExtension {
+					want = tc.want
+				}
+				if got := mode.displayName(item); got != want {
+					t.Fatalf("mode %v: name=%q want %q", mode, got, want)
+				}
+			}
+		})
+	}
+}
+
 func TestTrailingMetadataUsesEachRowsContentWidth(t *testing.T) {
 	for _, proportional := range []bool{false, true} {
 		for _, size := range []unit.Sp{15, 28} {

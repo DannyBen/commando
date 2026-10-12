@@ -151,7 +151,7 @@ func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor 
 	return layout.Inset{Left: padding, Right: padding}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
-			return v.columns(gtx, entry{name: item.name, size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize)
+			return v.columns(gtx, entry{name: mode.displayName(item), size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize)
 		})
 	})
 }

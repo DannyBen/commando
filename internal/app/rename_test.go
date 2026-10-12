@@ -43,8 +43,12 @@ func TestRenameEditorSelectionAndCancel(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			v := newView([]panel{{items: []entry{{name: tc.name, file: browser.Entry{Name: tc.name, Directory: tc.directory}}}, selected: 0}, {}})
+			v.panels[0].metadata = metadataExtension
 			send, _ := panelInputFrames(v)
 			send(pressed(key.NameF2))
+			if v.nameEditor.Text() != tc.name {
+				t.Fatal("Extension mode omitted part of the editable filename")
+			}
 			if v.nameInteraction() == nil || v.nameEditor.SelectedText() != tc.selection {
 				t.Fatalf("initial selection %q", v.nameEditor.SelectedText())
 			}
