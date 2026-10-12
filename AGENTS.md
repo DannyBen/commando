@@ -90,6 +90,14 @@ module/executable and `Commando` for the window title and data-folder name.
   (`d`/`d:` -> `D:\`). Explicit relative paths such as `.\d` retain their meaning.
 - Directory reads run off the UI thread through one worker. Keep file-opening
   failures silent unless changing their feedback is part of the requested scope.
+- Windows directory notifications trigger quiet, coalesced automatic refreshes
+  of open folders through the same worker. Protect foreground sessions and
+  pending mutations; defer both dispatch and arriving results when necessary.
+  Preserve surviving marks, current-item identity, viewport, focus, filename
+  prefixes and operation feedback. Discard stale results after navigation. Keep
+  ordinary browsing available during automatic reads, retain failed listings,
+  and release notification handles on navigation and shutdown. Ctrl+R remains
+  the fallback for unsupported locations; previews bypass directory monitors.
 - Ctrl+R refreshes only the active folder or drive list, retaining the current
   item by name (drive by path) and the viewport where possible. Missing items
   select the nearest remaining row; empty lists select none. Busy panels and

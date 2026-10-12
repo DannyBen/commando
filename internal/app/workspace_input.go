@@ -6,6 +6,7 @@ import (
 )
 
 func (v *view) update(gtx layout.Context) {
+	defer v.updateAutoRefresh(gtx)
 	v.updateCutClipboard(gtx)
 	v.updateFeedbackInput(gtx)
 	defer v.dismissUnhandledFeedbackKeys(gtx)

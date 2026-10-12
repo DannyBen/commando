@@ -14,6 +14,7 @@ type loadRequest struct {
 	panel            int
 	path, selectName string
 	refresh          bool
+	autoRefresh      bool
 	restore          bool
 	tracked          bool
 	action           actionClass
@@ -63,7 +64,7 @@ type directoryLoader struct {
 // filesystem access. Each panel allows only one pending directory read.
 func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate func()) *directoryLoader {
 	l := &directoryLoader{
-		requests:          make(chan loadRequest, 3),
+		requests:          make(chan loadRequest, 6), // One foreground and one automatic read per pane.
 		results:           make(chan loadResult, 3),
 		done:              make(chan struct{}),
 		recycle:           browser.Recycle,

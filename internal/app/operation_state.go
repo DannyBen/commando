@@ -59,6 +59,10 @@ func (l *directoryLoader) complete(request loadRequest) {
 // A destroyed window cannot discard an active operation's completion. Stop
 // accepting queued work, wait for the worker, and reconcile before saving state.
 func (v *view) finishOperations() {
+	if v.monitor != nil {
+		v.monitor.close()
+		v.monitor = nil
+	}
 	if v.loader == nil {
 		return
 	}

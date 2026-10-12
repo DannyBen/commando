@@ -95,6 +95,10 @@ func (v *view) acceptLoad(result loadResult) {
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
 	}
+	if result.request.autoRefresh {
+		v.acceptAutoRefresh(result)
+		return
+	}
 	if result.request.clipboard != nil || result.request.transfer != nil {
 		v.acceptFileOperation(result)
 		return
@@ -114,6 +118,12 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	p.feedback.Complete()
+	if p.drives != result.directory.Drives || !samePath(p.path, result.directory.Path) {
+		p.refreshNeeded = false
+	}
+	if result.request.refresh && v.monitor != nil && !result.directory.Drives {
+		v.monitor.retry(result.directory.Path)
+	}
 	previousRow := p.selected
 	var previousItem browser.Entry
 	if previousRow >= 0 && previousRow < len(p.items) {

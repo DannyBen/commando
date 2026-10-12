@@ -49,6 +49,12 @@ scrolling and scrollbars are supported. Folders appear first, with names display
 without a trailing slash. The parent row is `..`. Directory reads run in the
 background; a failed read shows an error in the panel footer and retains the listing.
 
+On Windows, open folders refresh automatically when their immediate entries
+change. Updates preserve surviving marks, the current item, scroll and focus,
+and wait while an editor, inline decision or file operation needs the listing.
+Automatic refresh runs quietly without replacing operation feedback. Ctrl+R
+remains available when a location does not support change notifications.
+
 Files sort by name before their final extension, so originals precede longer
 variations and copies. Names compare case-insensitively, with numbers in numeric
 order (`file2` before `file10`). Folder names compare whole; dotfiles such as

@@ -14,6 +14,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 const windowWidth, windowHeight = 800, 480
@@ -49,6 +50,7 @@ func Run() error {
 			gioapp.MinSize(unit.Dp(720), unit.Dp(360)))
 		w.Option(native.options()...)
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate, len(flag.Args()) == 0)
+		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		v.nativeKeys = keys
 		var ops op.Ops
 		for {

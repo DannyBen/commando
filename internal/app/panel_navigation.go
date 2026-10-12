@@ -38,7 +38,7 @@ func (v *view) swapPanel(direction int) {
 		return
 	}
 	for i := range v.panels {
-		if v.panels[i].loading {
+		if v.panels[i].loading || v.panels[i].refreshing {
 			return
 		}
 	}
