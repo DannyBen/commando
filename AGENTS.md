@@ -58,6 +58,13 @@ module/executable and `Commando` for the window title and data-folder name.
   endlessly forward/backward. Browsing and inline interactions share the same
   navigation policy. While editing a location or name, Tab/Shift+Tab retain
   editor text, selection and focus.
+- Shift+Left/Right swaps the active pane with its adjacent neighbor without
+  wrapping. Move the entire pane model, retaining location, listing, current item,
+  marks, viewport, metadata and feedback; focus follows the moved pane. Move
+  cached cut-clipboard alias locations with the panes without changing the
+  clipboard. Ignore swapping during editors, inline interactions, pending
+  transfers or any pane's pending directory work so captured worker indices stay
+  valid. Persist the resulting order through the existing state store.
 - Ctrl+Left/Right opens the selected folder, parent row or drive in the adjacent
   panel and moves focus there. Preserve the source listing, selection and scroll.
   Files, outer edges and busy panels produce no action. Failed reads retain the

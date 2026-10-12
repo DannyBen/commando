@@ -23,6 +23,10 @@ or panels start at home.
 - Up/Down selects a file; Home/End and Page Up/Down navigate longer lists.
 - Left/Right switches panels without wrapping. Tab/Shift+Tab cycles forward or
   backward through all panels, wrapping at the edges.
+- Shift+Left/Right swaps the active panel with its neighbor without wrapping.
+  Focus follows the moved panel, along with its folder, selection, marks, scroll
+  and metadata choice. The shortcut is ignored during editing, inline interactions
+  or pending directory work. The resulting panel order is saved on close.
 - Ctrl+Left/Right opens the selected folder in the adjacent panel and moves
   focus there, preserving the source panel. The outer edges do not wrap.
 - Type a filename prefix to select it without filtering. Matching is

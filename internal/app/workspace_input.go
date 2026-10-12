@@ -111,8 +111,8 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: "M", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "R", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "N", Required: key.ModCtrl, Optional: key.ModShift},
-			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow},
-			key.Filter{Focus: &v.focus, Name: key.NameRightArrow},
+			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Optional: key.ModShift},
+			key.Filter{Focus: &v.focus, Name: key.NameRightArrow, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameRightArrow, Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameHome},
@@ -248,7 +248,9 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		if ke.Name == key.NameLeftArrow {
 			direction = -1
 		}
-		if ke.Modifiers&key.ModCtrl != 0 {
+		if ke.Modifiers == key.ModShift {
+			v.swapPanel(direction)
+		} else if ke.Modifiers&key.ModCtrl != 0 {
 			v.openAdjacent(direction)
 		} else {
 			v.switchPanel(direction)

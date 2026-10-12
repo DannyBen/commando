@@ -29,3 +29,30 @@ func (v *view) switchPanelTo(target int) {
 	v.panels[v.active].prefix = ""
 	v.active = target
 }
+
+// Swap entire pane models so their location, listing, selection and viewport
+// travel together. Worker requests capture pane indices, so wait until all
+// directory work and inline interactions have finished before rearranging them.
+func (v *view) swapPanel(direction int) {
+	if v.activeEditor() != nil || v.actions != nil || !v.actionAllowed(actionMutation) {
+		return
+	}
+	for i := range v.panels {
+		if v.panels[i].loading {
+			return
+		}
+	}
+	source, target := v.active, v.panelNeighbor(direction, false, -1)
+	if target == source {
+		return
+	}
+	v.panels[source], v.panels[target] = v.panels[target], v.panels[source]
+	// Cut appearance caches resolved aliases by pane index; move those cached
+	// locations with their panes without touching the system clipboard.
+	for _, paths := range [][]string{v.cutPanelPaths, v.cutLocations} {
+		if source < len(paths) && target < len(paths) {
+			paths[source], paths[target] = paths[target], paths[source]
+		}
+	}
+	v.active = target
+}
