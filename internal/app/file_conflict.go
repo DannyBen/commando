@@ -27,15 +27,11 @@ func (v *view) offerFileConflict() {
 	p := &v.panels[panel]
 	plan := result.conflictPlan
 	file := plan.Subject
-	first := p.list.Position.First
-	inserted := p.applyTransferredEntry(browser.TransferredItem{Entry: file, Replaced: true})
+	p.applyTransferredEntry(browser.TransferredItem{Entry: file, Replaced: true})
 	row := 0
 	for index, item := range p.items {
 		if samePath(item.file.Name, file.Name) {
 			row = index + 1
-			if inserted && first > 0 && index <= first {
-				p.list.Position.First++
-			}
 			break
 		}
 	}

@@ -55,10 +55,10 @@ func TestTransferRealMixedFilesAndFolders(t *testing.T) {
 func TestTransferConflictsPreflightWholeBatch(t *testing.T) {
 	for _, move := range []bool{false, true} {
 		source, target, paths := transferFixture(t)
-		if err := os.Mkdir(filepath.Join(target, "folder"), 0700); err != nil {
+		if err := os.MkdirAll(filepath.Join(target, "folder", "nested"), 0700); err != nil {
 			t.Fatal(err)
 		}
-		keep := filepath.Join(target, "folder", "keep")
+		keep := filepath.Join(target, "folder", "nested", "data")
 		if err := os.WriteFile(keep, []byte("original"), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -92,7 +92,7 @@ func TestTransferRejectsMissingDuplicatesAndOverlappingSources(t *testing.T) {
 		{[]string{"relative-file"}, target, fs.ErrInvalid},
 	} {
 		calls := 0
-		result, err := transfer(tc.paths, tc.target, true, func(string, string, bool) (bool, bool, error) { calls++; return false, false, nil })
+		result, err := transfer(tc.paths, tc.target, true, func(string, string, bool) (transferOutcome, error) { calls++; return transferOutcome{}, nil })
 		if !errors.Is(err, tc.want) || calls != 0 || len(result.Items) != 0 {
 			t.Fatalf("preflight: %+v %v calls=%d", result, err, calls)
 		}
@@ -101,9 +101,9 @@ func TestTransferRejectsMissingDuplicatesAndOverlappingSources(t *testing.T) {
 
 func TestTransferRuntimeFailureRetainsConfirmedPrefix(t *testing.T) {
 	_, target, paths := transferFixture(t)
-	result, err := transfer(paths, target, false, func(source, destination string, move bool) (bool, bool, error) {
+	result, err := transfer(paths, target, false, func(source, destination string, move bool) (transferOutcome, error) {
 		if filepath.Base(source) == "folder" {
-			return false, false, fs.ErrPermission
+			return transferOutcome{}, fs.ErrPermission
 		}
 		return transferOne(source, destination, move)
 	})
@@ -121,7 +121,7 @@ func TestTransferLateConflictNeverReplacesDestination(t *testing.T) {
 		if err := os.Chmod(paths[0], 0444); err != nil {
 			t.Fatal(err)
 		}
-		result, err := transfer(paths[:1], target, move, func(source, destination string, move bool) (bool, bool, error) {
+		result, err := transfer(paths[:1], target, move, func(source, destination string, move bool) (transferOutcome, error) {
 			if err := os.WriteFile(destination, []byte("late arrival"), 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -146,9 +146,9 @@ func TestTransferLateConflictNeverReplacesDestination(t *testing.T) {
 
 func TestCopyTransferCrossVolumeMovePath(t *testing.T) {
 	_, target, paths := transferFixture(t)
-	created, moved, err := copyTransfer(paths[1], filepath.Join(target, "folder"), true)
-	if err != nil || !created || !moved {
-		t.Fatalf("copy/delete move: %t %t %v", created, moved, err)
+	outcome, err := copyTransfer(paths[1], filepath.Join(target, "folder"), true)
+	if err != nil || !outcome.created || !outcome.moved {
+		t.Fatalf("copy/delete move: %t %t %v", outcome.created, outcome.moved, err)
 	}
 	if _, err := os.Stat(paths[1]); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatal("source tree retained after successful move")
@@ -168,7 +168,7 @@ func TestSourceMutationPreventsMoveDeletion(t *testing.T) {
 	if err := os.WriteFile(file, []byte("new contents"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := removeCopiedSource(manifest); !errors.Is(err, ErrSourceChanged) {
+	if _, err := removeCopiedEntries(manifest, "", "", os.Remove); !errors.Is(err, ErrSourceChanged) {
 		t.Fatalf("changed source not refused: %v", err)
 	}
 	if data, err := os.ReadFile(file); err != nil || string(data) != "new contents" {

@@ -95,7 +95,7 @@ func TestDuplicateBatchLateCollisionNeverReplacesArrival(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := executeTransfer(plan, false, TransferExclusive, func(source, destination string, move bool) (bool, bool, error) {
+	result, err := executeTransfer(plan, false, TransferExclusive, func(source, destination string, move bool) (transferOutcome, error) {
 		if filepath.Base(source) == "b.txt" {
 			if err := os.WriteFile(destination, []byte("late arrival"), 0600); err != nil {
 				t.Fatal(err)

@@ -61,15 +61,11 @@ func (v *view) offerDuplicate(gtx layout.Context) {
 	p := &v.panels[panel]
 	source, name := result.duplicatePlan.DuplicateSubject()
 	// Anchor to the copied source even when a different row is highlighted.
-	first := p.list.Position.First
-	inserted := p.applyTransferredEntry(browser.TransferredItem{Entry: source, Replaced: true})
+	p.applyTransferredEntry(browser.TransferredItem{Entry: source, Replaced: true})
 	row := p.selected + 1
 	for index, item := range p.items {
 		if samePath(item.file.Name, source.Name) {
 			row = index + 1
-			if inserted && first > 0 && index <= first {
-				p.list.Position.First++
-			}
 			break
 		}
 	}
@@ -103,15 +99,6 @@ func (v *view) applyDuplicate(result loadResult) {
 		if p.drives || pi >= len(locations) || !samePath(p.path, locations[pi]) || pi >= len(result.sameDirectory) || !result.sameDirectory[pi] {
 			continue
 		}
-		first := p.list.Position.First
 		p.insertCreatedEntry(result.created, pi == result.request.panel)
-		if pi != result.request.panel && first > 0 {
-			for row, item := range p.items {
-				if item.file.Name == result.created.Name && row <= first {
-					p.list.Position.First++
-					break
-				}
-			}
-		}
 	}
 }

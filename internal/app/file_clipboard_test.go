@@ -221,7 +221,9 @@ func TestClipboardPartialMoveRetainsFailedItemForRetry(t *testing.T) {
 	v, _, _ := clipboardView(t)
 	c := attachTestFileClipboard(v)
 	markClipboardItems(t, &v.panels[0])
-	v.loader.transfer = func(paths []string, directory string, move bool) (browser.TransferResult, error) {
+	source := v.panels[0].path
+	v.loader.executeTransfer = func(plan *browser.TransferPlan, move bool, policy browser.TransferPolicy) (browser.TransferResult, error) {
+		paths, directory := []string{filepath.Join(source, "folder"), filepath.Join(source, "a.txt")}, plan.Directory
 		result, err := browser.Transfer(paths[:1], directory, move)
 		if err != nil {
 			return result, err
@@ -390,8 +392,8 @@ func TestMoveCompletionDoesNotChangeNewClipboardOrMisreportOperation(t *testing.
 	if _, err := c.write([]string{filepath.Join(source, "a.txt")}, true); err != nil {
 		t.Fatal(err)
 	}
-	v.loader.transfer = func(paths []string, directory string, move bool) (browser.TransferResult, error) {
-		result, err := browser.Transfer(paths, directory, move)
+	v.loader.executeTransfer = func(plan *browser.TransferPlan, move bool, policy browser.TransferPolicy) (browser.TransferResult, error) {
+		result, err := browser.ExecuteTransfer(plan, move, policy)
 		_, writeErr := c.write([]string{filepath.Join(source, "z.txt")}, false)
 		return result, errors.Join(err, writeErr)
 	}

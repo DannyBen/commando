@@ -164,7 +164,7 @@ func (v *view) updateName(gtx layout.Context) {
 				v.showFeedback(r.panel, feedback.Error, r.errorText(r.err))
 				continue
 			}
-			request := loadRequest{panel: r.panel, path: r.path}
+			request := loadRequest{panel: r.panel, path: r.path, locations: v.fileOperationLocations()}
 			progress := "Renaming"
 			if r.kind == nameRename {
 				request.rename = &renameRequest{oldName: r.oldName, newName: e.Text}
@@ -196,12 +196,12 @@ func (v *view) acceptName(result loadResult) {
 	}
 	success := "Renamed"
 	if request := result.request.rename; request != nil {
-		v.applyRename(result.request.path, request.oldName, request.newName)
+		v.applyRename(result, request.oldName, request.newName)
 	} else if result.request.duplicate != nil {
 		v.applyDuplicate(result)
 		success = "Copied"
 	} else {
-		v.applyCreatedEntry(result.request.panel, result.request.path, result.created)
+		v.applyCreatedEntry(result)
 		success = "File created"
 		if result.created.Directory {
 			success = "Folder created"

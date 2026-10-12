@@ -10,6 +10,7 @@ type loadRequest struct {
 	panel            int
 	path, selectName string
 	refresh          bool
+	locations        []string // Captured panel paths for create/rename alias reconciliation.
 	rename           *renameRequest
 	create           *createRequest
 	duplicate        *duplicateRequest
@@ -19,22 +20,23 @@ type loadRequest struct {
 }
 
 type loadResult struct {
-	request       loadRequest
-	directory     browser.Directory
-	created       browser.Entry
-	recycled      browser.RecycleResult
-	sameDirectory []bool
-	err           error
-	clipboard     browser.FileClipboard
-	transferred   browser.TransferResult
-	locations     []string
-	sourceParents []string
-	clipboardErr  error
-	transferMove  bool
-	conflictPlan  *browser.TransferPlan
-	duplicatePlan *browser.TransferPlan
-	alreadyHere   bool
-	panelUpdates  []transferPanelUpdate
+	request           loadRequest
+	directory         browser.Directory
+	created           browser.Entry
+	recycled          browser.RecycleResult
+	sameDirectory     []bool
+	err               error
+	clipboard         browser.FileClipboard
+	transferred       browser.TransferResult
+	locations         []string
+	sourceParents     []string
+	clipboardErr      error
+	transferMove      bool
+	conflictPlan      *browser.TransferPlan
+	duplicatePlan     *browser.TransferPlan
+	alreadyHere       bool
+	panelUpdates      []transferPanelUpdate
+	mutationDirectory string
 }
 
 type directoryLoader struct {
@@ -45,7 +47,6 @@ type directoryLoader struct {
 	readClipboard     func() (browser.FileClipboard, error)
 	writeClipboard    func([]string, bool) (browser.FileClipboard, error)
 	completeClipboard func(browser.FileClipboard, []string) (browser.FileClipboard, error)
-	transfer          func([]string, string, bool) (browser.TransferResult, error)
 	planTransfer      func([]string, string) (*browser.TransferPlan, error)
 	executeTransfer   func(*browser.TransferPlan, bool, browser.TransferPolicy) (browser.TransferResult, error)
 	readDirectory     func(string) (browser.Directory, error)
@@ -62,7 +63,6 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		readClipboard:     browser.ReadFileClipboard,
 		writeClipboard:    browser.WriteFileClipboard,
 		completeClipboard: browser.CompleteFileClipboard,
-		transfer:          browser.Transfer,
 		planTransfer:      browser.PlanTransfer,
 		executeTransfer:   browser.ExecuteTransfer,
 		readDirectory:     read,
@@ -90,18 +90,28 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					}
 					continue
 				}
+				result := loadResult{request: request}
+				mutationPath := request.path
+				var resolveErr error
+				if request.rename != nil || request.create != nil {
+					result.locations = resolveFileLocations(request.locations)
+					mutationPath, resolveErr = resolveFileLocation(request.path)
+					result.mutationDirectory = mutationPath
+				}
 				var directory browser.Directory
 				var created browser.Entry
 				var recycled browser.RecycleResult
 				var sameDirectory []bool
 				var err error
-				if r := request.rename; r != nil {
-					err = browser.Rename(request.path, r.oldName, r.newName)
+				if resolveErr != nil {
+					err = resolveErr
+				} else if r := request.rename; r != nil {
+					err = browser.Rename(mutationPath, r.oldName, r.newName)
 				} else if request.create != nil {
 					if request.create.folder {
-						created, err = browser.CreateFolder(request.path, request.create.name)
+						created, err = browser.CreateFolder(mutationPath, request.create.name)
 					} else {
-						created, err = browser.CreateFile(request.path, request.create.name)
+						created, err = browser.CreateFile(mutationPath, request.create.name)
 					}
 				} else if request.recycle != nil {
 					recycled, err = l.recycle(request.path, request.recycle.names)
@@ -118,10 +128,12 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				} else {
 					directory, err = read(request.path)
 				}
+				result.directory, result.created, result.recycled = directory, created, recycled
+				result.sameDirectory, result.err = sameDirectory, err
 				select {
 				case <-l.done:
 					return
-				case l.results <- loadResult{request: request, directory: directory, created: created, recycled: recycled, sameDirectory: sameDirectory, err: err}:
+				case l.results <- result:
 					if invalidate != nil {
 						invalidate()
 					}

@@ -169,7 +169,7 @@ func TestPlannedBatchLateArrivalStopsAndRetainsConfirmedPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := executeTransfer(plan, true, TransferOverwrite, func(src, dst string, move bool) (bool, bool, error) {
+	result, err := executeTransfer(plan, true, TransferOverwrite, func(src, dst string, move bool) (transferOutcome, error) {
 		if filepath.Base(src) == "first.txt" {
 			if err := os.WriteFile(filepath.Join(target, "second.txt"), []byte("late arrival"), 0600); err != nil {
 				t.Fatal(err)
@@ -192,7 +192,7 @@ func TestPartialMergeFailureRetainsSourceAndConfirmedChildren(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := executeTransfer(plan, true, TransferOverwrite, func(string, string, bool) (bool, bool, error) { return false, false, fs.ErrPermission })
+	result, err := executeTransfer(plan, true, TransferOverwrite, func(string, string, bool) (transferOutcome, error) { return transferOutcome{}, fs.ErrPermission })
 	if !errors.Is(err, fs.ErrPermission) || len(result.Items) != 1 || result.Items[0].Moved || len(result.Changes) != 1 || !result.Changes[0].Moved {
 		t.Fatalf("partial merge: %+v %v", result, err)
 	}
@@ -208,10 +208,10 @@ func TestMergeMoveNeverRemovesNewSourceChildren(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := executeTransfer(plan, true, TransferExclusive, func(src, dst string, move bool) (bool, bool, error) {
-		created, moved, err := transferOne(src, dst, move)
+	result, err := executeTransfer(plan, true, TransferExclusive, func(src, dst string, move bool) (transferOutcome, error) {
+		outcome, err := transferOne(src, dst, move)
 		writeTransferFiles(t, source, map[string]string{"folder/new-arrival.txt": "keep"})
-		return created, moved, err
+		return outcome, err
 	})
 	if err == nil || len(result.Items) != 1 || result.Items[0].Moved {
 		t.Fatalf("new source child was accepted as complete move: %+v %v", result, err)

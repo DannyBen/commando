@@ -17,18 +17,22 @@ type createRequest struct {
 
 // Add the entry to panels displaying this directory without losing their marks
 // or moving another panel's current item.
-func (v *view) applyCreatedEntry(source int, directory string, file browser.Entry) {
+func (v *view) applyCreatedEntry(result loadResult) {
 	for pi := range v.panels {
 		p := &v.panels[pi]
-		if p.drives || !samePath(p.path, directory) {
+		if !v.nameResultApplies(result, pi) || !samePath(result.locations[pi], result.mutationDirectory) {
 			continue
 		}
-		p.insertCreatedEntry(file, pi == source)
+		p.insertCreatedEntry(result.created, pi == result.request.panel)
 	}
 }
 
 // Shared by inline creation and clipboard transfers.
 func (p *panel) insertCreatedEntry(file browser.Entry, selectCreated bool) {
+	firstName := ""
+	if first := p.list.Position.First; first >= 0 && first < len(p.items) {
+		firstName = p.items[first].file.Name
+	}
 	size := "—"
 	if !file.Directory {
 		size = "?"
@@ -50,6 +54,12 @@ func (p *panel) insertCreatedEntry(file browser.Entry, selectCreated bool) {
 	row := sort.Search(len(p.items), func(i int) bool { return browser.CompareEntries(p.items[i].file, file) >= 0 })
 	p.items = slices.Insert(p.items, row, entry{name: file.Name, size: size, file: file})
 	p.shiftRows(row, 1)
+	for index, item := range p.items {
+		if item.file.Name == firstName {
+			p.list.Position.First = index
+			break
+		}
+	}
 	if selectCreated || p.selected < 0 || samePath(selectedName, file.Name) {
 		p.selected, p.reveal = row, true
 	}
@@ -59,7 +69,7 @@ func (p *panel) insertCreatedEntry(file browser.Entry, selectCreated bool) {
 
 // Refresh an overwritten file's metadata without treating its cached row as a
 // removed entry. Marks, selection and viewport belong to its destination path.
-func (p *panel) applyTransferredEntry(item browser.TransferredItem) (inserted bool) {
+func (p *panel) applyTransferredEntry(item browser.TransferredItem) {
 	if item.Replaced {
 		for row, existing := range p.items {
 			if samePath(existing.file.Name, item.Entry.Name) && existing.file.Directory == item.Entry.Directory {
@@ -68,12 +78,11 @@ func (p *panel) applyTransferredEntry(item browser.TransferredItem) (inserted bo
 					size = formatSize(item.Entry.Bytes)
 				}
 				p.items[row] = entry{name: item.Entry.Name, size: size, file: item.Entry}
-				return false
+				return
 			}
 		}
 	}
 	p.insertCreatedEntry(item.Entry, false)
-	return true
 }
 
 func (p *panel) shiftRows(row, delta int) {

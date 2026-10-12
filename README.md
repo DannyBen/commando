@@ -216,6 +216,12 @@ integration on a desktop, set `COMMANDO_TEST_CLIPBOARD=1` and run
 This optional test replaces the system clipboard. Explorer interoperability
 still requires desktop testing. Linux development uses an in-process file clipboard.
 
+For native transfer tests, set `COMMANDO_TEST_TRANSFER_VOLUME` to a folder on a
+second volume and run `go test ./internal/browser -run WindowsCrossVolumeMove`.
+Set `COMMANDO_TEST_SUBST_ROOT` to an existing SUBST root and run
+`go test ./internal/browser -run WindowsSUBSTMove`. These tests create disposable
+subdirectories and leave drive mappings unchanged.
+
 For Linux environments using Wayland/OpenGL without Vulkan or X11 support:
 
 ```sh
