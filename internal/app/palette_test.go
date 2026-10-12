@@ -1,0 +1,374 @@
+package app
+
+import (
+	"image"
+	"maps"
+	"os"
+	"path/filepath"
+	"slices"
+	"testing"
+	"time"
+	"unicode/utf8"
+
+	"gioui.org/f32"
+	"gioui.org/io/event"
+	"gioui.org/io/input"
+	"gioui.org/io/key"
+	"gioui.org/io/pointer"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/unit"
+)
+
+func paletteFrames(v *view, size image.Point, metric unit.Metric) (func(...event.Event), *input.Router) {
+	var router input.Router
+	var ops op.Ops
+	frame := func() {
+		ops.Reset()
+		v.layout(layout.Context{Ops: &ops, Source: router.Source(), Now: time.Now(), Metric: metric, Constraints: layout.Exact(size)})
+		router.Frame(&ops)
+	}
+	frame()
+	frame()
+	return func(events ...event.Event) { router.Queue(events...); frame(); frame() }, &router
+}
+
+func replacePalette(v *view, text string) key.EditEvent {
+	return key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.commandSearch.Text())}, Text: text}
+}
+
+func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	send(pressed("`"))
+	s := v.paletteInteraction()
+	var groups []string
+	for _, result := range s.results {
+		if len(groups) == 0 || groups[len(groups)-1] != result.command.group {
+			groups = append(groups, result.command.group)
+		}
+	}
+	if !slices.Equal(groups, []string{"Entry", "Navigation", "View", "Panel", "Selection", "Application"}) ||
+		s.results[0].command.label() != "Entry › Open" || s.results[1].command.label() != "Entry › Rename" {
+		t.Fatalf("blank search lost reviewed browsing order: %v", groups)
+	}
+	send(key.EditEvent{Text: "view"})
+	if len(s.results) < 4 {
+		t.Fatalf("group search found %d commands, want at least 4", len(s.results))
+	}
+	// Other commands can also fuzzy-match the group word. Its contiguous
+	// occurrences should put all four View commands ahead of scattered matches.
+	for _, result := range s.results[:4] {
+		if result.command.group != "View" || !slices.Equal(result.match.Indices, []int{0, 1, 2, 3}) {
+			t.Fatalf("group search or highlights failed: %+v", result)
+		}
+	}
+	send(replacePalette(v, "navnext"))
+	if len(s.results) == 0 || s.results[0].command.label() != "Navigation › Next panel" ||
+		!slices.Equal(s.results[0].match.Indices, []int{0, 1, 2, 13, 14, 15, 16}) {
+		t.Fatalf("combined group/action search failed: %+v", s.results)
+	}
+	send(pressed(key.NameReturn))
+	if !v.interaction.idle() || v.active != 1 {
+		t.Fatal("grouped action did not execute existing panel navigation")
+	}
+	send(pressed("`"))
+	send(key.EditEvent{Text: "Hidden files"}, pressed(key.NameReturn))
+	if !v.interaction.idle() || v.panels[1].visibility != visibilityHideHidden {
+		t.Fatal("Hidden files label did not retain the existing mode change")
+	}
+}
+
+func TestPaletteSearchPreservesPanelsAndRestoresFocus(t *testing.T) {
+	for _, opener := range []key.Event{pressed("`"), modified("P", key.ModCtrl|key.ModShift)} {
+		t.Run(string(opener.Name), func(t *testing.T) {
+			v := newPreviewView()
+			send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+			send(pressed(key.NameRightArrow), pressed(key.NameEnd))
+			var selections []int
+			var positions []layout.Position
+			var marks []map[int]bool
+			for i := range v.panels {
+				selections = append(selections, v.panels[i].selected)
+				positions = append(positions, v.panels[i].list.Position)
+				marks = append(marks, maps.Clone(v.panels[i].marks))
+			}
+			send(opener)
+			if v.paletteInteraction() == nil || v.paletteInteraction().panel != 1 || !router.Source().Focused(&v.commandSearch) {
+				t.Fatal("palette did not own the originating pane and search focus")
+			}
+			send(key.EditEvent{Text: "cpy"})
+			s := v.paletteInteraction()
+			if s.query != "cpy" || len(s.results) == 0 || s.results[0].command.label() != "Entry › Copy" || !slices.Equal(s.results[0].match.Indices, []int{8, 10, 11}) {
+				t.Fatalf("unexpected fuzzy results: %+v", s.results)
+			}
+			send(pressed(key.NameDownArrow), pressed(key.NameTab), modified(key.NameTab, key.ModShift), modified(key.NameLeftArrow, key.ModShift), modified("N", key.ModCtrl))
+			if v.active != 1 || v.paletteInteraction() != s || !router.Source().Focused(&v.commandSearch) {
+				t.Fatal("search navigation leaked to browsing or lost focus")
+			}
+			for i := range v.panels {
+				if v.panels[i].selected != selections[i] || v.panels[i].list.Position != positions[i] || !maps.Equal(v.panels[i].marks, marks[i]) {
+					t.Fatalf("palette changed pane %d", i)
+				}
+			}
+			send(replacePalette(v, "no-such-command"), pressed(key.NameReturn))
+			if v.paletteInteraction() == nil || len(v.paletteInteraction().results) != 0 {
+				t.Fatal("empty search executed a command or retained old results")
+			}
+			send(pressed(key.NameEscape))
+			if !v.interaction.idle() || !router.Source().Focused(&v.focus) || v.active != 1 {
+				t.Fatal("Escape did not restore browsing focus")
+			}
+			send(pressed(key.NameUpArrow))
+			if v.panels[1].selected != selections[1]-1 {
+				t.Fatal("browsing did not resume after dismissal")
+			}
+		})
+	}
+}
+
+func TestPaletteOpeningDoesNotInsertBacktick(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	send(pressed("`"), key.EditEvent{Text: "`"})
+	if v.paletteInteraction() == nil || v.commandSearch.Text() != "" {
+		t.Fatalf("opening inserted text: %q", v.commandSearch.Text())
+	}
+	send(key.EditEvent{Text: "rename"})
+	if s := v.paletteInteraction(); s == nil || s.query != "rename" || len(s.results) != 1 {
+		t.Fatal("opening swallowed subsequent search input")
+	}
+}
+
+func TestPaletteRenameHandsOffToExistingEditor(t *testing.T) {
+	v := newPreviewView()
+	v.active = 2
+	v.panels[2].selected = 1
+	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+	send(modified("P", key.ModCtrl|key.ModShift))
+	send(key.EditEvent{Text: "rename"}, pressed(key.NameReturn))
+	if v.paletteInteraction() != nil || v.nameInteraction() == nil || v.nameInteraction().panel != 2 ||
+		v.nameEditor.Text() != v.panels[2].items[1].name || !router.Source().Focused(&v.nameEditor) {
+		t.Fatalf("command failed to hand off to rename: session=%T editor=%q", v.interaction.current, v.nameEditor.Text())
+	}
+	owner, text, selection := v.nameInteraction(), v.nameEditor.Text(), v.nameEditor.SelectedText()
+	send(modified("P", key.ModCtrl|key.ModShift))
+	if v.nameInteraction() != owner || v.nameEditor.Text() != text || v.nameEditor.SelectedText() != selection {
+		t.Fatal("palette shortcut interrupted an editor")
+	}
+	send(pressed(key.NameEscape))
+	if !v.interaction.idle() || !router.Source().Focused(&v.focus) {
+		t.Fatal("rename cancellation did not restore browsing")
+	}
+}
+
+func TestPaletteSearchSelectionAndExecutionInOneEventBatch(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	send(pressed("`"))
+	send(key.EditEvent{Text: "metadata"}, pressed(key.NameDownArrow), pressed(key.NameReturn))
+	if !v.interaction.idle() || v.panels[0].metadata != metadataExtension {
+		t.Fatalf("query, Down, Enter did not execute the second search result: metadata=%v session=%T", v.panels[0].metadata, v.interaction.current)
+	}
+}
+
+func TestPaletteDefersAutomaticRefreshAndRejectsCompetingSessions(t *testing.T) {
+	v := newPreviewView()
+	v.loader = &directoryLoader{requests: make(chan loadRequest, 2)}
+	send, _ := panelInputFrames(v)
+	send(pressed("`"))
+	send(key.EditEvent{Text: "metadata"})
+	owner, selected, text := v.paletteInteraction(), v.panels[0].selected, v.commandSearch.Text()
+	v.acceptAutoRefresh(loadResult{request: loadRequest{panel: 0, path: v.panels[0].path, autoRefresh: true}})
+	var ops op.Ops
+	gtx := layout.Context{Ops: &ops}
+	v.startLocation(gtx)
+	v.startName(gtx, nameRename)
+	v.startInlineActions(0, 1, "", "", []string{"Choose"}, nil, nil)
+	if v.paletteInteraction() != owner || v.panels[0].selected != selected || !v.panels[0].refreshNeeded || v.commandSearch.Text() != text {
+		t.Fatal("automatic refresh or competing session disturbed search or source context")
+	}
+	send(pressed(key.NameEscape))
+	if v.interaction.finish(owner) || !v.interaction.idle() {
+		t.Fatal("dismissed palette retained foreground ownership")
+	}
+}
+
+func TestPaletteTransferHandsOffToPanelTargeting(t *testing.T) {
+	v := newPreviewView()
+	v.active = 1
+	v.loader = &directoryLoader{requests: make(chan loadRequest, 2)}
+	paths := v.panels[1].selectedPaths()
+	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+	send(pressed("`"))
+	send(key.EditEvent{Text: "Move to panel"}, pressed(key.NameReturn))
+	if v.paletteInteraction() != nil || v.inlineInteraction() == nil || v.active != 2 || !router.Source().Focused(&v.focus) {
+		t.Fatal("palette did not enter the shared transfer targeting session")
+	}
+	send(pressed(key.NameReturn))
+	select {
+	case request := <-v.loader.requests:
+		if request.transfer == nil || request.transfer.snapshot == nil || !request.transfer.snapshot.Move ||
+			request.panel != 2 || !slices.Equal(request.transfer.snapshot.Paths, paths) {
+			t.Fatalf("transfer lost source selection or destination: %+v", request)
+		}
+	default:
+		t.Fatal("target confirmation did not use the existing directory worker")
+	}
+}
+
+func TestPaletteRechecksBusyStateBeforeExecution(t *testing.T) {
+	v := newPreviewView()
+	v.loader = &directoryLoader{requests: make(chan loadRequest, 2)}
+	send, _ := panelInputFrames(v)
+	send(pressed("`"))
+	send(key.EditEvent{Text: "New file"})
+	owner := v.paletteInteraction()
+	v.loader.busy.Store(1)
+	send(pressed(key.NameReturn))
+	if v.paletteInteraction() != owner || v.nameInteraction() != nil || len(v.loader.requests) != 0 {
+		t.Fatal("palette dispatched a competing mutation")
+	}
+	v.loader.busy.Store(0)
+	send(pressed(key.NameReturn))
+	if v.paletteInteraction() != nil || v.nameInteraction() == nil || v.nameInteraction().kind != nameCreateFile {
+		t.Fatal("available command did not hand off to inline creation")
+	}
+	send(pressed(key.NameEscape))
+	v.panels[0].drives = true
+	send(pressed("`"))
+	send(key.EditEvent{Text: "New file"}, pressed(key.NameReturn))
+	if v.paletteInteraction() == nil || v.nameInteraction() != nil {
+		t.Fatal("palette offered creation in a drive list")
+	}
+}
+
+func TestPalettePointerBarrier(t *testing.T) {
+	v := newPreviewView()
+	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+	send(pressed("`"))
+	s := v.paletteInteraction()
+	positions := []layout.Position{v.panels[0].list.Position, v.panels[1].list.Position, v.panels[2].list.Position}
+	selections := []int{v.panels[0].selected, v.panels[1].selected, v.panels[2].selected}
+	send(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: f32.Pt(20, 300), Scroll: f32.Pt(0, 120)})
+	if v.paletteInteraction() != s {
+		t.Fatal("scroll dismissed the palette")
+	}
+	for i := range v.panels {
+		if v.panels[i].list.Position != positions[i] {
+			t.Fatal("scroll reached a file panel underneath the modal")
+		}
+	}
+	// A result click selects without executing and keeps typing in Search.
+	point := f32.Pt(float32(s.surface.bounds.Min.X+30), float32(s.surface.bounds.Min.Y+78))
+	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: point},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: point})
+	if v.paletteInteraction() != s || s.selected != 1 || !router.Source().Focused(&v.commandSearch) {
+		t.Fatalf("result click lost search focus or executed: selected=%d", s.selected)
+	}
+	// Clicking outside dismisses, without selecting the obscured file row.
+	point = f32.Pt(20, 120)
+	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: point},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: point})
+	if v.paletteInteraction() != nil || !router.Source().Focused(&v.focus) {
+		t.Fatal("outside click did not dismiss and restore focus")
+	}
+	for i := range v.panels {
+		if v.panels[i].selected != selections[i] {
+			t.Fatal("dismissal clicked through to the file list")
+		}
+	}
+}
+
+func TestPaletteSizingAndSelectionReveal(t *testing.T) {
+	for _, tc := range []struct {
+		width, left, overlay int
+		scale                float32
+		fontSize             unit.Sp
+	}{
+		{320, 0, 320, 1, 15},
+		{480, 0, 480, 1, 15},
+		{600, 60, 480, 1, 15},
+		{800, 80, 640, 1, 15},
+		{960, 120, 720, 1, 15},
+		{1600, 440, 720, 1, 15},
+		{1200, 120, 960, 1.5, 24},
+		{720, 72, 576, 1, 48},
+	} {
+		v := newPreviewView()
+		v.appearance.TextSize = tc.fontSize
+		send, _ := paletteFrames(v, image.Pt(tc.width, 480), unit.Metric{PxPerDp: tc.scale, PxPerSp: tc.scale})
+		send(pressed("`"))
+		s := v.paletteInteraction()
+		if s.surface.bounds.Min.X != tc.left || s.surface.bounds.Dx() != tc.overlay || s.surface.bounds.Min.Y < int(40*tc.scale) || s.surface.bounds.Max.Y > 480 {
+			t.Fatalf("width %d scale %g: overlay bounds %v", tc.width, tc.scale, s.surface.bounds)
+		}
+		if tc.scale == 1 && tc.fontSize == 15 && s.surface.bounds.Min.Y != 40 {
+			t.Fatalf("palette did not start below the 40px location bar: %v", s.surface.bounds)
+		}
+		send(pressed(key.NameEnd))
+		pos := s.list.Position
+		if s.selected != len(s.results)-1 || s.selected < pos.First || s.selected >= pos.First+pos.Count || pos.OffsetLast < 0 {
+			t.Fatalf("selection not revealed at text size %g: selected=%d position=%+v", tc.fontSize, s.selected, pos)
+		}
+		send(pressed(key.NameHome))
+		if s.selected != 0 || s.list.Position.First != 0 || s.list.Position.Offset > 0 {
+			t.Fatalf("Home did not reveal the first result: selected=%d position=%+v", s.selected, s.list.Position)
+		}
+	}
+}
+
+func TestPaletteHomeEndPreserveSearch(t *testing.T) {
+	v := newPreviewView()
+	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+	send(pressed("`"))
+	send(key.EditEvent{Text: "panel"})
+	s := v.paletteInteraction()
+	start, end := v.commandSearch.Selection()
+	for _, name := range []key.Name{key.NameEnd, key.NameHome} {
+		send(pressed(name))
+		gotStart, gotEnd := v.commandSearch.Selection()
+		if v.commandSearch.Text() != "panel" || s.query != "panel" || gotStart != start || gotEnd != end || !router.Source().Focused(&v.commandSearch) {
+			t.Fatal("result navigation changed search text, caret or focus")
+		}
+		want := 0
+		if name == key.NameEnd {
+			want = len(s.results) - 1
+		}
+		if s.selected != want {
+			t.Fatalf("%s selected %d, want %d", name, s.selected, want)
+		}
+	}
+	// Modified Home still belongs to text editing.
+	v.commandSearch.SetCaret(len("panel"), len("panel"))
+	send()
+	send(modified(key.NameHome, key.ModShift))
+	if v.commandSearch.SelectedText() != "panel" || s.selected != 0 {
+		t.Fatal("Shift+Home did not retain native text selection")
+	}
+	send(replacePalette(v, "no-such-command"), pressed(key.NameHome), pressed(key.NameEnd))
+	if len(s.results) != 0 || v.paletteInteraction() != s {
+		t.Fatal("Home/End on empty results changed the session")
+	}
+}
+
+func TestPalettePreview(t *testing.T) {
+	directory := os.Getenv("COMMANDO_PREVIEW_ACTIONS")
+	if directory == "" {
+		t.Skip("optional headless palette preview")
+	}
+	for _, query := range []string{"", "panel", "xyz"} {
+		v := newPreviewView()
+		var ops op.Ops
+		v.startPalette(layout.Context{Ops: &ops})
+		v.commandSearch.SetText(query)
+		v.paletteInteraction().filter(query)
+		name := "palette"
+		if query != "" {
+			name += "-" + query
+		}
+		if err := renderViewPNG(filepath.Join(directory, name+".png"), v); err != nil {
+			t.Fatal(err)
+		}
+	}
+}

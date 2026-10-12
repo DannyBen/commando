@@ -14,6 +14,7 @@ A keyboard-first file manager for Windows.
 
 | Key | Action |
 | --- | --- |
+| Backtick / Ctrl+Shift+P | Open the command palette |
 | Tab / Shift+Tab | Cycle panels |
 | Enter / Backspace | Open an item / go up |
 | Alt+D | Edit the current location |
@@ -24,6 +25,10 @@ A keyboard-first file manager for Windows.
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste |
 | Delete | Send marked or current items to the Recycle Bin |
 | Ctrl+H | Cycle hidden-file visibility |
+
+The command palette groups actions and shows their shortcuts. Search by group
+or action; use Up/Down or Home/End to select, Enter to run, and Escape to close.
+Unavailable actions remain visible.
 
 Licensed under [MIT](LICENSE). The bundled JetBrains Mono font uses the
 [SIL Open Font License](internal/app/fonts/OFL.txt).

@@ -29,6 +29,9 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 			}))
 		}
 		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			if v.paletteInteraction() != nil {
+				gtx.Source = gtx.Source.Disabled()
+			}
 			return v.panel(gtx, i)
 		}))
 	}
@@ -38,6 +41,9 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 	event.Op(gtx.Ops, &v.feedbackPointer)
 	pass.Pop()
 	area.Pop()
+	if v.paletteInteraction() != nil {
+		v.layoutPalette(gtx)
+	}
 	return dims
 }
 
@@ -57,6 +63,10 @@ func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layo
 		})
 	})
 	return layout.Dimensions{Size: size}
+}
+
+func locationBarHeight(gtx layout.Context, textHeight int) int {
+	return max(gtx.Dp(40), textHeight+gtx.Dp(12))
 }
 
 func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, width int) layout.Dimensions {

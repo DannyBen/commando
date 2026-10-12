@@ -13,8 +13,8 @@ func (v *view) update(gtx layout.Context) {
 	v.pollLoads()
 	v.offerDuplicate(gtx)
 	if !v.started {
-		gtx.Execute(key.FocusCmd{Tag: &v.focus})
-		v.started = gtx.Focused(&v.focus)
+		v.focusInteraction(gtx)
+		v.started = gtx.Focused(&v.focus) || v.activeEditor() != nil && gtx.Focused(v.activeEditor())
 	}
 	for pi := range v.panels {
 		p := &v.panels[pi]
@@ -23,6 +23,9 @@ func (v *view) update(gtx layout.Context) {
 				click, ok := row.Update(gtx)
 				if !ok {
 					break
+				}
+				if v.paletteInteraction() != nil {
+					continue
 				}
 				v.dismissFeedback()
 				if v.inlineActionRow(pi, ri) {
@@ -64,6 +67,8 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Name: key.NameTab, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModAlt},
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: "`"},
+			key.Filter{Focus: &v.focus, Name: "P", Required: key.ModCtrl | key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameF2},
 			key.Filter{Focus: &v.focus, Name: key.NameF5},
 			key.Filter{Focus: &v.focus, Name: key.NameF6},
@@ -135,6 +140,14 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	next := p.selected
 	page := max(1, p.list.Position.Count-1)
 	switch ke.Name {
+	case "`", "P":
+		if ke.Name == "`" && ke.Modifiers == 0 || ke.Name == "P" && ke.Modifiers == key.ModCtrl|key.ModShift {
+			v.startPalette(gtx)
+			if s := v.paletteInteraction(); s != nil {
+				s.openingBacktick = ke.Name == "`"
+			}
+		}
+		return
 	case "C", "X", "V":
 		if ke.Modifiers == key.ModCtrl {
 			if ke.Name == "V" {

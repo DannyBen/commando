@@ -35,7 +35,7 @@ func clipboardData(text string) transfer.DataEvent {
 }
 
 func TestEditorCopyAndPaste(t *testing.T) {
-	for _, editorName := range []string{"rename", "location", "create"} {
+	for _, editorName := range []string{"rename", "location", "create", "palette"} {
 		for _, shortcut := range []string{"native Shift+Insert", "routed Shift+Insert", "Ctrl+V"} {
 			t.Run(editorName+"/"+shortcut, func(t *testing.T) {
 				v := newPreviewView()
@@ -47,14 +47,20 @@ func TestEditorCopyAndPaste(t *testing.T) {
 						send(pressed(key.NameF2))
 					} else if editorName == "location" {
 						send(modified("D", key.ModAlt))
+					} else if editorName == "palette" {
+						send(modified("P", key.ModCtrl|key.ModShift))
 					} else {
 						send(newFolderKey())
 					}
 				}
 				start()
 				editor := v.activeEditor()
-				if editorName == "create" {
-					send(replaceCreate(v, "copied folder"))
+				if editorName == "create" || editorName == "palette" {
+					if editorName == "create" {
+						send(replaceCreate(v, "copied folder"))
+					} else {
+						send(replacePalette(v, "copied folder"))
+					}
 					editor.SetCaret(0, len("copied folder"))
 				}
 				selected := editor.SelectedText()

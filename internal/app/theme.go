@@ -19,12 +19,14 @@ var themeFont []byte
 // Theme holds the appearance choices independently of Gio's widget theme.
 // A future configuration loader can supply these values before creating a view.
 type Theme struct {
-	Colors                  ThemeColors
-	Font                    []byte
-	TextSize, SmallTextSize unit.Sp
-	RowPaddingVertical      unit.Dp // Above and below the measured text height.
-	RowPaddingHorizontal    unit.Dp // Left and right of the row contents.
-	Feedback                feedback.Animations
+	Colors                           ThemeColors
+	Font                             []byte
+	TextSize, SmallTextSize          unit.Sp
+	RowPaddingVertical               unit.Dp // Above and below the measured text height.
+	RowPaddingHorizontal             unit.Dp // Left and right of the row contents.
+	OverlayMinWidth, OverlayMaxWidth unit.Dp
+	OverlayBackdropOpacity           float32 // Surface-color wash; 0 disables it, 1 is opaque.
+	Feedback                         feedback.Animations
 }
 
 type ThemeColors struct {
@@ -85,11 +87,14 @@ var defaultTheme = Theme{
 		ScrollbarHover:         rgb(0xaaaaaa),
 		ScrollbarTrack:         color.NRGBA{}, // Transparent; shows the panel surface.
 	},
-	Font:                 themeFont,
-	TextSize:             15, // File rows and panel paths.
-	SmallTextSize:        12, // Column headings and panel footers.
-	RowPaddingVertical:   4,  // dp per side; row height grows with the font.
-	RowPaddingHorizontal: 14,
+	Font:                   themeFont,
+	TextSize:               15, // File rows and panel paths.
+	SmallTextSize:          12, // Column headings and panel footers.
+	RowPaddingVertical:     4,  // dp per side; row height grows with the font.
+	RowPaddingHorizontal:   14,
+	OverlayMinWidth:        480,
+	OverlayMaxWidth:        720,
+	OverlayBackdropOpacity: 0.15,
 	Feedback: feedback.Animations{
 		Enabled: true,
 		Info:    defaultFeedbackAnimation,

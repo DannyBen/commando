@@ -50,6 +50,7 @@ type view struct {
 	interaction       interactionController
 	location          widget.Editor
 	nameEditor        widget.Editor
+	commandSearch     widget.Editor
 	nativeKeys        *nativeKeyInput
 	suppressSpaceText bool
 	feedbackPointer   bool
@@ -78,6 +79,7 @@ func newView(panels []panel) *view {
 	v := &view{appearance: appearance, theme: appearance.materialTheme(), panels: panels,
 		location:          widget.Editor{SingleLine: true, Submit: true},
 		nameEditor:        widget.Editor{SingleLine: true, Submit: true},
+		commandSearch:     widget.Editor{SingleLine: true},
 		clipboardSequence: browser.FileClipboardSequence,
 	}
 	for i := range v.panels {

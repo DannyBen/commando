@@ -68,6 +68,8 @@ func (v *view) activeEditor() *widget.Editor {
 		return &v.location
 	case *nameSession:
 		return &v.nameEditor
+	case *paletteSession:
+		return &v.commandSearch
 	default:
 		return nil
 	}
@@ -96,6 +98,8 @@ func (v *view) cancelInteraction(gtx layout.Context) bool {
 	case *inlineActionSession:
 		v.cancelInlineActions()
 		v.focusInteraction(gtx)
+	case *paletteSession:
+		v.stopPalette(gtx)
 	}
 	return true
 }
@@ -136,6 +140,9 @@ func (v *view) updateInteraction(gtx layout.Context) bool {
 	case *locationSession:
 		v.updateEditorPaste(gtx, &v.location)
 		v.updateLocation(gtx)
+	case *paletteSession:
+		v.updateEditorPaste(gtx, &v.commandSearch)
+		v.updatePalette(gtx)
 	}
 	return v.activeEditor() != nil
 }

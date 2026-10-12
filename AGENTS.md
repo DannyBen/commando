@@ -25,6 +25,22 @@ module/executable and `Commando` for the window title and data-folder name.
   focus through the shared interaction helpers. Keep background operations and
   per-pane loading independent. Submitted name mutations retain their session
   until reconciliation, and stale sessions cannot end a newer interaction.
+- Backtick/Ctrl+Shift+P opens the command palette through the shared interaction
+  controller. Keep its originating pane as the command context and restore
+  browsing focus on dismissal. Search uses the Site Command Palette fuzzy
+  scoring and best-alignment highlights. Enter dispatches through existing
+  browsing handlers. Display group and action with a `›` separator; keep catalogue
+  order for a blank query and fuzzy-rank the full label while searching. Unavailable
+  actions remain visible and cannot execute.
+  Keep native text editing and Tab focus inside Search; block pointer input
+  to the file panels while open. Center the square overlay horizontally below
+  the location bars, keeping their height synchronized with text metrics. Home/End
+  select the first/last result; modified keys retain native text editing.
+  Use the existing surface color for Search. Clamp its width to theme bounds,
+  and use the full app width below the minimum. Reuse existing theme colors and
+  terminal-style lines.
+  Wash the file lists and footers with the existing surface color at the theme's
+  overlay backdrop opacity; keep location bars and the palette at full contrast.
 - Three independent panels retain their own selection and scroll position.
 - Ctrl+H cycles each pane independently through All, Hide Hidden, and Hide Hidden
   + dotfiles. Windows hidden attributes and leading-dot names are separate.
@@ -184,8 +200,9 @@ module/executable and `Commando` for the window title and data-folder name.
 ## Changes and Documentation
 
 - Discuss new interaction models with the user before implementing them.
-- Do not add tooltips. App-owned decisions use in-panel UI; Windows transfer
-  dialogs are the explicit native-shell exception.
+- Do not add tooltips. Name editing and transfer targeting use in-panel UI;
+  command search uses a modal overlay. Windows transfer dialogs remain the
+  native-shell exception.
 - All UI models must be reusable, with either a general purpose (such as a modal
   or message channel) or a semantic purpose (such as a file list or search bar).
   Extend the appropriate shared model instead of adding an operation-specific UI.
