@@ -1,22 +1,32 @@
 package app
 
 import (
-	"errors"
-	"io/fs"
+	"path/filepath"
+	"time"
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
 )
 
 func (v *view) updateAutoRefresh(gtx layout.Context) {
-	if v.monitor == nil || v.loader == nil {
+	if v.loader == nil {
 		return
 	}
-	v.monitor.sync(v.fileOperationLocations())
-	paths, next := v.monitor.take(gtx.Now)
-	if !next.IsZero() {
-		gtx.Execute(op.InvalidateCmd{At: next})
+	select {
+	case <-v.loader.done:
+		return
+	default:
+	}
+	var paths []string
+	if v.monitor != nil {
+		v.monitor.sync(v.fileOperationLocations())
+		var next time.Time
+		paths, next = v.monitor.take(gtx.Now)
+		if !next.IsZero() {
+			gtx.Execute(op.InvalidateCmd{At: next})
+		}
 	}
 	for pi := range v.panels {
 		p := &v.panels[pi]
@@ -26,6 +36,7 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 			}
 		}
 		if !p.refreshNeeded || p.drives || p.loading || p.refreshing ||
+			v.pendingDuplicate != nil && v.pendingDuplicate.request.panel == pi ||
 			v.interaction.protectsListing(pi) || !v.actionAllowed(actionMutation) {
 			continue
 		}
@@ -50,7 +61,7 @@ func (v *view) acceptAutoRefresh(result loadResult) {
 		return
 	}
 	if result.err != nil {
-		if errors.Is(result.err, fs.ErrNotExist) {
+		if browser.IsMissingDirectory(result.err) {
 			p.refreshNeeded = false
 			if v.monitor != nil {
 				v.monitor.suspend(p.path)
@@ -68,6 +79,9 @@ func (v *view) acceptAutoRefresh(result loadResult) {
 	// Reuse the preservation rules used after transfers. Automatic refresh must
 	// not clear operation feedback or interrupt a filename prefix being typed.
 	prefix, prefixAt := p.prefix, p.prefixAt
-	p.reconcileTransferListing(result.directory)
-	p.prefix, p.prefixAt = prefix, prefixAt
+	unchanged := !result.directory.Drives && samePath(filepath.Clean(p.path), filepath.Clean(result.directory.Path))
+	p.reconcileDirectoryListing(result.directory)
+	if unchanged {
+		p.prefix, p.prefixAt = prefix, prefixAt
+	}
 }

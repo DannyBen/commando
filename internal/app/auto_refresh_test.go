@@ -210,7 +210,7 @@ func TestRepeatedAutomaticReadErrorDoesNotRestartItsMessage(t *testing.T) {
 	}
 }
 
-func TestRecycledFolderOpenInAdjacentPanelDoesNotRepeatFeedback(t *testing.T) {
+func TestRecycledFolderOpenInAdjacentPanelRecoversWithoutRepeatedFeedback(t *testing.T) {
 	root := t.TempDir()
 	child := filepath.Join(root, "child")
 	if err := os.Mkdir(child, 0700); err != nil {
@@ -232,55 +232,47 @@ func TestRecycledFolderOpenInAdjacentPanelDoesNotRepeatFeedback(t *testing.T) {
 	watch := v.monitor.watches[directoryWatchKey(child)]
 	recycledPath := filepath.Join(t.TempDir(), "recycled")
 	v.loader.recycle = func(directory string, names []string) (browser.RecycleResult, error) {
-		// Model the shell recycling by moving the directory out of its old path.
 		if err := os.Rename(child, recycledPath); err != nil {
 			return browser.RecycleResult{}, err
 		}
 		return browser.RecycleResult{Directory: directory, Names: names}, nil
 	}
 	selectName(t, &v.panels[0], "child")
-	before := append([]entry(nil), v.panels[1].items...)
+	selectName(t, &v.panels[1], "kept.txt")
+	v.panels[1].toggleMark(v.panels[1].selected)
 	v.recycleSelected()
 	waitLoaded(t, v, 0)
-	if message := v.panels[0].feedback.Current(); message == nil || message.Text != "Item recycled" {
+	message := v.panels[0].feedback.Current()
+	if message == nil || message.Text != "Item recycled" {
 		t.Fatal("recycle did not complete")
 	}
-	v.monitor.changed(watch)
+	// Confirmed recycling schedules recovery without a notification callback.
 	runAutomaticRefresh(v, time.Now().Add(time.Second))
 	finishAutomaticRefresh(t, v)
 	p := &v.panels[1]
-	message := p.feedback.Current()
-	if message == nil || message.Text != "Folder not found" || !reflect.DeepEqual(p.items, before) {
-		t.Fatal("missing adjacent folder did not retain its listing and report one error")
+	if p.path != root || p.err != nil || len(p.marks) != 0 || p.feedback.Current() != nil || v.active != 0 {
+		t.Fatal("adjacent recycled folder did not quietly recover to its parent")
 	}
+	runAutomaticRefresh(v, time.Now().Add(time.Second))
 	for range 20 {
 		v.monitor.changed(watch)
 		runAutomaticRefresh(v, time.Now().Add(time.Second))
-		if p.refreshing || p.refreshNeeded || p.feedback.Current() != message {
-			t.Fatal("missing folder kept refreshing or restarting feedback")
+		if p.refreshing || p.refreshNeeded || v.panels[0].feedback.Current() != message {
+			t.Fatal("retired folder kept refreshing or restarting feedback")
 		}
-	}
-	p.feedback.Dismiss()
-	v.monitor.changed(watch)
-	runAutomaticRefresh(v, time.Now().Add(time.Second))
-	if p.feedback.Current() != nil || p.refreshing {
-		t.Fatal("dismissed missing-folder message reappeared")
 	}
 	if err := os.Mkdir(child, 0700); err != nil {
 		t.Fatal(err)
 	}
-	v.active = 1
-	v.refreshPanel()
-	waitLoaded(t, v, 1)
-	v.monitor.sync(v.fileOperationLocations())
-	fresh := v.monitor.watches[directoryWatchKey(child)]
-	if fresh == watch {
-		t.Fatal("manual refresh did not re-arm the recovered folder")
+	fresh := v.monitor.watches[directoryWatchKey(root)]
+	if fresh == nil || fresh == watch {
+		t.Fatal("recovered parent did not acquire a watch")
 	}
 	v.monitor.changed(fresh)
 	runAutomaticRefresh(v, time.Now().Add(time.Second))
-	if !p.refreshing {
-		t.Fatal("recovered folder no longer refreshes automatically")
-	}
 	finishAutomaticRefresh(t, v)
+	selectName(t, p, "child")
+	if p.path != root || len(p.marks) != 0 || v.panels[0].feedback.Current() != message {
+		t.Fatal("recreating the old folder changed the recovered location or feedback")
+	}
 }

@@ -18,7 +18,7 @@ const (
 // Edit this table to tune sounds, then rebuild. Notes are frequencies in Hz;
 // volume is a percentage. Spacing is measured between note starts.
 var cues = map[Name]Cue{
-	Navigation:          {Notes: []float64{220}, Length: 12 * time.Millisecond, Waveform: Square, Volume: 6},
+	Navigation:          {Notes: []float64{220}, Length: 12 * time.Millisecond, Waveform: Square, Volume: 10},
 	Cancel:              {Notes: []float64{330}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
 	DirectoryNavigation: {Notes: []float64{523.25}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
 	MessageInfo:         {Notes: []float64{440}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},

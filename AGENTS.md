@@ -130,6 +130,12 @@ module/executable and `Commando` for the window title and data-folder name.
   ordinary browsing available during automatic reads, retain failed listings,
   and release notification handles on navigation and shutdown. Ctrl+R remains
   the fallback for unsupported locations; previews bypass directory monitors.
+- Missing folders recover through existing parents, then fall back to `C:\`
+  (filesystem root on Linux). Use the existing directory worker and notification
+  refresh flow; the Windows watcher also checks existence once per second.
+  Preserve focus, panel preferences and operation feedback; clear listing-specific
+  marks, prefixes and viewport when recovery changes the location. Respect active
+  editors and pending operations, and discard stale results after navigation.
 - Ctrl+R refreshes only the active folder or drive list, retaining the current
   item by name (drive by path) and the viewport where possible. Missing items
   select the nearest remaining row; empty lists select none. Busy panels and

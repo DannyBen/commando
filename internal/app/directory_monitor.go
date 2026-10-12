@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/dannyben/commando/internal/browser"
 )
 
 const directoryChangeDelay = 150 * time.Millisecond
@@ -59,6 +61,11 @@ func (m *directoryMonitor) sync(paths []string) {
 			defer m.workers.Done()
 			err := m.watch(ctx, path, func() { m.changed(w) })
 			if err != nil && ctx.Err() == nil {
+				if browser.IsMissingDirectory(err) {
+					// A folder can vanish between its read and watch setup. Queue
+					// one recovery read even when no native handle could be armed.
+					m.changed(w)
+				}
 				m.mu.Lock()
 				w.failed = true
 				m.mu.Unlock()

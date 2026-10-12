@@ -19,14 +19,14 @@ func newBrowserView(paths []string, invalidate func()) *view {
 	for i, path := range paths {
 		locations[i].Path = path
 	}
-	return newLocationView(locations, 0, invalidate, false)
+	return newLocationView(locations, 0, invalidate)
 }
 
 func newRestoredView(locations []panelState, active int, invalidate func()) *view {
-	return newLocationView(locations, active, invalidate, true)
+	return newLocationView(locations, active, invalidate)
 }
 
-func newLocationView(locations []panelState, active int, invalidate func(), restore bool) *view {
+func newLocationView(locations []panelState, active int, invalidate func()) *view {
 	panels := make([]panel, len(locations))
 	for i, location := range locations {
 		panels[i].path, panels[i].drives, panels[i].selected = location.Path, location.Drives, -1
@@ -43,7 +43,7 @@ func newLocationView(locations []panelState, active int, invalidate func(), rest
 		if location.Drives {
 			v.load(i, "", location.Path)
 		} else {
-			v.queueLoad(loadRequest{panel: i, path: location.Path, restore: restore})
+			v.queueLoad(loadRequest{panel: i, path: location.Path})
 		}
 	}
 	return v
@@ -125,6 +125,8 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	p.feedback.Complete()
+	refresh := result.request.refresh && p.drives == result.directory.Drives &&
+		(p.drives || samePath(filepath.Clean(p.path), filepath.Clean(result.directory.Path)))
 	if p.drives != result.directory.Drives || !samePath(p.path, result.directory.Path) {
 		p.refreshNeeded = false
 	}
@@ -148,7 +150,7 @@ func (v *view) acceptLoad(result loadResult) {
 	p.selected = -1
 	if len(p.items) > 0 {
 		p.selected = 0
-		if result.request.refresh {
+		if refresh {
 			p.selected = max(0, min(previousRow, len(p.items)-1))
 		}
 	}
@@ -160,7 +162,7 @@ func (v *view) acceptLoad(result loadResult) {
 			size = formatSize(file.Bytes)
 		}
 		p.items[i] = entry{name: name, size: size, file: file}
-		if result.request.refresh && previousRow >= 0 {
+		if refresh && previousRow >= 0 {
 			sameItem := file.Name == previousItem.Name && file.Parent == previousItem.Parent
 			if p.drives {
 				sameItem = previousItem.Path != "" && samePath(file.Path, previousItem.Path)
@@ -175,7 +177,7 @@ func (v *view) acceptLoad(result loadResult) {
 		}
 	}
 	p.rows = make(map[int]*widget.Clickable)
-	if result.request.refresh {
+	if refresh {
 		// Keep the viewport unless the current item moved or disappeared.
 		p.reveal = p.reveal || p.selected != previousRow
 	} else {

@@ -141,16 +141,16 @@ func TestRealFolderNavigation(t *testing.T) {
 	}
 	selectName(t, p, "gone")
 	frame()
-	before := slices.Clone(p.items)
-	selected := p.selected
 	press(key.NameReturn)
 	waitLoaded(t, v, 0)
 	frame()
-	if p.path != root || !slices.Equal(p.items, before) || p.selected != selected {
-		t.Fatal("failed folder load changed the current path, listing, or selection")
+	if p.path != root || p.err != nil || p.selected != 0 {
+		t.Fatal("disappeared child did not recover to its surviving parent")
 	}
-	if message, failed := p.status(); !failed || message != "Folder not found" {
-		t.Fatalf("missing inline read error: %q %v", message, failed)
+	for _, item := range p.items {
+		if item.file.Name == "gone" {
+			t.Fatal("recovered listing retained the disappeared folder")
+		}
 	}
 	press(key.NameDownArrow)
 	if p.err != nil {

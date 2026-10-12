@@ -1,12 +1,14 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 
 	"gioui.org/io/key"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 func TestStateStoreRoundTrip(t *testing.T) {
@@ -175,13 +177,20 @@ func TestWorkspaceStateRestoresRealLocationsAndActivePanel(t *testing.T) {
 	waitLoaded(t, v, 0)
 	send(pressed(key.NameRightArrow))
 	// A failed or pending navigation must save the last displayed folder.
-	v.load(1, filepath.Join(other, "missing"), "")
+	denied := filepath.Join(other, "unreadable")
+	v.loader.readDirectory = func(path string) (browser.Directory, error) {
+		if path == denied {
+			return browser.Directory{}, os.ErrPermission
+		}
+		return browser.ReadLocation(path)
+	}
+	v.load(1, denied, "")
 	if got := v.sessionState(windowState{}); got.Panels[1].Path != other {
 		t.Fatal("pending navigation changed the saved folder")
 	}
 	waitLoaded(t, v, 1)
-	if v.panels[1].err == nil {
-		t.Fatal("missing folder was accepted")
+	if !errors.Is(v.panels[1].err, os.ErrPermission) {
+		t.Fatal("unreadable folder was accepted")
 	}
 	window := windowState{X: -100, Y: 70, Width: 900, Height: 500, Positioned: true}
 	dataDir := t.TempDir()
@@ -329,12 +338,13 @@ func TestRestoreDeletedFolderSavesSurvivingParent(t *testing.T) {
 	}
 }
 
-func TestExplicitMissingStartupFolderKeepsError(t *testing.T) {
-	missing := filepath.Join(t.TempDir(), "missing")
+func TestExplicitMissingStartupFolderRecoversToParent(t *testing.T) {
+	parent := t.TempDir()
+	missing := filepath.Join(parent, "missing", "nested")
 	v := newBrowserView([]string{missing}, nil)
 	defer v.loader.close()
 	waitLoaded(t, v, 0)
-	if v.panels[0].path != missing || v.panels[0].err == nil {
-		t.Fatal("explicit startup folder unexpectedly recovered to its parent")
+	if v.panels[0].path != parent || v.panels[0].err != nil {
+		t.Fatal("explicit startup folder did not recover to its surviving parent")
 	}
 }

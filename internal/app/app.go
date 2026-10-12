@@ -62,7 +62,7 @@ func Run() error {
 			gioapp.Size(unit.Dp(windowWidth), unit.Dp(windowHeight)),
 			gioapp.MinSize(unit.Dp(720), unit.Dp(360)))
 		w.Option(native.options()...)
-		v := newLocationView(locations, saved.ActivePanel, w.Invalidate, len(flag.Args()) == 0)
+		v := newLocationView(locations, saved.ActivePanel, w.Invalidate)
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		v.nativeKeys = keys
 		sounds := sound.NewPlayer()

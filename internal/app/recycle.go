@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -62,6 +63,15 @@ func (v *view) acceptRecycle(result loadResult) {
 		}
 		if matches {
 			other.removeEntries(result.recycled.Names)
+		}
+		if pi < len(result.locations) && result.locations[pi] != "" &&
+			pi < len(result.request.recycle.locations) && samePath(other.path, result.request.recycle.locations[pi]) {
+			for _, name := range result.recycled.Names {
+				if _, inside := movedLocationSuffix(filepath.Join(result.recycled.Directory, name), result.locations[pi]); inside {
+					other.refreshNeeded = true
+					break
+				}
+			}
 		}
 	}
 	count := len(result.recycled.Names)

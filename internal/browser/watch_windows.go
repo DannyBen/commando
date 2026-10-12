@@ -36,28 +36,37 @@ func WatchDirectory(ctx context.Context, path string, changed func()) error {
 	}()
 	changed()
 	for {
-		event, err := windows.WaitForMultipleObjects([]windows.Handle{stop, handle}, false, windows.INFINITE)
+		event, err := windows.WaitForMultipleObjects([]windows.Handle{stop, handle}, false, 1000)
 		if err != nil {
+			changed()
 			return err
 		}
 		if event == windows.WAIT_OBJECT_0 {
 			return ctx.Err()
 		}
-		if event != windows.WAIT_OBJECT_0+1 {
+		if event != windows.WAIT_OBJECT_0+1 && event != uint32(windows.WAIT_TIMEOUT) {
 			continue
 		}
-		changed()
+		// Check once per second as well as on notifications: Windows may not
+		// signal when the watched folder itself or an ancestor disappears.
 		// Recycling moves the watched directory out from under its original
 		// path. Its notification handle can still refer to the moved directory;
 		// never re-arm that handle once the requested location is gone.
 		info, err := os.Stat(path)
 		if err != nil {
+			changed()
 			return err
 		}
 		if !info.IsDir() {
+			changed()
 			return &os.PathError{Op: "watch", Path: path, Err: os.ErrNotExist}
 		}
+		if event == uint32(windows.WAIT_TIMEOUT) {
+			continue
+		}
+		changed()
 		if err := windows.FindNextChangeNotification(handle); err != nil {
+			changed()
 			return err
 		}
 	}

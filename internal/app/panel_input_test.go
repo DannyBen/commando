@@ -284,14 +284,13 @@ func TestLocationEditing(t *testing.T) {
 	if v.panels[0].path != filepath.Join(root, "other") {
 		t.Fatal("absolute path submission failed")
 	}
-	before := v.panels[0].path
 	send(altD)
 	replace(filepath.Join(root, "missing"))
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	send()
-	if v.panels[0].path != before || v.panels[0].err == nil {
-		t.Fatal("invalid path did not retain the listing and existing directory error behavior")
+	if v.panels[0].path != root || v.panels[0].err != nil || v.panels[1].path != root {
+		t.Fatal("missing path did not recover to its parent in only the current panel")
 	}
 	send(altD)
 	replace("")
@@ -352,7 +351,7 @@ func TestLocationDriveShortcutSubmission(t *testing.T) {
 					return browser.Directory{}, fmt.Errorf("submitted %q, want %q", path, want)
 				}
 				if tc.failed {
-					return browser.Directory{}, os.ErrNotExist
+					return browser.Directory{}, os.ErrPermission
 				}
 				return browser.Directory{Path: path}, nil
 			}, nil)
@@ -365,7 +364,7 @@ func TestLocationDriveShortcutSubmission(t *testing.T) {
 			send()
 			p := &v.panels[0]
 			if tc.failed {
-				if p.path != base || !errors.Is(p.err, os.ErrNotExist) {
+				if p.path != base || !errors.Is(p.err, os.ErrPermission) {
 					t.Fatalf("failed navigation changed the folder or error: path=%q err=%v", p.path, p.err)
 				}
 			} else if p.path != want || p.err != nil {

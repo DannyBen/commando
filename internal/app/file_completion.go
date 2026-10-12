@@ -61,7 +61,7 @@ func (v *view) applyTransferPanels(result loadResult, locations []string) (refre
 			refreshFailed = true
 			v.showFeedback(pi, feedback.Warning, "Cannot refresh folder")
 		} else {
-			p.reconcileTransferListing(update.directory)
+			p.reconcileDirectoryListing(update.directory)
 		}
 	}
 	return

@@ -1,9 +1,8 @@
 package app
 
 import (
-	"errors"
-	"io/fs"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -15,7 +14,6 @@ type loadRequest struct {
 	path, selectName string
 	refresh          bool
 	autoRefresh      bool
-	restore          bool
 	tracked          bool
 	action           actionClass
 	locations        []string // Captured panel paths for create/rename alias reconciliation.
@@ -124,23 +122,18 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 						created, err = browser.CreateFile(mutationPath, request.create.name)
 					}
 				} else if request.recycle != nil {
+					// Capture alias/backing locations before recycling can remove
+					// open descendants and make fresh identity resolution fail.
+					result.locations = resolveFileLocations(request.recycle.locations)
 					recycled, err = l.recycle(request.path, request.recycle.names)
 					sameDirectory = make([]bool, len(request.recycle.locations))
 					if len(recycled.Names) > 0 {
-						for pi, path := range request.recycle.locations {
-							if path == "" {
-								continue
-							}
-							resolved, resolveErr := browser.ResolveOperationPath(path)
-							sameDirectory[pi] = resolveErr == nil && samePath(filepath.Clean(resolved), recycled.Directory)
+						for pi, resolved := range result.locations {
+							sameDirectory[pi] = resolved != "" && samePath(filepath.Clean(resolved), recycled.Directory)
 						}
 					}
 				} else {
-					if request.restore {
-						directory, err = l.readExistingParent(request.path)
-					} else {
-						directory, err = read(request.path)
-					}
+					directory, err = l.readExistingParent(request.path)
 				}
 				result.directory, result.created, result.recycled = directory, created, recycled
 				result.sameDirectory, result.err = sameDirectory, err
@@ -162,9 +155,18 @@ func (l *directoryLoader) close() { l.stopOnce.Do(func() { close(l.done) }) }
 func (l *directoryLoader) readExistingParent(path string) (browser.Directory, error) {
 	for {
 		directory, err := l.readDirectory(path)
-		if !errors.Is(err, fs.ErrNotExist) || filepath.Dir(path) == path {
+		if !browser.IsMissingDirectory(err) || path == "" {
 			return directory, err
 		}
-		path = filepath.Dir(path)
+		parent := filepath.Dir(path)
+		if parent == path {
+			// No usable parent remains. Use the default root once, without looping.
+			fallback := string(filepath.Separator)
+			if runtime.GOOS == "windows" {
+				fallback = `C:\`
+			}
+			return l.readDirectory(fallback)
+		}
+		path = parent
 	}
 }

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -111,5 +112,33 @@ func TestSuspendedDirectoryWatchStaysQuietUntilManualRetry(t *testing.T) {
 	paths, _ := m.take(time.Now().Add(time.Second))
 	if len(paths) != 1 || paths[0] != "folder" || wakes.Load() != 2 {
 		t.Fatal("manual refresh did not re-arm only the fresh watch")
+	}
+}
+
+func TestFolderMissingDuringWatchSetupQueuesOneRecoveryRead(t *testing.T) {
+	wake := make(chan struct{}, 4)
+	m := newDirectoryMonitor(func(context.Context, string, func()) error {
+		return &os.PathError{Op: "watch", Path: "gone", Err: os.ErrNotExist}
+	}, func() { wake <- struct{}{} })
+	t.Cleanup(m.close)
+	m.sync([]string{"gone"})
+	select {
+	case <-wake:
+	case <-time.After(3 * time.Second):
+		t.Fatal("failed watch setup never requested location recovery")
+	}
+	// Waiting for provider termination makes the suspended state deterministic.
+	m.workers.Wait()
+	paths, _ := m.take(time.Now().Add(time.Second))
+	if len(paths) != 1 || paths[0] != "gone" {
+		t.Fatal("missing watch setup did not queue exactly one location read")
+	}
+	for range 20 {
+		m.sync([]string{"gone"})
+		m.changed(m.watches[directoryWatchKey("gone")])
+	}
+	paths, next := m.take(time.Now().Add(time.Second))
+	if len(paths) != 0 || !next.IsZero() || len(wake) != 0 {
+		t.Fatal("missing location entered a watch restart loop")
 	}
 }
