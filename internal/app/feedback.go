@@ -83,8 +83,11 @@ func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 	if index == v.active && p.prefix != "" {
 		status = "> " + p.prefix
 	}
-	return v.columns(gtx, entry{name: status, size: p.positionLabel()}, v.appearance.Colors.Foreground,
-		v.appearance.Colors.Muted, v.appearance.SmallTextSize, gtx.Dp(84))
+	return v.columnLayout(gtx, gtx.Dp(84), func(gtx layout.Context) layout.Dimensions {
+		return v.label(gtx, status, v.appearance.SmallTextSize, v.appearance.Colors.Foreground, text.Start)
+	}, func(gtx layout.Context) layout.Dimensions {
+		return v.label(gtx, p.positionLabel(), v.appearance.SmallTextSize, v.appearance.Colors.Muted, text.End)
+	})
 }
 
 func (v *view) playFeedbackSound(frame feedback.Frame) {

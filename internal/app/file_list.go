@@ -33,7 +33,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, max(gtx.Dp(28), smallTextHeight+gtx.Dp(12)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
-				return v.columns(gtx, entry{name: "NAME", size: p.metadata.heading()}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize, v.metadataWidth(gtx, p.metadata))
+				return v.columns(gtx, entry{name: "NAME", size: p.metadata.heading()}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize)
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -115,7 +115,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 						if storedRow >= 0 {
 							metadata = p.metadata.value(p.items[storedRow])
 						}
-						return v.nameContents(gtx, metadata, sizeColor, p.metadata)
+						return v.nameContents(gtx, metadata, sizeColor)
 					}
 					return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata)
 				}
@@ -151,7 +151,7 @@ func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor 
 	return layout.Inset{Left: padding, Right: padding}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
-			return v.columns(gtx, entry{name: item.name, size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize, v.metadataWidth(gtx, mode))
+			return v.columns(gtx, entry{name: item.name, size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize)
 		})
 	})
 }

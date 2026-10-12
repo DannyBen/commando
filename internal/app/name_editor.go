@@ -267,7 +267,7 @@ func (v *view) storedRow(panel, row int) int {
 	return row
 }
 
-func (v *view) nameContents(gtx layout.Context, metadata string, metaColor color.NRGBA, mode metadataColumn) layout.Dimensions {
+func (v *view) nameContents(gtx layout.Context, metadata string, metaColor color.NRGBA) layout.Dimensions {
 	hint := ""
 	if v.nameInteraction().draft() {
 		hint = "File name"
@@ -279,16 +279,20 @@ func (v *view) nameContents(gtx layout.Context, metadata string, metaColor color
 	return layout.Inset{Left: padding, Right: padding}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
-			return v.columnLayout(gtx, v.metadataWidth(gtx, mode), func(gtx layout.Context) layout.Dimensions {
+			var trailing layout.Widget
+			if metadata != "" {
+				trailing = func(gtx layout.Context) layout.Dimensions {
+					return v.label(gtx, metadata, v.appearance.TextSize, metaColor, text.End)
+				}
+			}
+			return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Background{}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					paint.FillShape(gtx.Ops, v.appearance.Colors.Surface, clip.Rect{Max: gtx.Constraints.Min}.Op())
 					return layout.Dimensions{Size: gtx.Constraints.Min}
 				}, func(gtx layout.Context) layout.Dimensions {
 					return v.textEditor(&v.nameEditor, hint).Layout(gtx)
 				})
-			}, func(gtx layout.Context) layout.Dimensions {
-				return v.label(gtx, metadata, v.appearance.TextSize, metaColor, text.End)
-			})
+			}, trailing)
 		})
 	})
 }

@@ -8,11 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/font"
+	"gioui.org/font/gofont"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
 )
 
@@ -102,19 +105,40 @@ func TestMetadataValues(t *testing.T) {
 	}
 }
 
-func TestNoneReleasesFilenameWidthAndDatesFitFont(t *testing.T) {
-	for _, size := range []unit.Sp{15, 28} {
-		v := newPreviewView()
-		v.appearance.TextSize = size
-		var ops op.Ops
-		gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(240, 60))}
-		if width := v.metadataWidth(gtx, metadataNone); width != 0 {
-			t.Fatalf("None reserved %d pixels", width)
-		}
-		gtx.Constraints = layout.Constraints{Max: image.Pt(1000, 1000)}
-		date := v.label(gtx, "2026-10-11", size, v.appearance.Colors.Metadata, text.End)
-		if width := v.metadataWidth(gtx, metadataModified); width < date.Size.X {
-			t.Fatal("date column crops configured font")
+func TestTrailingMetadataUsesEachRowsContentWidth(t *testing.T) {
+	for _, proportional := range []bool{false, true} {
+		for _, size := range []unit.Sp{15, 28} {
+			v := newPreviewView()
+			if proportional {
+				v.theme.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+			}
+			var ops op.Ops
+			gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 60))}
+			previous := gtx.Constraints.Max.X + 1
+			for _, value := range []string{"", "?", "png", "56.7 KB", "2026-10-11"} {
+				var trailing layout.Widget
+				if value != "" {
+					trailing = func(gtx layout.Context) layout.Dimensions {
+						dims, info := (widget.Label{MaxLines: 1}).LayoutDetailed(gtx, v.theme.Shaper, font.Font{Typeface: v.theme.Face}, size, value, op.CallOp{})
+						if info.Truncated != 0 {
+							t.Fatalf("metadata %q truncated at font size %v", value, size)
+						}
+						return dims
+					}
+				}
+				available := 0
+				v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
+					available = gtx.Constraints.Max.X
+					return layout.Dimensions{Size: gtx.Constraints.Min}
+				}, trailing)
+				if value == "" && available != 400 {
+					t.Fatal("empty metadata reserved filename space")
+				}
+				if available >= previous {
+					t.Fatalf("%q did not leave less filename space than shorter metadata: %d >= %d", value, available, previous)
+				}
+				previous = available
+			}
 		}
 	}
 }

@@ -3,10 +3,6 @@ package app
 import (
 	"path/filepath"
 	"strings"
-
-	"gioui.org/layout"
-	"gioui.org/op"
-	"gioui.org/text"
 )
 
 type metadataColumn uint8
@@ -92,31 +88,4 @@ func (m metadataColumn) value(item entry) string {
 	default:
 		return ""
 	}
-}
-
-// Measure a bounded column using the configured font, including its heading.
-// None reserves no width. Long extensions elide within the extension column.
-func (v *view) metadataWidth(gtx layout.Context, mode metadataColumn) int {
-	if mode == metadataNone {
-		return 0
-	}
-	sample := "1023.9 MB"
-	switch mode {
-	case metadataExtension:
-		sample = "xxxxxx"
-	case metadataModified:
-		sample = "2000-12-31"
-	}
-	gtx.Constraints = layout.Constraints{Max: gtx.Constraints.Max}
-	gtx.Constraints.Max.X = 1_000_000
-	gtx.Constraints.Max.Y = 1_000_000
-	macro := op.Record(gtx.Ops)
-	value := v.label(gtx, sample, v.appearance.TextSize, v.appearance.Colors.Metadata, text.End)
-	heading := v.label(gtx, mode.heading(), v.appearance.SmallTextSize, v.appearance.Colors.Metadata, text.End)
-	macro.Stop()
-	width := max(value.Size.X, heading.Size.X) + gtx.Dp(8)
-	if mode == metadataSize {
-		width = max(width, gtx.Dp(84))
-	}
-	return width
 }

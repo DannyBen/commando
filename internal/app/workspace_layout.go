@@ -69,12 +69,16 @@ func locationBarHeight(gtx layout.Context, textHeight int) int {
 	return max(gtx.Dp(40), textHeight+gtx.Dp(12))
 }
 
-func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, width int) layout.Dimensions {
-	return v.columnLayout(gtx, width, func(gtx layout.Context) layout.Dimensions {
+func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp) layout.Dimensions {
+	var metadata layout.Widget
+	if item.size != "" {
+		metadata = func(gtx layout.Context) layout.Dimensions {
+			return v.label(gtx, item.size, size, secondary, text.End)
+		}
+	}
+	return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return v.label(gtx, item.name, size, fg, text.Start)
-	}, func(gtx layout.Context) layout.Dimensions {
-		return v.label(gtx, item.size, size, secondary, text.End)
-	})
+	}, metadata)
 }
 
 func (v *view) columnLayout(gtx layout.Context, width int, name, metadata layout.Widget) layout.Dimensions {
@@ -85,6 +89,20 @@ func (v *view) columnLayout(gtx layout.Context, width int, name, metadata layout
 		layout.Flexed(1, name),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.X, gtx.Constraints.Max.X = width, width
+			return layout.Inset{Left: unit.Dp(8)}.Layout(gtx, metadata)
+		}),
+	)
+}
+
+// Each row gives its trailing content only the space it needs. Empty metadata
+// leaves the full width available to the filename or editor.
+func (v *view) trailingLayout(gtx layout.Context, name, metadata layout.Widget) layout.Dimensions {
+	if metadata == nil {
+		return name(gtx)
+	}
+	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+		layout.Flexed(1, name),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: unit.Dp(8)}.Layout(gtx, metadata)
 		}),
 	)
