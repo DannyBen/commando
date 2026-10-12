@@ -107,11 +107,19 @@ func (c *Channel) Dismiss() { *c = Channel{} }
 // Current returns only visible feedback, never a scheduled message.
 func (c *Channel) Current() *Message { return c.message }
 
+// Acknowledge marks visible feedback as already announced by its caller.
+// It suppresses the Started notification while retaining normal animation.
+func (c *Channel) Acknowledge() {
+	if c.message != nil {
+		c.message.presented = true
+	}
+}
+
 type Frame struct {
 	Text    string
 	Kind    Kind
 	Next    time.Time // Zero means the presentation is steady; no redraw is needed.
-	Started bool      // The message first appeared on this frame, once per message.
+	Started bool      // Newly announced feedback, once per message unless acknowledged.
 }
 
 // Frame reports whether the channel owns the footer, even during an empty

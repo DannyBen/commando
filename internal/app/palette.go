@@ -155,7 +155,10 @@ func (v *view) updatePalette(gtx layout.Context) {
 	for _, ke := range navigation {
 		previous := s.selected
 		switch ke.Name {
-		case key.NameEscape, "P":
+		case key.NameEscape:
+			v.escape(gtx)
+			return
+		case "P":
 			v.stopPalette(gtx)
 			return
 		case key.NameReturn, key.NameEnter:

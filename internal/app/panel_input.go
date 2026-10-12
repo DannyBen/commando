@@ -104,7 +104,7 @@ func (v *view) updateLocation(gtx layout.Context) {
 		if ke, ok := e.(key.Event); ok && ke.State == key.Press {
 			v.dismissFeedback()
 			if ke.Name == key.NameEscape {
-				v.stopLocation(gtx)
+				v.escape(gtx)
 				return
 			}
 			v.location.SetCaret(0, utf8.RuneCountInString(v.location.Text()))

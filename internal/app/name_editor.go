@@ -136,7 +136,7 @@ func (v *view) updateName(gtx layout.Context) {
 			if ke.Name == key.NameF2 {
 				v.nameEditor.SetCaret(0, utf8.RuneCountInString(v.nameEditor.Text()))
 			} else {
-				v.stopName(gtx)
+				v.escape(gtx)
 				return
 			}
 		}

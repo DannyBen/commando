@@ -4,6 +4,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 // Foreground interaction has one owner. Background work and panel loading are
@@ -104,6 +105,31 @@ func (v *view) cancelInteraction(gtx layout.Context) bool {
 	return true
 }
 
+// Escape uses the same session cancellation as other input routes, with one
+// semantic cue. Submitted name mutations remain protected until reconciliation.
+func (v *view) escape(gtx layout.Context) {
+	if s := v.nameInteraction(); s != nil && s.pending {
+		return
+	}
+	v.dismissFeedback()
+	if v.interaction.idle() {
+		p := &v.panels[v.active]
+		if p.prefix != "" {
+			p.prefix = ""
+		} else {
+			p.clearMarks()
+		}
+	} else if !v.cancelInteraction(gtx) {
+		return
+	}
+	if v.sounds != nil {
+		v.sounds.Play(sound.Cancel)
+	}
+	// Cancellation may produce a footer result, such as Copy cancelled. Its
+	// animation stays intact; the Escape cue already announces the result.
+	v.panels[v.active].feedback.Acknowledge()
+}
+
 // Return true when a foreground session owns this key, even when the session
 // ignores it. Browsing shortcuts must not leak through an editor or choice.
 func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
@@ -112,7 +138,7 @@ func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
 		return true
 	}
 	if a := v.inlineInteraction(); a != nil && a.panel == v.active {
-		v.inlineActionKey(ke)
+		v.inlineActionKey(gtx, ke)
 		return true
 	}
 	return false

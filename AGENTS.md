@@ -45,6 +45,9 @@ module/executable and `Commando` for the window title and data-folder name.
 - Keyboard navigation plays the quiet semantic Navigation cue when the current
   row or active panel changes, including palette results and inline choices.
   Keep navigation at an edge, key releases and native text editing silent.
+- Escape uses the shared cancellation helper and plays one single-note Cancel
+  cue. Preserve submitted name sessions; ignored Escape and key releases stay
+  silent. A cancellation result keeps its animation without a second tone.
 - Ctrl+H cycles each pane independently through All, Hide Hidden, and Hide Hidden
   + dotfiles. Windows hidden attributes and leading-dot names are separate.
   Always exclude entries carrying both hidden and system attributes; retain

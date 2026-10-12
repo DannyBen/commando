@@ -99,3 +99,31 @@ func TestCursorKeepsBlinkingUntilDismissed(t *testing.T) {
 		t.Fatal("new message did not restart typing and cursor timing")
 	}
 }
+
+func TestAcknowledgedFeedbackKeepsAnimationWithoutAnnouncingAgain(t *testing.T) {
+	var c Channel
+	start := time.Unix(1000, 0)
+	profiles := Animations{Enabled: true, Info: Animation{Enabled: true,
+		CharacterDelay: 15 * time.Millisecond, Cursor: "█"}}
+	c.Show(Info, "Cancelled")
+	c.Acknowledge()
+	frame, owns := c.Frame(start, profiles)
+	if !owns || frame.Text != "█" || frame.Started || frame.Next.IsZero() {
+		t.Fatal("acknowledgement suppressed animation or repeated notification")
+	}
+	frame, _ = c.Frame(start.Add(15*time.Millisecond), profiles)
+	if frame.Text != "C█" || frame.Started {
+		t.Fatal("acknowledged message did not keep normal typing")
+	}
+	c.Show(Info, "Next")
+	frame, _ = c.Frame(start.Add(time.Hour), profiles)
+	if !frame.Started {
+		t.Fatal("acknowledgement silenced a subsequent message")
+	}
+	c.ProgressAt("Reading folder", start.Add(2*time.Hour))
+	c.Acknowledge() // Pending feedback has not been announced yet.
+	frame, _ = c.Frame(start.Add(2*time.Hour), profiles)
+	if !frame.Started {
+		t.Fatal("acknowledgement silenced pending progress")
+	}
+}

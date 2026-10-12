@@ -79,7 +79,7 @@ func (v *view) chooseInlineAction() {
 	}
 }
 
-func (v *view) inlineActionKey(ke key.Event) {
+func (v *view) inlineActionKey(gtx layout.Context, ke key.Event) {
 	a := v.inlineInteraction()
 	if ke.State != key.Press {
 		return
@@ -109,7 +109,7 @@ func (v *view) inlineActionKey(ke key.Event) {
 		v.chooseInlineAction()
 		return
 	case key.NameEscape:
-		v.cancelInlineActions()
+		v.escape(gtx)
 		return
 	case key.NameLeftArrow:
 		v.navigateInlineActions(-1, false)

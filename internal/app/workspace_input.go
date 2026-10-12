@@ -207,11 +207,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		v.startName(gtx, kind)
 		return
 	case key.NameEscape:
-		if p.prefix != "" {
-			p.prefix = ""
-		} else {
-			p.clearMarks()
-		}
+		v.escape(gtx)
 		return
 	case "A":
 		p.prefix = ""

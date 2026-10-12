@@ -32,6 +32,8 @@ An empty typing/blink frame still owns the entire area. `Next` is zero when
 presentation is steady;
 a persistent blinking cursor continues scheduling redraws until dismissal.
 `Current()` exposes the complete message for inspection; treat it as read-only.
+`Acknowledge()` suppresses a visible message's `Started` notification when its
+caller has already announced it; animation and dismissal stay unchanged.
 
 `Animations` holds a master `Enabled` switch and separate profiles for the four
 kinds. Typing uses a fixed `CharacterDelay` per Unicode character. `BlinkInterval`

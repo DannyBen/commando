@@ -7,6 +7,7 @@ type Name string
 
 const (
 	Navigation          Name = "navigation"
+	Cancel              Name = "cancel"
 	DirectoryNavigation Name = "directoryNavigation"
 	MessageInfo         Name = "messageInfo"
 	MessageSuccess      Name = "messageSuccess"
@@ -18,6 +19,7 @@ const (
 // volume is a percentage. Spacing is measured between note starts.
 var cues = map[Name]Cue{
 	Navigation:          {Notes: []float64{220}, Length: 12 * time.Millisecond, Waveform: Square, Volume: 6},
+	Cancel:              {Notes: []float64{330}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
 	DirectoryNavigation: {Notes: []float64{523.25}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
 	MessageInfo:         {Notes: []float64{440}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
 	MessageSuccess:      {Notes: []float64{660, 880}, Length: 60 * time.Millisecond, Spacing: 50 * time.Millisecond, Waveform: Triangle, Volume: 20},
