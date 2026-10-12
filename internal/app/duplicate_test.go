@@ -54,14 +54,14 @@ func TestSingleDuplicateUsesInlineNameEditor(t *testing.T) {
 			send(modified(key.Name(shortcut), key.ModCtrl))
 			waitLoaded(t, v, 0)
 			send()
-			if v.naming == nil || v.naming.kind != nameDuplicate || v.nameEditor.Text() != suggestion || !router.Source().Focused(&v.nameEditor) {
-				t.Fatalf("duplicate did not use name editor: paste=%v folder=%v naming=%+v text=%q", paste, folder, v.naming, v.nameEditor.Text())
+			if v.nameInteraction() == nil || v.nameInteraction().kind != nameDuplicate || v.nameEditor.Text() != suggestion || !router.Source().Focused(&v.nameEditor) {
+				t.Fatalf("duplicate did not use name editor: paste=%v folder=%v naming=%+v text=%q", paste, folder, v.nameInteraction(), v.nameEditor.Text())
 			}
 			wantSelected := suggestion
 			if !folder {
 				wantSelected = "a - Copy"
 			}
-			if v.nameEditor.SelectedText() != wantSelected || v.panels[0].items[v.naming.row-1].name != name {
+			if v.nameEditor.SelectedText() != wantSelected || v.panels[0].items[v.nameInteraction().row-1].name != name {
 				t.Fatal("duplicate name selection or source anchor was wrong")
 			}
 			if _, err := os.Stat(filepath.Join(root, suggestion)); !errors.Is(err, fs.ErrNotExist) {
@@ -82,7 +82,7 @@ func TestSingleDuplicateUsesInlineNameEditor(t *testing.T) {
 				assertBatchFile(t, filepath.Join(root, name), "alpha")
 			}
 			current, _ := c.read()
-			if !reflect.DeepEqual(current, before) || v.naming != nil || v.transferPending || v.panels[0].items[v.panels[0].selected].name != custom {
+			if !reflect.DeepEqual(current, before) || v.nameInteraction() != nil || v.transferPending || v.panels[0].items[v.panels[0].selected].name != custom {
 				t.Fatal("duplicate lost copy selection or changed clipboard")
 			}
 			if v.panels[2].items[v.panels[2].selected].name != "z.txt" || !v.panels[2].marks[v.panels[2].selected] {
@@ -123,7 +123,7 @@ func TestDuplicateCancelAndCollisionRetry(t *testing.T) {
 			send(pressed(key.NameReturn))
 			waitCreated(t, v)
 			send()
-			if v.naming == nil || v.nameEditor.Text() != "a - Copy.txt" || v.nameEditor.ReadOnly || v.panels[0].feedback.Current().Text != "Name already exists" {
+			if v.nameInteraction() == nil || v.nameEditor.Text() != "a - Copy.txt" || v.nameEditor.ReadOnly || v.panels[0].feedback.Current().Text != "Name already exists" {
 				t.Fatal("collision did not retain editable draft")
 			}
 			assertBatchFile(t, filepath.Join(root, "a - Copy.txt"), "external")
@@ -132,7 +132,7 @@ func TestDuplicateCancelAndCollisionRetry(t *testing.T) {
 			send()
 			assertBatchFile(t, filepath.Join(root, "retry.txt"), "alpha")
 		}
-		if v.naming != nil || v.transferPending {
+		if v.nameInteraction() != nil || v.transferPending {
 			t.Fatal("duplicate retained pending state after completion/cancellation")
 		}
 		current, _ := c.read()
@@ -163,7 +163,7 @@ func TestBatchDuplicateAndSameFolderCutPaste(t *testing.T) {
 		send(modified(key.Name(keyName), key.ModCtrl))
 		waitLoaded(t, v, 0)
 		send()
-		if v.naming != nil || v.actions != nil || v.transferPending {
+		if v.nameInteraction() != nil || v.inlineInteraction() != nil || v.transferPending {
 			t.Fatal("batch duplicate or same-folder cut retained a choice")
 		}
 		current, _ := c.read()
@@ -250,14 +250,14 @@ func TestArrivingDuplicateDefersBehindEditorOrCancelsAfterLeaving(t *testing.T) 
 		waitLoaded(t, v, 0)
 		send()
 		first, last := v.location.Selection()
-		if !v.editing || v.naming != nil || v.location.Text() != "draft location" || first != 1 || last != 4 || !router.Source().Focused(&v.location) {
+		if !v.locationEditing() || v.nameInteraction() != nil || v.location.Text() != "draft location" || first != 1 || last != 4 || !router.Source().Focused(&v.location) {
 			t.Fatal("arriving duplicate disturbed an active editor")
 		}
 		if (v.pendingDuplicate == nil) != leave || v.transferPending == leave {
 			t.Fatal("arriving duplicate did not defer/cancel according to its pane")
 		}
 		send(pressed(key.NameEscape))
-		if (v.naming == nil) != leave {
+		if (v.nameInteraction() == nil) != leave {
 			t.Fatal("duplicate did not resume only in its active pane")
 		}
 		if !leave {

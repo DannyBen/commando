@@ -18,6 +18,11 @@ module/executable and `Commando` for the window title and data-folder name.
 
 ## Behavior to Preserve
 
+- Foreground interactions have one session owner through interaction.go. Start
+  and finish sessions through its controller; route input, cancellation and
+  focus through the shared interaction helpers. Keep background operations and
+  per-pane loading independent. Submitted name mutations retain their session
+  until reconciliation, and stale sessions cannot end a newer interaction.
 - Three independent panels retain their own selection and scroll position.
 - Ctrl+H cycles each pane independently through All, Hide Hidden, and Hide Hidden
   + dotfiles. Windows hidden attributes and leading-dot names are separate.

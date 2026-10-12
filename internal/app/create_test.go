@@ -28,7 +28,7 @@ func waitCreated(t *testing.T, v *view) {
 	t.Helper()
 	timer := time.NewTimer(3 * time.Second)
 	defer timer.Stop()
-	for v.naming != nil && v.naming.pending {
+	for v.nameInteraction() != nil && v.nameInteraction().pending {
 		select {
 		case result := <-v.loader.results:
 			v.acceptLoad(result)
@@ -48,20 +48,20 @@ func TestInlineCreateDraftAndCancel(t *testing.T) {
 		marks[row] = marked
 	}
 	send(pressed("N"), key.Event{Name: "N", State: key.Release, Modifiers: key.ModCtrl | key.ModShift})
-	if v.naming != nil {
+	if v.nameInteraction() != nil {
 		t.Fatal("creation opened without shortcut press")
 	}
 	send(newFolderKey())
-	if v.naming == nil || !router.Source().Focused(&v.nameEditor) || v.nameEditor.Text() != "" {
+	if v.nameInteraction() == nil || !router.Source().Focused(&v.nameEditor) || v.nameEditor.Text() != "" {
 		t.Fatal("shortcut did not focus an empty inline editor")
 	}
-	draft := v.naming.row
+	draft := v.nameInteraction().row
 	if draft != selected+1 || v.storedRow(0, draft) != -1 || !slices.Equal(p.items, before) || !reflect.DeepEqual(p.marks, marks) {
 		t.Fatal("draft was not a separate visual row after the current item")
 	}
 	send(replaceCreate(v, "draft"), modified(key.NameTab, key.ModShift), pressed(key.NameTab))
 	send(refreshKey(), modified("D", key.ModAlt), newFolderKey())
-	if v.activeEditor() != &v.nameEditor || v.nameEditor.Text() != "draft" || !router.Source().Focused(&v.nameEditor) || v.naming.row != draft {
+	if v.activeEditor() != &v.nameEditor || v.nameEditor.Text() != "draft" || !router.Source().Focused(&v.nameEditor) || v.nameInteraction().row != draft {
 		t.Fatal("shortcut, typing or Tab moved the draft/editor")
 	}
 	send(pressed(key.NameF2))
@@ -69,7 +69,7 @@ func TestInlineCreateDraftAndCancel(t *testing.T) {
 		t.Fatal("F2 did not select the entire draft")
 	}
 	send(pressed(key.NameEscape))
-	if v.naming != nil || !router.Source().Focused(&v.focus) || !slices.Equal(p.items, before) || !reflect.DeepEqual(p.marks, marks) || p.selected != selected || p.list.Position != position {
+	if v.nameInteraction() != nil || !router.Source().Focused(&v.focus) || !slices.Equal(p.items, before) || !reflect.DeepEqual(p.marks, marks) || p.selected != selected || p.list.Position != position {
 		t.Fatal("cancellation did not restore listing, marks, selection, scroll or focus")
 	}
 	send(pressed(key.NameRightArrow))
@@ -99,7 +99,7 @@ func TestClickCancelsInlineCreateDraft(t *testing.T) {
 				t.Fatal("click below the draft selected the wrong stored row")
 			}
 		}
-		if v.naming != nil {
+		if v.nameInteraction() != nil {
 			t.Fatal("row click did not cancel the draft")
 		}
 	}
@@ -158,7 +158,7 @@ func TestRealCreateFolderPreservesMarksAndUpdatesPanels(t *testing.T) {
 	waitCreated(t, v)
 	send()
 	p := &v.panels[0]
-	if v.naming != nil || v.active != 0 || p.items[p.selected].name != "Å folder" || p.metadata != metadataModified || p.marks[p.selected] {
+	if v.nameInteraction() != nil || v.active != 0 || p.items[p.selected].name != "Å folder" || p.metadata != metadataModified || p.marks[p.selected] {
 		t.Fatal("created folder was not selected and unmarked, or form stayed open")
 	}
 	if p.selected != 1 || !p.items[p.selected].file.Directory || p.items[p.selected].file.Modified.IsZero() {
@@ -211,7 +211,7 @@ func TestCreateFolderErrorsRetainDraftAndAllowRetry(t *testing.T) {
 		send(pressed(key.NameReturn))
 		waitCreated(t, v)
 		send()
-		if v.naming == nil || !errors.Is(v.naming.err, tc.err) || v.nameEditor.ReadOnly || v.nameEditor.Text() != tc.name || !slices.Equal(v.panels[0].items, before) {
+		if v.nameInteraction() == nil || !errors.Is(v.nameInteraction().err, tc.err) || v.nameEditor.ReadOnly || v.nameEditor.Text() != tc.name || !slices.Equal(v.panels[0].items, before) {
 			t.Fatalf("failed creation did not retain editable draft: %q", tc.name)
 		}
 		if message := v.panels[0].feedback.Current(); message == nil || message.Text != tc.message {
@@ -222,7 +222,7 @@ func TestCreateFolderErrorsRetainDraftAndAllowRetry(t *testing.T) {
 	send(pressed(key.NameReturn))
 	waitCreated(t, v)
 	send()
-	if v.naming != nil || v.panels[0].items[v.panels[0].selected].name != "new" {
+	if v.nameInteraction() != nil || v.panels[0].items[v.panels[0].selected].name != "new" {
 		t.Fatal("retry failed")
 	}
 	if data, err := os.ReadFile(filepath.Join(root, "existing")); err != nil || string(data) != "keep" {
@@ -235,28 +235,28 @@ func TestCreateFolderEmptyDirectoryAndUnavailableContexts(t *testing.T) {
 		v := newView([]panel{p})
 		send, _ := panelInputFrames(v)
 		send(newFolderKey())
-		if v.naming != nil {
+		if v.nameInteraction() != nil {
 			t.Fatal("creation opened for a busy panel, drive list or unknown location")
 		}
 	}
 	v := newView([]panel{{path: t.TempDir(), selected: -1}})
 	send, _ := panelInputFrames(v)
 	send(newFolderKey())
-	if v.naming == nil {
+	if v.nameInteraction() == nil {
 		t.Fatal("empty directory could not create a folder")
 	}
 	// Editor shortcuts keep their normal semantics and never open another editor.
 	send(pressed(key.NameEscape))
 	send(modified("D", key.ModAlt))
 	send(newFolderKey())
-	if v.naming != nil || !v.editing {
+	if v.nameInteraction() != nil || !v.locationEditing() {
 		t.Fatal("creation interrupted a location editor")
 	}
 	v = newPreviewView()
 	send, _ = panelInputFrames(v)
 	send(pressed(key.NameF2))
 	send(newFolderKey())
-	if v.naming == nil || v.naming.kind != nameRename {
+	if v.nameInteraction() == nil || v.nameInteraction().kind != nameRename {
 		t.Fatal("creation interrupted a filename editor")
 	}
 }
@@ -275,14 +275,14 @@ func TestInlineFileCreationAndCollision(t *testing.T) {
 	}
 	send, _ := panelInputFrames(v)
 	send(modified("N", key.ModCtrl))
-	if v.naming == nil || v.naming.kind != nameCreateFile {
+	if v.nameInteraction() == nil || v.nameInteraction().kind != nameCreateFile {
 		t.Fatal("Ctrl+N did not open a file draft")
 	}
 	send(replaceCreate(v, "existing.txt"))
 	send(pressed(key.NameReturn))
 	waitCreated(t, v)
 	send()
-	if v.naming == nil || !errors.Is(v.naming.err, fs.ErrExist) || v.nameEditor.ReadOnly {
+	if v.nameInteraction() == nil || !errors.Is(v.nameInteraction().err, fs.ErrExist) || v.nameEditor.ReadOnly {
 		t.Fatal("file collision did not retain an editable draft")
 	}
 	if data, err := os.ReadFile(filepath.Join(root, "existing.txt")); err != nil || string(data) != "keep" {
@@ -294,7 +294,7 @@ func TestInlineFileCreationAndCollision(t *testing.T) {
 	send()
 	p := &v.panels[0]
 	item := p.items[p.selected]
-	if v.naming != nil || item.name != "a-new.txt" || item.file.Directory || !item.file.SizeKnown || item.size != "0 B" || p.selected != 1 {
+	if v.nameInteraction() != nil || item.name != "a-new.txt" || item.file.Directory || !item.file.SizeKnown || item.size != "0 B" || p.selected != 1 {
 		t.Fatal("new file was not selected with fresh metadata in sorted order")
 	}
 	if data, err := os.ReadFile(filepath.Join(root, "a-new.txt")); err != nil || len(data) != 0 {
@@ -325,7 +325,7 @@ func TestInlineDraftAtEndRestoresScrollAndSelection(t *testing.T) {
 	p := &v.panels[0]
 	selected, position := p.selected, p.list.Position
 	send(modified("N", key.ModCtrl))
-	if v.naming == nil || v.naming.row != len(p.items) {
+	if v.nameInteraction() == nil || v.nameInteraction().row != len(p.items) {
 		t.Fatal("draft was not appended after the last current item")
 	}
 	if p.list.Position.First == position.First && p.list.Position.Offset == position.Offset {
@@ -333,7 +333,7 @@ func TestInlineDraftAtEndRestoresScrollAndSelection(t *testing.T) {
 	}
 	send(replaceCreate(v, "draft.txt"))
 	send(pressed(key.NameEscape))
-	if v.naming != nil || p.selected != selected || p.list.Position != position {
+	if v.nameInteraction() != nil || p.selected != selected || p.list.Position != position {
 		t.Fatalf("cancellation did not restore viewport: got=%+v want=%+v", p.list.Position, position)
 	}
 }
@@ -347,7 +347,7 @@ func TestScrollingAwayCancelsInlineDraft(t *testing.T) {
 	send(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: point, Scroll: f32.Pt(0, 1000)})
 	send()
 	send()
-	if v.naming != nil {
+	if v.nameInteraction() != nil {
 		t.Fatal("scrolling left an invisible draft editor")
 	}
 }
@@ -356,7 +356,7 @@ func TestCreateFolderFollowsPanelEventOrder(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
 	send(pressed(key.NameTab), newFolderKey())
-	if v.naming == nil || v.naming.panel != 1 || v.naming.path != v.panels[1].path {
+	if v.nameInteraction() == nil || v.nameInteraction().panel != 1 || v.nameInteraction().path != v.panels[1].path {
 		t.Fatal("creation did not use the panel selected by the preceding key")
 	}
 }
@@ -389,13 +389,13 @@ func TestPendingCreateFolderCannotCancelOrDuplicate(t *testing.T) {
 	send(replaceCreate(v, "queued"))
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameEscape), pressed(key.NameReturn), pressed(key.NameTab), refreshKey())
-	if v.naming == nil || !v.naming.pending || !v.nameEditor.ReadOnly || len(v.loader.requests) != 1 || v.active != 0 {
+	if v.nameInteraction() == nil || !v.nameInteraction().pending || !v.nameEditor.ReadOnly || len(v.loader.requests) != 1 || v.active != 0 {
 		t.Fatal("pending operation was cancelled, duplicated or allowed browsing")
 	}
 	close(release)
 	waitCreated(t, v)
 	send()
-	if v.naming != nil || v.panels[0].items[v.panels[0].selected].name != "queued" {
+	if v.nameInteraction() != nil || v.panels[0].items[v.panels[0].selected].name != "queued" {
 		t.Fatal("queued creation did not complete")
 	}
 }

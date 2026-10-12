@@ -23,7 +23,7 @@ func (v *view) switchPanel(direction int) {
 }
 
 func (v *view) switchPanelTo(target int) {
-	if target != v.active && v.actions != nil {
+	if target != v.active && v.inlineInteraction() != nil {
 		v.cancelInlineActions()
 	}
 	v.panels[v.active].prefix = ""
@@ -34,7 +34,7 @@ func (v *view) switchPanelTo(target int) {
 // travel together. Worker requests capture pane indices, so wait until all
 // directory work and inline interactions have finished before rearranging them.
 func (v *view) swapPanel(direction int) {
-	if v.activeEditor() != nil || v.actions != nil || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || !v.actionAllowed(actionMutation) {
 		return
 	}
 	for i := range v.panels {

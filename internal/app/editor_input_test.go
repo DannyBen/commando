@@ -116,7 +116,7 @@ func TestNativeInsertPasteRequiresShiftAndWritableEditor(t *testing.T) {
 				send(pressed(key.NameF2))
 			}
 			if name == "pending rename" {
-				v.naming.pending, v.nameEditor.ReadOnly = true, true
+				v.nameInteraction().pending, v.nameEditor.ReadOnly = true, true
 			}
 			before := v.activeEditor().Text()
 			keys := []key.Event{pressed(insertKey), modified(insertKey, key.ModCtrl), modified(insertKey, key.ModAlt|key.ModShift),

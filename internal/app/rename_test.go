@@ -22,7 +22,7 @@ func waitRenamed(t *testing.T, v *view) {
 	t.Helper()
 	timer := time.NewTimer(3 * time.Second)
 	defer timer.Stop()
-	for v.naming != nil && v.naming.pending {
+	for v.nameInteraction() != nil && v.nameInteraction().pending {
 		select {
 		case result := <-v.loader.results:
 			v.acceptLoad(result)
@@ -45,7 +45,7 @@ func TestRenameEditorSelectionAndCancel(t *testing.T) {
 			v := newView([]panel{{items: []entry{{name: tc.name, file: browser.Entry{Name: tc.name, Directory: tc.directory}}}, selected: 0}, {}})
 			send, _ := panelInputFrames(v)
 			send(pressed(key.NameF2))
-			if v.naming == nil || v.nameEditor.SelectedText() != tc.selection {
+			if v.nameInteraction() == nil || v.nameEditor.SelectedText() != tc.selection {
 				t.Fatalf("initial selection %q", v.nameEditor.SelectedText())
 			}
 			send(key.Event{Name: key.NameTab, State: key.Press})
@@ -70,7 +70,7 @@ func TestRenameEditorSelectionAndCancel(t *testing.T) {
 			}
 			send(replaceRename(v, "changed"))
 			send(pressed(key.NameEscape))
-			if v.naming != nil || v.panels[0].items[0].name != tc.name {
+			if v.nameInteraction() != nil || v.panels[0].items[0].name != tc.name {
 				t.Fatal("Escape changed entry or kept editor")
 			}
 			send(pressed(key.NameRightArrow))
@@ -91,7 +91,7 @@ func TestRenameSkipsNonEntries(t *testing.T) {
 		v := newView([]panel{p})
 		send, _ := panelInputFrames(v)
 		send(pressed(key.NameF2))
-		if v.naming != nil {
+		if v.nameInteraction() != nil {
 			t.Fatal("F2 edited a parent, drive, busy panel or empty list")
 		}
 	}
@@ -119,7 +119,7 @@ func TestRealRenamePreservesMarksAndUpdatesPanels(t *testing.T) {
 	send(pressed(key.NameReturn))
 	waitRenamed(t, v)
 	send()
-	if v.naming != nil || v.panels[0].items[v.panels[0].selected].name != "zz-last.md" || !v.panels[0].marks[v.panels[0].selected] {
+	if v.nameInteraction() != nil || v.panels[0].items[v.panels[0].selected].name != "zz-last.md" || !v.panels[0].marks[v.panels[0].selected] {
 		t.Fatal("renamed item lost focus or mark")
 	}
 	if v.panels[1].items[v.panels[1].selected].name != "middle.txt" || !v.panels[1].marks[v.panels[1].selected] {
@@ -155,7 +155,7 @@ func TestRenameFailureRetainsEditorAndCanRetry(t *testing.T) {
 	send(pressed(key.NameReturn))
 	waitRenamed(t, v)
 	send()
-	if v.naming == nil || !errors.Is(v.naming.err, fs.ErrExist) || v.nameEditor.ReadOnly {
+	if v.nameInteraction() == nil || !errors.Is(v.nameInteraction().err, fs.ErrExist) || v.nameEditor.ReadOnly {
 		t.Fatal("collision did not retain editable field")
 	}
 	if message := v.panels[0].feedback.Current(); message == nil || message.Kind != feedback.Error || message.Text != "Name already exists" {
@@ -163,14 +163,14 @@ func TestRenameFailureRetainsEditorAndCanRetry(t *testing.T) {
 	}
 	send(replaceRename(v, "../outside"))
 	send(pressed(key.NameReturn))
-	if v.naming == nil || !errors.Is(v.naming.err, browser.ErrInvalidName) || v.naming.pending {
+	if v.nameInteraction() == nil || !errors.Is(v.nameInteraction().err, browser.ErrInvalidName) || v.nameInteraction().pending {
 		t.Fatal("path was accepted as filename")
 	}
 	send(replaceRename(v, "new.txt"))
 	send(pressed(key.NameReturn))
 	waitRenamed(t, v)
 	send()
-	if v.naming != nil || v.panels[0].items[v.panels[0].selected].name != "new.txt" {
+	if v.nameInteraction() != nil || v.panels[0].items[v.panels[0].selected].name != "new.txt" {
 		t.Fatal("retry failed")
 	}
 	if data, err := os.ReadFile(filepath.Join(root, "b.txt")); err != nil || string(data) != "b.txt" {
@@ -238,7 +238,7 @@ func TestPendingRenameKeepsUIResponsiveAndCannotBeCancelled(t *testing.T) {
 	send(pressed(key.NameF2))
 	send(replaceRename(v, "new.txt"))
 	send(pressed(key.NameReturn))
-	if v.naming == nil || !v.naming.pending {
+	if v.nameInteraction() == nil || !v.nameInteraction().pending {
 		t.Fatal("submission was not queued")
 	}
 	// The worker is blocked. Rendering, Escape, repeated Enter and mouse input
@@ -247,14 +247,14 @@ func TestPendingRenameKeepsUIResponsiveAndCannotBeCancelled(t *testing.T) {
 	send(pressed(key.NameReturn))
 	v.panels[1].rows[0].Click()
 	send()
-	if v.naming == nil || !v.naming.pending || v.active != 0 {
+	if v.nameInteraction() == nil || !v.nameInteraction().pending || v.active != 0 {
 		t.Fatal("pending mutation was cancelled or duplicated")
 	}
 	close(release)
 	released = true
 	waitRenamed(t, v)
 	send()
-	if v.naming != nil || v.panels[0].items[v.panels[0].selected].name != "new.txt" {
+	if v.nameInteraction() != nil || v.panels[0].items[v.panels[0].selected].name != "new.txt" {
 		t.Fatal("queued mutation did not finish")
 	}
 }
@@ -266,7 +266,7 @@ func TestClickCancelsRenameDraft(t *testing.T) {
 	send(replaceRename(v, "draft"))
 	v.panels[1].rows[1].Click()
 	send()
-	if v.naming != nil || v.active != 1 || v.panels[0].items[3].name != "commando" {
+	if v.nameInteraction() != nil || v.active != 1 || v.panels[0].items[3].name != "commando" {
 		t.Fatal("row click did not discard the draft")
 	}
 	send(pressed(key.NameDownArrow))

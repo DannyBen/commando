@@ -224,6 +224,13 @@ active panel are saved on close. Windows stores state in
 
 ## Development
 
+Foreground interactions share a session controller in
+[`internal/app/interaction.go`](internal/app/interaction.go). Browsing has no
+session; location editors, name editors and inline choices each own one.
+The controller coordinates transitions, input routing, focus and listing
+protection. Background directory reads and file operations use the independent
+worker policy in `internal/app/operation_state.go`.
+
 `op check` formats, vets and tests the app. `op preview` renders
 `tmp/agent/screenshots/preview.png` through the same Gio layout with fixed sample entries,
 without reading or writing saved state.

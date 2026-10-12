@@ -25,7 +25,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if index == v.active {
 					fg = v.appearance.Colors.ActiveLocation
 				}
-				if v.editing && index == v.active {
+				if v.locationEditing() && index == v.active {
 					return v.textEditor(&v.location, "Path").Layout(gtx)
 				}
 				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), v.appearance.TextSize, fg, text.Start)
@@ -42,12 +42,12 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			if count == 0 {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			if p.reveal || v.actions != nil && v.actions.panel == index {
+			if p.reveal || v.inlineInteraction() != nil && v.inlineInteraction().panel == index {
 				selected := p.selected
 				end := selected + 1
 				if transient >= 0 {
 					selected, end = transient, transient+extra
-					if a := v.actions; a != nil && a.panel == index {
+					if a := v.inlineInteraction(); a != nil && a.panel == index {
 						if a.subjectRow >= 0 {
 							selected = a.subjectRow
 						}
@@ -75,7 +75,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			list.Track.Color = v.appearance.Colors.ScrollbarTrack
 			dims := list.Layout(gtx, count, func(gtx layout.Context, row int) layout.Dimensions {
 				storedRow := v.storedRow(index, row)
-				naming := v.naming != nil && !v.naming.finished && v.naming.panel == index && v.naming.row == row
+				naming := v.nameInteraction() != nil && !v.nameInteraction().finished && v.nameInteraction().panel == index && v.nameInteraction().row == row
 				if p.rows[row] == nil {
 					p.rows[row] = new(widget.Clickable)
 				}
@@ -99,7 +99,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 						}
 					}
 					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
-					if naming && v.naming.draft() {
+					if naming && v.nameInteraction().draft() {
 						paint.FillShape(gtx.Ops, v.appearance.Colors.InlineEdge, clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
 					} else if p.marks[storedRow] {
 						paint.FillShape(gtx.Ops, v.appearance.Colors.Marked,

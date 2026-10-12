@@ -11,7 +11,7 @@ import (
 func (v *view) startPanelTransfer(move bool) {
 	source := v.active
 	p := &v.panels[source]
-	if v.activeEditor() != nil || v.actions != nil || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
 		return
 	}
 	snapshot := browser.FileClipboard{Paths: p.selectedPaths(), Move: move}
@@ -42,7 +42,7 @@ func (v *view) startPanelTransfer(move bool) {
 				v.showFeedback(target, feedback.Info, "File operation in progress")
 			}
 		}, func() { v.active = source })
-		v.actions.canChoose = func() bool {
+		v.inlineInteraction().canChoose = func() bool {
 			p := &v.panels[target]
 			message := ""
 			switch {
@@ -59,7 +59,7 @@ func (v *view) startPanelTransfer(move bool) {
 			}
 			return true
 		}
-		v.actions.navigate = func(direction int, cycle bool) {
+		v.inlineInteraction().navigate = func(direction int, cycle bool) {
 			next := v.panelNeighbor(direction, cycle, source)
 			if next == target {
 				return

@@ -48,7 +48,7 @@ func TestDeleteQueuesStableMarkedOrCurrentSelection(t *testing.T) {
 			t.Fatalf("selection snapshot changed: %+v, want %v", request.recycle, want)
 		}
 		send(pressed(key.NameRightArrow), pressed(key.NameF2))
-		if v.naming != nil {
+		if v.nameInteraction() != nil {
 			t.Fatal("name mutation started during pending recycling")
 		}
 		v.acceptLoad(loadResult{request: request, recycled: browser.RecycleResult{Names: want}})
@@ -152,7 +152,7 @@ func TestRecycleCompletionPreservesLocationEditor(t *testing.T) {
 	v.acceptLoad(loadResult{request: request, recycled: browser.RecycleResult{Names: request.recycle.names}})
 	send()
 	first, last := v.location.Selection()
-	if !v.editing || v.location.Text() != "draft path" || first != 2 || last != 6 {
+	if !v.locationEditing() || v.location.Text() != "draft path" || first != 2 || last != 6 {
 		t.Fatal("completion disturbed location editing")
 	}
 }

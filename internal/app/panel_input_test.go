@@ -138,14 +138,14 @@ func TestTabKeepsLocationEditorFocus(t *testing.T) {
 		frame()
 		send(key.Event{Name: key.NameTab, Modifiers: modifiers, State: key.Release})
 		gotStart, gotEnd := v.location.Selection()
-		if !v.editing || v.active != 0 || !router.Source().Focused(&v.location) ||
+		if !v.locationEditing() || v.active != 0 || !router.Source().Focused(&v.location) ||
 			v.location.Text() != text || gotStart != start || gotEnd != end ||
 			p.selected != selected || p.list.Position != position {
 			t.Fatal("Tab changed editor or panel state/focus")
 		}
 	}
 	send(pressed(key.NameDeleteBackward))
-	if v.location.Text() != "" || !v.editing {
+	if v.location.Text() != "" || !v.locationEditing() {
 		t.Fatal("path editor lost keyboard input after Tab")
 	}
 	send(pressed(key.NameEscape))
@@ -252,28 +252,28 @@ func TestLocationEditing(t *testing.T) {
 		send(key.EditEvent{Range: key.Range{Start: 0, End: utf8.RuneCountInString(v.location.Text())}, Text: text})
 	}
 	send(altD)
-	if !v.editing || v.location.SelectedText() != root {
+	if !v.locationEditing() || v.location.SelectedText() != root {
 		t.Fatal("Alt+D did not focus/select the panel path")
 	}
 	replace("child")
 	send(pressed(key.NameLeftArrow))
-	if v.active != 0 || !v.editing {
+	if v.active != 0 || !v.locationEditing() {
 		t.Fatal("editor arrow switched panels")
 	}
 	send(pressed(key.NameEscape))
-	if v.editing || v.panels[0].path != root || v.panels[0].loading {
+	if v.locationEditing() || v.panels[0].path != root || v.panels[0].loading {
 		t.Fatal("Escape navigated or failed to cancel path editing")
 	}
 	send(pressed(key.NameDownArrow))
 	if v.panels[0].selected != 1 {
-		t.Fatalf("Escape did not restore list keyboard focus: selected=%d editing=%v", v.panels[0].selected, v.editing)
+		t.Fatalf("Escape did not restore list keyboard focus: selected=%d editing=%v", v.panels[0].selected, v.locationEditing())
 	}
 	send(altD)
 	replace("child")
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	send()
-	if v.editing || v.panels[0].path != filepath.Join(root, "child") || v.panels[1].path != root {
+	if v.locationEditing() || v.panels[0].path != filepath.Join(root, "child") || v.panels[1].path != root {
 		t.Fatal("relative path submission did not navigate only the current panel")
 	}
 	send(altD)
@@ -296,7 +296,7 @@ func TestLocationEditing(t *testing.T) {
 	send(altD)
 	replace("")
 	send(pressed(key.NameReturn))
-	if !v.editing || v.panels[0].loading {
+	if !v.locationEditing() || v.panels[0].loading {
 		t.Fatal("empty path navigated")
 	}
 	send(pressed(key.NameEscape))
@@ -304,7 +304,7 @@ func TestLocationEditing(t *testing.T) {
 	v.panels[1].rows[1].Click()
 	send()
 	send(pressed(key.NameDownArrow))
-	if v.editing || v.active != 1 || v.panels[1].selected != 2 {
+	if v.locationEditing() || v.active != 1 || v.panels[1].selected != 2 {
 		t.Fatal("row click did not cancel editing and restore keyboard focus")
 	}
 }
@@ -371,7 +371,7 @@ func TestLocationDriveShortcutSubmission(t *testing.T) {
 			} else if p.path != want || p.err != nil {
 				t.Fatalf("submission failed: path=%q want=%q err=%v", p.path, want, p.err)
 			}
-			if v.editing || v.panels[1].path != base {
+			if v.locationEditing() || v.panels[1].path != base {
 				t.Fatal("submission left editor open or changed another panel")
 			}
 		})
@@ -457,7 +457,7 @@ func TestBackspaceGoesUpWithActivePrefix(t *testing.T) {
 	// In the path editor, Backspace still deletes text instead of navigating.
 	send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
 	send(pressed(key.NameDeleteBackward))
-	if !v.editing || v.location.Text() != "" || p.path != root || p.loading {
+	if !v.locationEditing() || v.location.Text() != "" || p.path != root || p.loading {
 		t.Fatal("Backspace in the path editor navigated instead of editing text")
 	}
 }

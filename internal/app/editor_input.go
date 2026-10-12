@@ -8,16 +8,6 @@ import (
 	"gioui.org/widget/material"
 )
 
-func (v *view) activeEditor() *widget.Editor {
-	if v.naming != nil {
-		return &v.nameEditor
-	}
-	if v.editing {
-		return &v.location
-	}
-	return nil
-}
-
 // Request the same clipboard transfer used by Gio's Ctrl+V handling. The editor
 // then inserts it at its selection with its usual caret and undo behavior.
 func pasteWithInsert(gtx layout.Context, editor *widget.Editor, ke key.Event) {

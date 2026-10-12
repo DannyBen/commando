@@ -167,7 +167,7 @@ func TestCtrlArrowsStayInLocationEditor(t *testing.T) {
 	send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
 	for _, direction := range []int{-1, 1} {
 		send(adjacentKey(direction))
-		if !v.editing || v.active != 0 || len(v.loader.requests) != 0 {
+		if !v.locationEditing() || v.active != 0 || len(v.loader.requests) != 0 {
 			t.Fatal("Ctrl+arrow in the editor opened a folder or switched panels")
 		}
 	}

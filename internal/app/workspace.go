@@ -44,9 +44,8 @@ type view struct {
 	started           bool
 	loader            *directoryLoader
 	openFile          func(string) error
-	editing           bool
+	interaction       interactionController
 	location          widget.Editor
-	naming            *nameSession
 	nameEditor        widget.Editor
 	nativeKeys        *nativeKeyInput
 	suppressSpaceText bool
@@ -57,7 +56,6 @@ type view struct {
 	transferPending   bool
 	clipboardSequence func() uint32
 	ownerWindow       uintptr
-	actions           *inlineActionSession
 	pendingDuplicate  *loadResult
 }
 

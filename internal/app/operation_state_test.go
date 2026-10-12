@@ -63,7 +63,7 @@ func TestNativeTransferKeepsMutationGateAndCloseBlockedUntilReconciled(t *testin
 	send(pressed(key.NameRightArrow), pressed(key.NameDownArrow))
 	selected := v.panels[2].selected
 	send(modified("C", key.ModCtrl), modified("X", key.ModCtrl), modified("V", key.ModCtrl), modified("D", key.ModCtrl), pressed(key.NameF2), modified("N", key.ModCtrl), pressed(key.NameDeleteForward))
-	if len(v.loader.requests) != 0 || v.naming != nil || v.active != 2 || v.panels[2].selected != selected {
+	if len(v.loader.requests) != 0 || v.nameInteraction() != nil || v.active != 2 || v.panels[2].selected != selected {
 		t.Fatal("busy operation allowed writes or blocked browsing")
 	}
 	close(release)

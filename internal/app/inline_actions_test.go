@@ -41,11 +41,11 @@ func TestInlineActionsKeepUnderlyingRowsMarksAndSelection(t *testing.T) {
 		t.Fatal("action rows shifted file identity incorrectly")
 	}
 	send(pressed(key.NameUpArrow), pressed(key.NameDownArrow), pressed(key.NameDownArrow), pressed(key.NameDownArrow))
-	if v.actions.selected != 1 || v.panels[0].selected != selected || !slices.Equal(v.panels[0].items, before) || !reflect.DeepEqual(v.panels[0].marks, marks) {
+	if v.inlineInteraction().selected != 1 || v.panels[0].selected != selected || !slices.Equal(v.panels[0].items, before) || !reflect.DeepEqual(v.panels[0].marks, marks) {
 		t.Fatal("choice navigation changed real files or wrapped")
 	}
 	send(pressed(key.NameEscape))
-	if v.actions != nil || !cancelled || choice != -1 || v.panels[0].list.Position != position {
+	if v.inlineInteraction() != nil || !cancelled || choice != -1 || v.panels[0].list.Position != position {
 		t.Fatal("cancel did not restore temporary list state")
 	}
 }
@@ -57,11 +57,11 @@ func TestInlineActionClickSelectsAndEnterChooses(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	v.panels[0].rows[7].Click()
 	send()
-	if v.actions == nil || v.actions.selected != 1 || choice != -1 {
+	if v.inlineInteraction() == nil || v.inlineInteraction().selected != 1 || choice != -1 {
 		t.Fatal("click executed a choice or selected wrong option")
 	}
 	send(pressed(key.NameReturn))
-	if v.actions != nil || choice != 1 {
+	if v.inlineInteraction() != nil || choice != 1 {
 		t.Fatal("Enter did not choose clicked option")
 	}
 }
@@ -70,11 +70,11 @@ func TestRealRowClickCancelsInlineActionsAndMapsBelowGroup(t *testing.T) {
 	v := newPreviewView()
 	cancelled := false
 	v.startInlineActions(0, 4, "Copy: report.pdf", "File already exists", []string{"Overwrite", "Cancel"}, nil, func() { cancelled = true })
-	v.actions.subjectRow = 3
+	v.inlineInteraction().subjectRow = 3
 	send, _ := panelInputFrames(v)
 	v.panels[0].rows[9].Click()
 	send()
-	if v.actions != nil || !cancelled || v.panels[0].selected != 5 {
+	if v.inlineInteraction() != nil || !cancelled || v.panels[0].selected != 5 {
 		t.Fatal("click below temporary actions did not cancel and select real row")
 	}
 }
@@ -100,8 +100,8 @@ func TestInlineActionsPreview(t *testing.T) {
 		v := newPreviewView()
 		v.active = 1
 		v.startInlineActions(1, fixture.row, "", "", fixture.options, nil, nil)
-		v.actions.subjectRow = fixture.row - 1
-		v.actions.selected = fixture.selected
+		v.inlineInteraction().subjectRow = fixture.row - 1
+		v.inlineInteraction().selected = fixture.selected
 		v.showFeedback(1, feedback.Warning, fixture.message)
 		// Capture the held footer text without waiting for its typing animation.
 		v.panels[1].feedback.Frame(time.Now().Add(-time.Minute), v.appearance.Feedback)
@@ -120,7 +120,7 @@ func TestInlineSingleActionUsesSameListInteraction(t *testing.T) {
 		t.Fatal("single action could not use one temporary row")
 	}
 	send(pressed(key.NameReturn))
-	if !chosen || v.actions != nil {
+	if !chosen || v.inlineInteraction() != nil {
 		t.Fatal("single action did not use shared Enter behavior")
 	}
 }
@@ -139,7 +139,7 @@ func TestInlineActionsStayOpenWhenPanelSwitchHitsOuterEdge(t *testing.T) {
 		v.startInlineActions(tc.panel, 4, "", "", []string{"Overwrite", "Cancel"}, nil, func() { cancelled = true })
 		send, _ := panelInputFrames(v)
 		send(tc.event)
-		if v.active != tc.panel || v.actions == nil || cancelled {
+		if v.active != tc.panel || v.inlineInteraction() == nil || cancelled {
 			t.Fatal("blocked panel switch cancelled the choice without leaving")
 		}
 	}
@@ -159,7 +159,7 @@ func TestInlineActionsUseSharedTabCycling(t *testing.T) {
 		v.startInlineActions(tc.panel, 4, "", "", []string{"Overwrite", "Cancel"}, nil, func() { cancelled = true })
 		send, _ := panelInputFrames(v)
 		send(tc.event)
-		if v.active != tc.target || v.actions != nil || !cancelled {
+		if v.active != tc.target || v.inlineInteraction() != nil || !cancelled {
 			t.Fatal("ordinary inline interaction did not use shared Tab cycling")
 		}
 	}
@@ -170,7 +170,7 @@ func TestCompactInlineActionsKeepSubjectAndChoicesVisible(t *testing.T) {
 		v := newPreviewView()
 		v.appearance.TextSize = size
 		v.startInlineActions(0, 4, "", "", []string{"Overwrite", "Cancel"}, nil, nil)
-		v.actions.subjectRow = 3
+		v.inlineInteraction().subjectRow = 3
 		var router input.Router
 		var ops op.Ops
 		frame := func() {
@@ -184,7 +184,7 @@ func TestCompactInlineActionsKeepSubjectAndChoicesVisible(t *testing.T) {
 		assertVisible := func() {
 			t.Helper()
 			pos := v.panels[0].list.Position
-			for row := v.actions.subjectRow; row < v.actions.row+v.actions.count(); row++ {
+			for row := v.inlineInteraction().subjectRow; row < v.inlineInteraction().row+v.inlineInteraction().count(); row++ {
 				if row < pos.First || row >= pos.First+pos.Count ||
 					(row == pos.First && pos.Offset > 0) ||
 					(row == pos.First+pos.Count-1 && pos.OffsetLast < 0) {
@@ -216,11 +216,11 @@ func TestClosingInlineActionsSelectsAndRevealsOffscreenSubject(t *testing.T) {
 		p.selected = 0
 		subject := len(p.items) - 1
 		v.startInlineActions(0, subject+1, "", "", []string{"Overwrite", "Cancel"}, nil, nil)
-		v.actions.subjectRow = subject
+		v.inlineInteraction().subjectRow = subject
 		send()
 		send(pressed(name))
 		pos := p.list.Position
-		if v.actions != nil || p.selected != subject || subject < pos.First || subject >= pos.First+pos.Count ||
+		if v.inlineInteraction() != nil || p.selected != subject || subject < pos.First || subject >= pos.First+pos.Count ||
 			(subject == pos.First && pos.Offset > 0) ||
 			(subject == pos.First+pos.Count-1 && pos.OffsetLast < 0) {
 			t.Fatalf("%s did not select and reveal subject: selected=%d position=%+v", name, p.selected, pos)

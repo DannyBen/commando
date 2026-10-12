@@ -73,21 +73,23 @@ func (v *view) selectPrefix(fresh bool) {
 }
 
 func (v *view) startLocation(gtx layout.Context) {
+	if !v.interaction.begin(&locationSession{panel: v.active}) {
+		return
+	}
 	p := &v.panels[v.active]
 	p.prefix = ""
 	path := p.locationPath()
 	v.location.SetText(path)
 	v.location.SetCaret(0, utf8.RuneCountInString(path))
-	v.editing = true
-	gtx.Execute(key.FocusCmd{Tag: &v.location})
+	v.focusInteraction(gtx)
 }
 
 func (v *view) stopLocation(gtx layout.Context) {
-	if !v.editing {
+	if !v.locationEditing() {
 		return
 	}
-	v.editing = false
-	gtx.Execute(key.FocusCmd{Tag: &v.focus})
+	v.interaction.finish(v.interaction.current)
+	v.focusInteraction(gtx)
 }
 
 func (v *view) updateLocation(gtx layout.Context) {

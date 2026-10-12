@@ -20,7 +20,7 @@ type recycleRequest struct {
 
 func (v *view) recycleSelected() {
 	p := &v.panels[v.active]
-	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || !v.actionAllowed(actionMutation) {
 		return
 	}
 	var names []string

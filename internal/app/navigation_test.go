@@ -295,7 +295,7 @@ func TestDriveListNavigation(t *testing.T) {
 		t.Fatal("unreadable drive did not retain the list/selection with the existing inline error")
 	}
 	send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
-	if !v.editing || v.location.SelectedText() != unavailable {
+	if !v.locationEditing() || v.location.SelectedText() != unavailable {
 		t.Fatal("Alt+D in the drive list did not use the selected drive path")
 	}
 	send(pressed(key.NameEscape))

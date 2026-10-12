@@ -28,7 +28,7 @@ type inlineActionSession struct {
 }
 
 func (v *view) startInlineActions(panel, row int, title, detail string, options []string, choose func(int), cancel func()) {
-	if v.actions != nil || v.activeEditor() != nil {
+	if !v.interaction.idle() {
 		return
 	}
 	var headers []string
@@ -41,8 +41,8 @@ func (v *view) startInlineActions(panel, row int, title, detail string, options 
 		return
 	}
 	p := &v.panels[panel]
-	v.actions = &inlineActionSession{panel: panel, row: max(0, min(row, len(p.items))), subjectRow: -1, headers: headers,
-		options: options, choose: choose, cancel: cancel, previousPosition: p.list.Position, previousReveal: p.reveal}
+	v.interaction.begin(&inlineActionSession{panel: panel, row: max(0, min(row, len(p.items))), subjectRow: -1, headers: headers,
+		options: options, choose: choose, cancel: cancel, previousPosition: p.list.Position, previousReveal: p.reveal})
 	p.rows = make(map[int]*widget.Clickable)
 	p.prefix, p.reveal = "", true
 }
@@ -50,7 +50,7 @@ func (v *view) startInlineActions(panel, row int, title, detail string, options 
 func (a *inlineActionSession) count() int { return len(a.headers) + len(a.options) }
 
 func (v *view) stopInlineActions() *inlineActionSession {
-	a := v.actions
+	a := v.inlineInteraction()
 	p := &v.panels[a.panel]
 	p.list.Position, p.reveal = a.previousPosition, a.previousReveal
 	if a.subjectRow >= 0 && a.subjectRow < len(p.items) {
@@ -58,7 +58,7 @@ func (v *view) stopInlineActions() *inlineActionSession {
 		p.markRange = nil
 	}
 	p.rows = make(map[int]*widget.Clickable)
-	v.actions = nil
+	v.interaction.finish(a)
 	return a
 }
 
@@ -70,7 +70,7 @@ func (v *view) cancelInlineActions() {
 }
 
 func (v *view) chooseInlineAction() {
-	if len(v.actions.options) == 0 || v.actions.canChoose != nil && !v.actions.canChoose() {
+	if len(v.inlineInteraction().options) == 0 || v.inlineInteraction().canChoose != nil && !v.inlineInteraction().canChoose() {
 		return
 	}
 	a := v.stopInlineActions()
@@ -80,7 +80,7 @@ func (v *view) chooseInlineAction() {
 }
 
 func (v *view) inlineActionKey(ke key.Event) {
-	a := v.actions
+	a := v.inlineInteraction()
 	if ke.State != key.Press {
 		return
 	}
@@ -116,7 +116,7 @@ func (v *view) inlineActionKey(ke key.Event) {
 }
 
 func (v *view) navigateInlineActions(direction int, cycle bool) {
-	if navigate := v.actions.navigate; navigate != nil {
+	if navigate := v.inlineInteraction().navigate; navigate != nil {
 		navigate(direction, cycle)
 	} else {
 		v.switchPanelTo(v.panelNeighbor(direction, cycle, -1))
@@ -124,7 +124,7 @@ func (v *view) navigateInlineActions(direction int, cycle bool) {
 }
 
 func (v *view) transientRows(panel int) (row, count int) {
-	if a := v.actions; a != nil && a.panel == panel {
+	if a := v.inlineInteraction(); a != nil && a.panel == panel {
 		return a.row, a.count()
 	}
 	if row := v.draftRow(panel); row >= 0 {
@@ -134,12 +134,12 @@ func (v *view) transientRows(panel int) (row, count int) {
 }
 
 func (v *view) inlineActionRow(panel, row int) bool {
-	a := v.actions
+	a := v.inlineInteraction()
 	return a != nil && a.panel == panel && row >= a.row && row < a.row+a.count()
 }
 
 func (v *view) clickInlineAction(gtx layout.Context, panel, row int) {
-	a := v.actions
+	a := v.inlineInteraction()
 	v.active = panel
 	if option := row - a.row - len(a.headers); option >= 0 && option < len(a.options) {
 		a.selected = option
@@ -148,7 +148,7 @@ func (v *view) clickInlineAction(gtx layout.Context, panel, row int) {
 }
 
 func (v *view) inlineActionContents(gtx layout.Context, row, rowHeight int) layout.Dimensions {
-	a := v.actions
+	a := v.inlineInteraction()
 	index := row - a.row
 	bg, fg := v.appearance.Colors.InlineSurface, v.appearance.Colors.InlineText
 	value := ""

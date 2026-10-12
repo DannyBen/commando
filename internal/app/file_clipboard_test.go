@@ -262,7 +262,7 @@ func TestFilePasteSnapshotsTargetAndHasNoProgressUI(t *testing.T) {
 	v.loader = &directoryLoader{requests: make(chan loadRequest, 3), results: make(chan loadResult, 3)}
 	send, _ := panelInputFrames(v)
 	send(modified("V", key.ModCtrl), modified("V", key.ModCtrl), pressed(key.NameRightArrow), modified("V", key.ModCtrl), pressed(key.NameF2))
-	if len(v.loader.requests) != 1 || !v.transferPending || v.naming != nil {
+	if len(v.loader.requests) != 1 || !v.transferPending || v.nameInteraction() != nil {
 		t.Fatal("pending paste duplicated or allowed a name mutation")
 	}
 	request := <-v.loader.requests
@@ -275,7 +275,7 @@ func TestFilePasteSnapshotsTargetAndHasNoProgressUI(t *testing.T) {
 	v.acceptLoad(loadResult{request: request, err: browser.ErrNoClipboardFiles})
 	send()
 	start, end := v.location.Selection()
-	if v.transferPending || v.panels[0].loading || v.active != 1 || !v.editing || v.location.Text() != "draft path" || start != 1 || end != 4 {
+	if v.transferPending || v.panels[0].loading || v.active != 1 || !v.locationEditing() || v.location.Text() != "draft path" || start != 1 || end != 4 {
 		t.Fatal("completion stole focus or disturbed location editor")
 	}
 }

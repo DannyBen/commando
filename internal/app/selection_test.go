@@ -189,8 +189,8 @@ func TestSelectionKeysStayInLocationEditor(t *testing.T) {
 	}
 	send(pressed(key.NameSpace), key.EditEvent{Range: key.Range{Start: 0, End: utf8.RuneCountInString(v.location.Text())}, Text: " "})
 	assertMarks(t, p, 1)
-	if !v.editing || p.selected != 1 || v.location.Text() != " " {
-		t.Fatalf("marking shortcuts leaked out of the location editor: editing=%v current=%d text=%q", v.editing, p.selected, v.location.Text())
+	if !v.locationEditing() || p.selected != 1 || v.location.Text() != " " {
+		t.Fatalf("marking shortcuts leaked out of the location editor: editing=%v current=%d text=%q", v.locationEditing(), p.selected, v.location.Text())
 	}
 	send(pressed(key.NameEscape))
 	assertMarks(t, p, 1)

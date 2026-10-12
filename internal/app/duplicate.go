@@ -31,7 +31,7 @@ func (p *panel) selectedPaths() []string {
 
 func (v *view) duplicateSelected() {
 	p := &v.panels[v.active]
-	if v.activeEditor() != nil || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
 		return
 	}
 	paths := p.selectedPaths()
@@ -55,7 +55,7 @@ func (v *view) offerDuplicate(gtx layout.Context) {
 		v.showFeedback(panel, feedback.Info, "Copy cancelled")
 		return
 	}
-	if v.activeEditor() != nil || v.actions != nil {
+	if !v.interaction.idle() {
 		return
 	}
 	v.pendingDuplicate = nil

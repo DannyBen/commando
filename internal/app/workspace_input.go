@@ -32,16 +32,9 @@ func (v *view) update(gtx layout.Context) {
 				if storedRow < 0 {
 					continue
 				}
-				if v.actions != nil {
-					v.cancelInlineActions()
+				if !v.cancelInteraction(gtx) {
+					continue
 				}
-				if v.naming != nil {
-					if v.naming.pending {
-						continue
-					}
-					v.stopName(gtx)
-				}
-				v.stopLocation(gtx)
 				v.panels[v.active].prefix = ""
 				v.active = pi
 				p.clickRow(storedRow, click.Modifiers&key.ModShift != 0, click.Modifiers&key.ModCtrl != 0)
@@ -57,36 +50,10 @@ func (v *view) update(gtx layout.Context) {
 		if ke.State == key.Press {
 			v.dismissFeedback()
 		}
-		if editor := v.activeEditor(); editor != nil {
-			pasteWithInsert(gtx, editor, ke)
-		} else {
-			v.browseKey(gtx, ke)
-		}
+		v.browseKey(gtx, ke)
 	}
-	if v.activeEditor() != nil {
-		// Consume Tab in the editor without changing its text or focus.
-		for {
-			e, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift})
-			if !ok {
-				break
-			}
-			if ke, ok := e.(key.Event); ok && ke.State == key.Press {
-				v.dismissFeedback()
-			}
-		}
-		if v.naming != nil {
-			v.updateEditorPaste(gtx, &v.nameEditor)
-			v.updateName(gtx)
-			if v.naming != nil {
-				return
-			}
-		} else {
-			v.updateEditorPaste(gtx, &v.location)
-			v.updateLocation(gtx)
-		}
-		if v.editing {
-			return
-		}
+	if v.updateInteraction(gtx) {
+		return
 	}
 	v.offerDuplicate(gtx)
 	for {
@@ -130,7 +97,7 @@ func (v *view) update(gtx layout.Context) {
 		}
 		if edit, ok := e.(key.EditEvent); ok {
 			v.dismissFeedback()
-			if v.actions != nil && v.actions.panel == v.active {
+			if v.inlineInteraction() != nil && v.inlineInteraction().panel == v.active {
 				continue
 			}
 			if v.suppressSpaceText {
@@ -160,8 +127,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	}
 	v.dismissFeedback()
 	v.suppressSpaceText = false
-	if v.actions != nil && v.actions.panel == v.active {
-		v.inlineActionKey(ke)
+	if v.interactionKey(gtx, ke) {
 		return
 	}
 	p := &v.panels[v.active]

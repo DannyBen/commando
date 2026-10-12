@@ -43,7 +43,7 @@ func (n *nameSession) draft() bool { return n.kind != nameRename && !n.finished 
 
 func (v *view) startName(gtx layout.Context, kind nameOperation) {
 	p := &v.panels[v.active]
-	if p.loading || v.activeEditor() != nil || !v.actionAllowed(actionMutation) {
+	if p.loading || !v.interaction.idle() || !v.actionAllowed(actionMutation) {
 		return
 	}
 	r := &nameSession{kind: kind, panel: v.active, path: p.path, row: p.selected,
@@ -67,12 +67,14 @@ func (v *view) startName(gtx layout.Context, kind nameOperation) {
 }
 
 func (v *view) beginName(gtx layout.Context, r *nameSession, name string, folder bool) {
+	if !v.interaction.begin(r) {
+		return
+	}
 	p := &v.panels[r.panel]
 	if r.draft() {
 		p.rows = make(map[int]*widget.Clickable)
 	}
 	p.prefix, p.reveal = "", true
-	v.naming = r
 	v.nameEditor.SetText(name)
 	v.nameEditor.ReadOnly = false
 	selectionEnd := len(name)
@@ -82,17 +84,20 @@ func (v *view) beginName(gtx layout.Context, r *nameSession, name string, folder
 		}
 	}
 	v.nameEditor.SetCaret(0, utf8.RuneCountInString(name[:selectionEnd]))
-	gtx.Execute(key.FocusCmd{Tag: &v.nameEditor})
+	v.focusInteraction(gtx)
 }
 
 func (v *view) stopName(gtx layout.Context) {
-	r := v.naming
+	r := v.nameInteraction()
+	if r == nil || r.pending {
+		return
+	}
 	if r.draft() {
 		p := &v.panels[r.panel]
 		p.list.Position, p.reveal = r.previousPosition, r.previousReveal
 		p.rows = make(map[int]*widget.Clickable)
 	}
-	v.naming = nil
+	v.interaction.finish(r)
 	if r.kind == nameDuplicate {
 		v.transferPending = false
 		if !r.finished {
@@ -100,11 +105,11 @@ func (v *view) stopName(gtx layout.Context) {
 		}
 	}
 	v.nameEditor.ReadOnly = false
-	gtx.Execute(key.FocusCmd{Tag: &v.focus})
+	v.focusInteraction(gtx)
 }
 
 func (v *view) updateName(gtx layout.Context) {
-	r := v.naming
+	r := v.nameInteraction()
 	if r.finished {
 		v.stopName(gtx)
 		return
@@ -116,7 +121,7 @@ func (v *view) updateName(gtx layout.Context) {
 		v.stopName(gtx)
 		return
 	} else if !r.focused {
-		gtx.Execute(key.FocusCmd{Tag: &v.nameEditor})
+		v.focusInteraction(gtx)
 	}
 	for {
 		e, ok := gtx.Event(
@@ -183,7 +188,7 @@ func (v *view) updateName(gtx layout.Context) {
 }
 
 func (v *view) acceptName(result loadResult) {
-	r := v.naming
+	r := v.nameInteraction()
 	if r == nil {
 		return
 	}
@@ -244,7 +249,7 @@ func (n *nameSession) errorText(err error) string {
 // Convert display rows to stored rows. A draft is visual only: real entries,
 // marks, selection and persisted state keep their ordinary indices.
 func (v *view) draftRow(panel int) int {
-	if n := v.naming; n != nil && n.panel == panel && n.draft() {
+	if n := v.nameInteraction(); n != nil && n.panel == panel && n.draft() {
 		return n.row
 	}
 	return -1
@@ -264,9 +269,9 @@ func (v *view) storedRow(panel, row int) int {
 
 func (v *view) nameContents(gtx layout.Context, metadata string, metaColor color.NRGBA, mode metadataColumn) layout.Dimensions {
 	hint := ""
-	if v.naming.draft() {
+	if v.nameInteraction().draft() {
 		hint = "File name"
-		if v.naming.noun() == "folder" {
+		if v.nameInteraction().noun() == "folder" {
 			hint = "Folder name"
 		}
 	}

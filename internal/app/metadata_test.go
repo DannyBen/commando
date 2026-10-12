@@ -67,7 +67,7 @@ func TestMetadataKeysKeepLocationEditor(t *testing.T) {
 	send(modified("D", key.ModAlt))
 	before := v.location.Text()
 	send(modified("M", key.ModCtrl), modified("M", key.ModCtrl|key.ModShift))
-	if !v.editing || v.location.Text() != before || v.panels[0].metadata != metadataSize {
+	if !v.locationEditing() || v.location.Text() != before || v.panels[0].metadata != metadataSize {
 		t.Fatal("column shortcuts changed the location editor or browsing mode")
 	}
 }

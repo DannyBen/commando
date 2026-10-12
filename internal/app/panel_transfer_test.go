@@ -64,8 +64,8 @@ func TestPanelTransferDefaultDestinationNavigationAndCancellation(t *testing.T) 
 				if shortcut == key.NameF6 {
 					verb = "Move"
 				}
-				if v.active != initial || v.actions == nil || len(v.actions.headers) != 0 ||
-					!slices.Equal(v.actions.options, []string{verb + " here"}) || v.transferPending {
+				if v.active != initial || v.inlineInteraction() == nil || len(v.inlineInteraction().headers) != 0 ||
+					!slices.Equal(v.inlineInteraction().options, []string{verb + " here"}) || v.transferPending {
 					t.Fatal("shortcut did not immediately offer the action in the default destination")
 				}
 				left, right := 0, 2
@@ -76,15 +76,15 @@ func TestPanelTransferDefaultDestinationNavigationAndCancellation(t *testing.T) 
 					right = 1
 				}
 				send(pressed(key.NameRightArrow), pressed(key.NameRightArrow), pressed(key.NameRightArrow))
-				if v.active != right || !slices.Equal(v.actions.options, []string{verb + " here"}) {
+				if v.active != right || !slices.Equal(v.inlineInteraction().options, []string{verb + " here"}) {
 					t.Fatal("right navigation did not skip source or stop at outer edge")
 				}
 				send(pressed(key.NameLeftArrow), pressed(key.NameLeftArrow), pressed(key.NameLeftArrow))
-				if v.active != left || v.actions.panel != left {
+				if v.active != left || v.inlineInteraction().panel != left {
 					t.Fatal("left navigation did not carry the action or skip source")
 				}
 				send(pressed(key.NameEscape))
-				if v.actions != nil || v.active != source || v.transferPending {
+				if v.inlineInteraction() != nil || v.active != source || v.transferPending {
 					t.Fatal("Escape did not restore source focus")
 				}
 				for pi := range v.panels {
@@ -153,7 +153,7 @@ func TestPanelTransferCapturedSelectionAndOpenFolderDestination(t *testing.T) {
 			if !reflect.DeepEqual(current, before) || !reflect.DeepEqual(v.cutClipboard, before) {
 				t.Fatal("transfer changed the clipboard or cut appearance")
 			}
-			if v.active != 1 || v.actions != nil || v.transferPending || v.panels[0].items[v.panels[0].selected].name != "z.txt" {
+			if v.active != 1 || v.inlineInteraction() != nil || v.transferPending || v.panels[0].items[v.panels[0].selected].name != "z.txt" {
 				t.Fatal("completion lost destination focus/source current item or retained targeting")
 			}
 			for pi, name := range map[int]string{1: "highlighted", 2: "z.txt"} {
@@ -240,7 +240,7 @@ func TestPanelTransferIgnoresInvalidSourcesAndEditorKeys(t *testing.T) {
 				first, last = editor.Selection()
 			}
 			send(shortcut, second)
-			if v.actions != nil || v.transferPending || v.active != 0 {
+			if v.inlineInteraction() != nil || v.transferPending || v.active != 0 {
 				t.Fatal("invalid source/editor accepted targeting")
 			}
 			if editor != nil {
@@ -269,11 +269,11 @@ func TestPanelTransferRejectsInvalidDestinationWithoutLosingMode(t *testing.T) {
 				v.loader.busy.Store(1)
 			}
 			send(pressed(key.NameReturn))
-			if v.actions == nil || v.active != 1 || v.transferPending || len(v.loader.requests) != 0 {
+			if v.inlineInteraction() == nil || v.active != 1 || v.transferPending || len(v.loader.requests) != 0 {
 				t.Fatal("invalid destination submitted work or lost targeting")
 			}
 			send(pressed(key.NameEscape))
-			if v.active != 0 || v.actions != nil {
+			if v.active != 0 || v.inlineInteraction() != nil {
 				t.Fatal("invalid destination prevented cancellation")
 			}
 		})
@@ -293,15 +293,15 @@ func TestPanelTransferSameFolderAliasesReuseDuplicateAndMoveNoOp(t *testing.T) {
 		send(pressed(shortcut), pressed(key.NameRightArrow), pressed(key.NameReturn))
 		waitLoaded(t, v, 2)
 		send()
-		if v.active != 2 || v.actions != nil {
+		if v.active != 2 || v.inlineInteraction() != nil {
 			t.Fatal("alias transfer lost destination focus or retained targeting")
 		}
 		if move {
-			if v.naming != nil || v.transferPending || v.panels[2].feedback.Current().Text != "Already in this folder" {
+			if v.nameInteraction() != nil || v.transferPending || v.panels[2].feedback.Current().Text != "Already in this folder" {
 				t.Fatal("same-folder move did not retain the existing no-op behavior")
 			}
 		} else {
-			if v.naming == nil || v.nameEditor.Text() != "a - Copy.txt" {
+			if v.nameInteraction() == nil || v.nameEditor.Text() != "a - Copy.txt" {
 				t.Fatal("same-folder copy did not reuse the duplicate name editor")
 			}
 			send(pressed(key.NameReturn))
@@ -323,30 +323,30 @@ func TestPanelTransferTabCarriesActionAndSkipsSource(t *testing.T) {
 			selectName(t, &v.panels[1], "a.txt")
 			router, send := clipboardFrames(v)
 			send(pressed(shortcut))
-			if v.active != 2 || v.actions == nil {
+			if v.active != 2 || v.inlineInteraction() == nil {
 				t.Fatal("shortcut did not start in the pane on the right")
 			}
 			if backwards {
 				send(modified(key.NameTab, key.ModShift))
-				if v.active != 0 || v.actions == nil || v.actions.panel != 0 || !router.Source().Focused(&v.focus) {
+				if v.active != 0 || v.inlineInteraction() == nil || v.inlineInteraction().panel != 0 || !router.Source().Focused(&v.focus) {
 					t.Fatal("Shift+Tab did not carry targeting to the previous destination")
 				}
 				send(modified(key.NameTab, key.ModShift))
-				if v.active != 2 || v.actions == nil || v.actions.panel != 2 {
+				if v.active != 2 || v.inlineInteraction() == nil || v.inlineInteraction().panel != 2 {
 					t.Fatal("Shift+Tab did not cycle from the first destination to the last")
 				}
 			} else {
 				send(pressed(key.NameTab))
-				if v.active != 0 || v.actions == nil || v.actions.panel != 0 {
+				if v.active != 0 || v.inlineInteraction() == nil || v.inlineInteraction().panel != 0 {
 					t.Fatal("Tab did not cycle from the last destination to the first")
 				}
 				send(pressed(key.NameTab))
-				if v.active != 2 || v.actions == nil || v.actions.panel != 2 || !router.Source().Focused(&v.focus) {
+				if v.active != 2 || v.inlineInteraction() == nil || v.inlineInteraction().panel != 2 || !router.Source().Focused(&v.focus) {
 					t.Fatal("Tab did not carry targeting to the next destination")
 				}
 			}
 			send(pressed(key.NameEscape))
-			if v.active != 1 || v.actions != nil {
+			if v.active != 1 || v.inlineInteraction() != nil {
 				t.Fatal("Tab navigation prevented cancellation back to the source")
 			}
 		}
@@ -361,12 +361,12 @@ func TestPanelTransferRowClickRetainsNormalInteraction(t *testing.T) {
 	selectName(t, &v.panels[1], "a.txt")
 	router, send := clipboardFrames(v)
 	send(pressed(key.NameF5))
-	if v.active != 2 || v.actions == nil || !router.Source().Focused(&v.focus) {
+	if v.active != 2 || v.inlineInteraction() == nil || !router.Source().Focused(&v.focus) {
 		t.Fatal("shortcut did not offer the action in the pane on the right")
 	}
 	v.panels[0].rows[1].Click()
 	send()
-	if v.actions != nil || v.active != 0 || v.panels[0].selected != 1 || !router.Source().Focused(&v.focus) {
+	if v.inlineInteraction() != nil || v.active != 0 || v.panels[0].selected != 1 || !router.Source().Focused(&v.focus) {
 		t.Fatal("row click did not cancel targeting and perform its normal selection")
 	}
 }
@@ -395,12 +395,12 @@ func TestPanelTransferCyclesPastSourceAtEveryPosition(t *testing.T) {
 					event.Modifiers = key.ModShift
 				}
 				send(event)
-				if v.active != panel || v.actions == nil || v.actions.panel != panel || v.transferPending {
+				if v.active != panel || v.inlineInteraction() == nil || v.inlineInteraction().panel != panel || v.transferPending {
 					t.Fatalf("cycling from source %d lost target/action: active=%d want=%d", tc.source, v.active, panel)
 				}
 			}
 			send(pressed(key.NameEscape))
-			if v.active != tc.source || v.actions != nil {
+			if v.active != tc.source || v.inlineInteraction() != nil {
 				t.Fatal("cycling prevented Escape from restoring source focus")
 			}
 		}
@@ -415,12 +415,12 @@ func TestPanelTransferCyclingWithOneDestinationKeepsItsAction(t *testing.T) {
 	send(pressed(key.NameF5))
 	for _, event := range []key.Event{pressed(key.NameTab), modified(key.NameTab, key.ModShift)} {
 		send(event)
-		if v.active != 1 || v.actions == nil || v.actions.panel != 1 {
+		if v.active != 1 || v.inlineInteraction() == nil || v.inlineInteraction().panel != 1 {
 			t.Fatal("cycling with one destination selected the source or lost its action")
 		}
 	}
 	send(pressed(key.NameEscape))
-	if v.active != 0 || v.actions != nil {
+	if v.active != 0 || v.inlineInteraction() != nil {
 		t.Fatal("single destination did not retain normal cancellation")
 	}
 }
@@ -435,7 +435,7 @@ func TestPanelTransferIntoEmptyFolderAndLaterFocusChange(t *testing.T) {
 	}
 	send, _ := panelInputFrames(v)
 	send(pressed(key.NameF5))
-	if v.actions == nil || v.actions.row != 0 {
+	if v.inlineInteraction() == nil || v.inlineInteraction().row != 0 {
 		t.Fatal("empty destination did not offer an inline action")
 	}
 	send(pressed(key.NameReturn), pressed(key.NameRightArrow), pressed(key.NameRightArrow))

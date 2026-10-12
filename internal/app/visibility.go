@@ -63,7 +63,7 @@ func (m visibilityMode) shows(file browser.Entry) bool {
 
 func (v *view) cycleVisibility() {
 	p := &v.panels[v.active]
-	if v.activeEditor() != nil || v.actions != nil || p.loading || p.drives {
+	if !v.interaction.idle() || p.loading || p.drives {
 		return
 	}
 	p.ensureEntries()
