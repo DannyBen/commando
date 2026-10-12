@@ -79,8 +79,10 @@ module/executable and `Commando` for the window title and data-folder name.
 - Feedback owns the entire contextual panel footer, including the count area.
   Keep messages within five short words, including partial-result counts;
   omit filenames. Preserve specific failure reasons rather than truncating text.
-  Use fixed character timing, binary off/on blinks, then hold until interaction;
-  never expire messages on a timer. Dismissing input must still perform its normal
+  Reveal text with fixed character timing, without typing sounds. Play the
+  semantic message tone once at the start, and keep the cursor blinking with
+  binary off/on states until interaction; never expire messages on a timer.
+  Dismissing input must still perform its normal
   action, and message-producing actions must retain their result. Progress also
   clears on completion. Route operation feedback through internal/feedback.
   Keep semantic colors and independent per-kind animation profiles in theme.go;

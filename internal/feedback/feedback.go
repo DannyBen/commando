@@ -18,6 +18,7 @@ const (
 
 // Animation controls presentation only; messages never expire on time.
 // Zero character delay skips typing; zero Blinks skips blinking.
+// Negative CursorBlinks keeps the cursor blinking until dismissal.
 type Animation struct {
 	Enabled                       bool
 	CharacterDelay, BlinkInterval time.Duration
@@ -53,12 +54,11 @@ func (a Animations) profile(kind Kind) Animation {
 // Message is owned by its channel. Callers should treat Current's result as
 // read-only and use Show or Progress to replace it and restart animation.
 type Message struct {
-	Text     string
-	Kind     Kind
-	started  time.Time
-	progress bool
-	revealed int
-	finished bool
+	Text      string
+	Kind      Kind
+	started   time.Time
+	progress  bool
+	presented bool
 }
 
 // Channel holds one contextual message. Its zero value is ready to use.
@@ -86,11 +86,10 @@ func (c *Channel) Dismiss()          { c.message = nil }
 func (c *Channel) Current() *Message { return c.message }
 
 type Frame struct {
-	Text     string
-	Kind     Kind
-	Next     time.Time // Zero means the presentation is steady; no redraw is needed.
-	Typed    bool      // Newly visible characters; emit at most one cue per rendered frame.
-	Finished bool      // The message finished typing on this frame, once per message.
+	Text    string
+	Kind    Kind
+	Next    time.Time // Zero means the presentation is steady; no redraw is needed.
+	Started bool      // The message first appeared on this frame, once per message.
 }
 
 // Frame reports whether the channel owns the footer, even during an empty
@@ -102,16 +101,8 @@ func (c *Channel) Frame(now time.Time, animations Animations) (Frame, bool) {
 	m := c.message
 	animation := animations.profile(m.Kind)
 	text, next := m.frame(now, animation)
-	count := len([]rune(m.Text))
-	if animation.Enabled && animation.CharacterDelay > 0 {
-		count = min(count, int(max(0, now.Sub(m.started))/animation.CharacterDelay))
-	}
-	frame := Frame{Text: text, Kind: m.Kind, Next: next,
-		Typed:    animation.Enabled && animation.CharacterDelay > 0 && count > m.revealed,
-		Finished: count == len([]rune(m.Text)) && !m.finished,
-	}
-	m.revealed = max(m.revealed, count)
-	m.finished = m.finished || frame.Finished
+	frame := Frame{Text: text, Kind: m.Kind, Next: next, Started: !m.presented}
+	m.presented = true
 	return frame, true
 }
 
@@ -142,9 +133,9 @@ func (m *Message) frame(now time.Time, animation Animation) (value string, next 
 			next = m.started.Add(typingDuration + (phase+1)*animation.BlinkInterval)
 		}
 	}
-	if animation.Cursor != "" && animation.CursorBlinks > 0 && animation.CursorBlinkInterval > 0 {
+	if animation.Cursor != "" && animation.CursorBlinks != 0 && animation.CursorBlinkInterval > 0 {
 		phase := (elapsed - typingDuration) / animation.CursorBlinkInterval
-		if phase < time.Duration(animation.CursorBlinks)*2 {
+		if animation.CursorBlinks < 0 || phase < time.Duration(animation.CursorBlinks)*2 {
 			if phase%2 == 0 {
 				// Keep the cursor at the text's end during the existing text pulse.
 				if value == "" {

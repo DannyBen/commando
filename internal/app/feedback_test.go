@@ -21,12 +21,12 @@ type recordedSounds struct {
 func (s *recordedSounds) Play(name sound.Name) { s.played = append(s.played, name) }
 func (s *recordedSounds) Stop()                { s.stops++ }
 
-func TestMessageSoundsFollowRevealedTextAndStaySilentDuringBlinks(t *testing.T) {
+func TestMessageSoundsStartImmediatelyAndDoNotRepeat(t *testing.T) {
 	for _, tc := range []struct {
-		kind  feedback.Kind
-		final sound.Name
+		kind feedback.Kind
+		cue  sound.Name
 	}{
-		{feedback.Info, sound.MessageTyping},
+		{feedback.Info, sound.MessageInfo},
 		{feedback.Success, sound.MessageSuccess},
 		{feedback.Warning, sound.MessageWarning},
 		{feedback.Error, sound.MessageError},
@@ -37,22 +37,17 @@ func TestMessageSoundsFollowRevealedTextAndStaySilentDuringBlinks(t *testing.T) 
 		send, advance := panelInputFrames(v)
 		v.showFeedback(0, tc.kind, "Å文Z")
 		send()
-		if len(recorded.played) != 0 {
-			t.Fatal("cursor appearance played sound")
+		if len(recorded.played) != 1 || recorded.played[0] != tc.cue {
+			t.Fatalf("initial cue for kind %v: %v", tc.kind, recorded.played)
 		}
-		advance(35 * time.Millisecond)
-		if len(recorded.played) != 1 || recorded.played[0] != sound.MessageTyping {
-			t.Fatal("visible character did not play one typing sound")
-		}
-		advance(70 * time.Millisecond)
-		if len(recorded.played) != 2 || recorded.played[1] != tc.final {
-			t.Fatalf("completion cue for kind %v: %v", tc.kind, recorded.played)
-		}
+		send() // A redraw at the same time must not replay the cue.
+		advance(15 * time.Millisecond)
+		advance(30 * time.Millisecond)
 		advance(350 * time.Millisecond)
 		advance(350 * time.Millisecond)
 		advance(time.Hour)
-		if len(recorded.played) != 2 {
-			t.Fatal("blink or held text replayed sounds")
+		if len(recorded.played) != 1 {
+			t.Fatal("typing, completion or cursor blink replayed sound")
 		}
 		send(pressed(key.NameRightArrow))
 		if recorded.stops == 0 || v.active != 1 || v.panels[0].feedback.Current() != nil {
@@ -60,7 +55,10 @@ func TestMessageSoundsFollowRevealedTextAndStaySilentDuringBlinks(t *testing.T) 
 		}
 		v.showFeedback(1, tc.kind, "ABCDE")
 		send()
-		advance(35 * time.Millisecond)
+		if len(recorded.played) != 2 || recorded.played[1] != tc.cue {
+			t.Fatal("new message did not play its initial cue")
+		}
+		advance(15 * time.Millisecond)
 		send(pressed(key.NameF1))
 		count := len(recorded.played)
 		advance(time.Hour)

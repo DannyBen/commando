@@ -195,7 +195,7 @@ func TestRepeatedAutomaticReadErrorDoesNotRestartItsMessage(t *testing.T) {
 	before, _ := p.feedback.Frame(start.Add(350*time.Millisecond), v.appearance.Feedback)
 	failed(&os.PathError{Op: "read", Path: p.path, Err: os.ErrNotExist})
 	after, _ := p.feedback.Frame(start.Add(350*time.Millisecond), v.appearance.Feedback)
-	if p.feedback.Current() != message || before.Text != after.Text || after.Typed || after.Finished {
+	if p.feedback.Current() != message || before.Text != after.Text || after.Started {
 		t.Fatal("repeated automatic failure restarted typing or audio")
 	}
 	failed(os.ErrPermission)

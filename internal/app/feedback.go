@@ -87,27 +87,19 @@ func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 }
 
 func (v *view) playFeedbackSound(frame feedback.Frame) {
-	if v.sounds == nil {
+	if v.sounds == nil || !frame.Started {
 		return
 	}
-	if frame.Finished {
-		var cue sound.Name
-		switch frame.Kind {
-		case feedback.Success:
-			cue = sound.MessageSuccess
-		case feedback.Warning:
-			cue = sound.MessageWarning
-		case feedback.Error:
-			cue = sound.MessageError
-		}
-		if cue != "" {
-			v.sounds.Play(cue)
-			return
-		}
+	cue := sound.MessageInfo
+	switch frame.Kind {
+	case feedback.Success:
+		cue = sound.MessageSuccess
+	case feedback.Warning:
+		cue = sound.MessageWarning
+	case feedback.Error:
+		cue = sound.MessageError
 	}
-	if frame.Typed {
-		v.sounds.Play(sound.MessageTyping)
-	}
+	v.sounds.Play(cue)
 }
 
 func readError(err error) string {

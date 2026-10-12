@@ -35,39 +35,67 @@ func TestDrawingCursorBlinksIndependentlyThenDisappears(t *testing.T) {
 	}
 }
 
-func TestPresentationEventsDoNotRepeatOrCatchUpInBursts(t *testing.T) {
+func TestMessageStartsOnceRegardlessOfAnimation(t *testing.T) {
+	for _, enabled := range []bool{true, false} {
+		var c Channel
+		start := time.Unix(1000, 0)
+		profiles := Animations{Enabled: enabled, Info: Animation{Enabled: true, CharacterDelay: 15 * time.Millisecond}}
+		c.Show(Info, "Å文Z")
+		frame, _ := c.Frame(start, profiles)
+		if !frame.Started {
+			t.Fatal("first frame did not announce the message")
+		}
+		for _, delay := range []time.Duration{0, 30 * time.Millisecond, time.Second, time.Hour} {
+			frame, _ = c.Frame(start.Add(delay), profiles)
+			if frame.Started {
+				t.Fatal("redraw, typing or held message repeated its start")
+			}
+		}
+		c.Show(Info, "Å文Z")
+		frame, _ = c.Frame(start.Add(time.Hour), profiles)
+		if !frame.Started {
+			t.Fatal("replacement did not announce a new message")
+		}
+		c.Dismiss()
+		if _, owns := c.Frame(start.Add(2*time.Hour), profiles); owns {
+			t.Fatal("dismissed message still owns presentation")
+		}
+	}
+}
+
+func TestCursorKeepsBlinkingUntilDismissed(t *testing.T) {
 	var c Channel
 	start := time.Unix(1000, 0)
-	profiles := Animations{Enabled: true, Info: Animation{Enabled: true, CharacterDelay: 35 * time.Millisecond}}
-	c.Show(Info, "Å文Z")
-	frame, _ := c.Frame(start, profiles)
-	if frame.Typed || frame.Finished {
-		t.Fatal("initial cursor frame produced a typing event")
-	}
-	frame, _ = c.Frame(start.Add(70*time.Millisecond), profiles)
-	if !frame.Typed || frame.Finished || frame.Text != "Å文" {
-		t.Fatal("delayed frame did not report one typing event for revealed Unicode text")
-	}
-	frame, _ = c.Frame(start.Add(70*time.Millisecond), profiles)
-	if frame.Typed || frame.Finished {
-		t.Fatal("redraw replayed typing")
-	}
-	frame, _ = c.Frame(start.Add(time.Second), profiles)
-	if !frame.Typed || !frame.Finished {
-		t.Fatal("last character did not finish the message")
-	}
-	frame, _ = c.Frame(start.Add(time.Hour), profiles)
-	if frame.Typed || frame.Finished {
-		t.Fatal("held message replayed audio events")
-	}
-	c.Show(Info, "Å文Z")
-	c.Frame(start.Add(time.Hour), profiles)
-	frame, _ = c.Frame(start.Add(time.Hour+105*time.Millisecond), profiles)
-	if !frame.Typed || !frame.Finished {
-		t.Fatal("replacement did not restart events")
+	profiles := Animations{Enabled: true, Info: Animation{Enabled: true,
+		CharacterDelay: 15 * time.Millisecond, Cursor: "█",
+		CursorBlinkInterval: 350 * time.Millisecond, CursorBlinks: -1}}
+	c.Show(Info, "Å文")
+	for _, tc := range []struct {
+		delay time.Duration
+		text  string
+		next  time.Duration
+	}{
+		{0, "█", 15 * time.Millisecond},
+		{15 * time.Millisecond, "Å█", 30 * time.Millisecond},
+		{30 * time.Millisecond, "Å文█", 380 * time.Millisecond},
+		{380 * time.Millisecond, "Å文", 730 * time.Millisecond},
+		{730 * time.Millisecond, "Å文█", 1080 * time.Millisecond},
+		{30*time.Millisecond + 10000*350*time.Millisecond, "Å文█", 30*time.Millisecond + 10001*350*time.Millisecond},
+		{30*time.Millisecond + 10001*350*time.Millisecond, "Å文", 30*time.Millisecond + 10002*350*time.Millisecond},
+	} {
+		frame, owns := c.Frame(start.Add(tc.delay), profiles)
+		if !owns || frame.Text != tc.text || !frame.Next.Equal(start.Add(tc.next)) {
+			t.Fatalf("at %v: %+v, owns %v; want %q, next %v", tc.delay, frame, owns, tc.text, tc.next)
+		}
 	}
 	c.Dismiss()
-	if _, owns := c.Frame(start.Add(2*time.Hour), profiles); owns {
-		t.Fatal("dismissed message still owns presentation")
+	frame, owns := c.Frame(start.Add(2*time.Hour), profiles)
+	if owns || !frame.Next.IsZero() || frame.Started {
+		t.Fatal("dismissed message kept blinking or announced itself")
+	}
+	c.Show(Info, "New")
+	frame, owns = c.Frame(start.Add(2*time.Hour), profiles)
+	if !owns || !frame.Started || frame.Text != "█" || !frame.Next.Equal(start.Add(2*time.Hour+15*time.Millisecond)) {
+		t.Fatal("new message did not restart typing and cursor timing")
 	}
 }
