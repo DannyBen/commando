@@ -67,3 +67,52 @@ func TestRecyclingRecoversNestedAndAliasPanelsWithoutNotifications(t *testing.T)
 		t.Fatal("confirmed recycling stranded open descendants or their aliases")
 	}
 }
+
+func TestRecyclingFromAliasUpdatesBackingListingAndRecoversDescendant(t *testing.T) {
+	v, source, _ := clipboardView(t)
+	folder := filepath.Join(source, "folder")
+	alias := filepath.Join(t.TempDir(), "alias")
+	if err := os.Symlink(source, alias); err != nil {
+		t.Skipf("directory aliases unavailable: %v", err)
+	}
+	v.load(0, alias, "")
+	v.load(1, source, "")
+	v.load(2, filepath.Join(folder, "nested"), "")
+	for pi := range v.panels {
+		waitLoaded(t, v, pi)
+	}
+	selectName(t, &v.panels[1], "a.txt")
+	v.panels[1].toggleMark(v.panels[1].selected)
+	selectName(t, &v.panels[2], "file")
+	v.panels[2].toggleMark(v.panels[2].selected)
+	moved := filepath.Join(t.TempDir(), "recycled")
+	v.loader.recycle = func(directory string, names []string) (browser.RecycleResult, error) {
+		if directory != alias {
+			t.Fatalf("recycle did not receive the source alias: %q", directory)
+		}
+		if err := os.Rename(folder, moved); err != nil {
+			return browser.RecycleResult{}, err
+		}
+		// Like a Windows 8.3 path, this spelling differs from EvalSymlinks.
+		return browser.RecycleResult{Directory: directory, Names: names}, nil
+	}
+	selectName(t, &v.panels[0], "folder")
+	v.recycleSelected()
+	waitLoaded(t, v, 0)
+	for pi := 0; pi < 2; pi++ {
+		for _, item := range v.panels[pi].items {
+			if item.file.Name == "folder" {
+				t.Fatalf("panel %d retained the recycled folder", pi)
+			}
+		}
+	}
+	other := &v.panels[1]
+	if other.path != source || other.items[other.selected].file.Name != "a.txt" || !other.marks[other.selected] {
+		t.Fatal("recycling disturbed the backing panel's location, selection or marks")
+	}
+	runAutomaticRefresh(v, time.Now())
+	finishAutomaticRefresh(t, v)
+	if v.panels[2].path != source || len(v.panels[2].marks) != 0 || v.active != 0 {
+		t.Fatal("alias recycling stranded the open descendant or stole focus")
+	}
+}

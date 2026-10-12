@@ -95,7 +95,7 @@ func TestWindowsDirectoryWatchStopsAfterWatchedFolderMoves(t *testing.T) {
 	}
 }
 
-func startWindowsLocationWatch(t *testing.T, path string) (<-chan struct{}, <-chan error) {
+func startWindowsLocationWatch(t *testing.T, path string) (<-chan struct{}, <-chan error, context.CancelFunc) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	changes, done := make(chan struct{}, 8), make(chan error, 1)
@@ -123,7 +123,7 @@ func startWindowsLocationWatch(t *testing.T, path string) (<-chan struct{}, <-ch
 	case <-time.After(3 * time.Second):
 		t.Fatal("watch did not establish its baseline")
 	}
-	return changes, done
+	return changes, done, cancel
 }
 
 func waitWindowsMissingLocation(t *testing.T, done <-chan error) {
@@ -143,25 +143,38 @@ func TestWindowsDirectoryWatchDetectsEmptyFolderDeletion(t *testing.T) {
 	if err := os.Mkdir(path, 0700); err != nil {
 		t.Fatal(err)
 	}
-	_, done := startWindowsLocationWatch(t, path)
+	_, done, _ := startWindowsLocationWatch(t, path)
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
 	waitWindowsMissingLocation(t, done)
 }
 
-func TestWindowsDirectoryWatchDetectsRenamedAncestor(t *testing.T) {
+func TestWindowsDirectoryWatchReleasesDescendantBeforeAncestorRename(t *testing.T) {
 	root := t.TempDir()
 	parent := filepath.Join(root, "ancestor")
 	child := filepath.Join(parent, "child", "empty")
 	if err := os.MkdirAll(child, 0700); err != nil {
 		t.Fatal(err)
 	}
-	_, done := startWindowsLocationWatch(t, child)
+	_, done, cancel := startWindowsLocationWatch(t, child)
+	// Windows cannot rename an ancestor with an open descendant handle.
+	// Cancellation must release that handle before reporting completion.
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("watch did not cancel cleanly: %v", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("watch did not release its descendant handle")
+	}
 	if err := os.Rename(parent, filepath.Join(root, "moved")); err != nil {
 		t.Fatal(err)
 	}
-	waitWindowsMissingLocation(t, done)
+	if err := WatchDirectory(context.Background(), child, func() {}); !IsMissingDirectory(err) {
+		t.Fatalf("watch did not reject the vanished descendant: %v", err)
+	}
 }
 
 func TestWindowsDirectoryWatchDetectsMovedAliasTarget(t *testing.T) {
@@ -174,7 +187,7 @@ func TestWindowsDirectoryWatchDetectsMovedAliasTarget(t *testing.T) {
 	if err := os.Symlink(target, alias); err != nil {
 		t.Skipf("directory symlinks unavailable: %v", err)
 	}
-	_, done := startWindowsLocationWatch(t, alias)
+	_, done, _ := startWindowsLocationWatch(t, alias)
 	if err := os.Rename(target, filepath.Join(root, "moved")); err != nil {
 		t.Fatal(err)
 	}

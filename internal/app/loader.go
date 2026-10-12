@@ -125,7 +125,14 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					// Capture alias/backing locations before recycling can remove
 					// open descendants and make fresh identity resolution fail.
 					result.locations = resolveFileLocations(request.recycle.locations)
+					// Use the same canonical spelling for the recycled parent and
+					// captured panels. Windows temporary paths can contain 8.3
+					// names, and aliases may disappear during the operation.
+					parent, _ := resolveFileLocation(request.path)
 					recycled, err = l.recycle(request.path, request.recycle.names)
+					if parent != "" && len(recycled.Names) > 0 {
+						recycled.Directory = parent
+					}
 					sameDirectory = make([]bool, len(request.recycle.locations))
 					if len(recycled.Names) > 0 {
 						for pi, resolved := range result.locations {

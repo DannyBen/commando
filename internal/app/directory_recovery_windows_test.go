@@ -11,8 +11,10 @@ import (
 )
 
 // Exercise native notifications, the actual directory worker and panel recovery
-// together. The ancestor moves without any writes in the watched empty child.
-func TestWindowsNotificationsRecoverOpenDescendantsAutomatically(t *testing.T) {
+// together. The watched empty folder moves without any writes inside it.
+// Windows refuses ancestor renames while a descendant notification handle is
+// open; worker tests cover recovery after an ancestor becomes unavailable.
+func TestWindowsNotificationsRecoverMovedFoldersAutomatically(t *testing.T) {
 	root := t.TempDir()
 	ancestor := filepath.Join(root, "ancestor")
 	child := filepath.Join(ancestor, "empty")
@@ -56,18 +58,18 @@ func TestWindowsNotificationsRecoverOpenDescendantsAutomatically(t *testing.T) {
 	for len(wake) != 0 {
 		<-wake
 	}
-	if err := os.Rename(ancestor, filepath.Join(root, "moved")); err != nil {
+	if err := os.Rename(child, filepath.Join(root, "moved")); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.NewTimer(3 * time.Second)
 	defer deadline.Stop()
-	for v.panels[0].path != root || v.panels[1].path != root {
+	for v.panels[0].path != ancestor || v.panels[1].path != ancestor {
 		select {
 		case <-wake:
 			runAutomaticRefresh(v, time.Now().Add(time.Second))
 			finishAutomaticRefresh(t, v)
 		case <-deadline.C:
-			t.Fatal("missing open descendants did not automatically recover")
+			t.Fatal("missing open folders did not automatically recover")
 		}
 	}
 	if v.active != 0 || v.panels[0].err != nil || v.panels[1].err != nil {
