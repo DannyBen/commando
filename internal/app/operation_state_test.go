@@ -182,6 +182,7 @@ func TestCancelledMergeFollowsConfirmedMovedChildAndRetainsParentCut(t *testing.
 			return browser.TransferResult{}, err
 		}
 		return browser.TransferResult{Directory: target, Attempted: true, Aborted: true,
+			Summary: browser.TransferSummary{Requested: 1, Partial: 1},
 			Items:   []browser.TransferredItem{{Source: folder, Entry: browser.Entry{Name: "folder", Directory: true}}},
 			Changes: []browser.TransferredPath{{Source: filepath.Join(folder, "nested"), Destination: child, Directory: true, Moved: true}},
 		}, nil

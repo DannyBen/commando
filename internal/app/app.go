@@ -15,6 +15,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 const windowWidth, windowHeight = 800, 480
@@ -22,6 +23,7 @@ const windowWidth, windowHeight = 800, 480
 // Run opens the native folder browser.
 func Run() error {
 	preview := flag.String("png", "", "render the workspace to a PNG and exit")
+	traceTransfers := flag.Bool("trace-transfers", false, "record transfer diagnostics in the application data folder")
 	flag.Parse()
 	if *preview != "" {
 		return renderPNG(*preview)
@@ -39,6 +41,17 @@ func Run() error {
 		return err
 	}
 
+	stopTrace := func() error { return nil }
+	if *traceTransfers {
+		var tracePath string
+		tracePath, stopTrace, err = browser.EnableTransferTrace(dataDir)
+		if err != nil {
+			return fmt.Errorf("cannot open transfer trace: %w", err)
+		}
+		fmt.Fprintln(os.Stderr, "Transfer trace:", tracePath)
+	}
+	defer stopTrace()
+
 	done := make(chan error, 1)
 	go func() {
 		w := new(gioapp.Window)
@@ -52,6 +65,9 @@ func Run() error {
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate, len(flag.Args()) == 0)
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		v.nativeKeys = keys
+		sounds := sound.NewPlayer()
+		defer sounds.Close()
+		v.sounds = sounds
 		var ops op.Ops
 		for {
 			e := w.Event()
@@ -63,6 +79,8 @@ func Run() error {
 				}
 			case gioapp.DestroyEvent:
 				v.finishOperations()
+				sounds.Close()
+				stopTrace()
 				if err := saveState(dataDir, v.sessionState(tracker.snapshot())); err != nil {
 					done <- errors.Join(e.Err, fmt.Errorf("cannot save state: %w", err))
 				} else {

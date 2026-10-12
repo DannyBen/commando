@@ -63,3 +63,53 @@ func TestDirectoryMonitorSharesWatchesAndRejectsRetiredCallbacks(t *testing.T) {
 		t.Fatal("shutdown did not stop the remaining watcher")
 	}
 }
+
+func TestSuspendedDirectoryWatchStaysQuietUntilManualRetry(t *testing.T) {
+	type armed struct {
+		ctx     context.Context
+		changed func()
+	}
+	started := make(chan armed, 2)
+	var wakes atomic.Int32
+	m := newDirectoryMonitor(func(ctx context.Context, _ string, changed func()) error {
+		started <- armed{ctx, changed}
+		<-ctx.Done()
+		return ctx.Err()
+	}, func() { wakes.Add(1) })
+	t.Cleanup(m.close)
+	nextWatch := func() armed {
+		t.Helper()
+		select {
+		case watch := <-started:
+			return watch
+		case <-time.After(3 * time.Second):
+			t.Fatal("watch did not start")
+			return armed{}
+		}
+	}
+	m.sync([]string{"folder"})
+	old := nextWatch()
+	old.changed()
+	m.suspend("folder")
+	select {
+	case <-old.ctx.Done():
+	default:
+		t.Fatal("suspension did not cancel the notification provider")
+	}
+	for range 100 {
+		old.changed()
+		m.sync([]string{"folder"})
+	}
+	if paths, next := m.take(time.Now().Add(time.Second)); len(paths) != 0 || !next.IsZero() || wakes.Load() != 1 {
+		t.Fatal("suspended watcher continued waking or refreshing the window")
+	}
+	m.retry("folder")
+	m.sync([]string{"folder"})
+	fresh := nextWatch()
+	old.changed()
+	fresh.changed()
+	paths, _ := m.take(time.Now().Add(time.Second))
+	if len(paths) != 1 || paths[0] != "folder" || wakes.Load() != 2 {
+		t.Fatal("manual refresh did not re-arm only the fresh watch")
+	}
+}

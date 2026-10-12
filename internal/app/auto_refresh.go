@@ -1,6 +1,9 @@
 package app
 
 import (
+	"errors"
+	"io/fs"
+
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/dannyben/commando/internal/feedback"
@@ -47,8 +50,19 @@ func (v *view) acceptAutoRefresh(result loadResult) {
 		return
 	}
 	if result.err != nil {
+		if errors.Is(result.err, fs.ErrNotExist) {
+			p.refreshNeeded = false
+			if v.monitor != nil {
+				v.monitor.suspend(p.path)
+			}
+		}
+		previous := p.err
 		p.err = result.err
-		v.showFeedback(result.request.panel, feedback.Error, readError(result.err))
+		message := readError(result.err)
+		current := p.feedback.Current()
+		if previous == nil || readError(previous) != message || current == nil || current.Kind != feedback.Error || current.Text != message {
+			v.showFeedback(result.request.panel, feedback.Error, message)
+		}
 		return
 	}
 	// Reuse the preservation rules used after transfers. Automatic refresh must

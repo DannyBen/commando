@@ -152,8 +152,8 @@ func TestPartialShellMoveAcceptsStateAndReportsMovedDescendants(t *testing.T) {
 	result := transferResults(TransferRequest{Paths: []string{root}, Directory: target, Move: true}, []string{"clipboard-alias"}, []transferObservation{
 		{source: filepath.Join(child, "child"), destination: filepath.Join(target, "folder (2)", "nested", "child")},
 		{source: child, destination: filepath.Join(target, "folder (2)", "nested"), directory: true},
-	}, true, 1)
-	if !result.Attempted || !result.Aborted || result.Skipped != 1 || len(result.Items) != 1 || result.Items[0].Moved || result.Items[0].Source != "clipboard-alias" || result.Items[0].Entry.Name != "folder (2)" {
+	}, true, TransferSummary{Requested: 1, Partial: 1})
+	if !result.Attempted || !result.Aborted || result.Summary.Partial != 1 || result.Summary.Completed != 0 || result.Summary.Skipped != 0 || len(result.Items) != 1 || result.Items[0].Moved || result.Items[0].Source != "clipboard-alias" || result.Items[0].Entry.Name != "folder (2)" {
 		t.Fatalf("partial outcome: %+v", result)
 	}
 	if len(result.Changes) != 2 || !result.Changes[1].Moved || !result.Changes[1].Directory {
@@ -168,7 +168,7 @@ func TestShellCompletionRetainsClipboardOriginalAndActualDestinationName(t *test
 	source, target := filepath.Join(t.TempDir(), "old.txt"), t.TempDir()
 	writeTransferFiles(t, target, map[string]string{"actual.txt": "data"})
 	request := TransferRequest{Paths: []string{source}, Directory: target, Move: true}
-	result := transferResults(request, []string{"alias-path"}, []transferObservation{{source: source, destination: filepath.Join(target, "actual.txt")}}, false, 0)
+	result := transferResults(request, []string{"alias-path"}, []transferObservation{{source: source, destination: filepath.Join(target, "actual.txt")}}, false, TransferSummary{Requested: 1, Completed: 1})
 	if len(result.Items) != 1 || result.Items[0].Source != "alias-path" || !result.Items[0].Moved || result.Items[0].Entry.Name != "actual.txt" || !result.Changes[0].Moved {
 		t.Fatalf("completion mapping: %+v", result)
 	}

@@ -37,18 +37,25 @@ type TransferResult struct {
 	Directory          string
 	Items              []TransferredItem
 	Changes            []TransferredPath
-	Skipped            int
+	Summary            TransferSummary
 	Aborted, Attempted bool
+	trace              *transferBatchTrace
 }
 
 // Transfer has one execution backend. Windows owns progress, conflict/error
 // dialogs and cancellation; Commando only observes and reconciles its results.
-func Transfer(request TransferRequest) (TransferResult, error) {
+func Transfer(request TransferRequest) (result TransferResult, err error) {
+	trace := beginTransferTrace(request)
+	defer func() {
+		result.trace = trace
+		trace.result(result, err)
+	}()
 	prepared, err := prepareTransfer(request)
 	if err != nil {
 		return TransferResult{}, err
 	}
-	return transferNative(prepared, request.Paths)
+	trace.record("Prepared", map[string]any{"source_count": len(prepared.Paths), "request": prepared})
+	return transferNative(prepared, request.Paths, trace)
 }
 
 // Resolve SUBST and parent aliases without scanning file contents or deciding

@@ -69,9 +69,9 @@ func (m *directoryMonitor) sync(paths []string) {
 
 func (m *directoryMonitor) changed(w *directoryWatch) {
 	m.mu.Lock()
-	if m.watches[directoryWatchKey(w.path)] != w {
+	if m.watches[directoryWatchKey(w.path)] != w || w.failed {
 		m.mu.Unlock()
-		return // A callback from a directory that has been left.
+		return // A callback from a retired or suspended directory.
 	}
 	if w.dirtyAt.IsZero() {
 		w.dirtyAt = time.Now()
@@ -79,6 +79,18 @@ func (m *directoryMonitor) changed(w *directoryWatch) {
 	m.mu.Unlock()
 	if m.invalidate != nil {
 		m.invalidate()
+	}
+}
+
+// A missing location cannot produce useful updates. Retain the failed watch
+// entry to prevent sync from immediately reopening it; Ctrl+R can re-arm it.
+func (m *directoryMonitor) suspend(path string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if w := m.watches[directoryWatchKey(path)]; w != nil {
+		w.failed = true
+		w.dirtyAt = time.Time{}
+		w.cancel()
 	}
 }
 

@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,6 +11,60 @@ import (
 
 	"golang.org/x/sys/windows"
 )
+
+func TestWindowsTransferTraceRecordsConflictCallbacksAndFinalOutcome(t *testing.T) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	if err := windows.CoInitializeEx(0, windows.COINIT_APARTMENTTHREADED); err != nil && err != syscall.Errno(1) {
+		t.Fatal(err)
+	}
+	defer windows.CoUninitialize()
+	root := resolvedTempDir(t)
+	source, target := filepath.Join(root, "source.txt"), filepath.Join(root, "target")
+	if err := os.WriteFile(source, []byte("data"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(target, 0700); err != nil {
+		t.Fatal(err)
+	}
+	item, err := shellItem(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer item.call(2)
+	folder, err := shellItem(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer folder.call(2)
+	var buf bytes.Buffer
+	sink := newTransferSink(TransferRequest{Paths: []string{source}, Directory: target})
+	sink.trace = &transferBatchTrace{trace: &transferTrace{writer: &buf}, id: 1}
+	defer sink.releaseSources()
+	this, ptr, dest := uintptr(unsafe.Pointer(sink)), uintptr(unsafe.Pointer(item)), uintptr(unsafe.Pointer(folder))
+	for _, status := range []uint32{0x0027000b, 0x00270005} {
+		if hr, _, _ := syscall.SyscallN(sink.vtable[9], this, 2, ptr, dest, 0); hr != 0 {
+			t.Fatalf("pre-copy refused: %x", hr)
+		}
+		if hr, _, _ := syscall.SyscallN(sink.vtable[10], this, 2, ptr, dest, 0, uintptr(status), 0); hr != 0 {
+			t.Fatalf("post-copy refused: %x", hr)
+		}
+	}
+	observations, summary, err := sink.snapshot(false)
+	if err != nil || summary.Skipped != 1 || summary.Completed != 0 || len(observations) != 0 {
+		t.Fatal("pending and final callbacks were not reduced to one skip")
+	}
+	records := decodeTransferTrace(t, &buf)
+	if len(records) != 4 {
+		t.Fatalf("callback events: %+v", records)
+	}
+	data := records[1].Data.(map[string]any)
+	if data["source"].(map[string]any)["path"] != source || data["target"].(map[string]any)["path"] != target ||
+		data["cached_source_path"] != source || data["created"] != nil || data["hresult"].(map[string]any)["hex"] != "0x0027000B" {
+		t.Fatalf("missing conflict evidence: %+v", data)
+	}
+	runtime.KeepAlive(sink)
+}
 
 func TestWindowsTransferSinkABIRecordsOriginalBeforeMoveAndActualNewName(t *testing.T) {
 	runtime.LockOSThread()
@@ -44,15 +99,15 @@ func TestWindowsTransferSinkABIRecordsOriginalBeforeMoveAndActualNewName(t *test
 	if hr, _, _ := syscall.SyscallN(sink.vtable[8], this, 0, ptr, 0, 0, 0, uintptr(unsafe.Pointer(created))); hr != 0 {
 		t.Fatalf("post-move failed: %x", hr)
 	}
-	observations, skipped, err := sink.snapshot()
-	if err != nil || skipped != 0 || len(observations) != 1 || observations[0].source != source || observations[0].destination != destination {
-		t.Fatalf("callback result: %+v %d %v", observations, skipped, err)
+	observations, summary, err := sink.snapshot(false)
+	if err != nil || summary.Skipped != 0 || summary.Completed != 1 || len(observations) != 1 || observations[0].source != source || observations[0].destination != destination {
+		t.Fatalf("callback result: %+v %+v %v", observations, summary, err)
 	}
 	// A positive ignored status with a non-null target still isn't completion.
 	syscall.SyscallN(sink.vtable[10], this, 0, ptr, 0, 0, 0x00270005, uintptr(unsafe.Pointer(created)))
-	observations, skipped, err = sink.snapshot()
-	if err != nil || skipped != 1 || len(observations) != 1 {
-		t.Fatal("ignored copy accepted as completed")
+	observations, summary, err = sink.snapshot(false)
+	if err != nil || summary.Skipped != 0 || summary.Completed != 1 || len(observations) != 1 {
+		t.Fatal("a later ignored callback counted a completed source twice")
 	}
 	runtime.KeepAlive(sink)
 }
@@ -100,9 +155,9 @@ func TestWindowsTransferSinkCountsTwoDirectMoves(t *testing.T) {
 			t.Fatalf("post-move failed: %x", hr)
 		}
 	}
-	observations, skipped, err := sink.snapshot()
-	result := transferResults(request, request.Paths, observations, false, skipped)
-	if err != nil || result.Skipped != 0 || len(result.Items) != 2 || len(result.Changes) != 2 {
+	observations, summary, err := sink.snapshot(false)
+	result := transferResults(request, request.Paths, observations, false, summary)
+	if err != nil || result.Summary.Skipped != 0 || result.Summary.Completed != 2 || len(result.Items) != 2 || len(result.Changes) != 2 {
 		t.Fatalf("two completed moves reported incorrectly: %+v %v", result, err)
 	}
 	for _, item := range result.Items {
@@ -178,7 +233,7 @@ func TestWindowsShellTransfers(t *testing.T) {
 			t.Fatal(err)
 		}
 		result, err := Transfer(TransferRequest{Paths: []string{filepath.Join(source, "folder"), filepath.Join(source, "file.txt")}, Directory: directory, Move: move})
-		if err != nil || result.Aborted || result.Skipped != 0 || len(result.Items) != 2 {
+		if err != nil || result.Aborted || result.Summary.Skipped != 0 || result.Summary.Completed != 2 || len(result.Items) != 2 {
 			t.Fatalf("native copy/move: %+v %v", result, err)
 		}
 		for _, item := range result.Items {

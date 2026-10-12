@@ -27,6 +27,7 @@ func TestOperationErrorsFitShortPanelFooter(t *testing.T) {
 			result := loadResult{request: loadRequest{panel: 0, transfer: &transferRequest{}}, err: wrapped}
 			if partial {
 				result.transferred.Items = []browser.TransferredItem{{Entry: browser.Entry{Name: "completed.txt"}}}
+				result.transferred.Summary = browser.TransferSummary{Requested: 1, Completed: 1}
 			}
 			v.acceptFileOperation(result)
 			assertBriefFooter(t, v.panels[0].feedback.Current().Text, filename)

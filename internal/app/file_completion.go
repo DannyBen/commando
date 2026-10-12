@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 
+	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
 )
 
@@ -38,6 +39,9 @@ func (v *view) acceptFileOperation(result loadResult) {
 		v.rememberCutClipboard(result.clipboard, locations, result.locations)
 	}
 	v.showTransferResult(result, refreshFailed)
+	if message := p.feedback.Current(); message != nil {
+		browser.TraceTransferFeedback(result.transferred, message.Text)
+	}
 }
 
 func (v *view) applyTransferPanels(result loadResult, locations []string) (refreshFailed bool) {
@@ -64,12 +68,15 @@ func (v *view) applyTransferPanels(result loadResult, locations []string) (refre
 }
 
 func (v *view) showTransferResult(result loadResult, refreshFailed bool) {
-	count := len(result.transferred.Items)
+	summary := result.transferred.Summary
+	count := summary.Completed
 	panel := result.request.panel
 	if result.err != nil {
 		message := fileTransferError(result.err)
 		if count > 0 {
 			message = fmt.Sprintf("%d transferred; %s", count, message)
+		} else if summary.Partial > 0 {
+			message = fmt.Sprintf("%d partial; %s", summary.Partial, message)
 		}
 		v.showFeedback(panel, feedback.Error, message)
 	} else if result.clipboardErr != nil {
@@ -80,10 +87,20 @@ func (v *view) showTransferResult(result loadResult, refreshFailed bool) {
 		message := "Transfer stopped"
 		if count > 0 {
 			message = fmt.Sprintf("%d transferred; operation stopped", count)
+		} else if summary.Partial > 0 {
+			message = fmt.Sprintf("%d partial; operation stopped", summary.Partial)
 		}
 		v.showFeedback(panel, feedback.Info, message)
-	} else if result.transferred.Skipped > 0 {
-		v.showFeedback(panel, feedback.Warning, fmt.Sprintf("%d transferred; %d skipped", count, result.transferred.Skipped))
+	} else if summary.Partial > 0 {
+		v.showFeedback(panel, feedback.Warning, "Transfer partly completed")
+	} else if summary.Failed > 0 || summary.Unfinished > 0 {
+		message := "Transfer incomplete"
+		if count > 0 {
+			message = fmt.Sprintf("%d transferred; transfer incomplete", count)
+		}
+		v.showFeedback(panel, feedback.Warning, message)
+	} else if summary.Skipped > 0 {
+		v.showFeedback(panel, feedback.Warning, fmt.Sprintf("%d transferred; %d skipped", count, summary.Skipped))
 	} else {
 		verb := "copied"
 		if result.transferMove {

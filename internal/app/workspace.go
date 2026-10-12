@@ -8,6 +8,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 type entry struct {
@@ -61,6 +62,10 @@ type view struct {
 	clipboardSequence func() uint32
 	ownerWindow       uintptr
 	pendingDuplicate  *loadResult
+	sounds            interface {
+		Play(sound.Name)
+		Stop()
+	}
 }
 
 func newPreviewView() *view {

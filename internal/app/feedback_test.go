@@ -10,7 +10,65 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"github.com/dannyben/commando/internal/feedback"
+	"github.com/dannyben/commando/internal/sound"
 )
+
+type recordedSounds struct {
+	played []sound.Name
+	stops  int
+}
+
+func (s *recordedSounds) Play(name sound.Name) { s.played = append(s.played, name) }
+func (s *recordedSounds) Stop()                { s.stops++ }
+
+func TestMessageSoundsFollowRevealedTextAndStaySilentDuringBlinks(t *testing.T) {
+	for _, tc := range []struct {
+		kind  feedback.Kind
+		final sound.Name
+	}{
+		{feedback.Info, sound.MessageTyping},
+		{feedback.Success, sound.MessageSuccess},
+		{feedback.Warning, sound.MessageWarning},
+		{feedback.Error, sound.MessageError},
+	} {
+		v := newPreviewView()
+		recorded := &recordedSounds{}
+		v.sounds = recorded
+		send, advance := panelInputFrames(v)
+		v.showFeedback(0, tc.kind, "Å文Z")
+		send()
+		if len(recorded.played) != 0 {
+			t.Fatal("cursor appearance played sound")
+		}
+		advance(35 * time.Millisecond)
+		if len(recorded.played) != 1 || recorded.played[0] != sound.MessageTyping {
+			t.Fatal("visible character did not play one typing sound")
+		}
+		advance(70 * time.Millisecond)
+		if len(recorded.played) != 2 || recorded.played[1] != tc.final {
+			t.Fatalf("completion cue for kind %v: %v", tc.kind, recorded.played)
+		}
+		advance(350 * time.Millisecond)
+		advance(350 * time.Millisecond)
+		advance(time.Hour)
+		if len(recorded.played) != 2 {
+			t.Fatal("blink or held text replayed sounds")
+		}
+		send(pressed(key.NameRightArrow))
+		if recorded.stops == 0 || v.active != 1 || v.panels[0].feedback.Current() != nil {
+			t.Fatal("dismissal did not stop audio and perform normal navigation")
+		}
+		v.showFeedback(1, tc.kind, "ABCDE")
+		send()
+		advance(35 * time.Millisecond)
+		send(pressed(key.NameF1))
+		count := len(recorded.played)
+		advance(time.Hour)
+		if len(recorded.played) != count {
+			t.Fatal("dismissed typing completed in the background")
+		}
+	}
+}
 
 func TestFeedbackNavigationDismissesWithoutConsumingInput(t *testing.T) {
 	v := newPreviewView()

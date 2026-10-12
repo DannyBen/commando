@@ -181,3 +181,106 @@ func TestAutomaticRefreshDropsStaleReadsAndRetainsFailures(t *testing.T) {
 		}
 	}
 }
+
+func TestRepeatedAutomaticReadErrorDoesNotRestartItsMessage(t *testing.T) {
+	v := newPreviewView()
+	p := &v.panels[1]
+	start := time.Unix(1000, 0)
+	failed := func(err error) {
+		v.acceptAutoRefresh(loadResult{request: loadRequest{panel: 1, path: p.path, autoRefresh: true}, err: err})
+	}
+	failed(&os.PathError{Op: "read", Path: p.path, Err: os.ErrNotExist})
+	message := p.feedback.Current()
+	p.feedback.Frame(start, v.appearance.Feedback)
+	before, _ := p.feedback.Frame(start.Add(350*time.Millisecond), v.appearance.Feedback)
+	failed(&os.PathError{Op: "read", Path: p.path, Err: os.ErrNotExist})
+	after, _ := p.feedback.Frame(start.Add(350*time.Millisecond), v.appearance.Feedback)
+	if p.feedback.Current() != message || before.Text != after.Text || after.Typed || after.Finished {
+		t.Fatal("repeated automatic failure restarted typing or audio")
+	}
+	failed(os.ErrPermission)
+	if p.feedback.Current() == message || p.feedback.Current().Text != "Access denied" {
+		t.Fatal("different automatic failure was suppressed")
+	}
+	message = p.feedback.Current()
+	v.acceptAutoRefresh(loadResult{request: loadRequest{panel: 1, path: p.path, autoRefresh: true}, directory: browser.Directory{Path: p.path}})
+	failed(os.ErrPermission)
+	if p.feedback.Current() == message {
+		t.Fatal("a new failure after recovery was suppressed")
+	}
+}
+
+func TestRecycledFolderOpenInAdjacentPanelDoesNotRepeatFeedback(t *testing.T) {
+	root := t.TempDir()
+	child := filepath.Join(root, "child")
+	if err := os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(child, "kept.txt"), []byte("old"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	v := newBrowserView([]string{root, child, root}, nil)
+	t.Cleanup(v.finishOperations)
+	for pi := range v.panels {
+		waitLoaded(t, v, pi)
+	}
+	v.monitor = newDirectoryMonitor(func(ctx context.Context, _ string, _ func()) error {
+		<-ctx.Done()
+		return ctx.Err()
+	}, nil)
+	v.monitor.sync(v.fileOperationLocations())
+	watch := v.monitor.watches[directoryWatchKey(child)]
+	recycledPath := filepath.Join(t.TempDir(), "recycled")
+	v.loader.recycle = func(directory string, names []string) (browser.RecycleResult, error) {
+		// Model the shell recycling by moving the directory out of its old path.
+		if err := os.Rename(child, recycledPath); err != nil {
+			return browser.RecycleResult{}, err
+		}
+		return browser.RecycleResult{Directory: directory, Names: names}, nil
+	}
+	selectName(t, &v.panels[0], "child")
+	before := append([]entry(nil), v.panels[1].items...)
+	v.recycleSelected()
+	waitLoaded(t, v, 0)
+	if message := v.panels[0].feedback.Current(); message == nil || message.Text != "Item recycled" {
+		t.Fatal("recycle did not complete")
+	}
+	v.monitor.changed(watch)
+	runAutomaticRefresh(v, time.Now().Add(time.Second))
+	finishAutomaticRefresh(t, v)
+	p := &v.panels[1]
+	message := p.feedback.Current()
+	if message == nil || message.Text != "Folder not found" || !reflect.DeepEqual(p.items, before) {
+		t.Fatal("missing adjacent folder did not retain its listing and report one error")
+	}
+	for range 20 {
+		v.monitor.changed(watch)
+		runAutomaticRefresh(v, time.Now().Add(time.Second))
+		if p.refreshing || p.refreshNeeded || p.feedback.Current() != message {
+			t.Fatal("missing folder kept refreshing or restarting feedback")
+		}
+	}
+	p.feedback.Dismiss()
+	v.monitor.changed(watch)
+	runAutomaticRefresh(v, time.Now().Add(time.Second))
+	if p.feedback.Current() != nil || p.refreshing {
+		t.Fatal("dismissed missing-folder message reappeared")
+	}
+	if err := os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	v.active = 1
+	v.refreshPanel()
+	waitLoaded(t, v, 1)
+	v.monitor.sync(v.fileOperationLocations())
+	fresh := v.monitor.watches[directoryWatchKey(child)]
+	if fresh == watch {
+		t.Fatal("manual refresh did not re-arm the recovered folder")
+	}
+	v.monitor.changed(fresh)
+	runAutomaticRefresh(v, time.Now().Add(time.Second))
+	if !p.refreshing {
+		t.Fatal("recovered folder no longer refreshes automatically")
+	}
+	finishAutomaticRefresh(t, v)
+}

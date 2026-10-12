@@ -11,6 +11,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/text"
 	"github.com/dannyben/commando/internal/feedback"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 func (v *view) showFeedback(index int, kind feedback.Kind, text string) {
@@ -20,6 +21,9 @@ func (v *view) showFeedback(index int, kind feedback.Kind, text string) {
 func (v *view) dismissFeedback() {
 	for i := range v.panels {
 		v.panels[i].feedback.Dismiss()
+	}
+	if v.sounds != nil {
+		v.sounds.Stop()
 	}
 }
 
@@ -68,6 +72,7 @@ func (v *view) feedbackColor(kind feedback.Kind) color.NRGBA {
 func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 	p := &v.panels[index]
 	if frame, ownsFooter := p.feedback.Frame(gtx.Now, v.appearance.Feedback); ownsFooter {
+		v.playFeedbackSound(frame)
 		if !frame.Next.IsZero() {
 			gtx.Execute(op.InvalidateCmd{At: frame.Next})
 		}
@@ -79,6 +84,30 @@ func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 	}
 	return v.columns(gtx, entry{name: status, size: p.positionLabel()}, v.appearance.Colors.Foreground,
 		v.appearance.Colors.Muted, v.appearance.SmallTextSize, gtx.Dp(84))
+}
+
+func (v *view) playFeedbackSound(frame feedback.Frame) {
+	if v.sounds == nil {
+		return
+	}
+	if frame.Finished {
+		var cue sound.Name
+		switch frame.Kind {
+		case feedback.Success:
+			cue = sound.MessageSuccess
+		case feedback.Warning:
+			cue = sound.MessageWarning
+		case feedback.Error:
+			cue = sound.MessageError
+		}
+		if cue != "" {
+			v.sounds.Play(cue)
+			return
+		}
+	}
+	if frame.Typed {
+		v.sounds.Play(sound.MessageTyping)
+	}
 }
 
 func readError(err error) string {

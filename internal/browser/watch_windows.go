@@ -2,6 +2,7 @@ package browser
 
 import (
 	"context"
+	"os"
 
 	"golang.org/x/sys/windows"
 )
@@ -42,7 +43,20 @@ func WatchDirectory(ctx context.Context, path string, changed func()) error {
 		if event == windows.WAIT_OBJECT_0 {
 			return ctx.Err()
 		}
+		if event != windows.WAIT_OBJECT_0+1 {
+			continue
+		}
 		changed()
+		// Recycling moves the watched directory out from under its original
+		// path. Its notification handle can still refer to the moved directory;
+		// never re-arm that handle once the requested location is gone.
+		info, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return &os.PathError{Op: "watch", Path: path, Err: os.ErrNotExist}
+		}
 		if err := windows.FindNextChangeNotification(handle); err != nil {
 			return err
 		}

@@ -46,10 +46,13 @@ type ThemeColors struct {
 
 // Each kind starts with the same profile. The theme stores independent copies.
 var defaultFeedbackAnimation = feedback.Animation{
-	Enabled:        true,
-	CharacterDelay: 35 * time.Millisecond,
-	BlinkInterval:  160 * time.Millisecond,
-	Blinks:         2,
+	Enabled:             true,
+	CharacterDelay:      35 * time.Millisecond,
+	BlinkInterval:       160 * time.Millisecond,
+	Blinks:              0, // Set to 2 to restore the text pulse (160 ms per state).
+	Cursor:              "█",
+	CursorBlinkInterval: 350 * time.Millisecond,
+	CursorBlinks:        2,
 }
 
 // Edit these values to adjust the application's theme, then rebuild.

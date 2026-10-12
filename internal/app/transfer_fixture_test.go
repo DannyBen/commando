@@ -79,6 +79,8 @@ func fixtureTransfer(request browser.TransferRequest) (browser.TransferResult, e
 		}
 		file := browser.Entry{Name: name, Directory: info.IsDir(), Bytes: info.Size(), SizeKnown: info.Mode().IsRegular(), Modified: info.ModTime()}
 		result.Items = append(result.Items, browser.TransferredItem{Source: original, Entry: file, Moved: request.Move})
+		result.Summary.Requested = len(request.Paths)
+		result.Summary.Completed++
 		result.Changes = append(result.Changes, browser.TransferredPath{Source: source, Destination: destination, Directory: info.IsDir(), Moved: request.Move})
 	}
 	return result, nil
