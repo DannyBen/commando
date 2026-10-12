@@ -54,8 +54,10 @@ module/executable and `Commando` for the window title and data-folder name.
 - Location and name editors share EditorText and TextSelection colors.
   Support Shift+Insert paste through the native Insert bridge on Windows and
   through Gio key events elsewhere; keep browsing marks separate from editors.
-- Left/Right and Shift+Tab/Tab switch panels without wrapping. While editing a
-  location, Tab/Shift+Tab retain editor text, selection and focus.
+- Left/Right switches panels without wrapping. Tab/Shift+Tab cycles panels
+  endlessly forward/backward. Browsing and inline interactions share the same
+  navigation policy. While editing a location or name, Tab/Shift+Tab retain
+  editor text, selection and focus.
 - Ctrl+Left/Right opens the selected folder, parent row or drive in the adjacent
   panel and moves focus there. Preserve the source listing, selection and scroll.
   Files, outer edges and busy panels produce no action. Failed reads retain the
@@ -107,6 +109,21 @@ module/executable and `Commando` for the window title and data-folder name.
   and the normal selection colors. InlineEdge also identifies new-name drafts;
   keep editor placeholders distinct from actionable options. Defer arriving
   choices until an active editor closes, preserving its text, selection and focus.
+- F5/F6 captures marked files/folders, otherwise the current item, for direct
+  copy/move without reading or changing the file clipboard or cut appearance.
+  Start with the inline Copy here / Move here action in the pane on the right,
+  falling back to the pane on the left at the right edge. Left/Right and
+  Shift+Tab/Tab carry the shared inline action between destination panels,
+  skipping the source. Arrows stop at the edges; Tab cycles endlessly through
+  destinations using the shared panel navigation policy. Enter on Copy here /
+  Move here transfers into the pane's open folder, never its highlighted child.
+  Ignore shortcuts in editors or busy source panes; refuse drive lists and busy
+  destinations without losing targeting. Escape restores source focus; clicking
+  a real row cancels and performs normal selection. Restore visited viewports,
+  marks and current items. Confirmation keeps destination focus; completion,
+  Windows cancellation and failures preserve subsequent browsing. Reuse the
+  worker, native Windows engine and reconciliation; alias destinations retain
+  existing duplication/move-no-op rules.
 - Ctrl+D duplicates marks, otherwise the current file/folder, without reading
   or changing the clipboard or cut appearance. Same-folder copy/paste uses the
   same flow, resolving SUBST and parent aliases through the worker. One item

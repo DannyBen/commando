@@ -34,7 +34,7 @@ func (v *view) acceptFileOperation(result loadResult) {
 	}
 	locations := result.request.transfer.locations
 	refreshFailed := v.applyTransferPanels(result, locations)
-	if !result.request.transfer.duplicate {
+	if result.request.transfer.snapshot == nil {
 		v.rememberCutClipboard(result.clipboard, locations, result.locations)
 	}
 	v.showTransferResult(result, refreshFailed)

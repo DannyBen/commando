@@ -69,7 +69,7 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 			moved = append(moved, item.Source)
 		}
 	}
-	if len(moved) > 0 {
+	if len(moved) > 0 && request.transfer.snapshot == nil {
 		result.clipboard, result.clipboardErr = l.completeClipboard(snapshot, moved)
 	}
 	if result.transferred.Attempted {

@@ -20,13 +20,15 @@ type inlineActionSession struct {
 	headers              []string
 	options              []string
 	choose               func(int)
+	canChoose            func() bool
+	navigate             func(direction int, cycle bool) // Optional navigation that carries the inline interaction between panels.
 	cancel               func()
 	previousPosition     layout.Position
 	previousReveal       bool
 }
 
 func (v *view) startInlineActions(panel, row int, title, detail string, options []string, choose func(int), cancel func()) {
-	if len(options) == 0 || v.actions != nil || v.activeEditor() != nil {
+	if v.actions != nil || v.activeEditor() != nil {
 		return
 	}
 	var headers []string
@@ -34,6 +36,9 @@ func (v *view) startInlineActions(panel, row int, title, detail string, options 
 		if value != "" {
 			headers = append(headers, value)
 		}
+	}
+	if len(headers) == 0 && len(options) == 0 {
+		return
 	}
 	p := &v.panels[panel]
 	v.actions = &inlineActionSession{panel: panel, row: max(0, min(row, len(p.items))), subjectRow: -1, headers: headers,
@@ -65,6 +70,9 @@ func (v *view) cancelInlineActions() {
 }
 
 func (v *view) chooseInlineAction() {
+	if len(v.actions.options) == 0 || v.actions.canChoose != nil && !v.actions.canChoose() {
+		return
+	}
 	a := v.stopInlineActions()
 	if a.choose != nil {
 		a.choose(a.selected)
@@ -81,7 +89,7 @@ func (v *view) inlineActionKey(ke key.Event) {
 		if ke.Modifiers&key.ModShift != 0 {
 			direction = -1
 		}
-		v.switchPanel(direction)
+		v.navigateInlineActions(direction, true)
 		return
 	}
 	if ke.Modifiers != 0 {
@@ -91,19 +99,27 @@ func (v *view) inlineActionKey(ke key.Event) {
 	case key.NameUpArrow:
 		a.selected = max(0, a.selected-1)
 	case key.NameDownArrow:
-		a.selected = min(len(a.options)-1, a.selected+1)
+		a.selected = max(0, min(len(a.options)-1, a.selected+1))
 	case key.NameHome:
 		a.selected = 0
 	case key.NameEnd:
-		a.selected = len(a.options) - 1
+		a.selected = max(0, len(a.options)-1)
 	case key.NameReturn, key.NameEnter:
 		v.chooseInlineAction()
 	case key.NameEscape:
 		v.cancelInlineActions()
 	case key.NameLeftArrow:
-		v.switchPanel(-1)
+		v.navigateInlineActions(-1, false)
 	case key.NameRightArrow:
-		v.switchPanel(1)
+		v.navigateInlineActions(1, false)
+	}
+}
+
+func (v *view) navigateInlineActions(direction int, cycle bool) {
+	if navigate := v.actions.navigate; navigate != nil {
+		navigate(direction, cycle)
+	} else {
+		v.switchPanelTo(v.panelNeighbor(direction, cycle, -1))
 	}
 }
 

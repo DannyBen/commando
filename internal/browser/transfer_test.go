@@ -9,6 +9,37 @@ import (
 	"testing"
 )
 
+func TestShellTransferCompletionStatuses(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		hr        uint32
+		completed bool
+	}{
+		{"OK", 0, true},
+		{"merge", 0x00270006, true},
+		{"moved without processing children", 0x00270008, true},
+		{"already done", 0x0027000a, true},
+		{"keep both", 0x0027000c, true},
+		{"collision resolved", 0x0027000e, true},
+		{"false", 1, false},
+		{"yes decision", 0x00270001, false},
+		{"not handled", 0x00270003, false},
+		{"retry", 0x00270004, false},
+		{"ignored", 0x00270005, false},
+		{"pending", 0x0027000b, false},
+		{"close program", 0x0027000d, false},
+		{"pause", 0x0027000f, false},
+		{"cancelled", 0x80270000, false},
+		{"access denied", 0x80070005, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := shellTransferCompleted(tc.hr); got != tc.completed {
+				t.Fatalf("completion status 0x%08x: completed=%v, want %v", tc.hr, got, tc.completed)
+			}
+		})
+	}
+}
+
 func TestShellJournalBoundsLargeFolderBookkeepingAndTracksOpenDescendants(t *testing.T) {
 	root, target := filepath.Join(t.TempDir(), "folder"), filepath.Join(t.TempDir(), "folder (2)")
 	journal := newTransferJournal(TransferRequest{Paths: []string{root}, OpenFolders: []string{filepath.Join(root, "nested", "open")}})

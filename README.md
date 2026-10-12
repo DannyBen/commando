@@ -21,7 +21,8 @@ or panels start at home.
 ## Keyboard Navigation
 
 - Up/Down selects a file; Home/End and Page Up/Down navigate longer lists.
-- Left/Right or Shift+Tab/Tab switches panels without wrapping.
+- Left/Right switches panels without wrapping. Tab/Shift+Tab cycles forward or
+  backward through all panels, wrapping at the edges.
 - Ctrl+Left/Right opens the selected folder in the adjacent panel and moves
   focus there, preserving the source panel. The outer edges do not wrap.
 - Type a filename prefix to select it without filtering. Matching is
@@ -104,6 +105,17 @@ panels and drive lists ignore the shortcut. Submitted creation finishes before
 the editor closes.
 
 ## Copying, Cutting and Pasting
+
+F5 copies marked files and folders, or the current item when nothing is marked;
+F6 moves them. Both select the panel on the right, or the panel on the left when
+there is no panel on the right, and show an inline `Copy here` or `Move here`
+action. Left/Right or Shift+Tab/Tab moves the action between destination panels,
+skipping the source. Arrows stop at the edges; Tab/Shift+Tab cycles endlessly.
+Enter starts the transfer into that panel's
+open folder, regardless of its highlighted row, and keeps destination focus.
+Escape cancels and restores source focus; clicking a file row cancels and selects
+that row. Completion, cancellation and failures from Windows preserve any
+subsequent panel navigation. These shortcuts leave the clipboard untouched.
 
 Ctrl+C copies marked files and folders to the clipboard; Ctrl+X cuts them.
 With no marks, both use the current item. Ctrl+V pastes into the active panel's

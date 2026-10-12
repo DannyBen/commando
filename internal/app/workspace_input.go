@@ -97,6 +97,8 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModAlt},
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameF2},
+			key.Filter{Focus: &v.focus, Name: key.NameF5},
+			key.Filter{Focus: &v.focus, Name: key.NameF6},
 			key.Filter{Focus: &v.focus, Name: key.NameEscape},
 			key.Filter{Focus: &v.focus, Name: key.NameUpArrow, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameDownArrow, Optional: key.ModShift},
@@ -177,6 +179,11 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	case key.NameF2:
 		v.startName(gtx, nameRename)
 		return
+	case key.NameF5, key.NameF6:
+		if ke.Modifiers == 0 {
+			v.startPanelTransfer(ke.Name == key.NameF6)
+		}
+		return
 	case key.NameDeleteForward:
 		if ke.Modifiers == 0 {
 			v.recycleSelected()
@@ -187,7 +194,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		if ke.Modifiers&key.ModShift != 0 {
 			direction = -1
 		}
-		v.switchPanel(direction)
+		v.switchPanelTo(v.panelNeighbor(direction, true, -1))
 		return
 	case "M":
 		direction := 1
@@ -282,13 +289,4 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	}
 	p.selected = next
 	p.reveal, p.err = true, nil
-}
-
-func (v *view) switchPanel(direction int) {
-	target := max(0, min(len(v.panels)-1, v.active+direction))
-	if target != v.active && v.actions != nil {
-		v.cancelInlineActions()
-	}
-	v.panels[v.active].prefix = ""
-	v.active = target
 }

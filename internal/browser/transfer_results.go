@@ -14,6 +14,23 @@ type transferObservation struct {
 	directory           bool
 }
 
+// Classify native Windows completion statuses separately from COM so the
+// success/skip boundary is exercised by development-platform tests as well.
+func shellTransferCompleted(hr uint32) bool {
+	// COPYENGINE success statuses from ShErrors.h; decision/control statuses
+	// are deliberately excluded even when SUCCEEDED(hr) would be true.
+	switch hr {
+	case 0x00270008:
+		// DONT_PROCESS_CHILDREN is a completed direct move; the shell needs
+		// no recursive child work. It is not a skipped source item.
+		return true
+	case 0, 0x00270006, 0x0027000a, 0x0027000c, 0x0027000e:
+		return true // S_OK, MERGE, ALREADY_DONE, KEEP_BOTH, COLLISIONRESOLVED.
+	default:
+		return false
+	}
+}
+
 func transferResults(request TransferRequest, originals []string, observations []transferObservation, aborted bool, skipped int) TransferResult {
 	result := TransferResult{Directory: request.Directory, Attempted: true, Aborted: aborted, Skipped: skipped}
 	for _, observation := range observations {

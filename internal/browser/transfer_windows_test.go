@@ -11,19 +11,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func TestWindowsTransferCompletionStatusesExcludeControlResults(t *testing.T) {
-	for _, hr := range []uint32{0, 0x00270006, 0x0027000a, 0x0027000c, 0x0027000e} {
-		if !shellTransferCompleted(hr) {
-			t.Fatalf("completed result refused: %x", hr)
-		}
-	}
-	for _, hr := range []uint32{1, 0x00270001, 0x00270003, 0x00270004, 0x00270005, 0x00270008, 0x0027000b, 0x0027000d, 0x80270000, 0x80070005} {
-		if shellTransferCompleted(hr) {
-			t.Fatalf("control/failure result accepted: %x", hr)
-		}
-	}
-}
-
 func TestWindowsTransferSinkABIRecordsOriginalBeforeMoveAndActualNewName(t *testing.T) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -66,6 +53,62 @@ func TestWindowsTransferSinkABIRecordsOriginalBeforeMoveAndActualNewName(t *test
 	observations, skipped, err = sink.snapshot()
 	if err != nil || skipped != 1 || len(observations) != 1 {
 		t.Fatal("ignored copy accepted as completed")
+	}
+	runtime.KeepAlive(sink)
+}
+
+func TestWindowsTransferSinkCountsTwoDirectMoves(t *testing.T) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	if err := windows.CoInitializeEx(0, windows.COINIT_APARTMENTTHREADED); err != nil && err != syscall.Errno(1) {
+		t.Fatal(err)
+	}
+	defer windows.CoUninitialize()
+	root := t.TempDir()
+	target := filepath.Join(root, "target")
+	if err := os.Mkdir(target, 0700); err != nil {
+		t.Fatal(err)
+	}
+	request := TransferRequest{Paths: []string{filepath.Join(root, "first.txt"), filepath.Join(root, "second.txt")}, Directory: target, Move: true}
+	sink := newTransferSink(request)
+	defer sink.releaseSources()
+	this := uintptr(unsafe.Pointer(sink))
+	for _, source := range request.Paths {
+		if err := os.WriteFile(source, []byte("data"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		item, err := shellItem(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer item.call(2)
+		ptr := uintptr(unsafe.Pointer(item))
+		if hr, _, _ := syscall.SyscallN(sink.vtable[7], this, 0, ptr, 0, 0); hr != 0 {
+			t.Fatalf("pre-move refused: %x", hr)
+		}
+		destination := filepath.Join(target, filepath.Base(source))
+		if err := os.Rename(source, destination); err != nil {
+			t.Fatal(err)
+		}
+		created, err := shellItem(destination)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer created.call(2)
+		// Same-volume native moves report this successful completion status.
+		if hr, _, _ := syscall.SyscallN(sink.vtable[8], this, 0, ptr, 0, 0, 0x00270008, uintptr(unsafe.Pointer(created))); hr != 0 {
+			t.Fatalf("post-move failed: %x", hr)
+		}
+	}
+	observations, skipped, err := sink.snapshot()
+	result := transferResults(request, request.Paths, observations, false, skipped)
+	if err != nil || result.Skipped != 0 || len(result.Items) != 2 || len(result.Changes) != 2 {
+		t.Fatalf("two completed moves reported incorrectly: %+v %v", result, err)
+	}
+	for _, item := range result.Items {
+		if !item.Moved {
+			t.Fatal("completed move not confirmed")
+		}
 	}
 	runtime.KeepAlive(sink)
 }
@@ -135,7 +178,7 @@ func TestWindowsShellTransfers(t *testing.T) {
 			t.Fatal(err)
 		}
 		result, err := Transfer(TransferRequest{Paths: []string{filepath.Join(source, "folder"), filepath.Join(source, "file.txt")}, Directory: directory, Move: move})
-		if err != nil || result.Aborted || len(result.Items) != 2 {
+		if err != nil || result.Aborted || result.Skipped != 0 || len(result.Items) != 2 {
 			t.Fatalf("native copy/move: %+v %v", result, err)
 		}
 		for _, item := range result.Items {

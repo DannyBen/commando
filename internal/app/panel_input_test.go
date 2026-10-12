@@ -72,7 +72,7 @@ func TestTabSwitchesPanels(t *testing.T) {
 	for _, tc := range []struct {
 		modifiers key.Modifiers
 		want      int
-	}{{0, 1}, {0, 2}, {0, 2}, {key.ModShift, 1}, {key.ModShift, 0}, {key.ModShift, 0}} {
+	}{{0, 1}, {0, 2}, {0, 0}, {0, 1}, {key.ModShift, 0}, {key.ModShift, 2}, {key.ModShift, 1}, {key.ModShift, 0}} {
 		// Mirror Gio's Window: unhandled system Tab invokes widget focus traversal.
 		router.WakeupTime()
 		router.Queue(input.SystemEvent{Event: key.Event{

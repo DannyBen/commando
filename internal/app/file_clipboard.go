@@ -12,8 +12,8 @@ type fileClipboardRequest struct {
 
 type transferRequest struct {
 	locations []string
-	duplicate bool // Direct duplication does not read or change the clipboard.
-	snapshot  *browser.FileClipboard
+	duplicate bool                   // Direct duplication does not read or change the clipboard.
+	snapshot  *browser.FileClipboard // Captured selection; bypasses system clipboard reads and writes.
 	owner     uintptr
 }
 

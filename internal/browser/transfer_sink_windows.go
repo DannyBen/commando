@@ -132,17 +132,6 @@ func (s *transferSink) post(item, target, created *shellObject, name *uint16, hr
 	return 0
 }
 
-func shellTransferCompleted(hr uint32) bool {
-	// COPYENGINE success statuses from ShErrors.h; decision/control statuses
-	// are deliberately excluded even when SUCCEEDED(hr) would be true.
-	switch hr {
-	case 0, 0x00270006, 0x0027000a, 0x0027000c, 0x0027000e:
-		return true // S_OK, MERGE, ALREADY_DONE, KEEP_BOTH, COLLISIONRESOLVED.
-	default:
-		return false
-	}
-}
-
 func (s *transferSink) fail(err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

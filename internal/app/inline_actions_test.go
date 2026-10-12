@@ -131,9 +131,7 @@ func TestInlineActionsStayOpenWhenPanelSwitchHitsOuterEdge(t *testing.T) {
 		event key.Event
 	}{
 		{0, pressed(key.NameLeftArrow)},
-		{0, modified(key.NameTab, key.ModShift)},
 		{2, pressed(key.NameRightArrow)},
-		{2, pressed(key.NameTab)},
 	} {
 		v := newPreviewView()
 		v.active = tc.panel
@@ -143,6 +141,26 @@ func TestInlineActionsStayOpenWhenPanelSwitchHitsOuterEdge(t *testing.T) {
 		send(tc.event)
 		if v.active != tc.panel || v.actions == nil || cancelled {
 			t.Fatal("blocked panel switch cancelled the choice without leaving")
+		}
+	}
+}
+
+func TestInlineActionsUseSharedTabCycling(t *testing.T) {
+	for _, tc := range []struct {
+		panel, target int
+		event         key.Event
+	}{
+		{0, 2, modified(key.NameTab, key.ModShift)},
+		{2, 0, pressed(key.NameTab)},
+	} {
+		v := newPreviewView()
+		v.active = tc.panel
+		cancelled := false
+		v.startInlineActions(tc.panel, 4, "", "", []string{"Overwrite", "Cancel"}, nil, func() { cancelled = true })
+		send, _ := panelInputFrames(v)
+		send(tc.event)
+		if v.active != tc.target || v.actions != nil || !cancelled {
+			t.Fatal("ordinary inline interaction did not use shared Tab cycling")
 		}
 	}
 }
