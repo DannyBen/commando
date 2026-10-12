@@ -19,6 +19,18 @@ module/executable and `Commando` for the window title and data-folder name.
 ## Behavior to Preserve
 
 - Three independent panels retain their own selection and scroll position.
+- Ctrl+H cycles each pane independently through All, Hide Hidden, and Hide Hidden
+  + dotfiles. Windows hidden attributes and leading-dot names are separate.
+  Always exclude entries carrying both hidden and system attributes; retain
+  parents and drives. Store each pane's visibility choice with metadata,
+  independently of startup paths; missing/unknown choices default to All.
+  Keep the complete listing cached and filter its visible projection without
+  filesystem reads. Preserve surviving current items, marks and viewport anchors;
+  clear marks on entries that become invisible and select the nearest surviving
+  row when needed. Keep creation, rename, recycle and transfer updates in both
+  the complete cache and visible listing. Choices follow swapped panes.
+  Editors, inline interactions, busy panes and drive screens ignore Ctrl+H.
+  Report the mode through the existing contextual footer.
 - Use browser.CompareEntries for reads, renames and inserted entries. Keep
   parents and folders first; compare files by stem, then final extension, and
   folders by whole name. Ignore case and compare ASCII number runs by value

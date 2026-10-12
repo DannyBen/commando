@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"runtime"
+	"slices"
 	"strings"
 
 	"gioui.org/widget"
@@ -93,6 +94,10 @@ func (p *panel) removeEntries(names []string) {
 	for _, name := range names {
 		removed[key(name)] = true
 	}
+	p.ensureEntries()
+	p.entries = slices.DeleteFunc(p.entries, func(file browser.Entry) bool {
+		return !file.Parent && removed[key(file.Name)]
+	})
 	oldSelected, oldFirst := p.selected, p.list.Position.First
 	items := make([]entry, 0, len(p.items))
 	marks := make(map[int]bool)

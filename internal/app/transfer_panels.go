@@ -3,6 +3,7 @@ package app
 import (
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 
 	"gioui.org/widget"
@@ -62,14 +63,17 @@ func (p *panel) reconcileTransferListing(directory browser.Directory) {
 			marked[transferNameKey(p.items[row].file.Name)] = true
 		}
 	}
-	p.items = make([]entry, len(directory.Entries))
+	p.entries = slices.Clone(directory.Entries)
+	files := p.visibleEntries()
+	p.items = make([]entry, len(files))
 	p.marks = make(map[int]bool)
 	p.selected = -1
 	if len(p.items) > 0 {
 		p.selected = max(0, min(previousRow, len(p.items)-1))
 	}
+	p.list.Position.First = max(0, min(first, len(p.items)-1))
 	selectedSurvives := false
-	for row, file := range directory.Entries {
+	for row, file := range files {
 		size := "?"
 		if file.Directory {
 			size = "—"

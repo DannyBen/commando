@@ -16,21 +16,23 @@ type entry struct {
 }
 
 type panel struct {
-	path      string // Last physical directory, retained while displaying drives.
-	drives    bool
-	items     []entry
-	rows      map[int]*widget.Clickable
-	list      widget.List
-	selected  int
-	marks     map[int]bool
-	markRange *selectionRange
-	metadata  metadataColumn
-	reveal    bool
-	loading   bool
-	err       error
-	prefix    string
-	prefixAt  time.Time
-	feedback  feedback.Channel
+	path       string // Last physical directory, retained while displaying drives.
+	drives     bool
+	items      []entry
+	entries    []browser.Entry // Complete listing; items is the currently visible projection.
+	rows       map[int]*widget.Clickable
+	list       widget.List
+	selected   int
+	marks      map[int]bool
+	markRange  *selectionRange
+	metadata   metadataColumn
+	visibility visibilityMode
+	reveal     bool
+	loading    bool
+	err        error
+	prefix     string
+	prefixAt   time.Time
+	feedback   feedback.Channel
 }
 
 type view struct {

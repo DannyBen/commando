@@ -1,6 +1,10 @@
 package app
 
-import "time"
+import (
+	"strconv"
+	"strings"
+	"time"
+)
 
 // These directories and files are illustrative, not read from the host machine.
 func samplePanels() []panel {
@@ -57,6 +61,18 @@ func samplePanels() []panel {
 			item.file.Name = item.name
 			item.file.Directory = item.size == "—"
 			item.file.Parent = item.name == ".."
+			if !item.file.Directory {
+				value, unit, _ := strings.Cut(item.size, " ")
+				if bytes, err := strconv.ParseFloat(value, 64); err == nil {
+					switch unit {
+					case "KB":
+						bytes *= 1024
+					case "MB":
+						bytes *= 1024 * 1024
+					}
+					item.file.Bytes, item.file.SizeKnown = int64(bytes), true
+				}
+			}
 			if !item.file.Parent {
 				item.file.Modified = time.Date(2026, time.October, 1+row%10, 12, 0, 0, 0, time.UTC)
 			}

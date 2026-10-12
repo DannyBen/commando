@@ -24,6 +24,13 @@ func (v *view) applyRename(result loadResult, oldName, newName string) {
 			continue
 		}
 		if samePath(result.locations[pi], result.mutationDirectory) {
+			p.ensureEntries()
+			for i := range p.entries {
+				if p.entries[i].Name == oldName {
+					p.entries[i].Name = newName
+				}
+			}
+			slices.SortFunc(p.entries, browser.CompareEntries)
 			firstName := ""
 			if first := p.list.Position.First; first >= 0 && first < len(p.items) {
 				firstName = p.items[first].name
@@ -65,6 +72,7 @@ func (v *view) applyRename(result loadResult, oldName, newName string) {
 				}
 			}
 			p.rows = make(map[int]*widget.Clickable)
+			p.refilter()
 			if pi == v.active {
 				p.reveal = true
 			}

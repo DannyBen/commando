@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gioui.org/layout"
@@ -36,6 +37,7 @@ func newLocationView(locations []panelState, active int, invalidate func(), rest
 	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate)
 	for i, location := range locations {
 		v.panels[i].metadata = metadataFromState(location.Metadata)
+		v.panels[i].visibility = visibilityFromState(location.Visibility)
 		if location.Drives {
 			v.load(i, "", location.Path)
 		} else {
@@ -123,7 +125,9 @@ func (v *view) acceptLoad(result loadResult) {
 	if !p.drives {
 		p.path = result.directory.Path
 	}
-	p.items = make([]entry, len(result.directory.Entries))
+	p.entries = slices.Clone(result.directory.Entries)
+	files := p.visibleEntries()
+	p.items = make([]entry, len(files))
 	p.selected = -1
 	if len(p.items) > 0 {
 		p.selected = 0
@@ -131,7 +135,7 @@ func (v *view) acceptLoad(result loadResult) {
 			p.selected = max(0, min(previousRow, len(p.items)-1))
 		}
 	}
-	for i, file := range result.directory.Entries {
+	for i, file := range files {
 		name, size := file.Name, "?"
 		if file.Directory {
 			size = "—"

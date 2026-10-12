@@ -54,6 +54,20 @@ variations and copies. Names compare case-insensitively, with numbers in numeric
 order (`file2` before `file10`). Folder names compare whole; dotfiles such as
 `.env` retain their full name.
 
+## File Visibility
+
+Ctrl+H cycles the active panel through All, Hide Hidden, and Hide Hidden +
+dotfiles. Hidden uses the Windows hidden attribute; dotfiles are names starting
+with a dot. The rule applies to files and folders. The parent row stays visible.
+Entries carrying both Windows hidden and system attributes remain excluded in
+every mode, including All.
+
+Each panel saves its choice, defaults to All, and retains it when navigating or
+swapping panels. Startup folder arguments preserve those choices. The panel
+footer reports the new mode. Switching uses the cached listing, keeps the current
+item and scroll where possible, and clears marks only on entries that become
+invisible. Busy panels, drive lists and editors ignore the shortcut.
+
 ## Metadata Column
 
 Ctrl+M cycles the active panel through None, Extension, Size and Modified;

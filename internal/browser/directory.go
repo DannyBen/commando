@@ -12,6 +12,7 @@ import (
 type Entry struct {
 	Name, Path        string
 	Directory, Parent bool
+	Hidden, System    bool // Windows attributes of this entry, independent of its name.
 	Bytes             int64
 	SizeKnown         bool
 	Modified          time.Time // Zero when metadata is unavailable.
@@ -38,6 +39,9 @@ func ReadDirectory(path string) (Directory, error) {
 	for _, de := range entries {
 		item := Entry{Name: de.Name(), Directory: de.IsDir()}
 		info, err := de.Info()
+		if err == nil {
+			setEntryAttributes(&item, info)
+		}
 		if de.Type()&os.ModeSymlink != 0 {
 			// Follow folder links for navigation; retain broken links as entries.
 			info, err = os.Stat(filepath.Join(absolute, de.Name()))

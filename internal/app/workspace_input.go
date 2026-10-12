@@ -110,6 +110,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: "V", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "M", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "R", Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: "H", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "N", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameRightArrow, Optional: key.ModShift},
@@ -212,6 +213,11 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		return
 	case "R":
 		v.refreshPanel()
+		return
+	case "H":
+		if ke.Modifiers == key.ModCtrl {
+			v.cycleVisibility()
+		}
 		return
 	case "N":
 		kind := nameCreateFile

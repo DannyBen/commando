@@ -29,6 +29,11 @@ func (v *view) applyCreatedEntry(result loadResult) {
 
 // Shared by inline creation and clipboard transfers.
 func (p *panel) insertCreatedEntry(file browser.Entry, selectCreated bool) {
+	p.cacheEntry(file)
+	if !p.visibility.shows(file) {
+		p.refilter()
+		return
+	}
 	firstName := ""
 	if first := p.list.Position.First; first >= 0 && first < len(p.items) {
 		firstName = p.items[first].file.Name
@@ -71,6 +76,11 @@ func (p *panel) insertCreatedEntry(file browser.Entry, selectCreated bool) {
 // removed entry. Marks, selection and viewport belong to its destination path.
 func (p *panel) applyTransferredEntry(item browser.TransferredItem) {
 	if item.Replaced {
+		p.cacheEntry(item.Entry)
+		if !p.visibility.shows(item.Entry) {
+			p.refilter()
+			return
+		}
 		for row, existing := range p.items {
 			if samePath(existing.file.Name, item.Entry.Name) && existing.file.Directory == item.Entry.Directory {
 				size := "—"

@@ -112,7 +112,9 @@ func prepareTransfer(request TransferRequest) (TransferRequest, error) {
 }
 
 func entryFromInfo(path string, info fs.FileInfo) Entry {
-	return Entry{Name: filepath.Base(path), Directory: info.IsDir(), Bytes: info.Size(), SizeKnown: info.Mode().IsRegular(), Modified: info.ModTime()}
+	item := Entry{Name: filepath.Base(path), Directory: info.IsDir(), Bytes: info.Size(), SizeKnown: info.Mode().IsRegular(), Modified: info.ModTime()}
+	setEntryAttributes(&item, info)
+	return item
 }
 
 func sameTransferPath(a, b string) bool {
