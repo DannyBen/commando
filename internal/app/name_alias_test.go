@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gioui.org/io/key"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 func nameAliasView(t *testing.T, descendants bool, sourceAlias bool) (*view, string, string) {
@@ -121,13 +122,17 @@ func TestRenameFileRetainsAliasSelectionMarksAndViewportAfterReordering(t *testi
 }
 
 func TestNameCompletionIgnoresPanelWhichLeftCapturedLocation(t *testing.T) {
-	v, _, _ := nameAliasView(t, false, false)
-	send, _ := panelInputFrames(v)
-	send(modified("N", key.ModCtrl))
-	send(replaceCreate(v, "created"))
-	send(pressed(key.NameReturn))
+	v, root, _ := nameAliasView(t, false, false)
+	// Capture the operation before navigating, then deliver its completion
+	// afterward. A fast worker must not finish before the scenario is arranged.
+	request := loadRequest{panel: 0, path: v.panels[0].path, locations: v.fileOperationLocations()}
+	result := loadResult{request: request, locations: resolveFileLocations(request.locations),
+		mutationDirectory: root, created: browser.Entry{Name: "created", SizeKnown: true}}
 	v.panels[1].path = t.TempDir()
-	waitCreated(t, v)
+	v.applyCreatedEntry(result)
+	if p := &v.panels[0]; p.items[p.selected].name != "created" {
+		t.Fatal("completion did not update the panel still showing the directory")
+	}
 	for _, item := range v.panels[1].items {
 		if item.name == "created" {
 			t.Fatal("completion inserted into a panel which left the directory")
