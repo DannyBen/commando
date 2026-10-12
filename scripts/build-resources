@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+x86_64-w64-mingw32-windres \
+  --input scripts/commando.rc \
+  --output resource_windows_amd64.syso \
+  --output-format coff \
+  --target pe-x86-64

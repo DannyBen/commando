@@ -1,0 +1,49 @@
+version: 2
+
+project_name: commando
+
+builds:
+  - id: commando
+    main: .
+    binary: commando
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -H windowsgui
+    hooks:
+      pre: scripts/build-resources
+      post: rm -f resource_windows_amd64.syso
+
+archives:
+  - ids:
+      - commando
+    formats:
+      - zip
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE*
+      - src: internal/app/fonts/OFL.txt
+        dst: FONT-LICENSE.txt
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    include:
+      - "^- "
+
+release:
+  prerelease: true
+  header: |
+    Commando is a work in progress. This is an early Windows preview.

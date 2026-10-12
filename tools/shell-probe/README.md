@@ -63,5 +63,5 @@ For a Linux headless layout preview:
 
 ```sh
 EGL_PLATFORM=surfaceless GOFLAGS='-tags=novulkan,nox11' \
-  go run ./cmd/shell-probe --png tmp/agent/screenshots/shell-probe.png
+  go run ./tools/shell-probe --png tmp/agent/screenshots/shell-probe.png
 ```
