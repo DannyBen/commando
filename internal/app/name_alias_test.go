@@ -11,7 +11,7 @@ import (
 
 func nameAliasView(t *testing.T, descendants bool, sourceAlias bool) (*view, string, string) {
 	t.Helper()
-	root := t.TempDir()
+	root := resolvedTempDir(t)
 	for _, name := range []string{"a.txt", "middle.txt", "z.txt"} {
 		if err := os.WriteFile(filepath.Join(root, name), []byte(name), 0600); err != nil {
 			t.Fatal(err)

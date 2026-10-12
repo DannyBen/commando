@@ -84,7 +84,7 @@ func writeTransferFiles(t *testing.T, root string, files map[string]string) {
 }
 
 func TestTransferPreparationDispatchesConflictsWithoutMutating(t *testing.T) {
-	source, target := t.TempDir(), t.TempDir()
+	source, target := resolvedTempDir(t), resolvedTempDir(t)
 	writeTransferFiles(t, source, map[string]string{"same.txt": "source"})
 	writeTransferFiles(t, target, map[string]string{"same.txt": "target"})
 	request, err := prepareTransfer(TransferRequest{Paths: []string{filepath.Join(source, "same.txt")}, Directory: target, Move: true, Owner: 42})
@@ -127,7 +127,7 @@ func TestDuplicatePreparationKeepsEditableNamesAndClipboardIndependent(t *testin
 }
 
 func TestTransferPreparationResolvesParentAliasesAndKeepsFinalLinks(t *testing.T) {
-	source, target := t.TempDir(), t.TempDir()
+	source, target := resolvedTempDir(t), resolvedTempDir(t)
 	writeTransferFiles(t, source, map[string]string{"file": "data"})
 	alias := filepath.Join(t.TempDir(), "alias")
 	if err := os.Symlink(source, alias); err != nil {

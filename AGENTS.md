@@ -7,7 +7,6 @@ module/executable and `Commando` for the window title and data-folder name.
 ## Repository Layout
 
 - `main.go`: application entrypoint.
-- `tools/shell-probe`: optional Windows shell integration test executable.
 - `internal/app`: UI, keyboard input, navigation, window integration and state.
 - `internal/browser`: directory reads, drive enumeration and file opening.
 - `internal/feedback`: contextual message lifecycle and animation, without Gio.
@@ -15,7 +14,6 @@ module/executable and `Commando` for the window title and data-folder name.
 - `scripts/build-windows` and `scripts/commando.rc`: Windows build and resources.
 - `.goreleaser.yml`: Windows x64 ZIP, checksums and license notices.
 - `.github/workflows`: Linux/Windows checks and version-tag releases.
-- `CONTRIBUTING.md`: build and contributor instructions; README is user-facing.
 - `dist/`: generated executables and release archives. Agent-generated screenshots go in
   `tmp/agent/screenshots/`; temporary binaries go in `tmp/agent/bin/`.
   Keep the `tmp/` root free for user contributions. Private notes stay in `tmp/docs/`.

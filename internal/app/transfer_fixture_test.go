@@ -9,6 +9,17 @@ import (
 	"github.com/dannyben/commando/internal/browser"
 )
 
+// Tests asserting resolved operation paths need physical temporary roots.
+// Windows may return an 8.3 spelling from TempDir while the shell expands it.
+func resolvedTempDir(t *testing.T) string {
+	t.Helper()
+	path, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
 // A disposable-fixture stand-in for the external Windows backend. It has no
 // conflict, cancellation, staging or fallback policy; those belong to Windows.
 // UI tests exercise dispatch and reconciliation, rather than a second engine.

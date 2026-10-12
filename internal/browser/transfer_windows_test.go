@@ -18,7 +18,7 @@ func TestWindowsTransferSinkABIRecordsOriginalBeforeMoveAndActualNewName(t *test
 		t.Fatal(err)
 	}
 	defer windows.CoUninitialize()
-	root := t.TempDir()
+	root := resolvedTempDir(t)
 	source, destination := filepath.Join(root, "original.txt"), filepath.Join(root, "actual.txt")
 	if err := os.WriteFile(source, []byte("data"), 0600); err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestWindowsTransferSinkCountsTwoDirectMoves(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer windows.CoUninitialize()
-	root := t.TempDir()
+	root := resolvedTempDir(t)
 	target := filepath.Join(root, "target")
 	if err := os.Mkdir(target, 0700); err != nil {
 		t.Fatal(err)

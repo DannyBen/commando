@@ -4,18 +4,11 @@
 
 ![repocard](https://repocard.dannyben.com/svg/commando.svg)
 
-A keyboard-first file manager for Windows with three independent panels.
+A keyboard-first file manager for Windows.
 
 ## Download
 
-Download the Windows x64 ZIP from [GitHub Releases](https://github.com/DannyBen/commando/releases),
-extract it, and run `commando.exe`.
-
-Or install with [eget](https://github.com/zyedidia/eget):
-
-```powershell
-eget DannyBen/commando --pre-release
-```
+[Download from GitHub Releases](https://github.com/DannyBen/commando/releases).
 
 ## Basic Shortcuts
 
@@ -31,8 +24,6 @@ eget DannyBen/commando --pre-release
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste |
 | Delete | Send marked or current items to the Recycle Bin |
 | Ctrl+H | Cycle hidden-file visibility |
-
-For building from source and contributing, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Licensed under [MIT](LICENSE). The bundled JetBrains Mono font uses the
 [SIL Open Font License](internal/app/fonts/OFL.txt).

@@ -63,7 +63,7 @@ func attachTestFileClipboard(v *view) *testFileClipboard {
 
 func clipboardView(t *testing.T) (*view, string, string) {
 	t.Helper()
-	source, target := t.TempDir(), t.TempDir()
+	source, target := resolvedTempDir(t), resolvedTempDir(t)
 	if err := os.MkdirAll(filepath.Join(source, "folder", "nested"), 0700); err != nil {
 		t.Fatal(err)
 	}

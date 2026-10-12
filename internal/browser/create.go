@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -28,6 +29,11 @@ func createEntry(directory, name string, folder bool) (Entry, error) {
 	} else {
 		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
 		if err != nil {
+			// Windows can report EISDIR for an existing folder even with O_EXCL.
+			// It is still a name collision, and the existing entry stays intact.
+			if info, statErr := os.Lstat(path); statErr == nil && info.IsDir() {
+				return Entry{}, &os.PathError{Op: "create", Path: path, Err: fs.ErrExist}
+			}
 			return Entry{}, err
 		}
 		if err := file.Close(); err != nil {
