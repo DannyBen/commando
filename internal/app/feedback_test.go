@@ -53,9 +53,12 @@ func TestMessageSoundsStartImmediatelyAndDoNotRepeat(t *testing.T) {
 		if recorded.stops == 0 || v.active != 1 || v.panels[0].feedback.Current() != nil {
 			t.Fatal("dismissal did not stop audio and perform normal navigation")
 		}
+		if len(recorded.played) != 2 || recorded.played[1] != sound.Navigation {
+			t.Fatal("navigation did not replace the dismissed message sound")
+		}
 		v.showFeedback(1, tc.kind, "ABCDE")
 		send()
-		if len(recorded.played) != 2 || recorded.played[1] != tc.cue {
+		if len(recorded.played) != 3 || recorded.played[2] != tc.cue {
 			t.Fatal("new message did not play its initial cue")
 		}
 		advance(15 * time.Millisecond)

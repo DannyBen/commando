@@ -270,6 +270,9 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		return
 	}
 	next = max(0, min(next, len(p.items)-1))
+	if next != p.selected && ke.Name != insertKey {
+		v.playNavigationSound()
+	}
 	if ke.Modifiers&key.ModShift != 0 {
 		p.markTo(next)
 	} else {

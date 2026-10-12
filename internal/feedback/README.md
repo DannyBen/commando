@@ -7,6 +7,7 @@ to use. Calls belong on the UI thread; worker results are delivered there first.
 channel.Show(feedback.Error, "Name already exists")
 channel.Show(feedback.Success, "Renamed")
 channel.Progress("Reading folder")
+channel.ProgressAt("Reading folder", now.Add(delay))
 channel.Complete()
 channel.Dismiss()
 ```
@@ -16,10 +17,19 @@ Kinds are `Info`, `Success`, `Warning` and `Error`. `Progress(text)` shows an in
 message that also clears on `Complete()`. Completion leaves a result message
 alone. `Dismiss()` clears any message; nothing expires on a timer.
 
+`ShowAt(kind, text, notBefore)` schedules a replacement message. Until its
+deadline, `Current()` is nil and the channel leaves normal status visible.
+`ProgressAt(text, notBefore)` schedules Info feedback conditional on an operation
+remaining pending: `Complete()` cancels it before display or clears it afterward.
+Dismissal and any replacement also cancel scheduled messages. Animation starts
+when the message becomes visible, even if the deadline's frame arrives late.
+
 `Frame(now, animations)` returns a frame and whether the channel owns its
 display area. A frame contains visible `Text`, semantic `Kind`, the `Next`
-redraw deadline, and a `Started` event on its first frame. An empty typing/blink
-frame still owns the entire area. `Next` is zero when presentation is steady;
+redraw deadline, and a `Started` event on its first visible frame. Schedule `Next`
+even when the channel does not own its area; it can be a pending-message deadline.
+An empty typing/blink frame still owns the entire area. `Next` is zero when
+presentation is steady;
 a persistent blinking cursor continues scheduling redraws until dismissal.
 `Current()` exposes the complete message for inspection; treat it as read-only.
 

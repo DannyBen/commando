@@ -64,10 +64,23 @@ type Message struct {
 // Channel holds one contextual message. Its zero value is ready to use.
 // A new message replaces the previous one; there is no queue or timer expiry.
 // Use it on the UI thread; it is not safe for concurrent calls.
-type Channel struct{ message *Message }
+type Channel struct {
+	message, pending *Message
+	notBefore        time.Time
+}
 
 func (c *Channel) Show(kind Kind, text string) {
+	c.Dismiss()
 	c.message = &Message{Text: text, Kind: kind}
+}
+
+// ShowAt replaces the current message with one scheduled for notBefore.
+// Until then the channel yields its display area and reports a redraw deadline.
+// Dismiss or another message cancels the pending presentation.
+func (c *Channel) ShowAt(kind Kind, text string, notBefore time.Time) {
+	c.Dismiss()
+	c.pending = &Message{Text: text, Kind: kind}
+	c.notBefore = notBefore
 }
 
 func (c *Channel) Progress(text string) {
@@ -75,14 +88,23 @@ func (c *Channel) Progress(text string) {
 	c.message.progress = true
 }
 
-// Complete clears progress without erasing an intervening result message.
+// ProgressAt shows delayed Info feedback only while the operation is pending.
+// Complete before its deadline cancels it without animation or a Started event.
+func (c *Channel) ProgressAt(text string, notBefore time.Time) {
+	c.ShowAt(Info, text, notBefore)
+	c.pending.progress = true
+}
+
+// Complete clears visible or pending progress without erasing a result message.
 func (c *Channel) Complete() {
-	if c.message != nil && c.message.progress {
+	if c.message != nil && c.message.progress || c.pending != nil && c.pending.progress {
 		c.Dismiss()
 	}
 }
 
-func (c *Channel) Dismiss()          { c.message = nil }
+func (c *Channel) Dismiss() { *c = Channel{} }
+
+// Current returns only visible feedback, never a scheduled message.
 func (c *Channel) Current() *Message { return c.message }
 
 type Frame struct {
@@ -95,6 +117,13 @@ type Frame struct {
 // Frame reports whether the channel owns the footer, even during an empty
 // typing/blink frame. The caller schedules the next redraw when Next is set.
 func (c *Channel) Frame(now time.Time, animations Animations) (Frame, bool) {
+	if c.pending != nil {
+		if now.Before(c.notBefore) {
+			return Frame{Next: c.notBefore}, false
+		}
+		c.message, c.pending = c.pending, nil
+		c.notBefore = time.Time{}
+	}
 	if c.message == nil {
 		return Frame{}, false
 	}

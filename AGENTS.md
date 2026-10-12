@@ -42,6 +42,9 @@ module/executable and `Commando` for the window title and data-folder name.
   Wash the file lists and footers with the existing surface color at the theme's
   overlay backdrop opacity; keep location bars and the palette at full contrast.
 - Three independent panels retain their own selection and scroll position.
+- Keyboard navigation plays the quiet semantic Navigation cue when the current
+  row or active panel changes, including palette results and inline choices.
+  Keep navigation at an edge, key releases and native text editing silent.
 - Ctrl+H cycles each pane independently through All, Hide Hidden, and Hide Hidden
   + dotfiles. Windows hidden attributes and leading-dot names are separate.
   Always exclude entries carrying both hidden and system attributes; retain
@@ -88,6 +91,12 @@ module/executable and `Commando` for the window title and data-folder name.
   Keep semantic colors and independent per-kind animation profiles in theme.go;
   all kinds currently use the same timing. Preserve editor text, selection and
   focus. Observe native Windows editor keys without consuming them.
+  Directory navigation plays its own immediate cue. Schedule Reading folder
+  through the channel's delayed progress interface using FeedbackProgressDelay
+  in theme.go (500 ms by default). Pending messages leave normal status visible;
+  completion, dismissal or replacement cancels them. Once visible, delayed
+  progress uses normal Info sound, animation and edge styling. Manual refresh
+  uses the same delayed progress; automatic refresh stays quiet.
 - Location and name editors share EditorText and TextSelection colors.
   Support Shift+Insert paste through the native Insert bridge on Windows and
   through Gio key events elsewhere; keep browsing marks separate from editors.
@@ -224,6 +233,8 @@ Use `op check` for formatting, vet and tests, `op build-windows` for the Windows
 executable, and `op preview` for the headless Gio preview. Tests must check behavior
 rather than mirror implementation. A successful cross-build does not establish
 native Windows behavior; distinguish automated checks from desktop testing.
+Build only the main dist/commando.exe. If it cannot be written, report that it
+was not built; do not create an alternative executable.
 
 On Linux environments using Wayland/OpenGL without Vulkan or X11 support:
 

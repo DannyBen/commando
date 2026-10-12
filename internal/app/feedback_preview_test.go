@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"image"
 	"image/color"
 	"image/color/palette"
@@ -80,5 +81,64 @@ func TestFeedbackPreview(t *testing.T) {
 	}
 	if closeErr != nil {
 		t.Fatal(closeErr)
+	}
+}
+
+func TestDelayedFeedbackPreview(t *testing.T) {
+	directory := os.Getenv("COMMANDO_PREVIEW_MESSAGES")
+	if directory == "" {
+		t.Skip("optional headless delayed feedback preview")
+	}
+	w, err := headless.NewWindow(windowWidth, windowHeight)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer w.Release()
+	v := newPreviewView()
+	start := time.Unix(1000, 0)
+	due := start.Add(v.appearance.FeedbackProgressDelay)
+	v.panels[0].feedback.ProgressAt("Reading folder", due)
+	for _, tc := range []struct {
+		name    string
+		now     time.Time
+		visible bool
+	}{
+		{"reading-pending", due.Add(-time.Nanosecond), false},
+		{"reading-started", due, true},
+		{"reading-typed", due.Add(15 * time.Millisecond), true},
+		{"reading-completed", due.Add(time.Second), false},
+	} {
+		if tc.name == "reading-completed" {
+			v.panels[0].feedback.Complete()
+		}
+		var ops op.Ops
+		v.layout(layout.Context{Ops: &ops, Now: tc.now,
+			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+			Constraints: layout.Exact(image.Pt(windowWidth, windowHeight))})
+		if err := w.Frame(&ops); err != nil {
+			t.Fatal(err)
+		}
+		img := image.NewRGBA(image.Rect(0, 0, windowWidth, windowHeight))
+		if err := w.Screenshot(img); err != nil {
+			t.Fatal(err)
+		}
+		want := v.appearance.Colors.Footer
+		if tc.visible {
+			want = v.feedbackColor(feedback.Info)
+		}
+		for _, y := range []int{450, 451} {
+			if color.NRGBAModel.Convert(img.At(10, y)) != want {
+				t.Fatalf("%s: footer edge appeared early or did not follow visible progress", tc.name)
+			}
+		}
+		f, err := os.Create(filepath.Join(directory, tc.name+".png"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		encodeErr := png.Encode(f, img)
+		closeErr := f.Close()
+		if err := errors.Join(encodeErr, closeErr); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

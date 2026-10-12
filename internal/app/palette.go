@@ -153,6 +153,7 @@ func (v *view) updatePalette(gtx layout.Context) {
 	// text edits update the result set before the ordered selection/run keys.
 	v.updatePaletteSearch(gtx)
 	for _, ke := range navigation {
+		previous := s.selected
 		switch ke.Name {
 		case key.NameEscape, "P":
 			v.stopPalette(gtx)
@@ -174,6 +175,9 @@ func (v *view) updatePalette(gtx layout.Context) {
 			s.selected += max(1, s.list.Position.Count-1)
 		}
 		s.selected = max(0, min(s.selected, len(s.results)-1))
+		if s.selected != previous {
+			v.playNavigationSound()
+		}
 		s.reveal = true
 	}
 }

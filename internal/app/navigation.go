@@ -5,11 +5,13 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 func newBrowserView(paths []string, invalidate func()) *view {
@@ -72,9 +74,14 @@ func (v *view) queueLoad(request loadRequest) {
 	if v.loader == nil || p.loading {
 		return
 	}
+	if !v.loader.submit(request) {
+		return
+	}
 	p.loading, p.err = true, nil
-	p.feedback.Progress("Reading folder")
-	v.loader.submit(request)
+	p.feedback.ProgressAt("Reading folder", time.Now().Add(v.appearance.FeedbackProgressDelay))
+	if !request.refresh && v.sounds != nil {
+		v.sounds.Play(sound.DirectoryNavigation)
+	}
 }
 
 func (v *view) pollLoads() {

@@ -71,11 +71,12 @@ func (v *view) feedbackColor(kind feedback.Kind) color.NRGBA {
 
 func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 	p := &v.panels[index]
-	if frame, ownsFooter := p.feedback.Frame(gtx.Now, v.appearance.Feedback); ownsFooter {
+	frame, ownsFooter := p.feedback.Frame(gtx.Now, v.appearance.Feedback)
+	if !frame.Next.IsZero() {
+		gtx.Execute(op.InvalidateCmd{At: frame.Next})
+	}
+	if ownsFooter {
 		v.playFeedbackSound(frame)
-		if !frame.Next.IsZero() {
-			gtx.Execute(op.InvalidateCmd{At: frame.Next})
-		}
 		return v.label(gtx, frame.Text, v.appearance.SmallTextSize, v.feedbackColor(frame.Kind), text.Start)
 	}
 	status, _ := p.status()

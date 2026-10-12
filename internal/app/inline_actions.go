@@ -95,6 +95,7 @@ func (v *view) inlineActionKey(ke key.Event) {
 	if ke.Modifiers != 0 {
 		return
 	}
+	previous := a.selected
 	switch ke.Name {
 	case key.NameUpArrow:
 		a.selected = max(0, a.selected-1)
@@ -106,18 +107,29 @@ func (v *view) inlineActionKey(ke key.Event) {
 		a.selected = max(0, len(a.options)-1)
 	case key.NameReturn, key.NameEnter:
 		v.chooseInlineAction()
+		return
 	case key.NameEscape:
 		v.cancelInlineActions()
+		return
 	case key.NameLeftArrow:
 		v.navigateInlineActions(-1, false)
+		return
 	case key.NameRightArrow:
 		v.navigateInlineActions(1, false)
+		return
+	}
+	if a.selected != previous {
+		v.playNavigationSound()
 	}
 }
 
 func (v *view) navigateInlineActions(direction int, cycle bool) {
 	if navigate := v.inlineInteraction().navigate; navigate != nil {
+		previous := v.active
 		navigate(direction, cycle)
+		if v.active != previous {
+			v.playNavigationSound()
+		}
 	} else {
 		v.switchPanelTo(v.panelNeighbor(direction, cycle, -1))
 	}

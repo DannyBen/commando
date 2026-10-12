@@ -27,6 +27,7 @@ type Theme struct {
 	OverlayMinWidth, OverlayMaxWidth unit.Dp
 	OverlayBackdropOpacity           float32 // Surface-color wash; 0 disables it, 1 is opaque.
 	Feedback                         feedback.Animations
+	FeedbackProgressDelay            time.Duration // Delay before showing directory-read progress.
 }
 
 type ThemeColors struct {
@@ -98,6 +99,7 @@ var defaultTheme = Theme{
 	OverlayMinWidth:        480,
 	OverlayMaxWidth:        720,
 	OverlayBackdropOpacity: 0.15,
+	FeedbackProgressDelay:  500 * time.Millisecond,
 	Feedback: feedback.Animations{
 		Enabled: true,
 		Info:    defaultFeedbackAnimation,
