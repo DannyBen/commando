@@ -36,7 +36,7 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 		v.active = active
 	}
 	v.openFile = browser.OpenFile
-	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate)
+	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate, len(panels))
 	for i, location := range locations {
 		v.panels[i].metadata = metadataFromState(location.Metadata)
 		v.panels[i].sortByMetadata = location.SortByMetadata
@@ -224,7 +224,7 @@ func (v *view) parentFolder() {
 
 func (v *view) openAdjacent(direction int) {
 	target := v.active + direction
-	if target < 0 || target >= len(v.panels) || v.loader == nil || v.panels[target].loading {
+	if v.loader == nil || target >= 0 && target < len(v.panels) && v.panels[target].loading {
 		return
 	}
 	p := &v.panels[v.active]
@@ -239,9 +239,15 @@ func (v *view) openAdjacent(direction int) {
 	if path == "" {
 		path = filepath.Join(p.path, file.Name)
 	}
-	v.switchPanel(direction)
-	v.load(target, path, "")
-	p.prefix, v.panels[target].prefix = "", ""
+	if target < 0 || target >= len(v.panels) {
+		if !v.addPanel(direction) {
+			return
+		}
+	} else {
+		v.switchPanel(direction)
+	}
+	v.load(v.active, path, "")
+	v.panels[v.active].prefix = ""
 }
 
 func (p *panel) itemCount() int {

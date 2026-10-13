@@ -57,6 +57,11 @@ var commands = []command{
 	cmd("Panel", "Move left", key.NameLeftArrow, key.ModShift, func(v *view) bool { return v.active > 0 && panelsCanSwap(v) }),
 	cmd("Panel", "Move right", key.NameRightArrow, key.ModShift, func(v *view) bool { return v.active+1 < len(v.panels) && panelsCanSwap(v) }),
 
+	cmd("Panel", "Add left", key.NameLeftArrow, key.ModAlt, panelsCanChange),
+	cmd("Panel", "Add right", key.NameRightArrow, key.ModAlt, panelsCanChange),
+	cmd("Panel", "Close", "W", key.ModCtrl, func(v *view) bool { return len(v.panels) > 1 && panelsCanChange(v) }),
+	cmd("Panel", "Reopen closed", "W", key.ModCtrl|key.ModShift, func(v *view) bool { return len(v.closedPanels) > 0 && panelsCanChange(v) }),
+
 	cmd("Selection", "Toggle mark", key.NameSpace, 0, func(v *view) bool {
 		return v.panels[v.active].markable(v.panels[v.active].selected) && v.panels[v.active].prefix == ""
 	}),
@@ -154,5 +159,5 @@ func panelsCanSwap(v *view) bool {
 func adjacentReady(v *view, direction int) bool {
 	target := v.active + direction
 	return selectedReady(v) && v.panels[v.active].items[v.panels[v.active].selected].file.Directory &&
-		target >= 0 && target < len(v.panels) && !v.panels[target].loading && v.loader != nil
+		v.loader != nil && (target >= 0 && target < len(v.panels) && !v.panels[target].loading || (target < 0 || target >= len(v.panels)) && panelsCanChange(v))
 }

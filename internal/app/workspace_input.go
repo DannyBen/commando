@@ -83,6 +83,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: "X", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "V", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "M", Required: key.ModCtrl, Optional: key.ModShift},
+			key.Filter{Focus: &v.focus, Name: "W", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "R", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "H", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "N", Required: key.ModCtrl, Optional: key.ModShift},
@@ -90,6 +91,17 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: key.NameRightArrow, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameRightArrow, Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow, Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: key.NameRightArrow, Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "1", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "2", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "3", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "4", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "5", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "6", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "7", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "8", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "9", Required: key.ModAlt},
 			key.Filter{Focus: &v.focus, Name: key.NameHome},
 			key.Filter{Focus: &v.focus, Name: key.NameEnd},
 			key.Filter{Focus: &v.focus, Name: key.NamePageUp},
@@ -193,6 +205,22 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 			p.resort()
 		}
 		return
+	case "W":
+		if ke.Modifiers == key.ModCtrl {
+			v.closePanel()
+		}
+		if ke.Modifiers == key.ModCtrl|key.ModShift {
+			v.reopenPanel()
+		}
+		return
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		if ke.Modifiers == key.ModAlt {
+			index := int(ke.Name[0] - '1')
+			if index < len(v.panels) {
+				v.switchPanelTo(index)
+			}
+		}
+		return
 	case "D":
 		if ke.Modifiers == key.ModCtrl {
 			v.duplicateSelected()
@@ -241,6 +269,8 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		}
 		if ke.Modifiers == key.ModShift {
 			v.swapPanel(direction)
+		} else if ke.Modifiers == key.ModAlt {
+			v.addPanel(direction)
 		} else if ke.Modifiers&key.ModCtrl != 0 {
 			v.openAdjacent(direction)
 		} else {

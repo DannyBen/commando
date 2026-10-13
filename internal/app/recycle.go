@@ -45,7 +45,10 @@ func (v *view) recycleSelected() {
 	}
 	p.loading, p.prefix = true, ""
 	p.feedback.Progress("Recycling")
-	v.loader.submit(loadRequest{panel: v.active, path: p.path, recycle: request})
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, recycle: request}) {
+		p.loading = false
+		p.feedback.Complete()
+	}
 }
 
 func (v *view) acceptRecycle(result loadResult) {

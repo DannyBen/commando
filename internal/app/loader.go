@@ -60,10 +60,14 @@ type directoryLoader struct {
 
 // One worker keeps reads and mutations off the UI thread and avoids concurrent
 // filesystem access. Each panel allows only one pending directory read.
-func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate func()) *directoryLoader {
+func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate func(), panelCount ...int) *directoryLoader {
+	count := 3
+	if len(panelCount) > 0 {
+		count = max(1, panelCount[0])
+	}
 	l := &directoryLoader{
-		requests:          make(chan loadRequest, 6), // One foreground and one automatic read per pane.
-		results:           make(chan loadResult, 3),
+		requests:          make(chan loadRequest, 2*count),
+		results:           make(chan loadResult, count),
 		done:              make(chan struct{}),
 		recycle:           browser.Recycle,
 		readClipboard:     browser.ReadFileClipboard,

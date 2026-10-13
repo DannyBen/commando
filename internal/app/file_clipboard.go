@@ -37,7 +37,9 @@ func (v *view) clipboardSelected(move bool) {
 		return
 	}
 	p.loading, p.prefix = true, ""
-	v.loader.submit(loadRequest{panel: v.active, path: p.path, action: actionClipboard, clipboard: &fileClipboardRequest{paths: paths, move: move, locations: v.fileOperationLocations()}})
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, action: actionClipboard, clipboard: &fileClipboardRequest{paths: paths, move: move, locations: v.fileOperationLocations()}}) {
+		p.loading = false
+	}
 }
 
 func (v *view) pasteFiles() {
@@ -47,5 +49,7 @@ func (v *view) pasteFiles() {
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true
 	// Windows owns the transfer UI, including progress and cancellation.
-	v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{locations: v.fileOperationLocations(), owner: v.ownerWindow}})
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{locations: v.fileOperationLocations(), owner: v.ownerWindow}}) {
+		p.loading, v.transferPending = false, false
+	}
 }

@@ -41,7 +41,23 @@ module/executable and `Commando` for the window title and data-folder name.
   terminal-style lines.
   Wash the file lists and footers with the existing surface color at the theme's
   overlay backdrop opacity; keep location bars and the palette at full contrast.
-- Three independent panels retain their own selection and scroll position.
+- A variable number of independent panels retain their own selection and scroll
+  position. Alt+Left/Right inserts a panel beside the current pane, cloning its
+  location, selection, viewport and display preferences with independent caches
+  and no marks. Ctrl+W closes the current pane, retaining at least one; focus goes
+  to its right successor or left neighbor. Ctrl+Shift+W restores closed panes in
+  reverse order, including marks and viewport, then quietly reconciles changes.
+  Alt+1–9 focuses a numbered pane; bare digits remain filename-prefix input.
+  Editors, foreground sessions, pending directory work and file operations block
+  insertion/removal so captured worker indices remain valid. Move clipboard alias
+  cache slots with inserted/removed/restored panes without changing the clipboard.
+  Closed-pane history lasts for the session. Persist live pane count/preferences.
+  Windows panel-count changes preserve a separately saved base width, grow/shrink
+  within the current monitor's work area and retain relative horizontal alignment.
+  Only manual width resizing learns a new base; height-only changes, automatic
+  sizing, clamping, snap/maximize/restore and DPI changes do not. Leave snapped or
+  maximized geometry under OS control. Keep base width separate from pane models
+  so future fixed width presets can build on it.
 - Keyboard navigation plays the quiet semantic Navigation cue when the current
   row or active panel changes, including palette results and inline choices.
   Keep navigation at an edge, key releases and native text editing silent.
@@ -126,7 +142,8 @@ module/executable and `Commando` for the window title and data-folder name.
   valid. Persist the resulting order through the existing state store.
 - Ctrl+Left/Right opens the selected folder, parent row or drive in the adjacent
   panel and moves focus there. Preserve the source listing, selection and scroll.
-  Files, outer edges and busy panels produce no action. Failed reads retain the
+  At outer edges, create a pane on that side before opening it. Files and busy
+  panels produce no action. Failed reads retain the
   destination listing and show its footer error.
 - On Windows, a bare ASCII drive letter with an optional colon opens its root
   (`d`/`d:` -> `D:\`). Explicit relative paths such as `.\d` retain their meaning.

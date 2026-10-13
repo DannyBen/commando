@@ -126,10 +126,10 @@ func TestStartingLocations(t *testing.T) {
 	}{
 		{"first run", nil, nil, []panelState{{Path: home}, {Path: home}, {Path: home}}},
 		{"restore", nil, saved, saved},
-		{"partial state", nil, saved[:1], []panelState{{Path: first}, {Path: home}, {Path: home}}},
+		{"one saved panel", nil, saved[:1], []panelState{{Path: first}}},
 		{"one explicit path", []string{third}, saved, []panelState{{Path: third}, {Path: third}, {Path: third}}},
 		{"two explicit paths", []string{second, first}, saved, []panelState{{Path: second}, {Path: first}, {Path: second}}},
-		{"invalid saved path", nil, []panelState{{Path: "relative"}}, []panelState{{Path: home}, {Path: home}, {Path: home}}},
+		{"invalid saved path", nil, []panelState{{Path: "relative"}}, []panelState{{Path: home}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := startingLocations(tc.args, tc.saved)
@@ -138,8 +138,8 @@ func TestStartingLocations(t *testing.T) {
 			}
 		})
 	}
-	if _, err := startingLocations([]string{first, second, third, home}, saved); err == nil {
-		t.Fatal("more than three paths were accepted")
+	if locations, err := startingLocations([]string{first, second, third, home}, saved); err != nil || len(locations) != 4 {
+		t.Fatal("four startup paths did not create four panels")
 	}
 	got, err := startingLocations([]string{"."}, saved)
 	if err != nil || !filepath.IsAbs(got[0].Path) || got[0].Drives {

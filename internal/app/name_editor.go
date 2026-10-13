@@ -182,7 +182,11 @@ func (v *view) updateName(gtx layout.Context) {
 			}
 			r.err, r.pending, v.nameEditor.ReadOnly = nil, true, true
 			v.panels[r.panel].feedback.Progress(progress)
-			v.loader.submit(request)
+			if !v.loader.submit(request) {
+				r.pending, v.nameEditor.ReadOnly = false, false
+				v.panels[r.panel].loading = false
+				v.showFeedback(r.panel, feedback.Info, "Folder is busy")
+			}
 		}
 	}
 }

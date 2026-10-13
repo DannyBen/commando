@@ -83,8 +83,8 @@ func TestAdjacentOpeningNoAction(t *testing.T) {
 		direction int
 		prepare   func(*view)
 	}{
-		{"left edge", 0, -1, nil},
-		{"right edge", 2, 1, nil},
+		{"left edge with work pending", 0, -1, func(v *view) { v.panels[2].refreshing = true }},
+		{"right edge with work pending", 2, 1, func(v *view) { v.panels[0].loading = true }},
 		{"file", 1, 1, func(v *view) { v.panels[1].items[0].file.Directory = false }},
 		{"empty", 1, -1, func(v *view) { v.panels[1].items = nil; v.panels[1].selected = -1 }},
 		{"invalid selection", 1, 1, func(v *view) { v.panels[1].selected = 4 }},

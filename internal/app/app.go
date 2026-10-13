@@ -55,12 +55,12 @@ func Run() error {
 	done := make(chan error, 1)
 	go func() {
 		w := new(gioapp.Window)
-		tracker := windowTracker{value: saved.Window}
+		tracker := windowTracker{value: saved.Window, sizing: workspaceSizing{count: len(locations), baseWidth: saved.PanelWidth}}
 		keys := &nativeKeyInput{invalidate: w.Invalidate}
 		native := nativeWindow{state: &tracker, keys: keys}
 		w.Option(gioapp.Title("Commando"),
 			gioapp.Size(unit.Dp(windowWidth), unit.Dp(windowHeight)),
-			gioapp.MinSize(unit.Dp(720), unit.Dp(360)))
+			gioapp.MinSize(unit.Dp(minWindowWidth), unit.Dp(360)))
 		w.Option(native.options()...)
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate)
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
@@ -81,7 +81,9 @@ func Run() error {
 				v.finishOperations()
 				sounds.Close()
 				stopTrace()
-				if err := saveState(dataDir, v.sessionState(tracker.snapshot())); err != nil {
+				state := v.sessionState(tracker.snapshot())
+				state.PanelWidth = tracker.sizingSnapshot().baseWidth
+				if err := saveState(dataDir, state); err != nil {
 					done <- errors.Join(e.Err, fmt.Errorf("cannot save state: %w", err))
 				} else {
 					done <- e.Err
@@ -92,6 +94,7 @@ func Run() error {
 				e.Frame(&ops)
 			}
 			native.configure(w, e)
+			native.resizePanels(w, len(v.panels))
 			v.ownerWindow = native.owner()
 		}
 	}()
@@ -141,9 +144,6 @@ func renderViewPNG(path string, view *view) error {
 }
 
 func startingPaths(args []string) ([]string, error) {
-	if len(args) > 3 {
-		return nil, fmt.Errorf("provide at most three startup folders")
-	}
 	home, err := os.UserHomeDir()
 	if err != nil && len(args) == 0 {
 		return nil, err
@@ -151,7 +151,10 @@ func startingPaths(args []string) ([]string, error) {
 	if len(args) > 0 {
 		home = args[0]
 	}
-	paths := []string{home, home, home}
+	paths := make([]string, max(3, len(args)))
+	for i := range paths {
+		paths[i] = home
+	}
 	copy(paths, args)
 	return paths, nil
 }

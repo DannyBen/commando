@@ -12,6 +12,7 @@ import (
 // All saved data lives under the dataDir resolved at startup. State and future
 // settings receive that directory rather than choosing their own locations.
 type sessionState struct {
+	PanelWidth  float64      `json:"panelWidth,omitempty"` // Base panel width in dp, independent of future per-panel width presets.
 	Window      windowState  `json:"window"`
 	Panels      []panelState `json:"panels"`
 	ActivePanel int          `json:"activePanel"`
@@ -36,8 +37,9 @@ type windowState struct {
 
 // Native Windows callbacks and the app goroutine share the last placement.
 type windowTracker struct {
-	mu    sync.Mutex
-	value windowState
+	mu     sync.Mutex
+	value  windowState
+	sizing workspaceSizing
 }
 
 func (t *windowTracker) snapshot() windowState {
@@ -76,6 +78,9 @@ func loadState(dataDir string) (sessionState, error) {
 	if !state.Window.valid() {
 		state.Window = windowState{}
 	}
+	if state.PanelWidth <= 0 || state.PanelWidth > 32768 {
+		state.PanelWidth = 0
+	}
 	return state, nil
 }
 
@@ -113,7 +118,14 @@ func startingLocations(args []string, saved []panelState) ([]panelState, error) 
 		return nil, err
 	}
 	locations := make([]panelState, len(paths))
-	for i, path := range paths {
+	if len(saved) > 0 {
+		locations = make([]panelState, max(len(saved), len(args)))
+	}
+	for i := range locations {
+		path := paths[0]
+		if i < len(paths) {
+			path = paths[i]
+		}
 		locations[i].Path, err = filepath.Abs(path)
 		if err != nil {
 			return nil, err

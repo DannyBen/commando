@@ -40,8 +40,10 @@ func (v *view) duplicateSelected() {
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true
 	snapshot := browser.FileClipboard{Paths: paths}
-	v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{
-		locations: v.fileOperationLocations(), snapshot: &snapshot, duplicate: true, owner: v.ownerWindow}})
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{
+		locations: v.fileOperationLocations(), snapshot: &snapshot, duplicate: true, owner: v.ownerWindow}}) {
+		p.loading, v.transferPending = false, false
+	}
 }
 
 func (v *view) offerDuplicate(gtx layout.Context) {

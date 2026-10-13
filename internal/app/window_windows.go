@@ -32,10 +32,15 @@ var (
 const shortcutSubclassID = 1
 
 type nativeWindow struct {
-	state      *windowTracker
-	keys       *nativeKeyInput
-	hwnd       uintptr
-	configured bool
+	state            *windowTracker
+	keys             *nativeKeyInput
+	hwnd             uintptr
+	configured       bool
+	userSizing       bool
+	resizeStartWidth float64 // dp; moving between DPI scales alone is not a width edit.
+	alignment        float64
+	alignmentSet     bool
+	monitor          uintptr
 }
 
 type nativePoint struct{ X, Y int32 }
@@ -55,6 +60,21 @@ func init() {
 }
 
 func (n *nativeWindow) configure(w *gioapp.Window, e event.Event) {
+	if frame, ok := e.(gioapp.FrameEvent); ok && frame.Metric.PxPerDp > 0 && n.state.sizingSnapshot().baseWidth <= 0 {
+		width := float64(frame.Size.X) / float64(frame.Metric.PxPerDp)
+		if n.hwnd != 0 && w != nil {
+			w.Run(func() {
+				if g, ok := n.geometry(); ok && !g.ordinary {
+					saved := n.state.snapshot()
+					width = windowWidth
+					if saved.valid() {
+						width = float64(saved.Width-(g.window.Dx()-g.clientWidth)) / g.scale
+					}
+				}
+			})
+		}
+		n.state.rememberPanelWidth(width, false)
+	}
 	if view, ok := e.(gioapp.Win32ViewEvent); ok {
 		previous := n.hwnd
 		n.hwnd = view.HWND
@@ -143,6 +163,9 @@ func shortcutKeyboardProc(code int32, wParam, lParam uintptr) uintptr {
 }
 
 func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintptr) uintptr {
+	if native, ok := nativeWindows.Load(hwnd); ok && message != 0x0232 {
+		native.(*nativeWindow).observeSizing(message, wParam)
+	}
 	const wmSysChar, wmNCDestroy = 0x0106, 0x0082
 	const wmClose, wmDestroy, wmWindowPosChanged = 0x0010, 0x0002, 0x0047
 	const wmKeyDown, wmKeyUp, vkInsert = 0x0100, 0x0101, 0x2d
@@ -187,7 +210,7 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 	}
 	// Gio already receives the key event for Alt+D. Its extra system-character
 	// message otherwise reaches the default Windows menu handler and rings a bell.
-	if message == wmSysChar && (wParam == 'd' || wParam == 'D') && lParam&(1<<29) != 0 {
+	if message == wmSysChar && (wParam == 'd' || wParam == 'D' || wParam >= '1' && wParam <= '9') && lParam&(1<<29) != 0 {
 		return 0
 	}
 	if message == wmNCDestroy {
@@ -198,6 +221,11 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 		nativeWindows.Delete(hwnd)
 	}
 	result, _, _ := defSubclassProc.Call(hwnd, uintptr(message), wParam, lParam)
+	if message == 0x0232 { // Observe the completed sizing loop after the default handler.
+		if native, ok := nativeWindows.Load(hwnd); ok {
+			native.(*nativeWindow).observeSizing(message, wParam)
+		}
+	}
 	return result
 }
 

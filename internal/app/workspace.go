@@ -43,6 +43,7 @@ type view struct {
 	appearance        Theme
 	theme             *material.Theme
 	panels            []panel
+	closedPanels      []closedPanel
 	active            int
 	focus             bool
 	started           bool

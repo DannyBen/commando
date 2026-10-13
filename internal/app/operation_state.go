@@ -43,11 +43,14 @@ func (l *directoryLoader) submit(request loadRequest) bool {
 	case l.requests <- request:
 		return true
 	case <-l.done:
-		if request.tracked {
-			l.busy.Add(-1)
-		}
-		return false
+	default:
 	}
+	// A workspace can grow beyond its initial queue capacity. Never block the
+	// UI behind a worker waiting for the UI to consume its results.
+	if request.tracked {
+		l.busy.Add(-1)
+	}
+	return false
 }
 
 func (l *directoryLoader) complete(request loadRequest) {
