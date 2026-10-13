@@ -21,7 +21,11 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 	list.Track.Color = v.appearance.Colors.ScrollbarTrack
 	// Measure the full catalogue so filtering never changes the surface width.
 	labelWidth, shortcutWidth := 0, 0
-	for _, command := range s.commands {
+	catalogue := s.commands
+	if s.settingsMode {
+		catalogue = s.settingsCommands
+	}
+	for _, command := range catalogue {
 		labelWidth = max(labelWidth, v.textWidth(gtx, command.label(), v.appearance.TextSize))
 		shortcutWidth = max(shortcutWidth, v.textWidth(gtx, command.shortcut(), v.appearance.SmallTextSize))
 	}
@@ -57,7 +61,11 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 				if len(s.results) == 0 {
 					return layout.Inset{Left: 14, Right: 14}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return v.label(gtx, "No commands found", v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
+							message := "No commands found"
+							if s.settingsMode {
+								message = "No settings found"
+							}
+							return v.label(gtx, message, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 						})
 					})
 				}
@@ -103,6 +111,9 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, footerHeight, v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
 					hint := "Enter Run   Esc Close"
+					if s.settingsMode {
+						hint = "Enter Edit   Esc Close"
+					}
 					if len(s.results) > 0 && !s.results[s.selected].command.allowed(v) {
 						hint = "Unavailable here   Esc Close"
 					}

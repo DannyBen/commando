@@ -19,6 +19,8 @@ var themeFont []byte
 // Theme holds the appearance choices independently of Gio's widget theme.
 // A future configuration loader can supply these values before creating a view.
 type Theme struct {
+	FilenameColors                   *filenameColorSettings
+	SettingsWidth                    unit.Dp
 	Colors                           ThemeColors
 	Font                             []byte
 	TextSize, SmallTextSize          unit.Sp
@@ -59,6 +61,7 @@ var defaultFeedbackAnimation = feedback.Animation{
 // Edit these values to adjust the application's theme, then rebuild.
 // Text sizes use scale-independent pixels (sp); colors use RGB hex values.
 var defaultTheme = Theme{
+	SettingsWidth: 480,
 	Colors: ThemeColors{
 		Surface:                rgb(0xffffff),
 		Header:                 rgb(0xdddddd),

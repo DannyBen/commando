@@ -16,7 +16,7 @@ func (v *view) actionAllowed(class actionClass) bool {
 	if class == actionBrowse {
 		return true
 	}
-	return !v.interaction.operationsHeld() && !v.transferPending && !v.mutationsBusy()
+	return !v.interaction.operationsHeld() && !v.interaction.mutationsBlocked() && !v.transferPending && !v.mutationsBusy()
 }
 
 // Features declare a supported foreground state and action class, rather than

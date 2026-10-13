@@ -187,6 +187,9 @@ func (v *view) activateSelected() {
 	}
 	file := p.items[p.selected].file
 	if !file.Directory {
+		if v.settingsSelecting() {
+			return
+		}
 		if open := v.openFile; open != nil && file.Name != "" {
 			path := filepath.Join(p.path, file.Name)
 			go func() { _ = open(path) }()

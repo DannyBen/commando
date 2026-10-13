@@ -115,13 +115,17 @@ func (value oklchColor) rgb() color.NRGBA {
 func (t Theme) entryColors(file browser.Entry, active, cut bool) (background, filename, metadata color.NRGBA) {
 	background, filename = t.Colors.Surface, t.Colors.Filename
 	generated := file.Path == ""
+	colors := defaultFilenameColors
+	if t.FilenameColors != nil {
+		colors = *t.FilenameColors
+	}
 	if generated {
-		filename = defaultFilenameColors.filename(file).rgb()
+		filename = colors.filename(file).rgb()
 	}
 	if active {
 		background = t.Colors.Selected
 		if generated {
-			background = defaultFilenameColors.activeBackground(defaultFilenameColors.filename(file)).rgb()
+			background = colors.activeBackground(colors.filename(file)).rgb()
 			filename = t.Colors.Surface
 		} else {
 			filename = t.Colors.SelectedName

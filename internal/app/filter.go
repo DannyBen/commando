@@ -23,7 +23,13 @@ func (v *view) filterInteraction() *filterSession {
 }
 
 func (p *panel) shows(file browser.Entry) bool {
-	return p.visibility.shows(file) && (file.Parent || p.filter == "" ||
+	visible := p.visibility.shows(file)
+	if p.showProtectedSystem && file.Hidden && file.System {
+		copy := file
+		copy.System = false
+		visible = p.visibility.shows(copy)
+	}
+	return visible && (file.Parent || p.filter == "" ||
 		strings.Contains(strings.ToLower(file.Name), strings.ToLower(p.filter)))
 }
 

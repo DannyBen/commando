@@ -3,9 +3,12 @@ package app
 import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"strings"
+	"unicode/utf8"
 )
 
 func (v *view) update(gtx layout.Context) {
+	defer v.updateSettingsSelection()
 	defer v.updateAutoRefresh(gtx)
 	v.updateCutClipboard(gtx)
 	v.updateFeedbackInput(gtx)
@@ -117,6 +120,8 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: key.NamePageUp},
 			key.Filter{Focus: &v.focus, Name: key.NamePageDown},
 			key.Filter{Focus: &v.focus, Name: key.NameReturn},
+			key.Filter{Focus: &v.focus, Name: key.NameReturn, Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: key.NameEnter, Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameEnter},
 			key.Filter{Focus: &v.focus, Name: key.NameDeleteBackward},
 			key.Filter{Focus: &v.focus, Name: key.NameDeleteForward},
@@ -126,7 +131,7 @@ func (v *view) update(gtx layout.Context) {
 		}
 		if edit, ok := e.(key.EditEvent); ok {
 			v.dismissFeedback()
-			if !v.interaction.idle() {
+			if !v.interaction.idle() && !v.settingsSelecting() {
 				continue
 			}
 			if v.suppressSpaceText {
@@ -139,6 +144,16 @@ func (v *view) update(gtx layout.Context) {
 			// Opening on its key event would send this slash to the new field.
 			if edit.Text == "/" {
 				v.startFilter(gtx)
+				return
+			}
+			if strings.HasPrefix(edit.Text, "@") && v.interaction.idle() {
+				v.startPalette(gtx)
+				if s := v.paletteInteraction(); s != nil {
+					v.commandSearch.SetText(edit.Text)
+					end := utf8.RuneCountInString(edit.Text)
+					v.commandSearch.SetCaret(end, end)
+					s.filter(edit.Text)
+				}
 				return
 			}
 			v.typeToSelect(edit.Text, gtx.Now)
@@ -162,6 +177,10 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	}
 	v.dismissFeedback()
 	v.suppressSpaceText = false
+	if v.settingsSelecting() && (ke.Name == key.NameReturn || ke.Name == key.NameEnter) && ke.Modifiers == key.ModCtrl {
+		v.finishSettingsWidget(gtx, true)
+		return
+	}
 	if v.interactionKey(gtx, ke) {
 		return
 	}

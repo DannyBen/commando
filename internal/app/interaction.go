@@ -15,7 +15,8 @@ type interactionSession interface {
 }
 
 type interactionController struct {
-	current interactionSession // nil is ordinary browsing.
+	current   interactionSession // nil is ordinary browsing.
+	suspended interactionSession
 }
 
 func (c *interactionController) operationsHeld() bool {
@@ -31,8 +32,15 @@ func (c *interactionController) panelsBlocked() bool {
 func (c *interactionController) idle() bool { return c.current == nil }
 
 func (c *interactionController) begin(session interactionSession) bool {
-	if !c.idle() || session == nil {
+	if session == nil {
 		return false
+	}
+	if !c.idle() {
+		owner, ok := c.current.(interface{ canSuspendFor(interactionSession) bool })
+		if !ok || c.suspended != nil || !owner.canSuspendFor(session) {
+			return false
+		}
+		c.suspended = c.current
 	}
 	c.current = session
 	return true
@@ -44,11 +52,14 @@ func (c *interactionController) finish(session interactionSession) bool {
 	if session == nil || c.current != session {
 		return false
 	}
-	c.current = nil
+	c.current, c.suspended = c.suspended, nil
 	return true
 }
 
 func (c *interactionController) protectsListing(panel int) bool {
+	if owner, ok := c.current.(interface{ protectsListing() bool }); ok && !owner.protectsListing() {
+		return false
+	}
 	return c.current != nil && c.current.interactionPanel() == panel
 }
 
@@ -74,6 +85,12 @@ func (v *view) inlineInteraction() *inlineActionSession {
 }
 
 func (v *view) activeEditor() *widget.Editor {
+	if s := v.settingsInteraction(); s != nil {
+		if s.editing {
+			return &s.editor
+		}
+		return nil
+	}
 	switch v.interaction.current.(type) {
 	case *locationSession:
 		return &v.location
@@ -101,6 +118,8 @@ func (v *view) focusInteraction(gtx layout.Context) {
 // A submitted name mutation must finish before its editor can be left.
 func (v *view) cancelInteraction(gtx layout.Context) bool {
 	switch s := v.interaction.current.(type) {
+	case *settingsSession:
+		return s.selecting
 	case *filterSession:
 		v.stopFilter(gtx)
 	case *locationSession:
@@ -128,7 +147,14 @@ func (v *view) escape(gtx layout.Context) {
 		return
 	}
 	v.dismissFeedback()
-	if v.interaction.idle() {
+	if s := v.settingsInteraction(); s != nil {
+		if s.selecting {
+			s.selecting = false
+			v.focusInteraction(gtx)
+		} else {
+			v.finishSettingsWidget(gtx, false)
+		}
+	} else if v.interaction.idle() {
 		p := &v.panels[v.active]
 		if p.prefix != "" {
 			p.prefix = ""
@@ -154,6 +180,9 @@ func (v *view) escape(gtx layout.Context) {
 // Return true when a foreground session owns this key, even when the session
 // ignores it. Browsing shortcuts must not leak through an editor or choice.
 func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
+	if v.settingsSelecting() {
+		return false
+	}
 	if editor := v.activeEditor(); editor != nil {
 		pasteWithInsert(gtx, editor, ke)
 		return true
@@ -168,6 +197,10 @@ func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
 // Editors consume their events before ordinary browsing, preserving event
 // order and native text handling. True means editing is still active.
 func (v *view) updateInteraction(gtx layout.Context) bool {
+	if s := v.settingsInteraction(); s != nil {
+		v.updateSettingsWidget(gtx)
+		return v.settingsInteraction() != s || !s.selecting
+	}
 	if v.filterInteraction() != nil {
 		v.updateEditorPaste(gtx, &v.filterEditor)
 		v.updateFilter(gtx)
@@ -197,4 +230,13 @@ func (v *view) updateInteraction(gtx layout.Context) bool {
 		v.updatePalette(gtx)
 	}
 	return v.activeEditor() != nil
+}
+
+func (c *interactionController) mutationsBlocked() bool {
+	for _, session := range []interactionSession{c.current, c.suspended} {
+		if owner, ok := session.(interface{ blocksMutations() bool }); ok && owner.blocksMutations() {
+			return true
+		}
+	}
+	return false
 }

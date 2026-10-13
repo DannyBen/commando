@@ -8,6 +8,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/fuzzy"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 type commandMatch struct {
@@ -18,16 +19,18 @@ type commandMatch struct {
 // Search and its results belong to one foreground session. The originating
 // pane stays active and protected until dismissal or command dispatch.
 type paletteSession struct {
-	panel           int
-	query           string
-	selected        int
-	results         []commandMatch
-	commands        []command
-	list            widget.List
-	rows            map[int]*widget.Clickable
-	surface         overlay
-	reveal          bool
-	openingBacktick bool
+	panel            int
+	query            string
+	selected         int
+	results          []commandMatch
+	commands         []command
+	settingsCommands []command
+	settingsMode     bool
+	list             widget.List
+	rows             map[int]*widget.Clickable
+	surface          overlay
+	reveal           bool
+	openingBacktick  bool
 }
 
 func (*paletteSession) blocksPanels() bool { return true }
@@ -40,9 +43,12 @@ func (v *view) paletteInteraction() *paletteSession {
 }
 
 func (v *view) startPalette(gtx layout.Context) {
-	s := &paletteSession{panel: v.active, rows: make(map[int]*widget.Clickable), commands: v.commandCatalogue()}
+	s := &paletteSession{panel: v.active, rows: make(map[int]*widget.Clickable), commands: v.commandCatalogue(), settingsCommands: v.settingsCatalogue()}
 	if !v.interaction.begin(s) {
 		return
+	}
+	if v.sounds != nil {
+		v.sounds.Play(sound.Palette)
 	}
 	s.list.Axis = layout.Vertical
 	v.commandSearch.SetText("")
@@ -54,7 +60,13 @@ func (s *paletteSession) filter(query string) {
 	s.query, s.selected, s.reveal = query, 0, true
 	s.results = nil
 	needle := strings.TrimSpace(query)
-	for _, command := range s.commands {
+	s.settingsMode = strings.HasPrefix(query, "@")
+	catalogue := s.commands
+	if s.settingsMode {
+		catalogue = s.settingsCommands
+		needle = strings.TrimSpace(query[1:])
+	}
+	for _, command := range catalogue {
 		if match, ok := fuzzy.Match(needle, command.label()); ok {
 			s.results = append(s.results, commandMatch{command: command, match: match})
 		}
@@ -94,6 +106,9 @@ func (v *view) choosePalette(gtx layout.Context) {
 	if command.execute != nil {
 		v.dismissFeedback()
 		command.execute(v)
+		if widget := v.settingsInteraction(); s.settingsMode && widget != nil {
+			widget.palette = s
+		}
 	} else {
 		v.browseKey(gtx, command.binding)
 	}

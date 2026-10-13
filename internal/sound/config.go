@@ -8,6 +8,8 @@ type Name string
 const (
 	Navigation          Name = "navigation"
 	Cancel              Name = "cancel"
+	Palette             Name = "palette"
+	Settings            Name = "settings"
 	DirectoryNavigation Name = "directoryNavigation"
 	MessageInfo         Name = "messageInfo"
 	MessageSuccess      Name = "messageSuccess"
@@ -20,6 +22,8 @@ const (
 var cues = map[Name]Cue{
 	Navigation:          {Notes: []float64{220}, Length: 12 * time.Millisecond, Waveform: Square, Volume: 10},
 	Cancel:              {Notes: []float64{330}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
+	Palette:             {Notes: []float64{392}, Length: 45 * time.Millisecond, Waveform: Triangle, Volume: 12},
+	Settings:            {Notes: []float64{392, 523.25}, Length: 35 * time.Millisecond, Spacing: 30 * time.Millisecond, Waveform: Triangle, Volume: 12},
 	DirectoryNavigation: {Notes: []float64{523.25}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
 	MessageInfo:         {Notes: []float64{440}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
 	MessageSuccess:      {Notes: []float64{660, 880}, Length: 60 * time.Millisecond, Spacing: 50 * time.Millisecond, Waveform: Triangle, Volume: 20},

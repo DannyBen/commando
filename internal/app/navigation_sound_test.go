@@ -3,6 +3,7 @@ package app
 import (
 	"testing"
 
+	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"github.com/dannyben/commando/internal/sound"
 )
@@ -81,6 +82,10 @@ func TestPaletteNavigationTicksWhileSearchEditingStaysSilent(t *testing.T) {
 	v.sounds = recorded
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
+	if len(recorded.played) != 1 || recorded.played[0] != sound.Palette {
+		t.Fatalf("palette opening cue: %v", recorded.played)
+	}
+	recorded.played = nil
 	send(pressed(key.NameDownArrow), pressed(key.NameEnd), pressed(key.NameHome))
 	if len(recorded.played) != 3 {
 		t.Fatalf("palette movement cues: %v", recorded.played)
@@ -93,6 +98,19 @@ func TestPaletteNavigationTicksWhileSearchEditingStaysSilent(t *testing.T) {
 	for _, cue := range recorded.played {
 		if cue != sound.Navigation {
 			t.Fatal("palette used a different sound")
+		}
+	}
+}
+
+func TestPaletteOpeningCueForBothModes(t *testing.T) {
+	for _, opening := range []event.Event{pressed("`"), modified("P", key.ModCtrl|key.ModShift), key.EditEvent{Text: "@"}} {
+		v := newPreviewView()
+		recorded := &recordedSounds{}
+		v.sounds = recorded
+		send, _ := panelInputFrames(v)
+		send(opening)
+		if v.paletteInteraction() == nil || len(recorded.played) != 1 || recorded.played[0] != sound.Palette {
+			t.Fatalf("opening %v did not play one palette cue: %v", opening, recorded.played)
 		}
 	}
 }

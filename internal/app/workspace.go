@@ -9,6 +9,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
+	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
 )
 
@@ -18,32 +19,34 @@ type entry struct {
 }
 
 type panel struct {
-	path            string // Last physical directory, retained while displaying drives.
-	drives          bool
-	items           []entry
-	entries         []browser.Entry // Complete listing; items is the currently visible projection.
-	rows            map[int]*fileRow
-	list            widget.List
-	selected        int
-	selectionAnchor image.Point
-	marks           map[int]bool
-	markRange       *selectionRange
-	metadata        metadataColumn
-	sortByMetadata  bool
-	visibility      visibilityMode
-	reveal          bool
-	loading         bool
-	navigating      bool // Retained rows must not look active while their replacement loads.
-	refreshing      bool // Automatic read; ordinary browsing remains available.
-	refreshNeeded   bool // Coalesced notification deferred until the listing is safe.
-	err             error
-	filter          string
-	prefix          string
-	prefixAt        time.Time
-	feedback        feedback.Channel
+	showProtectedSystem bool
+	path                string // Last physical directory, retained while displaying drives.
+	drives              bool
+	items               []entry
+	entries             []browser.Entry // Complete listing; items is the currently visible projection.
+	rows                map[int]*fileRow
+	list                widget.List
+	selected            int
+	selectionAnchor     image.Point
+	marks               map[int]bool
+	markRange           *selectionRange
+	metadata            metadataColumn
+	sortByMetadata      bool
+	visibility          visibilityMode
+	reveal              bool
+	loading             bool
+	navigating          bool // Retained rows must not look active while their replacement loads.
+	refreshing          bool // Automatic read; ordinary browsing remains available.
+	refreshNeeded       bool // Coalesced notification deferred until the listing is safe.
+	err                 error
+	filter              string
+	prefix              string
+	prefixAt            time.Time
+	feedback            feedback.Channel
 }
 
 type view struct {
+	settingsValues    settings.Values
 	appearance        Theme
 	theme             *material.Theme
 	panels            []panel
