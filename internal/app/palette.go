@@ -22,6 +22,7 @@ type paletteSession struct {
 	query           string
 	selected        int
 	results         []commandMatch
+	commands        []command
 	list            widget.List
 	rows            map[int]*widget.Clickable
 	surface         overlay
@@ -37,7 +38,7 @@ func (v *view) paletteInteraction() *paletteSession {
 }
 
 func (v *view) startPalette(gtx layout.Context) {
-	s := &paletteSession{panel: v.active, rows: make(map[int]*widget.Clickable)}
+	s := &paletteSession{panel: v.active, rows: make(map[int]*widget.Clickable), commands: v.commandCatalogue()}
 	if !v.interaction.begin(s) {
 		return
 	}
@@ -51,7 +52,7 @@ func (s *paletteSession) filter(query string) {
 	s.query, s.selected, s.reveal = query, 0, true
 	s.results = nil
 	needle := strings.TrimSpace(query)
-	for _, command := range commands {
+	for _, command := range s.commands {
 		if match, ok := fuzzy.Match(needle, command.label()); ok {
 			s.results = append(s.results, commandMatch{command: command, match: match})
 		}
@@ -88,7 +89,12 @@ func (v *view) choosePalette(gtx layout.Context) {
 		return
 	}
 	v.stopPalette(gtx)
-	v.browseKey(gtx, command.binding)
+	if command.execute != nil {
+		v.dismissFeedback()
+		command.execute(v)
+	} else {
+		v.browseKey(gtx, command.binding)
+	}
 	v.focusInteraction(gtx)
 }
 

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"strconv"
 	"strings"
 
 	"gioui.org/io/key"
@@ -13,6 +14,29 @@ type command struct {
 	name      string
 	binding   key.Event
 	available func(*view) bool
+	execute   func(*view) // Workspace actions can run without a keyboard binding.
+}
+
+// Workspace-dependent commands join their category in catalogue order. The
+// palette snapshots this list while its session protects the panel context.
+func (v *view) commandCatalogue() []command {
+	catalogue := make([]command, 0, len(commands)+len(v.panels))
+	for i, c := range commands {
+		catalogue = append(catalogue, c)
+		if c.group == "Panel" && (i == len(commands)-1 || commands[i+1].group != "Panel") {
+			for index := range v.panels {
+				number := strconv.Itoa(index + 1)
+				focus := command{group: "Panel", name: "Focus " + number,
+					available: func(v *view) bool { return index < len(v.panels) },
+					execute:   func(v *view) { v.switchPanelTo(index) }}
+				if index < 9 {
+					focus.binding = key.Event{Name: key.Name(number), Modifiers: key.ModAlt, State: key.Press}
+				}
+				catalogue = append(catalogue, focus)
+			}
+		}
+	}
+	return catalogue
 }
 
 func cmd(group, name string, nameKey key.Name, modifiers key.Modifiers, available func(*view) bool) command {

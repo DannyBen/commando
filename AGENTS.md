@@ -32,6 +32,11 @@ module/executable and `Commando` for the window title and data-folder name.
   browsing handlers. Display group and action with a `›` separator; keep catalogue
   order for a blank query and fuzzy-rank the full label while searching. Unavailable
   actions remain visible and cannot execute.
+  Generate Panel › Focus N entries for exactly the live panel count, in numeric
+  order within the Panel group, without locations. Show Alt+1–9 for the first
+  nine; higher panels remain executable without shortcuts. Both routes use the
+  shared panel-focus helper. Preserve useful catalogue entries rather than
+  trimming the list for its size; categories and search provide discovery.
   Keep native text editing and Tab focus inside Search; block pointer input
   to the file panels while open. Center the square overlay horizontally below
   the location bars, keeping their height synchronized with text metrics. Home/End
