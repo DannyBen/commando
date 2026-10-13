@@ -72,6 +72,16 @@ module/executable and `Commando` for the window title and data-folder name.
   default to Size. Keep the header synchronized
   with the column. None reserves no metadata width. Preserve listing order,
   marks, current row and scroll. Handle browsing keys in event order.
+- Ctrl+F3 toggles Sort by metadata independently for each panel; the command
+  palette uses the same browsing handler. Persist the choice independently of
+  startup paths, defaulting to off. None uses name order without clearing the
+  choice. Extension sorts ascending; Size and Modified sort descending, with
+  unknown values last and natural-name ties. Keep parents first, then folders,
+  then files. Folders use name order for Extension/Size and date then name for
+  Modified. Reorder cached projections without reads, retaining current items,
+  marks and viewport anchors. Apply the same comparator after reads, filtering,
+  renames, creation and transfers. Editors, inline interactions, busy panels
+  and drive lists ignore the toggle; choices follow swapped panes.
 - File marks are separate from the current row, local to each panel, and not
   persisted. Preserve them during navigation within a listing and failed reads;
   clear them on successful listing changes. Exclude parent rows and drives.

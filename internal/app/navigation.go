@@ -39,6 +39,7 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate)
 	for i, location := range locations {
 		v.panels[i].metadata = metadataFromState(location.Metadata)
+		v.panels[i].sortByMetadata = location.SortByMetadata
 		v.panels[i].visibility = visibilityFromState(location.Visibility)
 		if location.Drives {
 			v.load(i, "", location.Path)

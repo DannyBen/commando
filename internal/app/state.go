@@ -18,10 +18,11 @@ type sessionState struct {
 }
 
 type panelState struct {
-	Path       string `json:"path"`
-	Drives     bool   `json:"drives,omitempty"`
-	Metadata   string `json:"metadata,omitempty"`
-	Visibility string `json:"visibility,omitempty"`
+	Path           string `json:"path"`
+	Drives         bool   `json:"drives,omitempty"`
+	Metadata       string `json:"metadata,omitempty"`
+	SortByMetadata bool   `json:"sortByMetadata,omitempty"`
+	Visibility     string `json:"visibility,omitempty"`
 }
 
 type windowState struct {
@@ -122,6 +123,7 @@ func startingLocations(args []string, saved []panelState) ([]panelState, error) 
 		// Column choices belong to the panel independently of its location.
 		if i < len(saved) {
 			locations[i].Metadata = saved[i].Metadata
+			locations[i].SortByMetadata = saved[i].SortByMetadata
 			locations[i].Visibility = saved[i].Visibility
 		}
 		if len(args) == 0 && i < len(saved) && filepath.IsAbs(saved[i].Path) {
@@ -134,7 +136,7 @@ func startingLocations(args []string, saved []panelState) ([]panelState, error) 
 func (v *view) sessionState(window windowState) sessionState {
 	state := sessionState{Window: window, ActivePanel: v.active, Panels: make([]panelState, len(v.panels))}
 	for i, p := range v.panels {
-		state.Panels[i] = panelState{Path: p.path, Drives: p.drives, Metadata: p.metadata.stateName(), Visibility: p.visibility.stateName()}
+		state.Panels[i] = panelState{Path: p.path, Drives: p.drives, Metadata: p.metadata.stateName(), Visibility: p.visibility.stateName(), SortByMetadata: p.sortByMetadata}
 	}
 	return state
 }

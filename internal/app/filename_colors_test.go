@@ -32,6 +32,7 @@ func TestFilenameColorIdentities(t *testing.T) {
 		}
 	}
 	s := defaultFilenameColors
+	s.hueSeed = 0
 	before := s.filename(browser.Entry{Name: "a.txt"})
 	_ = s.filename(browser.Entry{Name: "new.neverseen"})
 	if before != s.filename(browser.Entry{Name: "elsewhere.TXT"}) {

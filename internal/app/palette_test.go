@@ -166,7 +166,7 @@ func TestPaletteSearchSelectionAndExecutionInOneEventBatch(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
-	send(key.EditEvent{Text: "metadata"}, pressed(key.NameDownArrow), pressed(key.NameReturn))
+	send(key.EditEvent{Text: "metadata column"}, pressed(key.NameDownArrow), pressed(key.NameReturn))
 	if !v.interaction.idle() || v.panels[0].metadata != metadataExtension {
 		t.Fatalf("query, Down, Enter did not execute the second search result: metadata=%v session=%T", v.panels[0].metadata, v.interaction.current)
 	}

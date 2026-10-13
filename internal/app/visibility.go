@@ -88,6 +88,9 @@ func (p *panel) visibleEntries() []browser.Entry {
 			files = append(files, file)
 		}
 	}
+	if p.sortByMetadata && p.metadata != metadataNone && !p.drives {
+		slices.SortFunc(files, p.compareEntries)
+	}
 	return files
 }
 
@@ -116,7 +119,7 @@ func (p *panel) refilter() {
 	}
 	p.reconcileDirectoryListing(browser.Directory{Path: p.path, Drives: p.drives, Entries: p.entries})
 	nearest := func(file browser.Entry) int {
-		row := sort.Search(len(p.items), func(i int) bool { return browser.CompareEntries(p.items[i].file, file) >= 0 })
+		row := sort.Search(len(p.items), func(i int) bool { return p.compareEntries(p.items[i].file, file) >= 0 })
 		return min(row, len(p.items)-1)
 	}
 	if selected.Name != "" && !p.visibility.shows(selected) {

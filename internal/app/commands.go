@@ -52,6 +52,7 @@ var commands = []command{
 	cmd("View", "Hidden files", "H", key.ModCtrl, folderReady),
 	cmd("View", "Next metadata column", "M", key.ModCtrl, nil),
 	cmd("View", "Previous metadata column", "M", key.ModCtrl|key.ModShift, nil),
+	cmd("View", "Sort by metadata", key.NameF3, key.ModCtrl, folderReady),
 
 	cmd("Panel", "Move left", key.NameLeftArrow, key.ModShift, func(v *view) bool { return v.active > 0 && panelsCanSwap(v) }),
 	cmd("Panel", "Move right", key.NameRightArrow, key.ModShift, func(v *view) bool { return v.active+1 < len(v.panels) && panelsCanSwap(v) }),

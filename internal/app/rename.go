@@ -58,7 +58,7 @@ func (v *view) applyRename(result loadResult, oldName, newName string) {
 			if selectedName == oldName {
 				selectedName = newName
 			}
-			slices.SortFunc(p.items, func(a, b entry) int { return browser.CompareEntries(a.file, b.file) })
+			slices.SortFunc(p.items, func(a, b entry) int { return p.compareEntries(a.file, b.file) })
 			p.marks, p.markRange = make(map[int]bool, len(marked)), nil
 			for row, item := range p.items {
 				if item.name == firstName {

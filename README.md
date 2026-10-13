@@ -13,3 +13,8 @@ A keyboard-first multi-panel file terminal for Windows.
 ## Usage
 
 Press Backtick or Ctrl+Shift+P to open the command palette and view key bindings.
+
+Ctrl+M / Ctrl+Shift+M cycles the metadata column. Ctrl+F3 toggles sorting by
+that column for the current panel: extension ascending, size largest first,
+modified newest first. Folders stay ahead of files. Without a metadata column,
+the list uses its normal name order. Each panel remembers its sorting choice.

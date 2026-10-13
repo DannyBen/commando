@@ -70,6 +70,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: "`"},
 			key.Filter{Focus: &v.focus, Name: "P", Required: key.ModCtrl | key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameF2},
+			key.Filter{Focus: &v.focus, Name: key.NameF3, Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameF5},
 			key.Filter{Focus: &v.focus, Name: key.NameF6},
 			key.Filter{Focus: &v.focus, Name: key.NameEscape},
@@ -160,6 +161,11 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	case key.NameF2:
 		v.startName(gtx, nameRename)
 		return
+	case key.NameF3:
+		if ke.Modifiers == key.ModCtrl {
+			v.toggleMetadataSort()
+		}
+		return
 	case key.NameF5, key.NameF6:
 		if ke.Modifiers == 0 {
 			v.startPanelTransfer(ke.Name == key.NameF6)
@@ -183,6 +189,9 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 			direction = -1
 		}
 		p.metadata = p.metadata.cycle(direction)
+		if p.sortByMetadata && !p.loading && v.interaction.idle() {
+			p.resort()
+		}
 		return
 	case "D":
 		if ke.Modifiers == key.ModCtrl {

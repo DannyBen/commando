@@ -56,7 +56,7 @@ func (p *panel) insertCreatedEntry(file browser.Entry, selectCreated bool) {
 			break
 		}
 	}
-	row := sort.Search(len(p.items), func(i int) bool { return browser.CompareEntries(p.items[i].file, file) >= 0 })
+	row := sort.Search(len(p.items), func(i int) bool { return p.compareEntries(p.items[i].file, file) >= 0 })
 	p.items = slices.Insert(p.items, row, entry{name: file.Name, size: size, file: file})
 	p.shiftRows(row, 1)
 	for index, item := range p.items {
@@ -88,6 +88,9 @@ func (p *panel) applyTransferredEntry(item browser.TransferredItem) {
 					size = formatSize(item.Entry.Bytes)
 				}
 				p.items[row] = entry{name: item.Entry.Name, size: size, file: item.Entry}
+				if p.sortByMetadata && p.metadata != metadataNone {
+					p.resort()
+				}
 				return
 			}
 		}
