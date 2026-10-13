@@ -26,7 +26,7 @@ Drag a file or folder to another application to copy it. Dragging a marked item
 carries the marked set; dragging an unmarked item carries only that item.
 Ctrl+Shift+D or **Entry › Arm drag** starts dragging without holding a mouse
 button: switch windows with Alt+Tab, then click the destination to drop. Escape
-cancels.
+cancels. Clicking inside Commando keeps armed drag active.
 Both routes are copy-only; panel-to-panel transfers use F5/F6.
 
 Press `/` to filter filenames in the current panel. Matches appear as you type;

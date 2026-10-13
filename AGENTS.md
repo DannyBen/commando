@@ -29,6 +29,8 @@ module/executable and `Commando` for the window title and data-folder name.
   Armed drag shows Info through the shared feedback channel with Immediate
   style: full, steady text and the usual semantic sound. Submit that frame before
   entering the native loop; do not wait for an animation.
+  An armed click released over Commando's window is ignored and resets click
+  tracking; retain arming for the next external click. Regular release is unchanged.
   Both modes use the same native shell source/data object and copy-only effects,
   without accessing the clipboard or deleting sources. Commando does not register
   its panels as drop targets; F5/F6 remains the panel transfer flow. Reuse shared

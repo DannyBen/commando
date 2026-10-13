@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -19,6 +20,19 @@ type dropSource struct {
 	refs          atomic.Int32
 	state         dragState
 	primaryButton uintptr
+	owner         uintptr
+}
+
+func (s *dropSource) overOwner() bool {
+	var point nativePoint
+	if ok, _, _ := getCursorPos.Call(uintptr(unsafe.Pointer(&point))); ok == 0 {
+		return false
+	}
+	// Windows x64 passes the by-value POINT as one packed 64-bit argument.
+	packed := uintptr(uint32(point.X)) | uintptr(uint32(point.Y))<<32
+	hwnd, _, _ := windowFromPoint.Call(packed)
+	root, _, _ := getAncestor.Call(hwnd, 2) // GA_ROOT includes child windows.
+	return root == s.owner
 }
 
 func (s *dropSource) primaryDown() bool {
@@ -62,7 +76,11 @@ var sourceTable = [5]uintptr{
 			// dragging, queued flags must not masquerade as a fresh click.
 			buttons = armedDragKeys(buttons, s.primaryDown())
 		}
-		return uintptr(s.state.next(escape != 0, buttons))
+		decision := s.state.next(escape != 0, buttons)
+		if decision == dragDrop {
+			decision = s.state.dropAt(!s.state.standard && s.overOwner())
+		}
+		return uintptr(decision)
 	}),
 	syscall.NewCallback(func(_ *dropSource, _ uintptr) uintptr {
 		return 0x40102 // DRAGDROP_S_USEDEFAULTCURSORS.

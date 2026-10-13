@@ -27,6 +27,8 @@ var (
 	trackPopupMenu   = user32.NewProc("TrackPopupMenuEx")
 	clientToScreen   = user32.NewProc("ClientToScreen")
 	getCursorPos     = user32.NewProc("GetCursorPos")
+	windowFromPoint  = user32.NewProc("WindowFromPoint")
+	getAncestor      = user32.NewProc("GetAncestor")
 	getAsyncKeyState = user32.NewProc("GetAsyncKeyState")
 	getKeyState      = user32.NewProc("GetKeyState")
 	getSystemMetrics = user32.NewProc("GetSystemMetrics")
@@ -116,7 +118,7 @@ func (h *Host) Drag(paths []string, armed bool) (Result, error) {
 		return r, err
 	}
 	defer data.call(2)
-	source := &dropSource{table: &sourceTable, state: dragState{standard: !armed}}
+	source := &dropSource{table: &sourceTable, state: dragState{standard: !armed}, owner: h.hwnd}
 	if armed {
 		// GetAsyncKeyState reports physical buttons; honor the user's logical
 		// primary button when Windows has swapped left and right.

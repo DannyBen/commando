@@ -23,6 +23,14 @@ func armedDragKeys(queued uint32, primaryDown bool) uint32 {
 	return keys
 }
 
+func (s *dragState) dropAt(internal bool) uint32 {
+	if internal && !s.standard {
+		s.clicked = false
+		return dragContinue
+	}
+	return dragDrop
+}
+
 func (s *dragState) next(escape bool, keys uint32) uint32 {
 	if escape {
 		return dragCancel

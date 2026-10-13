@@ -2,6 +2,27 @@ package windowshell
 
 import "testing"
 
+func TestArmedInternalClickLeavesNextExternalClickAvailable(t *testing.T) {
+	s := dragState{}
+	for range 2 {
+		s.next(false, leftButton)
+		if s.next(false, 0) != dragDrop || s.dropAt(true) != dragContinue {
+			t.Fatal("internal click ended armed drag")
+		}
+		if s.next(false, 0) != dragContinue {
+			t.Fatal("moving after ignored click ended armed drag")
+		}
+	}
+	s.next(false, leftButton)
+	if s.next(false, 0) != dragDrop || s.dropAt(false) != dragDrop || s.next(true, 0) != dragCancel {
+		t.Fatal("external drop or Escape changed after ignored internal clicks")
+	}
+	standard := dragState{standard: true}
+	if standard.dropAt(true) != dragDrop {
+		t.Fatal("regular drag acquired armed behavior")
+	}
+}
+
 func TestArmedDragIgnoresQueuedButtonFlags(t *testing.T) {
 	s := dragState{}
 	// Stale press/release flags and movement with the physical button up must
