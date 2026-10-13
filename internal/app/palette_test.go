@@ -289,11 +289,11 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 		{320, 0, 320, 1, 15},
 		{480, 0, 480, 1, 15},
 		{600, 60, 480, 1, 15},
-		{800, 80, 640, 1, 15},
-		{960, 120, 720, 1, 15},
-		{1600, 440, 720, 1, 15},
-		{1200, 120, 960, 1.5, 24},
-		{720, 72, 576, 1, 48},
+		{800, 160, 480, 1, 15},
+		{960, 240, 480, 1, 15},
+		{1600, 560, 480, 1, 15},
+		{1200, 98, 1003, 1.5, 24},
+		{720, 0, 720, 1, 48},
 	} {
 		v := newPreviewView()
 		v.appearance.TextSize = tc.fontSize
@@ -314,6 +314,11 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 		send(pressed(key.NameHome))
 		if s.selected != 0 || s.list.Position.First != 0 || s.list.Position.Offset > 0 {
 			t.Fatalf("Home did not reveal the first result: selected=%d position=%+v", s.selected, s.list.Position)
+		}
+		bounds := s.surface.bounds
+		send(replacePalette(v, "focus"))
+		if s.surface.bounds.Min.X != bounds.Min.X || s.surface.bounds.Dx() != bounds.Dx() {
+			t.Fatal("searching changed the palette width")
 		}
 	}
 }

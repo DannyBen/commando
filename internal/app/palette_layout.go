@@ -14,7 +14,22 @@ import (
 func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 	s := v.paletteInteraction()
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
-	return s.surface.layout(gtx, locationBarHeight(gtx, textHeight), v.appearance.OverlayMinWidth, v.appearance.OverlayMaxWidth, v.appearance.Colors, v.appearance.OverlayBackdropOpacity, func(gtx layout.Context) layout.Dimensions {
+	list := material.List(v.theme, &s.list)
+	list.AnchorStrategy = material.Occupy
+	list.Indicator.MinorWidth = 3
+	list.Indicator.Color, list.Indicator.HoverColor = v.appearance.Colors.Scrollbar, v.appearance.Colors.ScrollbarHover
+	list.Track.Color = v.appearance.Colors.ScrollbarTrack
+	// Measure the full catalogue so filtering never changes the surface width.
+	labelWidth, shortcutWidth := 0, 0
+	for _, command := range s.commands {
+		labelWidth = max(labelWidth, v.textWidth(gtx, command.label(), v.appearance.TextSize))
+		shortcutWidth = max(shortcutWidth, v.textWidth(gtx, command.shortcut(), v.appearance.SmallTextSize))
+	}
+	shortcutWidth += gtx.Dp(12)
+	// Row insets, the border and the list's occupied scrollbar track.
+	width := labelWidth + shortcutWidth + gtx.Dp(28+2) + gtx.Dp(list.Width())
+	width = max(gtx.Dp(v.appearance.OverlayMinWidth), min(gtx.Dp(v.appearance.OverlayMaxWidth), width))
+	return s.surface.layout(gtx, locationBarHeight(gtx, textHeight), width, v.appearance.Colors, v.appearance.OverlayBackdropOpacity, func(gtx layout.Context) layout.Dimensions {
 		rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
 		searchHeight := max(gtx.Dp(40), textHeight+gtx.Dp(12))
 		footerHeight := max(gtx.Dp(28), v.textHeight(gtx, v.appearance.SmallTextSize)+gtx.Dp(12))
@@ -23,11 +38,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 		available := max(0, gtx.Constraints.Max.Y-searchHeight-footerHeight-gtx.Dp(32))
 		listHeight := min(max(1, len(s.results))*rowHeight, max(rowHeight, available*3/4))
 		listHeight = min(listHeight, max(0, gtx.Constraints.Max.Y-searchHeight-footerHeight))
-		shortcutWidth := 0
-		for _, result := range s.results {
-			shortcutWidth = max(shortcutWidth, v.textWidth(gtx, result.command.shortcut(), v.appearance.SmallTextSize))
-		}
-		shortcutWidth = min(shortcutWidth+gtx.Dp(12), gtx.Constraints.Max.X/2)
+		shortcutWidth := min(shortcutWidth, gtx.Constraints.Max.X/2)
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, searchHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
@@ -60,11 +71,6 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 					}
 					s.reveal = false
 				}
-				list := material.List(v.theme, &s.list)
-				list.AnchorStrategy = material.Occupy
-				list.Indicator.MinorWidth = 3
-				list.Indicator.Color, list.Indicator.HoverColor = v.appearance.Colors.Scrollbar, v.appearance.Colors.ScrollbarHover
-				list.Track.Color = v.appearance.Colors.ScrollbarTrack
 				return list.Layout(gtx, len(s.results), func(gtx layout.Context, row int) layout.Dimensions {
 					if s.rows[row] == nil {
 						s.rows[row] = new(widget.Clickable)

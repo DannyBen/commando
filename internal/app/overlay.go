@@ -9,7 +9,6 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/unit"
 	"gioui.org/widget"
 )
 
@@ -19,10 +18,6 @@ import (
 type overlay struct {
 	barrier bool
 	bounds  image.Rectangle
-}
-
-func overlayWidth(available, minimum, maximum int) int {
-	return min(available, max(0, min(maximum, max(minimum, available*4/5))))
 }
 
 func (o *overlay) outsidePress(gtx layout.Context) bool {
@@ -38,11 +33,11 @@ func (o *overlay) outsidePress(gtx layout.Context) bool {
 	}
 }
 
-func (o *overlay) layout(gtx layout.Context, top int, minimum, maximum unit.Dp, colors ThemeColors, backdropOpacity float32, content layout.Widget) layout.Dimensions {
+func (o *overlay) layout(gtx layout.Context, top, preferredWidth int, colors ThemeColors, backdropOpacity float32, content layout.Widget) layout.Dimensions {
 	area := clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &o.barrier)
 	area.Pop()
-	width := overlayWidth(gtx.Constraints.Max.X, gtx.Dp(minimum), gtx.Dp(maximum))
+	width := min(gtx.Constraints.Max.X, max(0, preferredWidth))
 	x := (gtx.Constraints.Max.X - width) / 2
 	top = max(0, min(top, gtx.Constraints.Max.Y))
 	backdrop := colors.Surface

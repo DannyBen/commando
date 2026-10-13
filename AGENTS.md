@@ -41,7 +41,9 @@ module/executable and `Commando` for the window title and data-folder name.
   to the file panels while open. Center the square overlay horizontally below
   the location bars, keeping their height synchronized with text metrics. Home/End
   select the first/last result; modified keys retain native text editing.
-  Use the existing surface color for Search. Clamp its width to theme bounds,
+  Use the existing surface color for Search. Size the palette for its full
+  catalogue's widest label and shortcut, including row padding, borders and
+  scrollbar space; keep the width stable while searching. Clamp it to theme bounds,
   and use the full app width below the minimum. Reuse existing theme colors and
   terminal-style lines.
   Wash the file lists and footers with the existing surface color at the theme's
