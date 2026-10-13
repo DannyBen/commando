@@ -141,6 +141,9 @@ func (v *view) acceptLoad(result loadResult) {
 	if previousRow >= 0 && previousRow < len(p.items) {
 		previousItem = p.items[previousRow].file
 	}
+	if !refresh {
+		p.filter = ""
+	}
 	p.clearMarks()
 	p.prefix = ""
 	p.drives = result.directory.Drives

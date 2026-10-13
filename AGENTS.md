@@ -20,6 +20,17 @@ module/executable and `Commando` for the window title and data-folder name.
 
 ## Behavior to Preserve
 
+- `/` edits a case-insensitive substring filter for the current folder panel.
+  Replace NAME/metadata headings at exactly their existing height while filtering;
+  keep the location bar and footer available. Enter finishes query editing without
+  opening a result; Enter in browsing opens the current item. Up/Down navigates
+  matches during editing, while Left/Right retains native caret movement.
+  Tab/Shift+Tab and Alt+1–9 leave query editing and switch panels. Returning to a
+  filtered panel restores browsing focus; `/` selects its existing query for editing.
+  Escape clears the filter (a browsing filename prefix clears first). Queries stay
+  through panel switches and refreshes, and clear on successful folder navigation.
+  Filter the cached projection, retaining parents, sorting and surviving selection,
+  marks and viewport anchors; entries hidden by a query lose their marks.
 - Foreground interactions have one session owner through interaction.go. Start
   and finish sessions through its controller; route input, cancellation and
   focus through the shared interaction helpers. Keep background operations and

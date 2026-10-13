@@ -13,6 +13,7 @@ import (
 // same. A recovered ancestor is a new listing, even when names happen to match.
 func (p *panel) reconcileDirectoryListing(directory browser.Directory) {
 	if p.drives != directory.Drives || !directory.Drives && !samePath(filepath.Clean(p.path), filepath.Clean(directory.Path)) {
+		p.filter = ""
 		p.clearMarks()
 		p.items, p.entries, p.selected = nil, nil, -1
 		p.list = widget.List{List: layout.List{Axis: layout.Vertical}}

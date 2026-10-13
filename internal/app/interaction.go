@@ -69,6 +69,8 @@ func (v *view) activeEditor() *widget.Editor {
 		return &v.location
 	case *nameSession:
 		return &v.nameEditor
+	case *filterSession:
+		return &v.filterEditor
 	case *paletteSession:
 		return &v.commandSearch
 	default:
@@ -89,6 +91,8 @@ func (v *view) focusInteraction(gtx layout.Context) {
 // A submitted name mutation must finish before its editor can be left.
 func (v *view) cancelInteraction(gtx layout.Context) bool {
 	switch s := v.interaction.current.(type) {
+	case *filterSession:
+		v.stopFilter(gtx)
 	case *locationSession:
 		v.stopLocation(gtx)
 	case *nameSession:
@@ -116,9 +120,14 @@ func (v *view) escape(gtx layout.Context) {
 		p := &v.panels[v.active]
 		if p.prefix != "" {
 			p.prefix = ""
+		} else if p.filter != "" {
+			p.setFilter("")
 		} else {
 			p.clearMarks()
 		}
+	} else if s := v.filterInteraction(); s != nil {
+		v.panels[s.panel].setFilter("")
+		v.stopFilter(gtx)
 	} else if !v.cancelInteraction(gtx) {
 		return
 	}
@@ -147,6 +156,11 @@ func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
 // Editors consume their events before ordinary browsing, preserving event
 // order and native text handling. True means editing is still active.
 func (v *view) updateInteraction(gtx layout.Context) bool {
+	if v.filterInteraction() != nil {
+		v.updateEditorPaste(gtx, &v.filterEditor)
+		v.updateFilter(gtx)
+		return v.activeEditor() != nil
+	}
 	if v.activeEditor() == nil {
 		return false
 	}

@@ -125,6 +125,12 @@ func (v *view) update(gtx layout.Context) {
 					continue
 				}
 			}
+			// Consume the invocation text before moving focus to the editor.
+			// Opening on its key event would send this slash to the new field.
+			if edit.Text == "/" {
+				v.startFilter(gtx)
+				return
+			}
 			v.typeToSelect(edit.Text, gtx.Now)
 			continue
 		}
@@ -153,6 +159,11 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	next := p.selected
 	page := max(1, p.list.Position.Count-1)
 	switch ke.Name {
+	case "/":
+		if ke.Modifiers == 0 {
+			v.startFilter(gtx)
+		}
+		return
 	case "`", "P":
 		if ke.Name == "`" && ke.Modifiers == 0 || ke.Name == "P" && ke.Modifiers == key.ModCtrl|key.ModShift {
 			v.startPalette(gtx)
@@ -300,6 +311,11 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	default:
 		return
 	}
+	v.selectBrowsingRow(ke, next)
+}
+
+func (v *view) selectBrowsingRow(ke key.Event, next int) {
+	p := &v.panels[v.active]
 	p.prefix = ""
 	if len(p.items) == 0 {
 		return

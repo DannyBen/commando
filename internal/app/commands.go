@@ -73,6 +73,7 @@ var commands = []command{
 	cmd("Navigation", "Page down", key.NamePageDown, 0, nil),
 
 	cmd("View", "Refresh", "R", key.ModCtrl, func(v *view) bool { return panelReady(v) && v.loader != nil }),
+	cmd("View", "Filter files", "/", 0, folderReady),
 	cmd("View", "Hidden files", "H", key.ModCtrl, folderReady),
 	cmd("View", "Next metadata column", "M", key.ModCtrl, nil),
 	cmd("View", "Previous metadata column", "M", key.ModCtrl|key.ModShift, nil),
@@ -91,7 +92,7 @@ var commands = []command{
 	}),
 	cmd("Selection", "Toggle mark and advance", insertKey, 0, func(v *view) bool { return panelReady(v) && v.panels[v.active].markable(v.panels[v.active].selected) }),
 	cmd("Selection", "Mark all", "A", key.ModCtrl, nil),
-	cmd("Selection", "Clear prefix or marks", key.NameEscape, 0, nil),
+	cmd("Selection", "Clear filter or marks", key.NameEscape, 0, nil),
 
 	cmd("Application", "Command palette", "`", 0, nil),
 }

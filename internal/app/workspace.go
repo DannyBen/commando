@@ -35,6 +35,7 @@ type panel struct {
 	refreshing     bool // Automatic read; ordinary browsing remains available.
 	refreshNeeded  bool // Coalesced notification deferred until the listing is safe.
 	err            error
+	filter         string
 	prefix         string
 	prefixAt       time.Time
 	feedback       feedback.Channel
@@ -55,6 +56,7 @@ type view struct {
 	location          widget.Editor
 	nameEditor        widget.Editor
 	commandSearch     widget.Editor
+	filterEditor      widget.Editor
 	nativeKeys        *nativeKeyInput
 	suppressSpaceText bool
 	feedbackPointer   bool
@@ -88,6 +90,7 @@ func newView(panels []panel) *view {
 		location:          widget.Editor{SingleLine: true, Submit: true},
 		nameEditor:        widget.Editor{SingleLine: true, Submit: true},
 		commandSearch:     widget.Editor{SingleLine: true},
+		filterEditor:      widget.Editor{SingleLine: true},
 		clipboardSequence: browser.FileClipboardSequence,
 	}
 	for i := range v.panels {

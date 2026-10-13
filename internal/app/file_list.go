@@ -33,6 +33,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, max(gtx.Dp(28), smallTextHeight+gtx.Dp(12)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
+				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
+					return v.filterContents(gtx, index)
+				}
 				return v.columns(gtx, entry{name: "NAME", size: p.metadata.heading()}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize)
 			}, false)
 		}),

@@ -14,6 +14,12 @@ A keyboard-first multi-panel file terminal for Windows.
 
 Press Backtick or Ctrl+Shift+P to open the command palette and view key bindings.
 
+Press `/` to filter filenames in the current panel. Matches appear as you type;
+Enter returns to browsing and Escape clears the filter. Press `/` again to edit
+the query. Filters remain when switching panels and clear when opening another
+folder. Files hidden by a filter lose their marks. Ordinary typing still jumps
+to a filename prefix.
+
 Alt+Left/Right adds a panel beside the current one. Ctrl+Left/Right opens the
 selected folder beside it, creating a panel at an outer edge. Ctrl+W closes a
 panel; Ctrl+Shift+W reopens the last closed panel. Alt+1–9 focuses a numbered

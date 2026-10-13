@@ -84,7 +84,7 @@ func (p *panel) ensureEntries() {
 func (p *panel) visibleEntries() []browser.Entry {
 	files := make([]browser.Entry, 0, len(p.entries))
 	for _, file := range p.entries {
-		if p.drives || p.visibility.shows(file) {
+		if p.drives || p.shows(file) {
 			files = append(files, file)
 		}
 	}
@@ -122,10 +122,10 @@ func (p *panel) refilter() {
 		row := sort.Search(len(p.items), func(i int) bool { return p.compareEntries(p.items[i].file, file) >= 0 })
 		return min(row, len(p.items)-1)
 	}
-	if selected.Name != "" && !p.visibility.shows(selected) {
+	if selected.Name != "" && !p.shows(selected) {
 		p.selected, p.reveal = nearest(selected), len(p.items) > 0
 	}
-	if first.Name != "" && !p.visibility.shows(first) {
+	if first.Name != "" && !p.shows(first) {
 		p.list.Position.First, p.list.Position.Offset = max(0, nearest(first)), 0
 	}
 }
