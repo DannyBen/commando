@@ -69,5 +69,5 @@ func (p *panel) reconcileDirectoryListing(directory browser.Directory) {
 		p.reveal = p.selected >= 0
 	}
 	p.prefix, p.markRange, p.err = "", nil, nil
-	p.rows = make(map[int]*widget.Clickable)
+	p.rows = make(map[int]*fileRow)
 }

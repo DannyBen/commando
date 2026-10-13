@@ -9,6 +9,7 @@ import (
 	gioapp "gioui.org/app"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"github.com/dannyben/commando/internal/windowshell"
 	"golang.org/x/sys/windows"
 )
 
@@ -33,6 +34,8 @@ const shortcutSubclassID = 1
 
 type nativeWindow struct {
 	instance         *instanceGuard
+	shell            *windowshell.Host
+	shellErr         error
 	state            *windowTracker
 	keys             *nativeKeyInput
 	hwnd             uintptr
@@ -92,6 +95,7 @@ func (n *nativeWindow) configure(w *gioapp.Window, e event.Event) {
 	hwnd := n.hwnd
 	// Both the subclass and keyboard hook belong to the window's owning thread.
 	w.Run(func() {
+		n.initializeShell(hwnd)
 		const whKeyboard = 2
 		hook, _, err := setWindowsHookEx.Call(whKeyboard, keyboardCallback, 0, uintptr(windows.GetCurrentThreadId()))
 		if hook == 0 {
@@ -178,7 +182,16 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 	const wmSysChar, wmNCDestroy = 0x0106, 0x0082
 	const wmClose, wmDestroy, wmWindowPosChanged = 0x0010, 0x0002, 0x0047
 	const wmKeyDown, wmKeyUp, vkInsert = 0x0100, 0x0101, 0x2d
+	const vkApps = 0x5d
 	const wmSysKeyDown = 0x0104
+	if (message == wmKeyDown || message == wmKeyUp) && wParam == vkApps {
+		if native, ok := nativeWindows.Load(hwnd); ok && message == wmKeyDown {
+			if keys := native.(*nativeWindow).keys; keys != nil {
+				keys.push(key.Event{Name: contextMenuKey, State: key.Press})
+			}
+		}
+		return 0
+	}
 	if (message == wmKeyDown || message == wmSysKeyDown) && wParam != vkInsert {
 		if native, ok := nativeWindows.Load(hwnd); ok {
 			if keys := native.(*nativeWindow).keys; keys != nil {
@@ -219,7 +232,7 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 	}
 	// Gio already receives the key event for Alt+D. Its extra system-character
 	// message otherwise reaches the default Windows menu handler and rings a bell.
-	if message == wmSysChar && (wParam == 'd' || wParam == 'D' || wParam >= '1' && wParam <= '9') && lParam&(1<<29) != 0 {
+	if message == wmSysChar && (wParam == '/' || wParam == 'd' || wParam == 'D' || wParam >= '1' && wParam <= '9') && lParam&(1<<29) != 0 {
 		return 0
 	}
 	if message == wmNCDestroy {

@@ -6,7 +6,6 @@ import (
 	"slices"
 	"sort"
 
-	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
 )
 
@@ -69,7 +68,7 @@ func (p *panel) insertCreatedEntry(file browser.Entry, selectCreated bool) {
 		p.selected, p.reveal = row, true
 	}
 	p.markRange = nil
-	p.rows = make(map[int]*widget.Clickable)
+	p.rows = make(map[int]*fileRow)
 }
 
 // Refresh an overwritten file's metadata without treating its cached row as a

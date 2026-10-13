@@ -9,7 +9,6 @@ import (
 	"slices"
 	"strings"
 
-	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
 )
@@ -139,7 +138,7 @@ func (p *panel) removeEntries(names []string) {
 	p.selected = min(oldSelected-removedBefore, len(items)-1)
 	p.list.Position.First = max(0, min(oldFirst-removedBeforeFirst, len(items)-1))
 	p.reveal = p.reveal || selectedRemoved
-	p.rows = make(map[int]*widget.Clickable)
+	p.rows = make(map[int]*fileRow)
 }
 
 func recycleError(err error) string {

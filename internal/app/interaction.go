@@ -18,6 +18,16 @@ type interactionController struct {
 	current interactionSession // nil is ordinary browsing.
 }
 
+func (c *interactionController) operationsHeld() bool {
+	owner, ok := c.current.(interface{ holdsOperations() bool })
+	return ok && owner.holdsOperations()
+}
+
+func (c *interactionController) panelsBlocked() bool {
+	owner, ok := c.current.(interface{ blocksPanels() bool })
+	return ok && owner.blocksPanels()
+}
+
 func (c *interactionController) idle() bool { return c.current == nil }
 
 func (c *interactionController) begin(session interactionSession) bool {
@@ -105,6 +115,8 @@ func (v *view) cancelInteraction(gtx layout.Context) bool {
 		v.focusInteraction(gtx)
 	case *paletteSession:
 		v.stopPalette(gtx)
+	default:
+		return v.interaction.idle()
 	}
 	return true
 }
@@ -150,7 +162,7 @@ func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
 		v.inlineActionKey(gtx, ke)
 		return true
 	}
-	return false
+	return !v.interaction.idle()
 }
 
 // Editors consume their events before ordinary browsing, preserving event

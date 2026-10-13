@@ -2,9 +2,11 @@ package windowshell
 
 import (
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -23,6 +25,7 @@ var (
 	createPopupMenu  = user32.NewProc("CreatePopupMenu")
 	destroyMenu      = user32.NewProc("DestroyMenu")
 	trackPopupMenu   = user32.NewProc("TrackPopupMenuEx")
+	clientToScreen   = user32.NewProc("ClientToScreen")
 	getCursorPos     = user32.NewProc("GetCursorPos")
 	getKeyState      = user32.NewProc("GetKeyState")
 	windowThread     = user32.NewProc("GetWindowThreadProcessId")
@@ -49,6 +52,7 @@ type Host struct {
 	hwnd         uintptr
 	thread       uint32
 	busy         bool
+	oleAlive     bool
 	menu2, menu3 *object
 	menuMessages uint32
 }
@@ -68,7 +72,7 @@ func NewHost(hwnd uintptr) (*Host, error) {
 	if err := hresult(hr); err != nil {
 		return nil, fmt.Errorf("OleInitialize: %w", err)
 	}
-	h := &Host{hwnd: hwnd, thread: windows.GetCurrentThreadId()}
+	h := &Host{hwnd: hwnd, thread: windows.GetCurrentThreadId(), oleAlive: true}
 	hosts.Store(hwnd, h)
 	if ok, _, err := setSubclass.Call(hwnd, subclassCallback, subclassID, 0); ok == 0 {
 		hosts.Delete(hwnd)
@@ -89,6 +93,14 @@ func (h *Host) begin() error {
 	return nil
 }
 
+func (h *Host) end() {
+	h.busy = false
+	if h.hwnd == 0 && h.oleAlive {
+		oleUninitialize.Call()
+		h.oleAlive = false
+	}
+}
+
 // Drag allows the target to copy or move. The target/shell owns the transfer;
 // the source must never interpret the returned effect as permission to delete.
 func (h *Host) Drag(paths []string) (Result, error) {
@@ -96,7 +108,7 @@ func (h *Host) Drag(paths []string) (Result, error) {
 	if err := h.begin(); err != nil {
 		return r, err
 	}
-	defer func() { h.busy = false }()
+	defer h.end()
 	data, err := shellObject(h.hwnd, paths, &iidData)
 	if err != nil {
 		return r, err
@@ -113,13 +125,24 @@ func (h *Host) Drag(paths []string) (Result, error) {
 
 // ContextMenu hosts the traditional Windows shell menu for sibling items.
 // Menu and command callbacks remain on the native thread throughout.
-func (h *Host) ContextMenu(paths []string, extended bool) (Result, error) {
+func (h *Host) ContextMenu(paths []string, options MenuOptions) (Result, error) {
 	r := Result{Action: "menu", ThreadID: h.thread}
+	start := time.Now()
+	extended := options.Extended
 	if err := h.begin(); err != nil {
 		return r, err
 	}
-	defer func() { h.busy = false }()
-	menu, err := shellObject(h.hwnd, paths, &iidMenu)
+	defer h.end()
+	var point nativePoint
+	if options.ClientPoint != nil {
+		point = nativePoint{int32(options.ClientPoint.X), int32(options.ClientPoint.Y)}
+		if ok, _, err := clientToScreen.Call(h.hwnd, uintptr(unsafe.Pointer(&point))); ok == 0 {
+			return r, fmt.Errorf("ClientToScreen: %w", err)
+		}
+	} else if ok, _, err := getCursorPos.Call(uintptr(unsafe.Pointer(&point))); ok == 0 {
+		return r, fmt.Errorf("GetCursorPos: %w", err)
+	}
+	menu, err := timedShellObject(h.hwnd, paths, &iidMenu, &r.Timings)
 	if err != nil {
 		return r, err
 	}
@@ -155,18 +178,18 @@ func (h *Host) ContextMenu(paths []string, extended bool) (Result, error) {
 	if extended {
 		flags = 0x100
 	} // CMF_EXTENDEDVERBS
+	populate := time.Now()
 	hr := menu.call(3, hm, 0, 1, 0x7fff, flags)
+	r.Timings.Populate = time.Since(populate)
 	if err := hresult(uintptr(hr)); err != nil {
 		return r, err
 	}
 	r.Commands = hr & 0xffff
-	var point nativePoint
-	if ok, _, err := getCursorPos.Call(uintptr(unsafe.Pointer(&point))); ok == 0 {
-		return r, fmt.Errorf("GetCursorPos: %w", err)
-	}
 	// RETURNCMD avoids WM_COMMAND routing into Gio. RIGHTBUTTON permits
 	// choosing commands with either mouse button; nested menu messages go
 	// through our window subclass before Gio/default processing.
+	r.Timings.Ready = time.Since(start)
+	releaseCapture.Call()
 	command, _, _ := trackPopupMenu.Call(hm, 0x100|0x2, uintptr(point.X), uintptr(point.Y), h.hwnd, 0)
 	r.MenuMessages = h.menuMessages
 	if command == 0 {
@@ -220,6 +243,11 @@ func (o *object) query(iid *windows.GUID) *object {
 }
 
 func shellObject(hwnd uintptr, paths []string, iid *windows.GUID) (*object, error) {
+	return timedShellObject(hwnd, paths, iid, nil)
+}
+
+func timedShellObject(hwnd uintptr, paths []string, iid *windows.GUID, timings *MenuTimings) (*object, error) {
+	start := time.Now()
 	paths, err := siblingPaths(paths)
 	if err != nil {
 		return nil, err
@@ -235,11 +263,22 @@ func shellObject(hwnd uintptr, paths []string, iid *windows.GUID) (*object, erro
 	}()
 	var parent *object
 	for i, path := range paths {
-		name, err := windows.UTF16PtrFromString(path)
+		displayName := path
+		if i > 0 {
+			displayName = filepath.Base(path)
+		}
+		name, err := windows.UTF16PtrFromString(displayName)
 		if err != nil {
 			return nil, err
 		}
-		hr, _, _ := parseDisplayName.Call(uintptr(unsafe.Pointer(name)), 0, uintptr(unsafe.Pointer(&ids[i])), 0, 0)
+		var hr uintptr
+		if i == 0 {
+			hr, _, _ = parseDisplayName.Call(uintptr(unsafe.Pointer(name)), 0, uintptr(unsafe.Pointer(&ids[i])), 0, 0)
+		} else {
+			// Siblings share a bound parent. Parse only their relative names, without
+			// traversing the parent path and binding another folder for every item.
+			hr = uintptr(parent.call(3, hwnd, 0, uintptr(unsafe.Pointer(name)), 0, uintptr(unsafe.Pointer(&ids[i])), 0))
+		}
 		runtime.KeepAlive(name)
 		if err := hresult(hr); err != nil {
 			return nil, fmt.Errorf("SHParseDisplayName: %w", err)
@@ -252,18 +291,19 @@ func shellObject(hwnd uintptr, paths []string, iid *windows.GUID) (*object, erro
 			}
 			defer parent.call(2)
 		} else {
-			var otherParent *object
-			hr, _, _ = bindToParent.Call(uintptr(ids[i]), uintptr(unsafe.Pointer(&iidFolder)),
-				uintptr(unsafe.Pointer(&otherParent)), uintptr(unsafe.Pointer(&children[i])))
-			if err := hresult(hr); err != nil {
-				return nil, fmt.Errorf("SHBindToParent: %w", err)
-			}
-			otherParent.call(2)
+			children[i] = ids[i]
 		}
 	}
+	if timings != nil {
+		timings.Resolve = time.Since(start)
+	}
+	acquire := time.Now()
 	var out *object
 	hr := parent.call(10, hwnd, uintptr(len(children)), uintptr(unsafe.Pointer(&children[0])),
 		uintptr(unsafe.Pointer(iid)), 0, uintptr(unsafe.Pointer(&out)))
+	if timings != nil {
+		timings.Object = time.Since(acquire)
+	}
 	runtime.KeepAlive(ids)
 	runtime.KeepAlive(children)
 	if err := hresult(uintptr(hr)); err != nil {
@@ -311,7 +351,9 @@ func menuWindowProc(hwnd uintptr, msg uint32, wparam, lparam, id, data uintptr) 
 			removeSubclass.Call(hwnd, subclassCallback, id)
 			hosts.Delete(hwnd)
 			h.hwnd = 0
-			oleUninitialize.Call()
+			if !h.busy {
+				h.end()
+			}
 		}
 	}
 	result, _, _ := defSubclass.Call(hwnd, uintptr(msg), wparam, lparam)

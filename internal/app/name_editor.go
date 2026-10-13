@@ -72,7 +72,7 @@ func (v *view) beginName(gtx layout.Context, r *nameSession, name string, folder
 	}
 	p := &v.panels[r.panel]
 	if r.draft() {
-		p.rows = make(map[int]*widget.Clickable)
+		p.rows = make(map[int]*fileRow)
 	}
 	p.prefix, p.reveal = "", true
 	v.nameEditor.SetText(name)
@@ -95,7 +95,7 @@ func (v *view) stopName(gtx layout.Context) {
 	if r.draft() {
 		p := &v.panels[r.panel]
 		p.list.Position, p.reveal = r.previousPosition, r.previousReveal
-		p.rows = make(map[int]*widget.Clickable)
+		p.rows = make(map[int]*fileRow)
 	}
 	v.interaction.finish(r)
 	if r.kind == nameDuplicate {

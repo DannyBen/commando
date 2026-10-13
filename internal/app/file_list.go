@@ -9,7 +9,6 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
-	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
@@ -80,7 +79,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				storedRow := v.storedRow(index, row)
 				naming := v.nameInteraction() != nil && !v.nameInteraction().finished && v.nameInteraction().panel == index && v.nameInteraction().row == row
 				if p.rows[row] == nil {
-					p.rows[row] = new(widget.Clickable)
+					p.rows[row] = new(fileRow)
 				}
 				if v.inlineActionRow(index, row) {
 					return p.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions { return v.inlineActionContents(gtx, row, rowHeight) })
@@ -121,6 +120,11 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				}
 				return p.rows[row].Layout(gtx, contents)
 			})
+			// Keyboard menus anchor beside the revealed current row in client pixels.
+			headerHeight := locationBarHeight(gtx, textHeight) + max(gtx.Dp(28), smallTextHeight+gtx.Dp(12))
+			panelX := (v.frameSize.X + gtx.Dp(1)) * index / len(v.panels)
+			y := (p.selected-p.list.Position.First)*rowHeight - p.list.Position.Offset
+			p.selectionAnchor = image.Pt(panelX+gtx.Dp(14), headerHeight+max(0, min(y+rowHeight, dims.Size.Y)))
 			// Keep row widgets only around the visible viewport.
 			for row := range p.rows {
 				if row < p.list.Position.First-1 || row > p.list.Position.First+p.list.Position.Count {

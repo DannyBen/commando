@@ -182,7 +182,7 @@ func (v *view) acceptLoad(result loadResult) {
 			p.selected = i
 		}
 	}
-	p.rows = make(map[int]*widget.Clickable)
+	p.rows = make(map[int]*fileRow)
 	if refresh {
 		// Keep the viewport unless the current item moved or disappeared.
 		p.reveal = p.reveal || p.selected != previousRow

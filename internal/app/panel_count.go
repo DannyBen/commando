@@ -21,7 +21,7 @@ func panelsCanChange(v *view) bool {
 
 func (p panel) clone() panel {
 	p.items, p.entries = slices.Clone(p.items), slices.Clone(p.entries)
-	p.rows = make(map[int]*widget.Clickable)
+	p.rows = make(map[int]*fileRow)
 	p.marks, p.markRange = nil, nil
 	p.list = widget.List{List: layout.List{Axis: layout.Vertical, Position: p.list.Position}}
 	p.feedback = feedback.Channel{}

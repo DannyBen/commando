@@ -16,7 +16,20 @@ func (v *view) actionAllowed(class actionClass) bool {
 	if class == actionBrowse {
 		return true
 	}
-	return !v.transferPending && !v.mutationsBusy()
+	return !v.interaction.operationsHeld() && !v.transferPending && !v.mutationsBusy()
+}
+
+// Features declare a supported foreground state and action class, rather than
+// listing competing editor or modal types at every input entry point.
+func (v *view) canStartInteraction(index int, class actionClass) bool {
+	return v.interaction.idle() && v.canOfferInteraction(index, class)
+}
+
+// Command discovery checks readiness while its palette still owns foreground.
+// Dispatch finishes that owner before canStartInteraction admits the action.
+func (v *view) canOfferInteraction(index int, class actionClass) bool {
+	return index >= 0 && index < len(v.panels) &&
+		!v.panels[index].loading && v.pendingDuplicate == nil && v.actionAllowed(class)
 }
 
 func (v *view) mutationsBusy() bool {
@@ -62,6 +75,7 @@ func (l *directoryLoader) complete(request loadRequest) {
 // A destroyed window cannot discard an active operation's completion. Stop
 // accepting queued work, wait for the worker, and reconcile before saving state.
 func (v *view) finishOperations() {
+	v.finishNative()
 	if v.monitor != nil {
 		v.monitor.close()
 		v.monitor = nil
@@ -83,7 +97,7 @@ func (v *view) finishOperations() {
 
 func (v *view) requestClose() bool {
 	v.pollLoads()
-	if !v.mutationsBusy() {
+	if !v.mutationsBusy() && !v.interaction.operationsHeld() {
 		return true
 	}
 	v.showFeedback(v.active, feedback.Info, "File operation in progress")

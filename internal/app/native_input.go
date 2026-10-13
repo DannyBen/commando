@@ -9,6 +9,7 @@ import (
 // Gio does not translate Windows VK_INSERT. The window subclass forwards it
 // here without accessing UI state from the native window thread.
 const insertKey key.Name = "Insert"
+const contextMenuKey key.Name = "ContextMenu"
 
 type nativeKeyInput struct {
 	mu         sync.Mutex

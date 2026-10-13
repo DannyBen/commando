@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
 )
 
@@ -71,7 +70,7 @@ func (v *view) applyRename(result loadResult, oldName, newName string) {
 					p.marks[row] = true
 				}
 			}
-			p.rows = make(map[int]*widget.Clickable)
+			p.rows = make(map[int]*fileRow)
 			p.refilter()
 			if pi == v.active {
 				p.reveal = true

@@ -10,6 +10,7 @@ func (v *view) update(gtx layout.Context) {
 	v.updateCutClipboard(gtx)
 	v.updateFeedbackInput(gtx)
 	defer v.dismissUnhandledFeedbackKeys(gtx)
+	v.pollNative(gtx)
 	v.pollLoads()
 	v.offerDuplicate(gtx)
 	if !v.started {
@@ -19,12 +20,15 @@ func (v *view) update(gtx layout.Context) {
 	for pi := range v.panels {
 		p := &v.panels[pi]
 		for ri, row := range p.rows {
+			if row.contextClicked(gtx) {
+				v.startContextMenu(gtx, pi, v.storedRow(pi, ri), true)
+			}
 			for {
 				click, ok := row.Update(gtx)
 				if !ok {
 					break
 				}
-				if v.paletteInteraction() != nil {
+				if v.interaction.panelsBlocked() {
 					continue
 				}
 				v.dismissFeedback()
@@ -66,6 +70,8 @@ func (v *view) update(gtx layout.Context) {
 			// Consume Tab alongside browsing keys to retain their event order.
 			key.Filter{Name: key.NameTab, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: "/", Required: key.ModAlt},
+			key.Filter{Focus: &v.focus, Name: contextMenuKey},
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "`"},
 			key.Filter{Focus: &v.focus, Name: "P", Required: key.ModCtrl | key.ModShift},
@@ -116,7 +122,7 @@ func (v *view) update(gtx layout.Context) {
 		}
 		if edit, ok := e.(key.EditEvent); ok {
 			v.dismissFeedback()
-			if v.inlineInteraction() != nil && v.inlineInteraction().panel == v.active {
+			if !v.interaction.idle() {
 				continue
 			}
 			if v.suppressSpaceText {
@@ -159,8 +165,15 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	next := p.selected
 	page := max(1, p.list.Position.Count-1)
 	switch ke.Name {
-	case "/":
+	case contextMenuKey:
 		if ke.Modifiers == 0 {
+			v.startContextMenu(gtx, v.active, p.selected, false)
+		}
+		return
+	case "/":
+		if ke.Modifiers == key.ModAlt {
+			v.startContextMenu(gtx, v.active, p.selected, false)
+		} else if ke.Modifiers == 0 {
 			v.startFilter(gtx)
 		}
 		return

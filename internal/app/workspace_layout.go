@@ -16,6 +16,7 @@ import (
 )
 
 func (v *view) layout(gtx layout.Context) layout.Dimensions {
+	v.frameSize = gtx.Constraints.Max
 	v.update(gtx)
 	paint.Fill(gtx.Ops, v.appearance.Colors.Surface)
 	event.Op(gtx.Ops, &v.focus)
@@ -29,7 +30,7 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 			}))
 		}
 		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			if v.paletteInteraction() != nil {
+			if v.interaction.panelsBlocked() {
 				gtx.Source = gtx.Source.Disabled()
 			}
 			return v.panel(gtx, i)

@@ -4,8 +4,10 @@ package windowshell
 
 import (
 	"fmt"
+	"image"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func siblingPaths(paths []string) ([]string, error) {
@@ -38,4 +40,17 @@ type Result struct {
 	MenuVersion  int
 	MenuMessages uint32
 	ThreadID     uint32
+	Timings      MenuTimings
+}
+
+type MenuOptions struct {
+	Extended    bool
+	ClientPoint *image.Point // nil uses the cursor captured before preparation.
+}
+
+type MenuTimings struct {
+	Resolve  time.Duration
+	Object   time.Duration
+	Populate time.Duration
+	Ready    time.Duration
 }

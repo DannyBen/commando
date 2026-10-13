@@ -18,6 +18,10 @@ are ignored; the current workspace stays intact.
 
 Press Backtick or Ctrl+Shift+P to open the command palette and view key bindings.
 
+Right-click an item to open its Windows context menu. Alt+/ or the Menu key
+opens the menu for marked items, or the current item when nothing is marked.
+Right-click targets only the clicked item and preserves other marks.
+
 Press `/` to filter filenames in the current panel. Matches appear as you type;
 Enter returns to browsing and Escape clears the filter. Press `/` again to edit
 the query. Filters remain when switching panels and clear when opening another

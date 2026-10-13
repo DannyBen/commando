@@ -23,6 +23,7 @@ const windowWidth, windowHeight = 800, 480
 // Run opens the native folder browser.
 func Run() error {
 	preview := flag.String("png", "", "render the workspace to a PNG and exit")
+	traceShell := flag.Bool("trace-shell", false, "record shell menu preparation timings")
 	traceTransfers := flag.Bool("trace-transfers", false, "record transfer diagnostics in the application data folder")
 	flag.Parse()
 	if *preview != "" {
@@ -57,6 +58,16 @@ func Run() error {
 	}
 	defer stopTrace()
 
+	var menuTrace func(menuCompletion)
+	stopShellTrace := func() error { return nil }
+	if *traceShell {
+		menuTrace, stopShellTrace, err = openShellTrace(dataDir)
+		if err != nil {
+			return fmt.Errorf("cannot open shell trace: %w", err)
+		}
+	}
+	defer stopShellTrace()
+
 	done := make(chan error, 1)
 	go func() {
 		w := new(gioapp.Window)
@@ -70,6 +81,8 @@ func Run() error {
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate)
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		v.nativeKeys = keys
+		v.menuExecutor = native.menuExecutor(w)
+		v.menuTrace = menuTrace
 		sounds := sound.NewPlayer()
 		defer sounds.Close()
 		v.sounds = sounds
@@ -86,6 +99,7 @@ func Run() error {
 				v.finishOperations()
 				sounds.Close()
 				stopTrace()
+				stopShellTrace()
 				state := v.sessionState(tracker.snapshot())
 				state.PanelWidth = tracker.sizingSnapshot().baseWidth
 				result := e.Err
@@ -102,6 +116,7 @@ func Run() error {
 			native.configure(w, e)
 			native.resizePanels(w, len(v.panels))
 			v.ownerWindow = native.owner()
+			v.dispatchNative(w.Invalidate)
 		}
 	}()
 	go func() {

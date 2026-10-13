@@ -1,6 +1,7 @@
 package app
 
 import (
+	"image"
 	"time"
 
 	"gioui.org/layout"
@@ -17,28 +18,29 @@ type entry struct {
 }
 
 type panel struct {
-	path           string // Last physical directory, retained while displaying drives.
-	drives         bool
-	items          []entry
-	entries        []browser.Entry // Complete listing; items is the currently visible projection.
-	rows           map[int]*widget.Clickable
-	list           widget.List
-	selected       int
-	marks          map[int]bool
-	markRange      *selectionRange
-	metadata       metadataColumn
-	sortByMetadata bool
-	visibility     visibilityMode
-	reveal         bool
-	loading        bool
-	navigating     bool // Retained rows must not look active while their replacement loads.
-	refreshing     bool // Automatic read; ordinary browsing remains available.
-	refreshNeeded  bool // Coalesced notification deferred until the listing is safe.
-	err            error
-	filter         string
-	prefix         string
-	prefixAt       time.Time
-	feedback       feedback.Channel
+	path            string // Last physical directory, retained while displaying drives.
+	drives          bool
+	items           []entry
+	entries         []browser.Entry // Complete listing; items is the currently visible projection.
+	rows            map[int]*fileRow
+	list            widget.List
+	selected        int
+	selectionAnchor image.Point
+	marks           map[int]bool
+	markRange       *selectionRange
+	metadata        metadataColumn
+	sortByMetadata  bool
+	visibility      visibilityMode
+	reveal          bool
+	loading         bool
+	navigating      bool // Retained rows must not look active while their replacement loads.
+	refreshing      bool // Automatic read; ordinary browsing remains available.
+	refreshNeeded   bool // Coalesced notification deferred until the listing is safe.
+	err             error
+	filter          string
+	prefix          string
+	prefixAt        time.Time
+	feedback        feedback.Channel
 }
 
 type view struct {
@@ -48,6 +50,7 @@ type view struct {
 	closedPanels      []closedPanel
 	active            int
 	focus             bool
+	frameSize         image.Point
 	started           bool
 	loader            *directoryLoader
 	monitor           *directoryMonitor
@@ -67,6 +70,9 @@ type view struct {
 	clipboardSequence func() uint32
 	ownerWindow       uintptr
 	pendingDuplicate  *loadResult
+	menuExecutor      func(menuRequest) menuCompletion
+	menuResults       chan menuCompletion
+	menuTrace         func(menuCompletion)
 	sounds            interface {
 		Play(sound.Name)
 		Stop()
@@ -92,10 +98,11 @@ func newView(panels []panel) *view {
 		commandSearch:     widget.Editor{SingleLine: true},
 		filterEditor:      widget.Editor{SingleLine: true},
 		clipboardSequence: browser.FileClipboardSequence,
+		menuResults:       make(chan menuCompletion, 1),
 	}
 	for i := range v.panels {
 		p := &v.panels[i]
-		p.rows = make(map[int]*widget.Clickable)
+		p.rows = make(map[int]*fileRow)
 		p.list.Axis = layout.Vertical
 		p.metadata = metadataSize
 	}

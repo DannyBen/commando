@@ -20,6 +20,17 @@ module/executable and `Commando` for the window title and data-folder name.
 
 ## Behavior to Preserve
 
+- Right-click targets only the clicked file or folder, selects its row and panel,
+  and retains independent marks. Alt+/ and the native Menu key use marked items,
+  otherwise the current item; command search uses the same handler. Keyboard
+  menus anchor beside the revealed current row. Exclude parents, drives and blank
+  areas. Use shared foreground readiness and action policy, without enumerating
+  competing editors or overlays in the feature. Native shell sessions hold input,
+  mutations, clipboard writes and close requests until completion. Run the native
+  loop on the window's OLE thread after submitting the frame, keeping Gio's event
+  consumer available. Keep the shell host for the window lifetime and build fresh
+  menus. Quietly reconcile open folders through the existing worker after shell
+  commands, preserving surviving marks, selection, filters and viewports.
 - Windows keeps one instance per shared data folder in the login session.
   Acquire ownership before loading state; previews bypass it. Later launches
   ignore supplied paths, request activation and exit without loading or saving
@@ -274,8 +285,8 @@ module/executable and `Commando` for the window title and data-folder name.
 
 - Discuss new interaction models with the user before implementing them.
 - Do not add tooltips. Name editing and transfer targeting use in-panel UI;
-  command search uses a modal overlay. Windows transfer dialogs remain the
-  native-shell exception.
+  command search uses a modal overlay. Windows transfer dialogs and context
+  menus remain native-shell exceptions.
 - All UI models must be reusable, with either a general purpose (such as a modal
   or message channel) or a semantic purpose (such as a file list or search bar).
   Extend the appropriate shared model instead of adding an operation-specific UI.

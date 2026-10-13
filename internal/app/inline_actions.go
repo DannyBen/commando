@@ -8,7 +8,6 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
-	"gioui.org/widget"
 )
 
 // Inline actions are temporary file-list rows. The list owns their placement,
@@ -43,7 +42,7 @@ func (v *view) startInlineActions(panel, row int, title, detail string, options 
 	p := &v.panels[panel]
 	v.interaction.begin(&inlineActionSession{panel: panel, row: max(0, min(row, len(p.items))), subjectRow: -1, headers: headers,
 		options: options, choose: choose, cancel: cancel, previousPosition: p.list.Position, previousReveal: p.reveal})
-	p.rows = make(map[int]*widget.Clickable)
+	p.rows = make(map[int]*fileRow)
 	p.prefix, p.reveal = "", true
 }
 
@@ -57,7 +56,7 @@ func (v *view) stopInlineActions() *inlineActionSession {
 		p.selected, p.reveal = a.subjectRow, true
 		p.markRange = nil
 	}
-	p.rows = make(map[int]*widget.Clickable)
+	p.rows = make(map[int]*fileRow)
 	v.interaction.finish(a)
 	return a
 }

@@ -30,6 +30,8 @@ type paletteSession struct {
 	openingBacktick bool
 }
 
+func (*paletteSession) blocksPanels() bool { return true }
+
 func (s *paletteSession) interactionPanel() int { return s.panel }
 
 func (v *view) paletteInteraction() *paletteSession {
