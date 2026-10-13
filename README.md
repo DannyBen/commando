@@ -12,45 +12,4 @@ A keyboard-first multi-panel file terminal for Windows.
 
 ## Usage
 
-Windows runs one Commando instance. Launching it again brings the existing
-window forward, restoring it if minimized. Paths supplied to later launches
-are ignored; the current workspace stays intact.
-
 Press Backtick or Ctrl+Shift+P to open the command palette and view key bindings.
-
-Right-click an item to open its Windows context menu. Alt+/ or the Menu key
-opens the menu for marked items, or the current item when nothing is marked.
-Right-click targets only the clicked item and preserves other marks.
-
-Drag a file or folder to another application to copy it. Dragging a marked item
-carries the marked set; dragging an unmarked item carries only that item.
-Ctrl+Shift+D or **Entry › Arm drag** starts dragging without holding a mouse
-button: switch windows with Alt+Tab, then click the destination to drop. Escape
-cancels. Clicking inside Commando keeps armed drag active.
-Both routes are copy-only; panel-to-panel transfers use F5/F6.
-
-Ctrl+V pastes clipboard files into the current folder. If the clipboard contains
-an image instead, it opens a name draft suggesting `file.png`. Enter saves the
-image as PNG; Escape cancels. The clipboard remains available for another paste.
-
-Press `/` to filter filenames in the current panel. Matches appear as you type;
-Enter returns to browsing and Escape clears the filter. Press `/` again to edit
-the query. Filters remain when switching panels and clear when opening another
-folder. Files hidden by a filter lose their marks. Ordinary typing still jumps
-to a filename prefix.
-
-Alt+Left/Right adds a panel beside the current one. Ctrl+Left/Right opens the
-selected folder beside it, creating a panel at an outer edge. Ctrl+W closes a
-panel; Ctrl+Shift+W reopens the last closed panel. Alt+1–9 focuses a numbered
-panel. At least one panel stays open.
-
-On Windows, adding or closing panels adjusts the window to preserve your
-preferred panel width, within the current screen's available space. A manual
-window-width resize sets a new preference. Maximized and snapped layouts keep
-their window size. Panel count, locations, display choices and preferred width
-are saved between sessions.
-
-Ctrl+M / Ctrl+Shift+M cycles the metadata column. Ctrl+F3 toggles sorting by
-that column for the current panel: extension ascending, size largest first,
-modified newest first. Folders stay ahead of files. Without a metadata column,
-the list uses its normal name order. Each panel remembers its sorting choice.
