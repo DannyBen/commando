@@ -79,6 +79,7 @@ func (v *view) queueLoad(request loadRequest) {
 		return
 	}
 	p.loading, p.err = true, nil
+	p.navigating = !request.refresh
 	p.feedback.ProgressAt("Reading folder", time.Now().Add(v.appearance.FeedbackProgressDelay))
 	if !request.refresh && v.sounds != nil {
 		v.sounds.Play(sound.DirectoryNavigation)
@@ -121,6 +122,7 @@ func (v *view) acceptLoad(result loadResult) {
 	}
 	p := &v.panels[result.request.panel]
 	p.loading, p.err = false, result.err
+	p.navigating = false
 	if result.err != nil {
 		v.showFeedback(result.request.panel, feedback.Error, readError(result.err))
 		return

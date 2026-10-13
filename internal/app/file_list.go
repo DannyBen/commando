@@ -89,7 +89,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					if naming {
 						bg = v.appearance.Colors.NameRow
 					} else {
-						active := storedRow == p.selected && index == v.active && transient < 0
+						active := storedRow == p.selected && index == v.active && transient < 0 && !p.navigating
 						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, v.cutEntry(index, storedRow))
 					}
 					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())

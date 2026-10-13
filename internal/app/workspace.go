@@ -31,6 +31,7 @@ type panel struct {
 	visibility     visibilityMode
 	reveal         bool
 	loading        bool
+	navigating     bool // Retained rows must not look active while their replacement loads.
 	refreshing     bool // Automatic read; ordinary browsing remains available.
 	refreshNeeded  bool // Coalesced notification deferred until the listing is safe.
 	err            error
