@@ -20,6 +20,21 @@ module/executable and `Commando` for the window title and data-folder name.
 
 ## Behavior to Preserve
 
+- Regular outbound dragging starts after a mouse movement threshold on a file
+  or folder. A marked row carries the marked set; an unmarked row carries only
+  that item. Suppress the originating click after a drag, retaining normal clicks
+  and independent marks. Ctrl+Shift+D and Entry › Arm drag capture marks, otherwise
+  the current item, for button-free dragging: the next complete click drops;
+  Escape cancels. Ignore an invocation button held initially until it is released.
+  Armed drag shows Info through the shared feedback channel with Immediate
+  style: full, steady text and the usual semantic sound. Submit that frame before
+  entering the native loop; do not wait for an animation.
+  Both modes use the same native shell source/data object and copy-only effects,
+  without accessing the clipboard or deleting sources. Commando does not register
+  its panels as drop targets; F5/F6 remains the panel transfer flow. Reuse shared
+  native sessions, eligibility, close/mutation blocking and quiet reconciliation.
+  Keep the source pinned/rooted until its final COM Release. Native completion
+  reports acceptance rather than claiming the destination finished an upload.
 - Right-click targets only the clicked file or folder, selects its row and panel,
   and retains independent marks. Alt+/ and the native Menu key use marked items,
   otherwise the current item; command search uses the same handler. Keyboard

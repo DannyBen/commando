@@ -70,9 +70,9 @@ type view struct {
 	clipboardSequence func() uint32
 	ownerWindow       uintptr
 	pendingDuplicate  *loadResult
-	menuExecutor      func(menuRequest) menuCompletion
-	menuResults       chan menuCompletion
-	menuTrace         func(menuCompletion)
+	shellExecutor     func(shellRequest) shellCompletion
+	shellResults      chan shellCompletion
+	shellTrace        func(shellCompletion)
 	sounds            interface {
 		Play(sound.Name)
 		Stop()
@@ -98,7 +98,7 @@ func newView(panels []panel) *view {
 		commandSearch:     widget.Editor{SingleLine: true},
 		filterEditor:      widget.Editor{SingleLine: true},
 		clipboardSequence: browser.FileClipboardSequence,
-		menuResults:       make(chan menuCompletion, 1),
+		shellResults:      make(chan shellCompletion, 1),
 	}
 	for i := range v.panels {
 		p := &v.panels[i]

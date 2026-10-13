@@ -58,7 +58,9 @@ var commands = []command{
 	cmd("Entry", "Recycle", key.NameDeleteForward, 0, selectedMutationReady),
 	cmd("Entry", "New file", "N", key.ModCtrl, writableFolder),
 	cmd("Entry", "New folder", "N", key.ModCtrl|key.ModShift, writableFolder),
-	cmd("Entry", "Context menu", "/", key.ModAlt, func(v *view) bool { return v.contextMenuAvailable(v.active, v.panels[v.active].selected, false) }),
+	cmd("Entry", "Context menu", "/", key.ModAlt, func(v *view) bool { return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false) }),
+
+	cmd("Entry", "Arm drag", "D", key.ModCtrl|key.ModShift, func(v *view) bool { return v.dragAvailable(v.active, v.panels[v.active].selected, true) }),
 
 	cmd("Navigation", "Parent folder", key.NameDeleteBackward, 0, func(v *view) bool { return folderReady(v) && v.loader != nil }),
 	cmd("Navigation", "Edit location", "D", key.ModAlt, nil),

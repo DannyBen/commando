@@ -8,16 +8,21 @@ import (
 	"github.com/dannyben/commando/internal/windowshell"
 )
 
-func (n *nativeWindow) menuExecutor(w *gioapp.Window) func(menuRequest) menuCompletion {
-	return func(request menuRequest) menuCompletion {
-		var result menuCompletion
+func (n *nativeWindow) shellExecutor(w *gioapp.Window) func(shellRequest) shellCompletion {
+	return func(request shellRequest) shellCompletion {
+		var result shellCompletion
 		w.Run(func() {
 			result.queue = time.Since(request.queued)
 			if n.shell == nil {
 				result.err = fmt.Errorf("native shell unavailable: %w", n.shellErr)
 				return
 			}
-			result.result, result.err = n.shell.ContextMenu(request.paths, request.options)
+			switch request.action {
+			case shellDrag:
+				result.result, result.err = n.shell.Drag(request.paths, request.armed)
+			default:
+				result.result, result.err = n.shell.ContextMenu(request.paths, request.options)
+			}
 		})
 		return result
 	}

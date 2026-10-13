@@ -20,7 +20,11 @@ func (v *view) update(gtx layout.Context) {
 	for pi := range v.panels {
 		p := &v.panels[pi]
 		for ri, row := range p.rows {
-			if row.contextClicked(gtx) {
+			context, dragged := row.updatePointer(gtx)
+			if dragged {
+				v.startDrag(gtx, pi, v.storedRow(pi, ri), false)
+			}
+			if context {
 				v.startContextMenu(gtx, pi, v.storedRow(pi, ri), true)
 			}
 			for {
@@ -72,7 +76,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModAlt},
 			key.Filter{Focus: &v.focus, Name: "/", Required: key.ModAlt},
 			key.Filter{Focus: &v.focus, Name: contextMenuKey},
-			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: "D", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "`"},
 			key.Filter{Focus: &v.focus, Name: "P", Required: key.ModCtrl | key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameF2},
@@ -246,7 +250,9 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		}
 		return
 	case "D":
-		if ke.Modifiers == key.ModCtrl {
+		if ke.Modifiers == key.ModCtrl|key.ModShift {
+			v.startDrag(gtx, v.active, p.selected, true)
+		} else if ke.Modifiers == key.ModCtrl {
 			v.duplicateSelected()
 		} else if ke.Modifiers == key.ModAlt {
 			v.startLocation(gtx)

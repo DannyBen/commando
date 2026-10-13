@@ -7,6 +7,36 @@ import (
 	"unicode/utf8"
 )
 
+func TestImmediateStylePreservesAnnouncementAndLifecycle(t *testing.T) {
+	var c Channel
+	start := time.Unix(1000, 0)
+	animations := Animations{Enabled: true, Info: Animation{
+		Enabled: true, CharacterDelay: time.Second, Blinks: 2, BlinkInterval: time.Second,
+		Cursor: "█", CursorBlinks: -1, CursorBlinkInterval: time.Second,
+	}}
+	c.ShowWithStyle(Info, "Ready", Immediate)
+	for i := range 4 {
+		frame, owns := c.Frame(start.Add(time.Duration(i)*time.Second), animations)
+		if !owns || frame.Text != "Ready" || frame.Kind != Info || frame.Started != (i == 0) || !frame.Next.IsZero() {
+			t.Fatalf("immediate presentation changed announcement or animated: %+v", frame)
+		}
+	}
+	c.Show(Info, "Next")
+	frame, _ := c.Frame(start, animations)
+	if frame.Text != "█" || !frame.Started || frame.Next.IsZero() {
+		t.Fatal("ordinary replacement lost its normal animation")
+	}
+	c.ShowWithStyle(Info, "Ready", Immediate)
+	c.Acknowledge()
+	if frame, _ := c.Frame(start, animations); frame.Started {
+		t.Fatal("acknowledged immediate message announced again")
+	}
+	c.Dismiss()
+	if _, owns := c.Frame(start, animations); owns {
+		t.Fatal("immediate message did not dismiss")
+	}
+}
+
 func TestFeedbackTypingAndTwoBlinksHoldIndefinitely(t *testing.T) {
 	start := time.Unix(1000, 0)
 	animation := Animation{Enabled: true, CharacterDelay: 10 * time.Millisecond, BlinkInterval: 20 * time.Millisecond, Blinks: 2}

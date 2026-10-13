@@ -13,9 +13,12 @@ import (
 // pointer events through keeps list scrolling and primary clicks independent.
 type fileRow struct {
 	widget.Clickable
-	secondary bool
-	pressed   bool
-	size      image.Point
+	secondary     bool
+	pressed       bool
+	size          image.Point
+	dragCandidate bool
+	dragOrigin    image.Point
+	suppressClick bool
 }
 
 func (r *fileRow) Layout(gtx layout.Context, contents layout.Widget) layout.Dimensions {
@@ -29,10 +32,9 @@ func (r *fileRow) Layout(gtx layout.Context, contents layout.Widget) layout.Dime
 	return dims
 }
 
-func (r *fileRow) contextClicked(gtx layout.Context) bool {
-	clicked := false
+func (r *fileRow) updatePointer(gtx layout.Context) (clicked, dragged bool) {
 	for {
-		e, ok := gtx.Event(pointer.Filter{Target: &r.secondary, Kinds: pointer.Press | pointer.Release | pointer.Cancel})
+		e, ok := gtx.Event(pointer.Filter{Target: &r.secondary, Kinds: pointer.Press | pointer.Release | pointer.Cancel | pointer.Move | pointer.Drag})
 		if !ok {
 			break
 		}
@@ -40,12 +42,26 @@ func (r *fileRow) contextClicked(gtx layout.Context) bool {
 		switch pe.Kind {
 		case pointer.Press:
 			r.pressed = pe.Source == pointer.Mouse && pe.Buttons == pointer.ButtonSecondary
+			r.dragCandidate = pe.Source == pointer.Mouse && pe.Buttons == pointer.ButtonPrimary
+			r.dragOrigin = pe.Position.Round()
+			r.suppressClick = false
+		case pointer.Move, pointer.Drag:
+			delta := pe.Position.Round().Sub(r.dragOrigin)
+			threshold := gtx.Dp(6)
+			if r.dragCandidate && pe.Buttons == pointer.ButtonPrimary && delta.X*delta.X+delta.Y*delta.Y >= threshold*threshold {
+				dragged, r.dragCandidate, r.suppressClick = true, false, true
+			}
 		case pointer.Release:
 			clicked = clicked || r.pressed && pe.Position.Round().In(image.Rectangle{Max: r.size})
-			r.pressed = false
+			r.pressed, r.dragCandidate = false, false
 		case pointer.Cancel:
-			r.pressed = false
+			r.pressed, r.dragCandidate = false, false
 		}
 	}
-	return clicked
+	return
+}
+
+func (r *fileRow) Update(gtx layout.Context) (widget.Click, bool) {
+	click, ok := r.Clickable.Update(gtx)
+	return click, ok && !r.suppressClick
 }

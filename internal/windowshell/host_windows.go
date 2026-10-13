@@ -27,7 +27,9 @@ var (
 	trackPopupMenu   = user32.NewProc("TrackPopupMenuEx")
 	clientToScreen   = user32.NewProc("ClientToScreen")
 	getCursorPos     = user32.NewProc("GetCursorPos")
+	getAsyncKeyState = user32.NewProc("GetAsyncKeyState")
 	getKeyState      = user32.NewProc("GetKeyState")
+	getSystemMetrics = user32.NewProc("GetSystemMetrics")
 	windowThread     = user32.NewProc("GetWindowThreadProcessId")
 	releaseCapture   = user32.NewProc("ReleaseCapture")
 	setSubclass      = comctl32.NewProc("SetWindowSubclass")
@@ -101,9 +103,9 @@ func (h *Host) end() {
 	}
 }
 
-// Drag allows the target to copy or move. The target/shell owns the transfer;
+// Drag is outbound and copy-only. The target/shell owns the transfer;
 // the source must never interpret the returned effect as permission to delete.
-func (h *Host) Drag(paths []string) (Result, error) {
+func (h *Host) Drag(paths []string, armed bool) (Result, error) {
 	r := Result{Action: "drag", ThreadID: h.thread}
 	if err := h.begin(); err != nil {
 		return r, err
@@ -114,10 +116,26 @@ func (h *Host) Drag(paths []string) (Result, error) {
 		return r, err
 	}
 	defer data.call(2)
-	// Gio captures the pointer during a press. Hand capture to OLE before
-	// entering its modal loop. SHDoDragDrop supplies IDropSource and an image.
+	source := &dropSource{table: &sourceTable, state: dragState{standard: !armed}}
+	if armed {
+		// GetAsyncKeyState reports physical buttons; honor the user's logical
+		// primary button when Windows has swapped left and right.
+		source.primaryButton = 1                                      // VK_LBUTTON
+		if swapped, _, _ := getSystemMetrics.Call(23); swapped != 0 { // SM_SWAPBUTTON
+			source.primaryButton = 2 // VK_RBUTTON
+		}
+		source.state.waitRelease = source.primaryDown()
+	}
+	source.refs.Store(1)
+	var pin runtime.Pinner
+	pin.Pin(source)
+	pin.Pin(&sourceTable)
+	sourcePins.Store(source, &pin)
+	defer releaseSource(source)
+	// Gio captures the pointer during a press; OLE owns it during the drag.
 	releaseCapture.Call()
-	hr, _, _ := doDragDrop.Call(h.hwnd, uintptr(unsafe.Pointer(data)), 0, 1|2, uintptr(unsafe.Pointer(&r.Effect)))
+	hr, _, _ := doDragDrop.Call(h.hwnd, uintptr(unsafe.Pointer(data)), uintptr(unsafe.Pointer(source)), 1, uintptr(unsafe.Pointer(&r.Effect)))
+	runtime.KeepAlive(source)
 	runtime.KeepAlive(data)
 	r.Cancelled = uint32(hr) == 0x00040101 // DRAGDROP_S_CANCEL
 	return r, hresult(hr)

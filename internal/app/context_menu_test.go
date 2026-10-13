@@ -20,7 +20,9 @@ func (s *testForeground) interactionPanel() int { return s.panel }
 
 func menuTestView() *view {
 	v := newPreviewView()
-	v.menuExecutor = func(menuRequest) menuCompletion { return menuCompletion{result: windowshell.Result{Cancelled: true}} }
+	v.shellExecutor = func(shellRequest) shellCompletion {
+		return shellCompletion{result: windowshell.Result{Cancelled: true}}
+	}
 	return v
 }
 
@@ -81,7 +83,7 @@ func TestContextMenuKeyboardAndPaletteUseMarkedSnapshot(t *testing.T) {
 			t.Fatal("live selection changed menu snapshot")
 		}
 		v.dispatchNative(func() {})
-		completion := <-v.menuResults
+		completion := <-v.shellResults
 		v.completeNative(completion)
 		if !v.interaction.idle() {
 			t.Fatal("menu completion did not release foreground")
@@ -114,7 +116,7 @@ func TestContextMenuCompletionRefreshesQuietlyAndRejectsStaleOwner(t *testing.T)
 	s := v.interaction.current.(*nativeSession)
 	before := v.panels[0].list.Position
 	selected := v.panels[0].selected
-	if !v.completeNative(menuCompletion{session: s}) {
+	if !v.completeNative(shellCompletion{session: s}) {
 		t.Fatal("completion rejected owner")
 	}
 	if !v.panels[0].refreshNeeded || !v.panels[1].refreshNeeded || v.panels[0].filter != "go" || v.panels[0].list.Position != before || v.panels[0].selected != selected {
@@ -122,7 +124,7 @@ func TestContextMenuCompletionRefreshesQuietlyAndRejectsStaleOwner(t *testing.T)
 	}
 	newOwner := &testForeground{panel: 1}
 	v.interaction.begin(newOwner)
-	if v.completeNative(menuCompletion{session: s}) || v.interaction.current != newOwner {
+	if v.completeNative(shellCompletion{session: s}) || v.interaction.current != newOwner {
 		t.Fatal("stale native completion ended a newer interaction")
 	}
 }

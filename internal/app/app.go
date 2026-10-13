@@ -58,10 +58,10 @@ func Run() error {
 	}
 	defer stopTrace()
 
-	var menuTrace func(menuCompletion)
+	var shellTrace func(shellCompletion)
 	stopShellTrace := func() error { return nil }
 	if *traceShell {
-		menuTrace, stopShellTrace, err = openShellTrace(dataDir)
+		shellTrace, stopShellTrace, err = openShellTrace(dataDir)
 		if err != nil {
 			return fmt.Errorf("cannot open shell trace: %w", err)
 		}
@@ -81,8 +81,8 @@ func Run() error {
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate)
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		v.nativeKeys = keys
-		v.menuExecutor = native.menuExecutor(w)
-		v.menuTrace = menuTrace
+		v.shellExecutor = native.shellExecutor(w)
+		v.shellTrace = shellTrace
 		sounds := sound.NewPlayer()
 		defer sounds.Close()
 		v.sounds = sounds

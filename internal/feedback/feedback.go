@@ -16,6 +16,14 @@ const (
 	Error
 )
 
+// Style controls message presentation independently of its semantic kind.
+type Style uint8
+
+const (
+	Animated  Style = iota
+	Immediate       // Full, steady text without typing, pulses or cursor animation.
+)
+
 // Animation controls presentation only; messages never expire on time.
 // Zero character delay skips typing; zero Blinks skips blinking.
 // Negative CursorBlinks keeps the cursor blinking until dismissal.
@@ -56,6 +64,7 @@ func (a Animations) profile(kind Kind) Animation {
 type Message struct {
 	Text      string
 	Kind      Kind
+	Style     Style
 	started   time.Time
 	progress  bool
 	presented bool
@@ -70,8 +79,14 @@ type Channel struct {
 }
 
 func (c *Channel) Show(kind Kind, text string) {
+	c.ShowWithStyle(kind, text, Animated)
+}
+
+// ShowWithStyle changes presentation while retaining normal announcement,
+// replacement and dismissal. Immediate messages still announce their kind.
+func (c *Channel) ShowWithStyle(kind Kind, text string, style Style) {
 	c.Dismiss()
-	c.message = &Message{Text: text, Kind: kind}
+	c.message = &Message{Text: text, Kind: kind, Style: style}
 }
 
 // ShowAt replaces the current message with one scheduled for notBefore.
@@ -137,6 +152,9 @@ func (c *Channel) Frame(now time.Time, animations Animations) (Frame, bool) {
 	}
 	m := c.message
 	animation := animations.profile(m.Kind)
+	if m.Style == Immediate {
+		animation = Animation{}
+	}
 	text, next := m.frame(now, animation)
 	frame := Frame{Text: text, Kind: m.Kind, Next: next, Started: !m.presented}
 	m.presented = true

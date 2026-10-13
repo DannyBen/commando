@@ -9,7 +9,7 @@ import (
 
 // Optional diagnostics separate app dispatch, shell resolution, extension
 // acquisition and menu population. No filenames or user menu-wait time.
-func openShellTrace(dataDir string) (func(menuCompletion), func() error, error) {
+func openShellTrace(dataDir string) (func(shellCompletion), func() error, error) {
 	if err := os.MkdirAll(dataDir, 0700); err != nil {
 		return nil, nil, err
 	}
@@ -18,7 +18,7 @@ func openShellTrace(dataDir string) (func(menuCompletion), func() error, error) 
 		return nil, nil, err
 	}
 	encoder := json.NewEncoder(f)
-	return func(result menuCompletion) {
+	return func(result shellCompletion) {
 		ms := func(d time.Duration) float64 { return d.Seconds() * 1000 }
 		timing := result.result.Timings
 		event := struct {
