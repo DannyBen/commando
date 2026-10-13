@@ -1,6 +1,31 @@
 Changelog
 ========================================
 
+v0.2.0 - 2026-10-13
+----------------------------------------
+
+- Add command palette
+- Add message sounds
+- Update message sounds
+- Fix footer info on dir navigation
+- Add ESC sound
+- Handle gone dirs
+- Fix premature filename ellipsis
+- Detach file extension when extension meta is active
+- Add formula based color per extension
+- Ctrl+F3 to sort by metadata column
+- Allow adding/removing panels
+- Mention panel focus commands in palette
+- Prevent stale selection highlight during adjacent folder loading
+- Narrower command palette
+- Use slash to filter
+- Force single instance
+- Add Windows context menu
+- Add drag outside and arm-drag
+- Ignore in-app arm-drag drops
+- Pasting of image data stream creates image file
+
+
 v0.1.0 - 2026-10-12
 ----------------------------------------
 
