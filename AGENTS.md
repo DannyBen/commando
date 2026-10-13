@@ -20,6 +20,14 @@ module/executable and `Commando` for the window title and data-folder name.
 
 ## Behavior to Preserve
 
+- Windows keeps one instance per shared data folder in the login session.
+  Acquire ownership before loading state; previews bypass it. Later launches
+  ignore supplied paths, request activation and exit without loading or saving
+  state. Restore minimized windows, retaining their prior maximized state; leave
+  other geometry and UI interactions intact. Hand foreground permission from the
+  launching process to the existing process. Keep ownership until operations
+  drain and state is saved, and allow recovery after an owner exits or crashes.
+  Verify foreground activation on a real Windows desktop before marking complete.
 - `/` edits a case-insensitive substring filter for the current folder panel.
   Replace NAME/metadata headings at exactly their existing height while filtering;
   keep the location bar and footer available. Enter finishes query editing without

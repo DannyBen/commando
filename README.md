@@ -12,6 +12,10 @@ A keyboard-first multi-panel file terminal for Windows.
 
 ## Usage
 
+Windows runs one Commando instance. Launching it again brings the existing
+window forward, restoring it if minimized. Paths supplied to later launches
+are ignored; the current workspace stays intact.
+
 Press Backtick or Ctrl+Shift+P to open the command palette and view key bindings.
 
 Press `/` to filter filenames in the current panel. Matches appear as you type;

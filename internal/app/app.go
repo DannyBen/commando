@@ -32,6 +32,11 @@ func Run() error {
 	if err != nil {
 		return err
 	}
+	instance, primary, err := startInstance(dataDir)
+	if err != nil || !primary {
+		return err
+	}
+	defer instance.close()
 	saved, err := loadState(dataDir)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "cannot load state:", err)
@@ -57,7 +62,7 @@ func Run() error {
 		w := new(gioapp.Window)
 		tracker := windowTracker{value: saved.Window, sizing: workspaceSizing{count: len(locations), baseWidth: saved.PanelWidth}}
 		keys := &nativeKeyInput{invalidate: w.Invalidate}
-		native := nativeWindow{state: &tracker, keys: keys}
+		native := nativeWindow{state: &tracker, keys: keys, instance: instance}
 		w.Option(gioapp.Title("Commando"),
 			gioapp.Size(unit.Dp(windowWidth), unit.Dp(windowHeight)),
 			gioapp.MinSize(unit.Dp(minWindowWidth), unit.Dp(360)))
@@ -83,11 +88,12 @@ func Run() error {
 				stopTrace()
 				state := v.sessionState(tracker.snapshot())
 				state.PanelWidth = tracker.sizingSnapshot().baseWidth
+				result := e.Err
 				if err := saveState(dataDir, state); err != nil {
-					done <- errors.Join(e.Err, fmt.Errorf("cannot save state: %w", err))
-				} else {
-					done <- e.Err
+					result = errors.Join(e.Err, fmt.Errorf("cannot save state: %w", err))
 				}
+				instance.close()
+				done <- result
 				return
 			case gioapp.FrameEvent:
 				v.layout(gioapp.NewContext(&ops, e))

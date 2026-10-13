@@ -9,6 +9,7 @@ import (
 )
 
 type nativeWindow struct {
+	instance      *instanceGuard
 	state         *windowTracker
 	keys          *nativeKeyInput
 	mode          gioapp.WindowMode

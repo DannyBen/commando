@@ -32,6 +32,7 @@ var (
 const shortcutSubclassID = 1
 
 type nativeWindow struct {
+	instance         *instanceGuard
 	state            *windowTracker
 	keys             *nativeKeyInput
 	hwnd             uintptr
@@ -104,6 +105,8 @@ func (n *nativeWindow) configure(w *gioapp.Window, e event.Event) {
 				unhookWindowsHookEx.Call(hook)
 			}
 			fmt.Fprintln(os.Stderr, "cannot install window shortcut handler:", err)
+		} else if err := n.instance.publish(hwnd); err != nil {
+			fmt.Fprintln(os.Stderr, err)
 		}
 		n.capture(hwnd)
 	})
@@ -163,6 +166,12 @@ func shortcutKeyboardProc(code int32, wParam, lParam uintptr) uintptr {
 }
 
 func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintptr) uintptr {
+	if native, ok := nativeWindows.Load(hwnd); ok {
+		if instance := native.(*nativeWindow).instance; instance != nil && message == instance.message {
+			activateInstanceWindow(hwnd)
+			return 0
+		}
+	}
 	if native, ok := nativeWindows.Load(hwnd); ok && message != 0x0232 {
 		native.(*nativeWindow).observeSizing(message, wParam)
 	}
@@ -214,6 +223,9 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 		return 0
 	}
 	if message == wmNCDestroy {
+		if native, ok := nativeWindows.Load(hwnd); ok {
+			native.(*nativeWindow).instance.unpublish(hwnd)
+		}
 		if data != 0 {
 			unhookWindowsHookEx.Call(data)
 		}
