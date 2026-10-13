@@ -46,22 +46,34 @@ func (v *view) duplicateSelected() {
 	}
 }
 
-func (v *view) offerDuplicate(gtx layout.Context) {
-	if v.pendingDuplicate == nil {
+func (v *view) offerNameDraft(gtx layout.Context) {
+	if v.pendingNameDraft == nil {
 		return
 	}
-	result := v.pendingDuplicate
+	result := v.pendingNameDraft
 	panel := result.request.panel
 	if panel != v.active {
-		v.pendingDuplicate, v.transferPending = nil, false
-		v.showFeedback(panel, feedback.Info, "Copy cancelled")
+		v.pendingNameDraft, v.transferPending = nil, false
+		message := "Copy cancelled"
+		if len(result.clipboard.ImagePNG) > 0 {
+			message = "Paste cancelled"
+		}
+		v.showFeedback(panel, feedback.Info, message)
 		return
 	}
 	if !v.interaction.idle() {
 		return
 	}
-	v.pendingDuplicate = nil
+	v.pendingNameDraft = nil
 	p := &v.panels[panel]
+	if len(result.clipboard.ImagePNG) > 0 {
+		v.transferPending = false
+		r := &nameSession{kind: nameCreateFile, panel: panel, path: p.path,
+			row: max(0, min(p.selected+1, len(p.items))), data: result.clipboard.ImagePNG,
+			previousPosition: p.list.Position, previousReveal: p.reveal}
+		v.beginName(gtx, r, "file.png", false)
+		return
+	}
 	source, name := result.duplicatePlan.DuplicateSubject()
 	// Anchor to the copied source even when a different row is highlighted.
 	p.applyTransferredEntry(browser.TransferredItem{Entry: source, Replaced: true})

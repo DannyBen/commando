@@ -12,7 +12,7 @@ func (v *view) update(gtx layout.Context) {
 	defer v.dismissUnhandledFeedbackKeys(gtx)
 	v.pollNative(gtx)
 	v.pollLoads()
-	v.offerDuplicate(gtx)
+	v.offerNameDraft(gtx)
 	if !v.started {
 		v.focusInteraction(gtx)
 		v.started = gtx.Focused(&v.focus) || v.activeEditor() != nil && gtx.Focused(v.activeEditor())
@@ -67,7 +67,7 @@ func (v *view) update(gtx layout.Context) {
 	if v.updateInteraction(gtx) {
 		return
 	}
-	v.offerDuplicate(gtx)
+	v.offerNameDraft(gtx)
 	for {
 		e, ok := gtx.Event(
 			key.FocusFilter{Target: &v.focus},

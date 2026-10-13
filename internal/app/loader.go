@@ -123,7 +123,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					if request.create.folder {
 						created, err = browser.CreateFolder(mutationPath, request.create.name)
 					} else {
-						created, err = browser.CreateFile(mutationPath, request.create.name)
+						created, err = browser.CreateFileData(mutationPath, request.create.name, request.create.data)
 					}
 				} else if request.recycle != nil {
 					// Capture alias/backing locations before recycling can remove

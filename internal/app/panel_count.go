@@ -16,7 +16,7 @@ type closedPanel struct {
 }
 
 func panelsCanChange(v *view) bool {
-	return panelsCanSwap(v) && v.pendingDuplicate == nil
+	return panelsCanSwap(v) && v.pendingNameDraft == nil
 }
 
 func (p panel) clone() panel {

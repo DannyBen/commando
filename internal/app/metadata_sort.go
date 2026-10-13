@@ -53,7 +53,7 @@ func compareKnown(a, b bool) int {
 
 func (v *view) toggleMetadataSort() {
 	p := &v.panels[v.active]
-	if !v.interaction.idle() || !folderReady(v) || v.pendingDuplicate != nil && v.pendingDuplicate.request.panel == v.active {
+	if !v.interaction.idle() || !folderReady(v) || v.pendingNameDraft != nil && v.pendingNameDraft.request.panel == v.active {
 		return
 	}
 	p.sortByMetadata = !p.sortByMetadata

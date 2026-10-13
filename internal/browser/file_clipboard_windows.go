@@ -70,10 +70,14 @@ func preferredEffectFormat() (uintptr, error) {
 }
 
 func ReadFileClipboard() (snapshot FileClipboard, err error) {
+	var dib bool
 	err = withFileClipboard(false, func() error {
 		hdrop, _, _ := getClipboardData.Call(fileDropFormat)
 		if hdrop == 0 {
-			return ErrNoClipboardFiles
+			var imageErr error
+			snapshot.ImagePNG, dib, imageErr = readClipboardImageLocked()
+			snapshot.Sequence = FileClipboardSequence()
+			return imageErr
 		}
 		count, _, _ := dragQueryFile.Call(hdrop, 0xffffffff, 0, 0)
 		if count == 0 || count > 100_000 {
@@ -111,6 +115,9 @@ func ReadFileClipboard() (snapshot FileClipboard, err error) {
 		snapshot.Sequence = FileClipboardSequence()
 		return nil
 	})
+	if err == nil && len(snapshot.ImagePNG) > 0 {
+		snapshot.ImagePNG, err = clipboardPNG(snapshot.ImagePNG, dib)
+	}
 	return
 }
 

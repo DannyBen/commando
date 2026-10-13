@@ -40,14 +40,14 @@ func TestContextMenuUsesSharedForegroundAndBusyPolicy(t *testing.T) {
 	for _, blocked := range []func(){
 		func() { v.transferPending = true },
 		func() { v.panels[0].loading = true },
-		func() { v.pendingDuplicate = &loadResult{} },
+		func() { v.pendingNameDraft = &loadResult{} },
 	} {
 		blocked()
 		v.startContextMenu(gtx, 0, 1, true)
 		if !v.interaction.idle() {
 			t.Fatal("menu ignored shared busy policy")
 		}
-		v.transferPending, v.panels[0].loading, v.pendingDuplicate = false, false, nil
+		v.transferPending, v.panels[0].loading, v.pendingNameDraft = false, false, nil
 	}
 	v.startContextMenu(gtx, 0, 1, true)
 	if v.interaction.idle() || v.actionAllowed(actionMutation) || v.actionAllowed(actionClipboard) || v.requestClose() {

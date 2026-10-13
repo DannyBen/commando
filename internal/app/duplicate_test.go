@@ -253,7 +253,7 @@ func TestArrivingDuplicateDefersBehindEditorOrCancelsAfterLeaving(t *testing.T) 
 		if !v.locationEditing() || v.nameInteraction() != nil || v.location.Text() != "draft location" || first != 1 || last != 4 || !router.Source().Focused(&v.location) {
 			t.Fatal("arriving duplicate disturbed an active editor")
 		}
-		if (v.pendingDuplicate == nil) != leave || v.transferPending == leave {
+		if (v.pendingNameDraft == nil) != leave || v.transferPending == leave {
 			t.Fatal("arriving duplicate did not defer/cancel according to its pane")
 		}
 		send(pressed(key.NameEscape))

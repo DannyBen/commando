@@ -28,9 +28,9 @@ func (v *view) acceptFileOperation(result loadResult) {
 		v.showFeedback(result.request.panel, feedback.Info, "Already in this folder")
 		return
 	}
-	if result.duplicatePlan != nil {
+	if result.duplicatePlan != nil || len(result.clipboard.ImagePNG) > 0 && len(result.clipboard.Paths) == 0 {
 		v.transferPending = true
-		v.pendingDuplicate = &result
+		v.pendingNameDraft = &result
 		return
 	}
 	locations := result.request.transfer.locations

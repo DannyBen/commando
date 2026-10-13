@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -9,15 +10,20 @@ import (
 // CreateFolder creates one named child without accepting paths or reusing an
 // existing file, directory or link.
 func CreateFolder(directory, name string) (Entry, error) {
-	return createEntry(directory, name, true)
+	return createEntry(directory, name, true, nil)
 }
 
 // CreateFile creates an empty file without replacing any existing entry.
 func CreateFile(directory, name string) (Entry, error) {
-	return createEntry(directory, name, false)
+	return CreateFileData(directory, name, nil)
 }
 
-func createEntry(directory, name string, folder bool) (Entry, error) {
+// CreateFileData creates a file exclusively, preserving existing destinations.
+func CreateFileData(directory, name string, data []byte) (Entry, error) {
+	return createEntry(directory, name, false, data)
+}
+
+func createEntry(directory, name string, folder bool, data []byte) (Entry, error) {
 	if err := ValidateName(name); err != nil {
 		return Entry{}, err
 	}
@@ -36,13 +42,16 @@ func createEntry(directory, name string, folder bool) (Entry, error) {
 			}
 			return Entry{}, err
 		}
-		if err := file.Close(); err != nil {
-			return Entry{}, err
+		_, writeErr := file.Write(data)
+		closeErr := file.Close()
+		if err := errors.Join(writeErr, closeErr); err != nil {
+			return Entry{}, errors.Join(err, os.Remove(path))
 		}
 	}
 	item := Entry{Name: name, Directory: folder, SizeKnown: !folder}
 	if info, err := os.Stat(path); err == nil {
 		item.Modified = info.ModTime()
+		item.Bytes = info.Size()
 		setEntryAttributes(&item, info)
 	}
 	return item, nil

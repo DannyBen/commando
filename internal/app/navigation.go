@@ -68,7 +68,7 @@ func (v *view) refreshPanel() {
 
 func (v *view) queueLoad(request loadRequest) {
 	request.action = actionBrowse
-	if v.interaction.protectsListing(request.panel) || v.pendingDuplicate != nil && v.pendingDuplicate.request.panel == request.panel {
+	if v.interaction.protectsListing(request.panel) || v.pendingNameDraft != nil && v.pendingNameDraft.request.panel == request.panel {
 		return
 	}
 	p := &v.panels[request.panel]

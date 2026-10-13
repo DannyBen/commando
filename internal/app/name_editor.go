@@ -34,6 +34,7 @@ type nameSession struct {
 	focused           bool
 	err               error
 	duplicate         *browser.DuplicatePlan
+	data              []byte // Captured contents for a new file.
 	folder            bool
 	previousPosition  layout.Position
 	previousReveal    bool
@@ -177,7 +178,7 @@ func (v *view) updateName(gtx layout.Context) {
 				request.duplicate = &duplicateRequest{plan: r.duplicate, name: e.Text, locations: v.fileOperationLocations(), owner: v.ownerWindow}
 				progress = "Copying"
 			} else {
-				request.create = &createRequest{name: e.Text, folder: r.kind == nameCreateFolder}
+				request.create = &createRequest{name: e.Text, folder: r.kind == nameCreateFolder, data: r.data}
 				progress = "Creating " + r.noun()
 			}
 			r.err, r.pending, v.nameEditor.ReadOnly = nil, true, true

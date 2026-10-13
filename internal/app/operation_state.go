@@ -29,7 +29,7 @@ func (v *view) canStartInteraction(index int, class actionClass) bool {
 // Dispatch finishes that owner before canStartInteraction admits the action.
 func (v *view) canOfferInteraction(index int, class actionClass) bool {
 	return index >= 0 && index < len(v.panels) &&
-		!v.panels[index].loading && v.pendingDuplicate == nil && v.actionAllowed(class)
+		!v.panels[index].loading && v.pendingNameDraft == nil && v.actionAllowed(class)
 }
 
 func (v *view) mutationsBusy() bool {

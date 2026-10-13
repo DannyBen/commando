@@ -12,6 +12,7 @@ import (
 type createRequest struct {
 	name   string
 	folder bool
+	data   []byte
 }
 
 // Add the entry to panels displaying this directory without losing their marks

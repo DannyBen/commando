@@ -11,6 +11,7 @@ var ErrNoClipboardFiles = errors.New("clipboard contains no files")
 
 type FileClipboard struct {
 	Paths    []string
+	ImagePNG []byte // Captured image when no file selection is present.
 	Move     bool
 	Sequence uint32
 }

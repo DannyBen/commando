@@ -11,7 +11,9 @@ func fileTransferError(err error) string {
 	message := "Cannot transfer"
 	switch {
 	case errors.Is(err, browser.ErrNoClipboardFiles):
-		return "No clipboard files"
+		return "Nothing to paste"
+	case errors.Is(err, browser.ErrClipboardImage):
+		return "Unsupported clipboard image"
 	case errors.Is(err, browser.ErrInvalidName):
 		return "Invalid filename"
 	case errors.Is(err, fs.ErrExist):

@@ -29,6 +29,10 @@ button: switch windows with Alt+Tab, then click the destination to drop. Escape
 cancels. Clicking inside Commando keeps armed drag active.
 Both routes are copy-only; panel-to-panel transfers use F5/F6.
 
+Ctrl+V pastes clipboard files into the current folder. If the clipboard contains
+an image instead, it opens a name draft suggesting `file.png`. Enter saves the
+image as PNG; Escape cancels. The clipboard remains available for another paste.
+
 Press `/` to filter filenames in the current panel. Matches appear as you type;
 Enter returns to browsing and Escape clears the filter. Press `/` again to edit
 the query. Filters remain when switching panels and clear when opening another

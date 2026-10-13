@@ -42,10 +42,16 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	if result.err != nil {
 		return result
 	}
+	if len(snapshot.ImagePNG) > 0 && len(snapshot.Paths) == 0 {
+		result.clipboard = snapshot
+		return result
+	}
 	if len(snapshot.Paths) == 0 {
 		result.err = browser.ErrNoClipboardFiles
 		return result
 	}
+	// File selections take precedence over any alternate image representation.
+	snapshot.ImagePNG = nil
 	result.clipboard, result.transferMove = snapshot, snapshot.Move
 	sameFolder, err := browser.SourcesInDirectory(snapshot.Paths, request.path)
 	if err != nil {

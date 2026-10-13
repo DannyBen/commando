@@ -93,7 +93,7 @@ func TestPanelCloseMinimumAndHistory(t *testing.T) {
 func TestPanelLifecycleBusyAndEditorGuards(t *testing.T) {
 	for _, prepare := range []func(*view){
 		func(v *view) { v.panels[1].loading = true }, func(v *view) { v.panels[1].refreshing = true },
-		func(v *view) { v.transferPending = true }, func(v *view) { v.pendingDuplicate = &loadResult{} },
+		func(v *view) { v.transferPending = true }, func(v *view) { v.pendingNameDraft = &loadResult{} },
 	} {
 		v := newPreviewView()
 		v.closePanel()

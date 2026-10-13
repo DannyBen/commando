@@ -36,7 +36,7 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 			}
 		}
 		if !p.refreshNeeded || p.drives || p.loading || p.refreshing ||
-			v.pendingDuplicate != nil && v.pendingDuplicate.request.panel == pi ||
+			v.pendingNameDraft != nil && v.pendingNameDraft.request.panel == pi ||
 			v.interaction.protectsListing(pi) || !v.actionAllowed(actionMutation) {
 			continue
 		}

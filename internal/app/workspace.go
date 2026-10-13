@@ -69,7 +69,7 @@ type view struct {
 	transferPending   bool
 	clipboardSequence func() uint32
 	ownerWindow       uintptr
-	pendingDuplicate  *loadResult
+	pendingNameDraft  *loadResult
 	shellExecutor     func(shellRequest) shellCompletion
 	shellResults      chan shellCompletion
 	shellTrace        func(shellCompletion)
