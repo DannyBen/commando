@@ -88,15 +88,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Metadata
 					if naming {
 						bg = v.appearance.Colors.NameRow
-					} else if storedRow == p.selected && index == v.active && transient < 0 {
-						bg = v.appearance.Colors.Selected
-						nameColor, sizeColor = v.appearance.Colors.SelectedName, v.appearance.Colors.SelectedMetadata
-					}
-					if !naming && v.cutEntry(index, storedRow) {
-						nameColor = v.appearance.Colors.CutFilename
-						if storedRow == p.selected && index == v.active && transient < 0 {
-							nameColor = v.appearance.Colors.SelectedCutFilename
-						}
+					} else {
+						active := storedRow == p.selected && index == v.active && transient < 0
+						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, v.cutEntry(index, storedRow))
 					}
 					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 					if naming && v.nameInteraction().draft() {
