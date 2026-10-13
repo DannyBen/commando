@@ -248,6 +248,10 @@ planning and progress in those notes or the local Todo list, if available.
 
 ## Validation
 
+Use `op loc` for occasional project-size reviews and when a change appears
+unexpectedly large. It reports production Go and test lines separately;
+investigate growth that is disproportionate to the feature's scope.
+
 Use `op check` for formatting, vet and tests, `op build-windows` for the Windows
 executable, and `op preview` for the headless Gio preview. Tests must check behavior
 rather than mirror implementation. A successful cross-build does not establish
