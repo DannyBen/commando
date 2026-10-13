@@ -173,3 +173,39 @@ func TestShellCompletionRetainsClipboardOriginalAndActualDestinationName(t *test
 		t.Fatalf("completion mapping: %+v", result)
 	}
 }
+
+func TestShellBatchCompletionMatchesSourcesAndPrefersExactNames(t *testing.T) {
+	source, target := t.TempDir(), t.TempDir()
+	root, skipped, file := filepath.Join(source, "folder"), filepath.Join(source, "skipped"), filepath.Join(source, "file")
+	request := TransferRequest{Paths: []string{root, skipped, file}, Directory: target}
+	result := transferResults(request, []string{"folder-alias", "skipped-alias", "file-alias"}, []transferObservation{
+		{source: filepath.Join(root, "child"), destination: filepath.Join(target, "inferred", "child")},
+		{source: file, destination: filepath.Join(target, "renamed-file")},
+		{source: root, destination: filepath.Join(target, "actual-folder"), directory: true},
+		{source: root, destination: filepath.Join(target, "later-folder"), directory: true},
+	}, false, TransferSummary{Requested: 3, Completed: 2, Skipped: 1})
+	if len(result.Items) != 2 || result.Items[0].Source != "folder-alias" || result.Items[0].Entry.Name != "actual-folder" || !result.Items[0].Entry.Directory || result.Items[1].Source != "file-alias" || result.Items[1].Entry.Name != "renamed-file" {
+		t.Fatalf("unordered batch completion: %+v", result)
+	}
+}
+
+func BenchmarkTransferResults(b *testing.B) {
+	for _, count := range []int{100, 1000, 10000} {
+		b.Run(fmt.Sprint(count), func(b *testing.B) {
+			root := b.TempDir()
+			request := TransferRequest{Directory: root}
+			var observations []transferObservation
+			for i := range count {
+				source := filepath.Join(root, "source", fmt.Sprint(i))
+				request.Paths = append(request.Paths, source)
+				if i%2 == 0 {
+					observations = append(observations, transferObservation{source: source, destination: filepath.Join(root, "target", fmt.Sprint(i))})
+				}
+			}
+			b.ResetTimer()
+			for b.Loop() {
+				transferResults(request, request.Paths, observations, false, TransferSummary{})
+			}
+		})
+	}
+}

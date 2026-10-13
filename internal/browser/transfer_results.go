@@ -23,7 +23,28 @@ func shellTransferCompleted(hr uint32) bool {
 
 func transferResults(request TransferRequest, originals []string, observations []transferObservation, aborted bool, summary TransferSummary) TransferResult {
 	result := TransferResult{Directory: request.Directory, Attempted: true, Aborted: aborted || summary.cancelled, Summary: summary}
+	// Index completions once, including the first inferred destination for a
+	// partially transferred root. Large selections must not rescan every
+	// observation for each completed or skipped source.
+	roots := make(map[string]bool, len(request.Paths))
+	for _, source := range request.Paths {
+		roots[transferPathKey(source)] = true
+	}
+	exact := make(map[string]transferObservation, len(observations))
+	inferred := make(map[string]transferObservation)
 	for _, observation := range observations {
+		key := transferPathKey(observation.source)
+		if _, exists := exact[key]; !exists {
+			exact[key] = observation
+		}
+		path, destination := observation.source, observation.destination
+		for filepath.Dir(path) != path {
+			path, destination = filepath.Dir(path), filepath.Dir(destination)
+			key := transferPathKey(path)
+			if _, exists := inferred[key]; roots[key] && !exists {
+				inferred[key] = transferObservation{destination: destination, directory: true}
+			}
+		}
 		moved := false
 		if request.Move {
 			_, err := os.Lstat(observation.source)
@@ -32,30 +53,11 @@ func transferResults(request TransferRequest, originals []string, observations [
 		result.Changes = append(result.Changes, TransferredPath{Source: observation.source, Destination: observation.destination, Directory: observation.directory, Moved: moved})
 	}
 	for i, source := range request.Paths {
-		destination := ""
-		folder := false
-		for _, observation := range observations {
-			if sameTransferPath(observation.source, source) {
-				destination, folder = observation.destination, observation.directory
-				break
-			}
+		observation, ok := exact[transferPathKey(source)]
+		if !ok {
+			observation = inferred[transferPathKey(source)]
 		}
-		if destination == "" {
-			for _, observation := range observations {
-				if !pathWithin(source, observation.source) {
-					continue
-				}
-				// A partly transferred folder may have only child completions.
-				relative, _ := filepath.Rel(source, observation.source)
-				destination = observation.destination
-				for relative != "." {
-					destination = filepath.Dir(destination)
-					relative = filepath.Dir(relative)
-				}
-				folder = true
-				break
-			}
-		}
+		destination, folder := observation.destination, observation.directory
 		if destination == "" {
 			continue
 		}

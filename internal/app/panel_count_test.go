@@ -187,7 +187,7 @@ func TestVariablePanelCountAndWidthPersistence(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(locations, saved) {
 		t.Fatal("startup did not retain the saved panel count")
 	}
-	v := newRestoredView(locations, 11, nil)
+	v := newLocationView(locations, 11, nil)
 	defer v.loader.close()
 	for i := range v.panels {
 		waitLoaded(t, v, i)

@@ -167,7 +167,7 @@ func TestMetadataSortStateAndPanelSwap(t *testing.T) {
 	if err != nil || !locations[0].SortByMetadata || locations[1].SortByMetadata {
 		t.Fatalf("startup paths lost independent sort choices: %v %v", locations, err)
 	}
-	v := newRestoredView(saved, 0, nil)
+	v := newLocationView(saved, 0, nil)
 	defer v.loader.close()
 	for i := range v.panels {
 		waitLoaded(t, v, i)

@@ -18,6 +18,14 @@ import (
 	"github.com/dannyben/commando/internal/browser"
 )
 
+func newBrowserView(paths []string, invalidate func()) *view {
+	locations := make([]panelState, len(paths))
+	for i, path := range paths {
+		locations[i].Path = path
+	}
+	return newLocationView(locations, 0, invalidate)
+}
+
 func navigationFrames(v *view) (frame func(), press func(key.Name)) {
 	var router input.Router
 	var ops op.Ops

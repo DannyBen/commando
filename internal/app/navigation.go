@@ -14,18 +14,6 @@ import (
 	"github.com/dannyben/commando/internal/sound"
 )
 
-func newBrowserView(paths []string, invalidate func()) *view {
-	locations := make([]panelState, len(paths))
-	for i, path := range paths {
-		locations[i].Path = path
-	}
-	return newLocationView(locations, 0, invalidate)
-}
-
-func newRestoredView(locations []panelState, active int, invalidate func()) *view {
-	return newLocationView(locations, active, invalidate)
-}
-
 func newLocationView(locations []panelState, active int, invalidate func()) *view {
 	panels := make([]panel, len(locations))
 	for i, location := range locations {

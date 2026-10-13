@@ -207,7 +207,7 @@ func TestVisibilityPersistsPerPaneAndFollowsSwaps(t *testing.T) {
 			t.Fatal("startup path overrides lost visibility choices")
 		}
 	}
-	restored := newRestoredView(locations, saved.ActivePanel, nil)
+	restored := newLocationView(locations, saved.ActivePanel, nil)
 	t.Cleanup(restored.loader.close)
 	for i := range restored.panels {
 		waitLoaded(t, restored, i)

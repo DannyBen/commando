@@ -157,7 +157,7 @@ func TestWorkspaceStateRestoresRealLocationsAndActivePanel(t *testing.T) {
 		t.Fatal(err)
 	}
 	locations := []panelState{{Path: root}, {Path: other}, {Path: root}}
-	v := newRestoredView(locations, 0, nil)
+	v := newLocationView(locations, 0, nil)
 	defer v.loader.close()
 	for i := range v.panels {
 		waitLoaded(t, v, i)
@@ -201,7 +201,7 @@ func TestWorkspaceStateRestoresRealLocationsAndActivePanel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	restored := newRestoredView(saved.Panels, saved.ActivePanel, nil)
+	restored := newLocationView(saved.Panels, saved.ActivePanel, nil)
 	defer restored.loader.close()
 	for i := range restored.panels {
 		waitLoaded(t, restored, i)
@@ -268,7 +268,7 @@ func TestRestoreMetadataDefaultsAndDrives(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			v := newRestoredView(saved.Panels, 0, nil)
+			v := newLocationView(saved.Panels, 0, nil)
 			defer v.loader.close()
 			waitLoaded(t, v, 0)
 			if !v.panels[0].drives || v.panels[0].metadata != tc.want {
@@ -283,7 +283,7 @@ func TestRestoreDrivesAndUnavailableFolder(t *testing.T) {
 	parent := t.TempDir()
 	missing := filepath.Join(parent, "missing", "nested")
 	for _, active := range []int{-1, 50} {
-		v := newRestoredView([]panelState{{Path: root, Drives: true}, {Path: missing}}, active, nil)
+		v := newLocationView([]panelState{{Path: root, Drives: true}, {Path: missing}}, active, nil)
 		for i := range v.panels {
 			waitLoaded(t, v, i)
 		}
@@ -320,7 +320,7 @@ func TestRestoreDeletedFolderSavesSurvivingParent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v := newRestoredView(saved.Panels, saved.ActivePanel, nil)
+	v := newLocationView(saved.Panels, saved.ActivePanel, nil)
 	defer v.loader.close()
 	for i := range v.panels {
 		waitLoaded(t, v, i)
