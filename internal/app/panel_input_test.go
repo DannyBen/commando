@@ -309,6 +309,74 @@ func TestLocationEditing(t *testing.T) {
 	}
 }
 
+func TestExpandLocationEnvironment(t *testing.T) {
+	t.Setenv("COMMANDO_LOCATION_TEST", "folder with spaces")
+	t.Setenv("COMMANDO_LOCATION_NESTED", "%COMMANDO_LOCATION_TEST%")
+	t.Setenv("COMMANDO_LOCATION_EMPTY", "")
+	for _, tc := range []struct{ input, want string }{
+		{"plain", "plain"},
+		{"%COMMANDO_LOCATION_TEST%/child", "folder with spaces/child"},
+		{"%COMMANDO_LOCATION_TEST%/%COMMANDO_LOCATION_TEST%", "folder with spaces/folder with spaces"},
+		{"%COMMANDO_LOCATION_NESTED%", "%COMMANDO_LOCATION_TEST%"},
+		{"%COMMANDO_LOCATION_EMPTY%", ""},
+		{"%COMMANDO_LOCATION_UNKNOWN%", "%COMMANDO_LOCATION_UNKNOWN%"},
+		{"100%", "100%"},
+		{"%%", "%%"},
+	} {
+		if got := expandLocationEnvironment(tc.input); got != tc.want {
+			t.Errorf("%q expanded to %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestLocationEnvironmentSubmission(t *testing.T) {
+	root := t.TempDir()
+	child := filepath.Join(root, "folder with spaces")
+	if err := os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("COMMANDO_LOCATION_ROOT", root)
+	t.Setenv("COMMANDO_LOCATION_CHILD", "folder with spaces")
+	t.Setenv("COMMANDO_LOCATION_EMPTY", "")
+	for _, path := range []string{
+		filepath.Join("%COMMANDO_LOCATION_ROOT%", "%COMMANDO_LOCATION_CHILD%"),
+		"%COMMANDO_LOCATION_CHILD%",
+		filepath.Join("%COMMANDO_LOCATION_ROOT%", "missing"),
+		"%COMMANDO_LOCATION_EMPTY%",
+	} {
+		t.Run(path, func(t *testing.T) {
+			v := newBrowserView([]string{root, root}, nil)
+			t.Cleanup(v.finishOperations)
+			for i := range v.panels {
+				waitLoaded(t, v, i)
+			}
+			send, _ := panelInputFrames(v)
+			send(modified("D", key.ModAlt))
+			send(key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.location.Text())}, Text: path})
+			send(pressed(key.NameReturn))
+			if path == "%COMMANDO_LOCATION_EMPTY%" {
+				if !v.locationEditing() || v.panels[0].loading {
+					t.Fatal("empty expansion navigated or closed the editor")
+				}
+				return
+			}
+			waitLoaded(t, v, 0)
+			send()
+			p := &v.panels[0]
+			if filepath.Base(path) == "missing" {
+				if p.path != root || !errors.Is(p.err, os.ErrNotExist) || p.feedback.Current() == nil || p.feedback.Current().Text != "Folder not found" {
+					t.Fatal("missing expanded folder did not retain the listing and report its error")
+				}
+			} else if p.path != child || p.err != nil {
+				t.Fatalf("expanded path did not navigate: path=%q err=%v", p.path, p.err)
+			}
+			if v.locationEditing() || v.active != 0 || v.panels[1].path != root {
+				t.Fatal("submission lost browsing focus or changed the other panel")
+			}
+		})
+	}
+}
+
 func TestNormalizeDriveShortcut(t *testing.T) {
 	for letter := byte('A'); letter <= 'Z'; letter++ {
 		want := string(letter) + `:\`

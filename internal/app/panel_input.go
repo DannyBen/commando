@@ -120,7 +120,7 @@ func (v *view) updateLocation(gtx layout.Context) {
 		}
 		if submit, ok := e.(widget.SubmitEvent); ok {
 			v.dismissFeedback()
-			path := submit.Text
+			path := expandLocationEnvironment(submit.Text)
 			if path == "" || v.panels[v.active].loading {
 				return
 			}
@@ -139,6 +139,31 @@ func (v *view) updateLocation(gtx layout.Context) {
 			v.queueLoad(loadRequest{panel: v.active, path: path, explicitPath: true})
 			return
 		}
+	}
+}
+
+// Expand %NAME% once, preserving unknown variables and literal percent signs.
+func expandLocationEnvironment(path string) string {
+	var expanded strings.Builder
+	for {
+		start := strings.IndexByte(path, '%')
+		if start < 0 {
+			expanded.WriteString(path)
+			return expanded.String()
+		}
+		end := strings.IndexByte(path[start+1:], '%')
+		if end < 0 {
+			expanded.WriteString(path)
+			return expanded.String()
+		}
+		end += start + 1
+		expanded.WriteString(path[:start])
+		if value, ok := os.LookupEnv(path[start+1 : end]); ok {
+			expanded.WriteString(value)
+		} else {
+			expanded.WriteString(path[start : end+1])
+		}
+		path = path[end+1:]
 	}
 }
 
