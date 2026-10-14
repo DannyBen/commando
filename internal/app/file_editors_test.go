@@ -30,6 +30,7 @@ func setEditorRule(t *testing.T, v *view, extensions, program string) {
 
 func TestEditorWidgetCreatePickSaveAndDiscover(t *testing.T) {
 	v := newPreviewView()
+	program := filepath.Join("/programs", "editor.exe")
 	v.panels[1] = panel{path: "/programs", selected: 1, items: []entry{
 		{name: "folder", file: browser.Entry{Name: "folder", Directory: true}},
 		{name: "editor.exe", file: browser.Entry{Name: "editor.exe"}},
@@ -60,12 +61,12 @@ func TestEditorWidgetCreatePickSaveAndDiscover(t *testing.T) {
 	}
 	v.panels[1].selected = 1
 	send(pressed(key.NameReturn))
-	if s.selecting || v.settingsInteraction() != s || v.settingText(settings.EditorCollection+".path") != "/programs/editor.exe" {
+	if s.selecting || v.settingsInteraction() != s || v.settingText(settings.EditorCollection+".path") != program {
 		t.Fatal("Enter did not choose the program and return to its widget")
 	}
 	send(modified(key.NameReturn, key.ModCtrl))
 	rules := v.settingsValues.EditorRules()
-	if !v.interaction.idle() || len(rules) != 1 || rules[0].Program != "/programs/editor.exe" || !reflect.DeepEqual(rules[0].Extensions, []string{".TXT", "md"}) {
+	if !v.interaction.idle() || len(rules) != 1 || rules[0].Program != program || !reflect.DeepEqual(rules[0].Extensions, []string{".TXT", "md"}) {
 		t.Fatalf("saved rules = %#v", rules)
 	}
 	send(key.EditEvent{Text: "@editors .TXT md"})
