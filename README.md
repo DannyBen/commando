@@ -19,3 +19,6 @@ Press `@` to search settings. Under Programs › Editors, add an editor program,
 space-separated extensions (or `*` for a fallback), and arguments containing
 `%SelectedFiles%`. F4 edits marked files, otherwise the current file, launching
 each matching editor once with its files.
+
+Folder shortcuts (`.lnk`) open in the current panel; other shortcuts use their
+normal Windows opening behavior.

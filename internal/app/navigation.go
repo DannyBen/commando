@@ -68,8 +68,12 @@ func (v *view) queueLoad(request loadRequest) {
 	}
 	p.loading, p.err = true, nil
 	p.navigating = !request.refresh
-	p.feedback.ProgressAt("Reading folder", time.Now().Add(v.appearance.FeedbackProgressDelay))
-	if !request.refresh && v.sounds != nil {
+	progress := "Reading folder"
+	if request.shortcut {
+		progress = "Opening shortcut"
+	}
+	p.feedback.ProgressAt(progress, time.Now().Add(v.appearance.FeedbackProgressDelay))
+	if !request.refresh && !request.shortcut && v.sounds != nil {
 		v.playSound(sound.DirectoryNavigation)
 	}
 }
@@ -117,6 +121,15 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	p := &v.panels[result.request.panel]
+	if result.request.shortcut {
+		if result.externalOpen {
+			p.loading, p.navigating = false, false
+			p.feedback.Complete()
+			v.openPath(result.request.path)
+			return
+		}
+		v.playSound(sound.DirectoryNavigation)
+	}
 	p.loading, p.err = false, result.err
 	p.navigating = false
 	if result.err != nil {
@@ -198,9 +211,13 @@ func (v *view) activateSelected() {
 		if v.settingsSelecting() {
 			return
 		}
-		if open := v.openFile; open != nil && file.Name != "" {
+		if file.Name != "" {
 			path := filepath.Join(p.path, file.Name)
-			go func() { _ = open(path) }()
+			if strings.EqualFold(filepath.Ext(path), ".lnk") && v.loader != nil {
+				v.queueLoad(loadRequest{panel: v.active, path: path, shortcut: true})
+			} else {
+				v.openPath(path)
+			}
 		}
 		return
 	}
@@ -301,4 +318,10 @@ func (p *panel) locationPath() string {
 		return p.items[p.selected].file.Path
 	}
 	return p.path
+}
+
+func (v *view) openPath(path string) {
+	if open := v.openFile; open != nil {
+		go func() { _ = open(path) }()
+	}
 }

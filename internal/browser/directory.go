@@ -8,7 +8,8 @@ import (
 )
 
 // Entry describes a file, folder, parent row, or drive. Path is the absolute
-// navigation target for drives; ordinary directory entries use Name.
+// navigation target for drives; ordinary directory entries use Name. Windows
+// .lnk shortcuts remain files; only activation resolves their folder target.
 type Entry struct {
 	Name, Path        string
 	Directory, Parent bool

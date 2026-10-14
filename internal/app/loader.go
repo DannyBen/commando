@@ -14,6 +14,7 @@ type loadRequest struct {
 	path, selectName string
 	refresh          bool
 	autoRefresh      bool
+	shortcut         bool // Resolve a .lnk before deciding between folder navigation and native opening.
 	explicitPath     bool // Typed locations report missing-path errors instead of recovering.
 	tracked          bool
 	action           actionClass
@@ -46,22 +47,24 @@ type loadResult struct {
 	mutationDirectory string
 	settingsMessage   string
 	editorsStarted    int
+	externalOpen      bool
 }
 
 type directoryLoader struct {
-	requests          chan loadRequest
-	results           chan loadResult
-	done              chan struct{}
-	recycle           func(string, []string) (browser.RecycleResult, error)
-	readClipboard     func() (browser.FileClipboard, error)
-	writeClipboard    func([]string, bool) (browser.FileClipboard, error)
-	completeClipboard func(browser.FileClipboard, []string) (browser.FileClipboard, error)
-	transfer          func(browser.TransferRequest) (browser.TransferResult, error)
-	readDirectory     func(string) (browser.Directory, error)
-	launchEditor      func(string, []string, string) error
-	busy              atomic.Int32
-	stopOnce          sync.Once
-	stopped           chan struct{}
+	requests             chan loadRequest
+	results              chan loadResult
+	done                 chan struct{}
+	recycle              func(string, []string) (browser.RecycleResult, error)
+	readClipboard        func() (browser.FileClipboard, error)
+	writeClipboard       func([]string, bool) (browser.FileClipboard, error)
+	completeClipboard    func(browser.FileClipboard, []string) (browser.FileClipboard, error)
+	transfer             func(browser.TransferRequest) (browser.TransferResult, error)
+	readDirectory        func(string) (browser.Directory, error)
+	launchEditor         func(string, []string, string) error
+	folderShortcutTarget func(string) (string, error)
+	busy                 atomic.Int32
+	stopOnce             sync.Once
+	stopped              chan struct{}
 }
 
 // One worker keeps reads and mutations off the UI thread and avoids concurrent
@@ -72,17 +75,18 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		count = max(1, panelCount[0])
 	}
 	l := &directoryLoader{
-		requests:          make(chan loadRequest, 2*count),
-		results:           make(chan loadResult, count),
-		done:              make(chan struct{}),
-		recycle:           browser.Recycle,
-		readClipboard:     browser.ReadFileClipboard,
-		writeClipboard:    browser.WriteFileClipboard,
-		completeClipboard: browser.CompleteFileClipboard,
-		transfer:          browser.Transfer,
-		stopped:           make(chan struct{}),
-		readDirectory:     read,
-		launchEditor:      browser.LaunchEditor,
+		requests:             make(chan loadRequest, 2*count),
+		results:              make(chan loadResult, count),
+		done:                 make(chan struct{}),
+		recycle:              browser.Recycle,
+		readClipboard:        browser.ReadFileClipboard,
+		writeClipboard:       browser.WriteFileClipboard,
+		completeClipboard:    browser.CompleteFileClipboard,
+		transfer:             browser.Transfer,
+		stopped:              make(chan struct{}),
+		readDirectory:        read,
+		launchEditor:         browser.LaunchEditor,
+		folderShortcutTarget: browser.FolderShortcutTarget,
 	}
 	go func() {
 		defer close(l.stopped)
@@ -172,6 +176,13 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 						for pi, resolved := range result.locations {
 							sameDirectory[pi] = resolved != "" && samePath(filepath.Clean(resolved), recycled.Directory)
 						}
+					}
+				} else if request.shortcut {
+					target, resolveErr := l.folderShortcutTarget(request.path)
+					if resolveErr != nil || target == "" {
+						result.externalOpen = true
+					} else {
+						directory, err = l.readExistingParent(target)
 					}
 				} else if request.explicitPath {
 					directory, err = l.readDirectory(request.path)

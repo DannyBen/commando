@@ -201,6 +201,10 @@ module/executable and `Commando` for the window title and data-folder name.
   destination listing and show its footer error.
 - On Windows, a bare ASCII drive letter with an optional colon opens its root
   (`d`/`d:` -> `D:\`). Explicit relative paths such as `.\d` retain their meaning.
+- Opening a Windows .lnk shortcut to a filesystem folder navigates in the current
+  panel. Resolve it on activation through the shared worker, with no shortcut edits
+  or resolver dialogs. Other targets retain native opening. Keep the shortcut a
+  file for listing, marking, rename, copy, move and recycle operations.
 - Directory reads run off the UI thread through one worker. Keep file-opening
   failures silent unless changing their feedback is part of the requested scope.
 - Windows directory notifications trigger quiet, coalesced automatic refreshes
