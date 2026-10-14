@@ -284,13 +284,14 @@ func TestLocationEditing(t *testing.T) {
 	if v.panels[0].path != filepath.Join(root, "other") {
 		t.Fatal("absolute path submission failed")
 	}
+	before := v.panels[0].path
 	send(altD)
 	replace(filepath.Join(root, "missing"))
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	send()
-	if v.panels[0].path != root || v.panels[0].err != nil || v.panels[1].path != root {
-		t.Fatal("missing path did not recover to its parent in only the current panel")
+	if v.panels[0].path != before || !errors.Is(v.panels[0].err, os.ErrNotExist) || v.panels[1].path != root {
+		t.Fatal("invalid typed path did not retain the current folder and report an error")
 	}
 	send(altD)
 	replace("")
@@ -458,5 +459,47 @@ func TestBackspaceGoesUpWithActivePrefix(t *testing.T) {
 	send(pressed(key.NameDeleteBackward))
 	if !v.locationEditing() || v.location.Text() != "" || p.path != root || p.loading {
 		t.Fatal("Backspace in the path editor navigated instead of editing text")
+	}
+}
+
+func TestLocationEditorMissingPathReportsErrorAndKeepsListing(t *testing.T) {
+	for _, relative := range []bool{false, true} {
+		t.Run(fmt.Sprintf("relative=%v", relative), func(t *testing.T) {
+			root := t.TempDir()
+			current := filepath.Join(root, "current")
+			if err := os.Mkdir(current, 0700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(current, "keep.txt"), []byte("keep"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			v := newBrowserView([]string{current, root}, nil)
+			t.Cleanup(v.finishOperations)
+			for i := range v.panels {
+				waitLoaded(t, v, i)
+			}
+			send, _ := panelInputFrames(v)
+			p := &v.panels[0]
+			selectName(t, p, "keep.txt")
+			p.toggleMark(p.selected)
+			send()
+			selected, position, count := p.selected, p.list.Position, len(p.items)
+			path := filepath.Join(root, "missing", "nested")
+			if relative {
+				path = filepath.Join("..", "missing", "nested")
+			}
+			send(modified("D", key.ModAlt))
+			send(key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.location.Text())}, Text: path})
+			send(pressed(key.NameReturn))
+			waitLoaded(t, v, 0)
+			send()
+			if !errors.Is(p.err, os.ErrNotExist) || p.path != current || len(p.items) != count || p.selected != selected || !p.marks[selected] || len(p.marks) != 1 || p.list.Position.First != position.First || p.list.Position.Offset != position.Offset {
+				t.Fatalf("invalid typed path changed the listing or swallowed its error: path=%q error=%v", p.path, p.err)
+			}
+			message := p.feedback.Current()
+			if message == nil || message.Text != "Folder not found" || v.locationEditing() || v.active != 0 || v.panels[1].path != root {
+				t.Fatal("missing-path feedback/focus was lost or another panel changed")
+			}
+		})
 	}
 }

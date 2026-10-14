@@ -14,6 +14,7 @@ type loadRequest struct {
 	path, selectName string
 	refresh          bool
 	autoRefresh      bool
+	explicitPath     bool // Typed locations report missing-path errors instead of recovering.
 	tracked          bool
 	action           actionClass
 	locations        []string // Captured panel paths for create/rename alias reconciliation.
@@ -172,6 +173,8 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 							sameDirectory[pi] = resolved != "" && samePath(filepath.Clean(resolved), recycled.Directory)
 						}
 					}
+				} else if request.explicitPath {
+					directory, err = l.readDirectory(request.path)
 				} else {
 					directory, err = l.readExistingParent(request.path)
 				}

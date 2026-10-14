@@ -136,7 +136,7 @@ func (v *view) updateLocation(gtx layout.Context) {
 				}
 			}
 			v.stopLocation(gtx)
-			v.load(v.active, path, "")
+			v.queueLoad(loadRequest{panel: v.active, path: path, explicitPath: true})
 			return
 		}
 	}
