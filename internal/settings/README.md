@@ -49,6 +49,13 @@ Special files adjusts lightness offsets and chroma multipliers for hidden
 attributes and dot-prefixed names; both modifiers apply when an entry has both.
 Each widget resets only its own fields.
 
+Appearance › Font provides a text field for an installed font family, two text
+sizes and an application-wide weight (400 regular, 700 bold). Changes preview
+live; Save persists them, Cancel restores the previous values, and Reset restores
+the bundled family and default sizes/weight. Unavailable or blank families use
+the bundled font. Weight uses the closest available face; the bundled font
+currently includes only regular. Row padding is independent of font settings.
+
 Feedback › Sounds includes an Enabled toggle, on by default. It applies live to
 all application cues and stops queued/current audio when disabled. Individual cue
 volumes stay unchanged. Save, Cancel and Reset use the shared settings transaction.

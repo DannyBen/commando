@@ -114,6 +114,7 @@ func (v *view) trailingLayout(gtx layout.Context, name, metadata layout.Widget) 
 
 func (v *view) label(gtx layout.Context, value string, size unit.Sp, fg color.NRGBA, alignment text.Alignment) layout.Dimensions {
 	label := material.Label(v.theme, size, value)
+	label.Font.Weight = v.appearance.FontWeight
 	label.Color, label.Alignment, label.MaxLines = fg, alignment, 1
 	return label.Layout(gtx)
 }

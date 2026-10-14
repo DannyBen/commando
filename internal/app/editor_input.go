@@ -34,6 +34,7 @@ func (v *view) updateEditorPaste(gtx layout.Context, editor *widget.Editor) {
 
 func (v *view) textEditor(editor *widget.Editor, hint string) material.EditorStyle {
 	style := material.Editor(v.theme, editor, hint)
+	style.Font.Weight = v.appearance.FontWeight
 	style.TextSize = v.appearance.TextSize
 	style.Color, style.SelectionColor = v.appearance.Colors.EditorText, v.appearance.Colors.TextSelection
 	return style

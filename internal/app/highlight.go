@@ -18,6 +18,7 @@ import (
 // and selection contrast. Indices are runes, including for non-ASCII labels.
 func (v *view) highlightedLabel(gtx layout.Context, value string, indices []int, size unit.Sp, fg color.NRGBA) layout.Dimensions {
 	style := material.Label(v.theme, size, value)
+	style.Font.Weight = v.appearance.FontWeight
 	macro := op.Record(gtx.Ops)
 	paint.ColorOp{Color: fg}.Add(gtx.Ops)
 	material := macro.Stop()

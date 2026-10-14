@@ -5,7 +5,7 @@ import (
 	"image/color"
 	"time"
 
-	"gioui.org/text"
+	"gioui.org/font"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 	"github.com/dannyben/commando/internal/feedback"
@@ -23,6 +23,8 @@ type Theme struct {
 	SettingsWidth                    unit.Dp
 	Colors                           ThemeColors
 	Font                             []byte
+	FontFamily                       string
+	FontWeight                       font.Weight
 	TextSize, SmallTextSize          unit.Sp
 	RowPaddingVertical               unit.Dp // Above and below the measured text height.
 	RowPaddingHorizontal             unit.Dp // Left and right of the row contents.
@@ -95,6 +97,7 @@ var defaultTheme = Theme{
 		ScrollbarTrack:         color.NRGBA{}, // Transparent; shows the panel surface.
 	},
 	Font:                   themeFont,
+	FontFamily:             "JetBrains Mono NL",
 	TextSize:               15, // File rows and panel paths.
 	SmallTextSize:          12, // Column headings and panel footers.
 	RowPaddingVertical:     4,  // dp per side; row height grows with the font.
@@ -114,9 +117,7 @@ var defaultTheme = Theme{
 
 func (t Theme) materialTheme() *material.Theme {
 	theme := material.NewTheme()
-	faces := bundledFont(t.Font)
-	theme.Shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces))
-	theme.Face = faces[0].Font.Typeface
+	theme.Shaper, theme.Face = fontShaper(t.Font, t.FontFamily)
 	theme.Fg, theme.Bg = t.Colors.Foreground, t.Colors.Surface
 	theme.ContrastBg, theme.ContrastFg = t.Colors.Selected, t.Colors.SelectedName
 	return theme

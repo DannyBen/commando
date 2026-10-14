@@ -59,6 +59,10 @@ const (
 	settingDotfileLightness      = "appearance.autocolor.special_files.dotfile_lightness_offset"
 	settingDotfileChroma         = "appearance.autocolor.special_files.dotfile_chroma_multiplier"
 	settingDataFolder            = "application.data_folder.path"
+	settingFontFamily            = "appearance.font.family"
+	settingFontTextSize          = "appearance.font.text_size"
+	settingFontSmallTextSize     = "appearance.font.small_text_size"
+	settingFontWeight            = "appearance.font.weight"
 )
 
 func settingsGroupLabel(key string) string {
@@ -249,6 +253,7 @@ func (v *view) adjustSetting(key string, direction int) {
 }
 func (v *view) applySettings() {
 	c := settings.CatalogueDefault
+	v.applyFontSettings()
 	v.appearance.Feedback.Enabled = v.settingsValues.Get(c, settingNotificationAnimation).Bool
 	if v.sounds != nil && !v.settingsValues.Get(c, settingSoundsEnabled).Bool {
 		v.sounds.Stop()
