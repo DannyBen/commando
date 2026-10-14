@@ -1,8 +1,28 @@
 package app
 
 import (
+	"fmt"
+	"io"
+	"strings"
+
+	"gioui.org/io/clipboard"
+	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/feedback"
 )
+
+func (v *view) copySelectedPaths(gtx layout.Context) {
+	if !v.interaction.idle() || !textClipboardReady(v) {
+		return
+	}
+	paths := v.panels[v.active].selectedPaths()
+	gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(strings.Join(paths, "\n")))})
+	message := "Path copied"
+	if len(paths) > 1 {
+		message = fmt.Sprintf("%d paths copied", len(paths))
+	}
+	v.showFeedback(v.active, feedback.Success, message)
+}
 
 type fileClipboardRequest struct {
 	paths     []string

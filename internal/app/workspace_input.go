@@ -97,7 +97,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: insertKey},
 			key.Filter{Focus: &v.focus, Name: key.NameSpace},
 			key.Filter{Focus: &v.focus, Name: "A", Required: key.ModCtrl},
-			key.Filter{Focus: &v.focus, Name: "C", Required: key.ModCtrl},
+			key.Filter{Focus: &v.focus, Name: "C", Required: key.ModCtrl, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: "X", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "V", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "M", Required: key.ModCtrl, Optional: key.ModShift},
@@ -217,7 +217,9 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		}
 		return
 	case "C", "X", "V":
-		if ke.Modifiers == key.ModCtrl {
+		if ke.Name == "C" && ke.Modifiers == key.ModCtrl|key.ModShift {
+			v.copySelectedPaths(gtx)
+		} else if ke.Modifiers == key.ModCtrl {
 			if ke.Name == "V" {
 				v.pasteFiles()
 			} else {

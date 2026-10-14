@@ -52,6 +52,7 @@ var commands = []command{
 		return selectedReady(v) && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)
 	}),
 	cmd("Entry", "Copy", "C", key.ModCtrl, clipboardReady),
+	cmd("Entry", "Copy paths", "C", key.ModCtrl|key.ModShift, textClipboardReady),
 	cmd("Entry", "Cut", "X", key.ModCtrl, clipboardReady),
 	cmd("Entry", "Paste", "V", key.ModCtrl, mutationReady),
 	cmd("Entry", "Duplicate", "D", key.ModCtrl, selectedMutationReady),
@@ -178,6 +179,10 @@ func selectedMutationReady(v *view) bool {
 
 func clipboardReady(v *view) bool {
 	return folderReady(v) && v.loader != nil && v.actionAllowed(actionClipboard) && len(v.panels[v.active].selectedPaths()) > 0
+}
+
+func textClipboardReady(v *view) bool {
+	return folderReady(v) && v.actionAllowed(actionClipboard) && len(v.panels[v.active].selectedPaths()) > 0
 }
 
 func panelsCanSwap(v *view) bool {
