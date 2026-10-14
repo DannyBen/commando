@@ -38,6 +38,7 @@ type Definition struct {
 	Minimum float64
 	Maximum *float64 // nil means unbounded.
 	Step    float64
+	Integer bool
 }
 
 type Group struct{ Key, Parent, Label string }
@@ -102,6 +103,15 @@ func (v *Values) Set(c Catalogue, key string, value Value) error {
 	}
 	if d.Kind == Number && (math.IsNaN(value.Number) || math.IsInf(value.Number, 0) || value.Number < d.Minimum || d.Maximum != nil && value.Number > *d.Maximum) {
 		return fmt.Errorf("%w: %s", ErrRange, key)
+	}
+	if d.Kind == Number && d.Integer {
+		if math.Trunc(value.Number) != value.Number {
+			return fmt.Errorf("%w: %s needs a whole number", ErrValue, key)
+		}
+		// Keep integer step increments exact in the numeric value store.
+		if math.Abs(value.Number) > 1<<53-1 {
+			return fmt.Errorf("%w: %s", ErrRange, key)
+		}
 	}
 	if v.overrides == nil {
 		v.overrides = make(map[string]any)

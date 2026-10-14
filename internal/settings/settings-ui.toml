@@ -29,13 +29,13 @@ min = 0.0
 max = 0.5
 step = 0.01
 
-[appearance.autocolor.hue]
-label = "Initial hue"
-description = "Rotate the generated file color palette."
-control = "stepper-progress"
+[appearance.autocolor.salt]
+label = "Salt"
+description = "Choose a repeatable set of generated file colors."
+control = "stepper"
 min = 0.0
-max = 360.0
 step = 1.0
+integer = true
 
 [appearance.autocolor.selection]
 label = "Selection"

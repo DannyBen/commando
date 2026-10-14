@@ -128,7 +128,7 @@ func TestSaveCleansExistingExplicitDefaultsOnUnrelatedEdit(t *testing.T) {
 	source := `feedback.notifications.animation = true
 feedback.sounds.enabled = true
 appearance.autocolor.lightness = 0.36
-appearance.autocolor.hue = 20
+appearance.autocolor.salt = 0
 `
 	if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte(source), 0600); err != nil {
 		t.Fatal(err)

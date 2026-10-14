@@ -3,7 +3,7 @@
 enabled = true
 lightness = 0.36
 chroma = 0.35
-hue = 20.0
+salt = 0.0
 
 [appearance.autocolor.selection]
 lightness_offset = 0.10

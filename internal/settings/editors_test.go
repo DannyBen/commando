@@ -42,7 +42,7 @@ func TestEditorGroupingSpecificRulesBeforeFallback(t *testing.T) {
 
 func TestEditorRulesRoundTripAndClone(t *testing.T) {
 	dir := t.TempDir()
-	source := `appearance.autocolor.hue = 42
+	source := `appearance.autocolor.salt = 42
 [[programs.editors]]
 ext = [".TXT", "md", "txt"]
 path = "text.exe"
@@ -74,7 +74,7 @@ path = "fallback.exe"
 		t.Fatal(err)
 	}
 	restored, err := Load(dir, CatalogueDefault)
-	if err != nil || !reflect.DeepEqual(restored.EditorRules(), rules) || restored.Get(CatalogueDefault, "appearance.autocolor.hue").Number != 42 {
+	if err != nil || !reflect.DeepEqual(restored.EditorRules(), rules) || restored.Get(CatalogueDefault, "appearance.autocolor.salt").Number != 42 {
 		t.Fatalf("round trip = %#v, %v", restored, err)
 	}
 	restored.SetCollection(EditorCollection, nil)
@@ -116,11 +116,11 @@ ext = ["txt"]
 path = "editor.exe"`,
 	} {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte("appearance.autocolor.hue = 42\n"+source), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte("appearance.autocolor.salt = 42\n"+source), 0600); err != nil {
 			t.Fatal(err)
 		}
 		values, err := Load(dir, CatalogueDefault)
-		if err == nil || values.Overridden("appearance.autocolor.hue") {
+		if err == nil || values.Overridden("appearance.autocolor.salt") {
 			t.Fatalf("accepted partial/invalid rules: %s, %v", source, err)
 		}
 		if !errors.Is(err, ErrType) && !errors.Is(err, ErrValue) && !errors.Is(err, ErrUnknownKey) {

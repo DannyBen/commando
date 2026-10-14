@@ -65,9 +65,9 @@ func TestAutoColorChildWidgetsLiveCancelResetAndSave(t *testing.T) {
 			}
 			change()
 			// Reset the child without resetting a basic preference.
-			_ = v.settingsValues.Set(settings.CatalogueDefault, settingHue, settings.Value{Number: 42})
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSalt, settings.Value{Number: 42})
 			v.activateSettingsAction(layout.Context{}, 2)
-			if v.appearance.FilenameColors.hueSeed != 42 {
+			if v.appearance.FilenameColors.salt != 42 {
 				t.Fatal("child Reset changed a basic preference")
 			}
 			for _, key := range tc.keys {

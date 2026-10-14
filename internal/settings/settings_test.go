@@ -40,6 +40,24 @@ func TestOverridesAndValidation(t *testing.T) {
 	}
 }
 
+func TestSaltValuesPersistBeyondHueRange(t *testing.T) {
+	c := CatalogueDefault
+	dir := t.TempDir()
+	var values Values
+	for _, n := range []float64{0, 1, 361, 1000000} {
+		if err := values.Set(c, "appearance.autocolor.salt", Value{Number: n}); err != nil {
+			t.Fatal(err)
+		}
+		if err := Save(dir, values); err != nil {
+			t.Fatal(err)
+		}
+		reloaded, err := Load(dir, c)
+		if err != nil || reloaded.Get(c, "appearance.autocolor.salt").Number != n {
+			t.Fatalf("salt %v did not survive save/load: %v", n, err)
+		}
+	}
+}
+
 func TestPresentationReferences(t *testing.T) {
 	c := CatalogueDefault
 	groups := map[string]bool{"": true}

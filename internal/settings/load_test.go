@@ -10,13 +10,13 @@ import (
 func TestLoadDottedAndSectionOverrides(t *testing.T) {
 	for _, document := range []string{
 		`appearance.autocolor.lightness = 0.5
-appearance.autocolor.hue = 20
+appearance.autocolor.salt = 0
 view.show_protected_system_files = false
 application.data_folder.path = 'C:\user folder\#data'
 `,
 		`[appearance.autocolor]
 lightness = 0.5
-hue = 20
+salt = 0
 [view]
 show_protected_system_files = false
 [application.data_folder]
@@ -33,7 +33,7 @@ path = 'C:\user folder\#data'
 		}
 		for key, want := range map[string]Value{
 			"appearance.autocolor.lightness":   {Number: 0.5},
-			"appearance.autocolor.hue":         {Number: 20},
+			"appearance.autocolor.salt":        {Number: 0},
 			"view.show_protected_system_files": {Bool: false},
 			"application.data_folder.path":     {Text: `C:\user folder\#data`},
 		} {
@@ -51,12 +51,12 @@ path = 'C:\user folder\#data'
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, key := range []string{"appearance.autocolor.lightness", "appearance.autocolor.hue", "view.show_protected_system_files", "application.data_folder.path"} {
+		for _, key := range []string{"appearance.autocolor.lightness", "appearance.autocolor.salt", "view.show_protected_system_files", "application.data_folder.path"} {
 			if reloaded.Get(CatalogueDefault, key) != values.Get(CatalogueDefault, key) {
 				t.Fatalf("save/load changed effective value %s", key)
 			}
 		}
-		if reloaded.Overridden("appearance.autocolor.hue") || reloaded.Overridden("view.show_protected_system_files") {
+		if reloaded.Overridden("appearance.autocolor.salt") || reloaded.Overridden("view.show_protected_system_files") {
 			t.Fatal("Save retained explicit default values")
 		}
 	}
@@ -72,7 +72,7 @@ func TestLoadRejectsEntireInvalidFile(t *testing.T) {
 		{"unknown key", "files.extra = true", ErrUnknownKey},
 		{"unknown empty table", "[files.extra]", ErrUnknownKey},
 		{"literal dotted key", `"view.show_protected_system_files" = true`, ErrUnknownKey},
-		{"numeric string", `appearance.autocolor.hue = "20"`, ErrType},
+		{"numeric string", `appearance.autocolor.salt = "20"`, ErrType},
 		{"boolean string", `view.show_protected_system_files = "true"`, ErrType},
 		{"number as boolean", "view.show_protected_system_files = 1", ErrType},
 		{"array as path", "application.data_folder.path = []", ErrType},
@@ -80,8 +80,11 @@ func TestLoadRejectsEntireInvalidFile(t *testing.T) {
 		{"value as group", "application = 1", ErrType},
 		{"upper bound", "appearance.autocolor.lightness = 1.1", ErrRange},
 		{"lower bound", "appearance.autocolor.chroma = -0.1", ErrRange},
-		{"nan", "appearance.autocolor.hue = nan", ErrRange},
-		{"infinity", "appearance.autocolor.hue = inf", ErrRange},
+		{"nan", "appearance.autocolor.salt = nan", ErrRange},
+		{"infinity", "appearance.autocolor.salt = inf", ErrRange},
+		{"fractional salt", "appearance.autocolor.salt = 0.5", ErrValue},
+		{"negative salt", "appearance.autocolor.salt = -1", ErrRange},
+		{"inexact salt", "appearance.autocolor.salt = 9007199254740992", ErrRange},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()

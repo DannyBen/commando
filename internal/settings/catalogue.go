@@ -32,6 +32,7 @@ type nodeMetadata struct {
 	Minimum                              *float64 `toml:"min"`
 	Maximum                              *float64 `toml:"max"`
 	Step                                 float64
+	Integer                              bool
 }
 
 // ParseCatalogue builds widgets from titled metadata nodes, independently of
@@ -139,6 +140,7 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 			d.Minimum = *m.Minimum
 		}
 		d.Maximum, d.Step = m.Maximum, m.Step
+		d.Integer = m.Integer
 		compatible := m.Control == "input" ||
 			d.Kind == Boolean && m.Control == "toggle" ||
 			d.Kind == String && (m.Control == "folder" || m.Control == "file") ||
@@ -146,7 +148,7 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 		if !compatible {
 			return c, fmt.Errorf("incompatible control: %s", d.Key)
 		}
-		if d.Kind != Number && (m.Minimum != nil || m.Maximum != nil || m.Step != 0) {
+		if d.Kind != Number && (m.Minimum != nil || m.Maximum != nil || m.Step != 0 || m.Integer) {
 			return c, fmt.Errorf("numeric constraints on non-number: %s", d.Key)
 		}
 		if d.Kind == Number {
@@ -239,7 +241,7 @@ func allowMetadata(known map[string]bool, key string, leaf bool) {
 		known[key+"."+property] = true
 	}
 	if leaf {
-		for _, property := range []string{"control", "min", "max", "step"} {
+		for _, property := range []string{"control", "min", "max", "step", "integer"} {
 			known[key+"."+property] = true
 		}
 	}

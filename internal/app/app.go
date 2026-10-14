@@ -49,9 +49,9 @@ func Run() error {
 	if folderErr != nil {
 		store.chosen = "" // Saving a choice can repair an unreadable startup pointer.
 	}
-	settingsValues, settingsErr := settings.Load(dataDir, settings.CatalogueDefault)
+	settingsValues, settingsErr := settings.LoadAndRepair(dataDir, settings.CatalogueDefault)
 	if settingsErr != nil {
-		fmt.Fprintln(os.Stderr, "cannot load settings:", settingsErr)
+		fmt.Fprintln(os.Stderr, "settings:", settingsErr)
 	}
 	saved, err := loadState(dataDir)
 	if err != nil {

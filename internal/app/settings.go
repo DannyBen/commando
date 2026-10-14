@@ -28,6 +28,10 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 	}
 	message := "Cannot read settings"
 	switch {
+	case errors.Is(err, settings.ErrRepaired):
+		message = "Settings error (auto-fixed)"
+	case errors.Is(err, settings.ErrRepairFailed):
+		message = "Settings repair failed"
 	case errors.Is(err, os.ErrPermission):
 		message = "Settings: access denied"
 	case errors.Is(err, settings.ErrSyntax):
@@ -52,7 +56,7 @@ const (
 	settingAutoColorEnabled      = "appearance.autocolor.enabled"
 	settingLightness             = "appearance.autocolor.lightness"
 	settingChroma                = "appearance.autocolor.chroma"
-	settingHue                   = "appearance.autocolor.hue"
+	settingSalt                  = "appearance.autocolor.salt"
 	settingSelectionLightness    = "appearance.autocolor.selection.lightness_offset"
 	settingHiddenLightness       = "appearance.autocolor.special_files.hidden_lightness_offset"
 	settingHiddenChroma          = "appearance.autocolor.special_files.hidden_chroma_multiplier"
@@ -273,7 +277,7 @@ func (v *view) applySettings() {
 	colors.enabled = v.settingsValues.Get(c, settingAutoColorEnabled).Bool
 	colors.filenameLightness = v.settingsValues.Get(c, settingLightness).Number
 	colors.filenameChroma = v.settingsValues.Get(c, settingChroma).Number
-	colors.hueSeed = v.settingsValues.Get(c, settingHue).Number
+	colors.salt = v.settingsValues.Get(c, settingSalt).Number
 	colors.activeBackgroundLightnessOffset = v.settingsValues.Get(c, settingSelectionLightness).Number
 	colors.hiddenLightnessOffset = v.settingsValues.Get(c, settingHiddenLightness).Number
 	colors.hiddenChromaMultiplier = v.settingsValues.Get(c, settingHiddenChroma).Number
@@ -325,6 +329,10 @@ func (v *view) applySettingDraft(gtx layout.Context) bool {
 			return false
 		}
 		value.Number = n
+		if d.Integer && math.Trunc(n) != n {
+			s.errorText = "Enter a whole number"
+			return false
+		}
 	} else if d.Kind == settings.Boolean {
 		b, err := strconv.ParseBool(strings.TrimSpace(s.editor.Text()))
 		if err != nil {

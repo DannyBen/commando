@@ -50,6 +50,8 @@ func TestStartupSettingsErrorsSurviveInitialRead(t *testing.T) {
 		err     error
 		message string
 	}{
+		{errors.Join(settings.ErrRepaired, settings.ErrUnknownKey), "Settings error (auto-fixed)"},
+		{errors.Join(settings.ErrRepairFailed, os.ErrPermission), "Settings repair failed"},
 		{settings.ErrSyntax, "Settings: invalid TOML"},
 		{settings.ErrUnknownKey, "Settings: unknown key"},
 		{settings.ErrType, "Settings: invalid value type"},
@@ -214,6 +216,38 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	send(pressed(key.NameReturn))
 	if v.settingText(settingLightness) != "0.37" || !v.settingsValues.Overridden(settingLightness) {
 		t.Fatal("revert lost prior committed override")
+	}
+}
+
+func TestSaltStepperAndWholeNumberInput(t *testing.T) {
+	v := newPreviewView()
+	openSettingsGroup(t, v, "appearance.autocolor")
+	v.settingsInteraction().selected = 3
+	send, _ := panelInputFrames(v)
+	send(pressed(key.NameLeftArrow))
+	if v.appearance.FilenameColors.salt != 0 {
+		t.Fatal("salt stepped below zero")
+	}
+	send(pressed(key.NameRightArrow))
+	if v.appearance.FilenameColors.salt != 1 {
+		t.Fatal("salt did not preview one integer step")
+	}
+	send(pressed(key.NameReturn))
+	send(key.EditEvent{Range: key.Range{Start: 0, End: 1}, Text: "0.5"})
+	send(pressed(key.NameReturn))
+	s := v.settingsInteraction()
+	if !s.editing || s.errorText != "Enter a whole number" || v.appearance.FilenameColors.salt != 1 {
+		t.Fatal("fractional salt changed the preview or left the editor")
+	}
+	send(key.EditEvent{Range: key.Range{Start: 0, End: 3}, Text: "1000"})
+	send(pressed(key.NameReturn))
+	send(pressed(key.NameRightArrow))
+	if v.appearance.FilenameColors.salt != 1001 {
+		t.Fatal("salt did not accept and step beyond 360")
+	}
+	v.finishSettingsWidget(layout.Context{}, false)
+	if v.appearance.FilenameColors.salt != 0 {
+		t.Fatal("Cancel did not restore the original salt")
 	}
 }
 
@@ -564,7 +598,7 @@ func TestSettingsActionBarKeyboardFocus(t *testing.T) {
 	}
 	send(pressed(key.NameTab))
 	if s.selected != 3 || s.actionsFocused {
-		t.Fatal("Tab did not visit Initial hue")
+		t.Fatal("Tab did not visit Salt")
 	}
 	send(pressed(key.NameTab))
 	if !s.actionsFocused || s.action != 0 {

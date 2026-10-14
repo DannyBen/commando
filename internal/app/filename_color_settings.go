@@ -6,7 +6,7 @@ var defaultFilenameColors = filenameColorSettings{
 	enabled:                         true,
 	filenameLightness:               0.36,
 	filenameChroma:                  0.35,
-	hueSeed:                         20,
+	salt:                            0,
 	activeBackgroundLightnessOffset: 0.10, // Positive softens the row on the current white surface; use a negative offset for a dark theme.
 	hiddenLightnessOffset:           0.06,
 	hiddenChromaMultiplier:          0.65,
@@ -17,7 +17,7 @@ var defaultFilenameColors = filenameColorSettings{
 type filenameColorSettings struct {
 	enabled                                         bool
 	activeBackgroundLightnessOffset                 float64
-	filenameLightness, filenameChroma, hueSeed      float64
+	filenameLightness, filenameChroma, salt         float64
 	hiddenLightnessOffset, hiddenChromaMultiplier   float64
 	dotfileLightnessOffset, dotfileChromaMultiplier float64
 }

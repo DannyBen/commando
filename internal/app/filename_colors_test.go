@@ -32,19 +32,40 @@ func TestFilenameColorIdentities(t *testing.T) {
 		}
 	}
 	s := defaultFilenameColors
-	s.hueSeed = 0
+	s.salt = 0
 	before := s.filename(browser.Entry{Name: "a.txt"})
 	_ = s.filename(browser.Entry{Name: "new.neverseen"})
 	if before != s.filename(browser.Entry{Name: "elsewhere.TXT"}) {
 		t.Fatal("color changed with filename, extension case, or encounter order")
 	}
-	// Freeze the documented FNV-1a mapping across restarts and platforms.
-	if got := s.filename(browser.Entry{Name: "folder", Directory: true}).h; math.Abs(got-169.4202207494527) > 1e-9 {
+	// Freeze the salted mapping across restarts and platforms.
+	if got := s.filename(browser.Entry{Name: "folder", Directory: true}).h; math.Abs(got-160.33905647800177) > 1e-9 {
 		t.Fatalf("folder hue changed: %v", got)
 	}
-	s.hueSeed -= 725
-	if got := s.filename(browser.Entry{Name: "a.txt"}).h; math.Abs(got-wrapHue(before.h-5)) > 1e-9 {
-		t.Fatalf("seed did not rotate hue: %v", got)
+}
+
+func TestFilenameHueSaltShufflesRatherThanRotates(t *testing.T) {
+	s := defaultFilenameColors
+	s.salt = 0
+	txt := s.filename(browser.Entry{Name: "a.txt"})
+	png := s.filename(browser.Entry{Name: "a.png"})
+	s.salt = 1
+	nextTXT := s.filename(browser.Entry{Name: "a.txt"})
+	nextPNG := s.filename(browser.Entry{Name: "a.png"})
+	if nextTXT.h == txt.h || nextPNG.h == png.h ||
+		math.Abs(wrapHue(nextTXT.h-txt.h)-wrapHue(nextPNG.h-png.h)) < 1e-9 {
+		t.Fatal("salt did not change extension color relationships")
+	}
+	if nextTXT.l != txt.l || nextTXT.c != txt.c || nextPNG.l != png.l || nextPNG.c != png.c {
+		t.Fatal("salt changed lightness or chroma")
+	}
+	s.salt = 0
+	if s.filename(browser.Entry{Name: "another.PNG"}) != png {
+		t.Fatal("restoring salt did not restore the original color")
+	}
+	s.salt = 1000000
+	if s.filename(browser.Entry{Name: "a.png"}).h == png.h {
+		t.Fatal("large salt was discarded")
 	}
 }
 

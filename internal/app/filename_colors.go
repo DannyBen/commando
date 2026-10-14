@@ -4,6 +4,7 @@ import (
 	"hash/fnv"
 	"image/color"
 	"math"
+	"math/rand/v2"
 	"strings"
 
 	"github.com/dannyben/commando/internal/browser"
@@ -26,12 +27,15 @@ func filenameColorKey(file browser.Entry) string {
 type oklchColor struct{ l, c, h float64 }
 
 func (s filenameColorSettings) filename(file browser.Entry) oklchColor {
-	// FNV-1a 32-bit over UTF-8, mapped uniformly to [0,360). This mapping
-	// never depends on the listing, platform, or encounter order.
+	// Seed a local PCG from the extension hash plus salt, then take one hue.
+	// Without shared random state, colors stay independent of listing,
+	// platform and encounter order.
 	hash := fnv.New32a()
 	_, _ = hash.Write([]byte(filenameColorKey(file)))
+	seed := math.Float64bits(float64(hash.Sum32()) + s.salt)
+	random := rand.New(rand.NewPCG(seed, 0))
 	value := oklchColor{s.filenameLightness, s.filenameChroma,
-		wrapHue(float64(hash.Sum32())/4294967296*360 + s.hueSeed)}
+		random.Float64() * 360}
 	if file.Hidden && !file.Parent {
 		value.l += s.hiddenLightnessOffset
 		value.c *= s.hiddenChromaMultiplier
