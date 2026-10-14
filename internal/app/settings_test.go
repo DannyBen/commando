@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"image"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/unit"
 	"github.com/BurntSushi/toml"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
@@ -52,6 +54,7 @@ func TestStartupSettingsErrorsSurviveInitialRead(t *testing.T) {
 		{settings.ErrUnknownKey, "Settings: unknown key"},
 		{settings.ErrType, "Settings: invalid value type"},
 		{settings.ErrRange, "Settings: value outside range"},
+		{settings.ErrValue, "Settings: invalid value"},
 		{os.ErrPermission, "Settings: access denied"},
 		{errors.New("read failure"), "Cannot read settings"},
 	} {
@@ -134,10 +137,10 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	s := v.paletteInteraction()
-	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 3 {
+	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 4 {
 		t.Fatal("@ did not open settings-only palette")
 	}
-	for i, label := range []string{"Appearance › Auto color", "Application › Data folder", "View › System files"} {
+	for i, label := range []string{"Appearance › Auto color", "Application › Data folder", "Programs › Editors › New", "View › System files"} {
 		if got := s.results[i].command.label(); got != label {
 			t.Fatalf("settings result %d = %q; want %q", i, got, label)
 		}
@@ -188,9 +191,10 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	if v.appearance.FilenameColors.filenameChroma != 0.36 {
 		t.Fatal("Tab did not navigate controls")
 	}
-	send(pressed(key.NameEscape))
+	v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
+	send(pressed(key.NameReturn))
 	if v.paletteInteraction() == nil || v.settingsValues.Overridden(settingLightness) || v.settingsValues.Overridden(settingChroma) || v.appearance.FilenameColors.filenameLightness != 0.36 {
-		t.Fatal("Escape did not restore inherited original values")
+		t.Fatal("Cancel did not restore inherited original values")
 	}
 	send(pressed(key.NameEscape))
 	send(key.EditEvent{Text: "@"})
@@ -203,7 +207,8 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	send(key.EditEvent{Text: "@"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameRightArrow))
-	send(pressed(key.NameEscape))
+	v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
+	send(pressed(key.NameReturn))
 	if v.settingText(settingLightness) != "0.37" || !v.settingsValues.Overridden(settingLightness) {
 		t.Fatal("revert lost prior committed override")
 	}
@@ -231,8 +236,17 @@ func TestSettingsWidgetDirectValueInput(t *testing.T) {
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 3}, Text: "0.2"})
 	send(pressed(key.NameEscape))
-	if v.paletteInteraction() == nil || v.settingText(settingLightness) != "0.5" {
-		t.Fatal("Escape did not cancel unfinished draft")
+	if v.settingsInteraction() == nil || v.settingsInteraction().editing || v.paletteInteraction() != nil || v.settingText(settingLightness) != "0.5" {
+		t.Fatal("Escape did not leave the input and discard unfinished text")
+	}
+	send(pressed(key.NameEscape))
+	if v.settingsInteraction() == nil {
+		t.Fatal("second Escape closed a dirty widget")
+	}
+	v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
+	send(pressed(key.NameReturn))
+	if v.paletteInteraction() == nil {
+		t.Fatal("Cancel did not return to the palette")
 	}
 }
 
@@ -262,9 +276,10 @@ func TestSettingsPathPanelSelection(t *testing.T) {
 	if s.selecting || v.settingsInteraction() != s || v.settingText(settingDataFolder) != v.panels[2].path {
 		t.Fatal("Escape did not return to widget with draft")
 	}
-	send(pressed(key.NameEscape))
+	v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
+	send(pressed(key.NameReturn))
 	if v.paletteInteraction() == nil || v.settingsValues.Overridden(settingDataFolder) {
-		t.Fatal("second Escape did not revert path")
+		t.Fatal("Cancel did not revert path")
 	}
 	send(pressed(key.NameEscape))
 	send(key.EditEvent{Text: "@application"})
@@ -458,8 +473,7 @@ func TestSettingsEscapeRestoresPalettePosition(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
-	send(pressed(key.NameDownArrow))
-	send(pressed(key.NameDownArrow))
+	send(pressed(key.NameEnd))
 	source := v.paletteInteraction()
 	selected, position, query := source.selected, source.list.Position, v.commandSearch.Text()
 	send(pressed(key.NameReturn))
@@ -602,5 +616,159 @@ func TestSettingsSaveClickKeepsInvalidDraftEditable(t *testing.T) {
 	send(pressed(key.NameReturn))
 	if v.settingsInteraction() != s || s.editing || v.settingText(settingLightness) != "0.5" {
 		t.Fatal("correcting input did not preview within widget")
+	}
+}
+
+func TestSettingsEscapeLeavesInputBeforeWidget(t *testing.T) {
+	for _, tc := range []struct {
+		group string
+		field int
+		text  string
+	}{
+		{"appearance.autocolor", 0, "invalid number"},
+		{"application.data_folder", 0, "unfinished folder"},
+		{settings.EditorCollection, 0, "*.txt"},
+		{settings.EditorCollection, 1, "unfinished program"},
+		{settings.EditorCollection, 2, "unfinished arguments"},
+	} {
+		t.Run(fmt.Sprintf("%s/%d", tc.group, tc.field), func(t *testing.T) {
+			v := newPreviewView()
+			send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+			if tc.group == settings.EditorCollection {
+				v.startCollectionWidget(tc.group, -1, "New")
+			} else {
+				v.startSettingsWidget(tc.group)
+			}
+			s := v.settingsInteraction()
+			s.selected = tc.field
+			field := s.fields[s.selected].Key
+			original := v.settingText(field)
+			send(pressed(key.NameReturn))
+			send(key.EditEvent{Range: key.Range{End: len([]rune(original))}, Text: tc.text})
+			s.errorText = "Draft error"
+			recorded := &recordedSounds{}
+			v.sounds = recorded
+			send(pressed(key.NameEscape))
+			if v.settingsInteraction() != s || s.editing || s.errorText != "" || v.settingText(field) != original || !router.Source().Focused(&v.focus) {
+				t.Fatal("Escape lost widget, retained draft, or failed to restore focus")
+			}
+			if len(recorded.played) != 1 || recorded.played[0] != sound.Cancel {
+				t.Fatal("Escape did not play one cancellation cue")
+			}
+			send(key.Event{Name: key.NameEscape, State: key.Release})
+			if len(recorded.played) != 1 {
+				t.Fatal("Escape release played a cue")
+			}
+			send(pressed(key.NameReturn))
+			if !s.editing || s.editor.Text() != original {
+				t.Fatal("reopening input retained discarded text")
+			}
+			send(pressed(key.NameEscape))
+			send(pressed(key.NameEscape))
+			if v.settingsInteraction() != s || !s.dirty {
+				t.Fatal("second Escape closed dirty widget")
+			}
+			v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
+			send(pressed(key.NameReturn))
+			if !v.interaction.idle() {
+				t.Fatal("Cancel did not close dirty widget")
+			}
+		})
+	}
+}
+
+func TestSettingsCancelActionClosesWhileEditing(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	v.startSettingsWidget("appearance.autocolor")
+	send(pressed(key.NameReturn))
+	send(key.EditEvent{Range: key.Range{End: 4}, Text: "0.8"})
+	v.activateSettingsAction(layout.Context{}, 1)
+	if !v.interaction.idle() || v.settingText(settingLightness) != "0.36" {
+		t.Fatal("Cancel only left editing instead of cancelling widget")
+	}
+}
+
+func TestDirtySettingsEscapeWarnsAndFocusesCancel(t *testing.T) {
+	for _, kind := range []string{"adjust", "toggle", "reset", "delete"} {
+		t.Run(kind, func(t *testing.T) {
+			v := newPreviewView()
+			send, _ := panelInputFrames(v)
+			switch kind {
+			case "adjust":
+				v.startSettingsWidget("appearance.autocolor")
+				v.adjustSetting(settingLightness, 1)
+				v.adjustSetting(settingLightness, -1)
+			case "toggle":
+				v.startSettingsWidget("view.show_protected_system_files")
+				v.adjustSetting(settingProtectedSystem, 0)
+			case "reset":
+				_ = v.settingsValues.Set(settings.CatalogueDefault, settingDataFolder, settings.Value{Text: "chosen"})
+				v.startSettingsWidget("application.data_folder")
+				v.activateSettingsAction(layout.Context{}, 2)
+			case "delete":
+				setEditorRule(t, v, "txt", "editor.exe")
+				v.startCollectionWidget(settings.EditorCollection, 0, "txt")
+				v.activateSettingsAction(layout.Context{}, 2)
+			}
+			s := v.settingsInteraction()
+			if !s.dirty {
+				t.Fatal("change did not mark widget dirty")
+			}
+			recorded := &recordedSounds{}
+			v.sounds = recorded
+			send(pressed(key.NameEscape))
+			if v.settingsInteraction() != s || !s.actionsFocused || s.action != 1 || len(recorded.played) != 1 || recorded.played[0] != sound.MessageWarning {
+				t.Fatal("dirty Escape did not preserve widget, warn once, and focus Cancel")
+			}
+			send(key.Event{Name: key.NameEscape, State: key.Release})
+			if len(recorded.played) != 1 {
+				t.Fatal("Escape release repeated the warning")
+			}
+			send(pressed(key.NameReturn))
+			if !v.interaction.idle() {
+				t.Fatal("Cancel did not discard dirty widget")
+			}
+		})
+	}
+}
+
+func TestUnchangedWidgetAndInputCanCloseWithEscape(t *testing.T) {
+	for _, edit := range []bool{false, true} {
+		v := newPreviewView()
+		send, _ := panelInputFrames(v)
+		v.startSettingsWidget("appearance.autocolor")
+		s := v.settingsInteraction()
+		if edit {
+			send(pressed(key.NameReturn))
+			send(pressed(key.NameEscape))
+			if v.settingsInteraction() != s || s.editing || s.dirty {
+				t.Fatal("entering and leaving unchanged input made widget dirty")
+			}
+		}
+		send(pressed(key.NameEscape))
+		if !v.interaction.idle() {
+			t.Fatal("Escape did not close unchanged widget")
+		}
+	}
+}
+
+func TestDirtySettingsFailedSaveStillNeedsExplicitCancel(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	v.startSettingsWidget("appearance.autocolor")
+	v.adjustSetting(settingLightness, 1)
+	v.prepareSettingsSave = func(settings.Values) func() (string, error) {
+		return func() (string, error) { return "", os.ErrPermission }
+	}
+	v.finishSettingsWidget(layout.Context{}, true)
+	s := v.settingsInteraction()
+	send(pressed(key.NameEscape))
+	if v.settingsInteraction() != s || s.errorText != "Settings save: access denied" {
+		t.Fatal("Escape discarded failed save or its error")
+	}
+	v.activateSettingsAction(layout.Context{}, 1)
+	if !v.interaction.idle() || v.settingText(settingLightness) != "0.36" {
+		t.Fatal("Cancel failed after save error")
 	}
 }

@@ -12,6 +12,7 @@ var (
 	ErrSyntax     = errors.New("invalid TOML syntax")
 	ErrUnknownKey = errors.New("unknown setting")
 	ErrType       = errors.New("invalid setting type")
+	ErrValue      = errors.New("invalid setting value")
 	ErrRange      = errors.New("value outside range")
 )
 
@@ -21,6 +22,7 @@ const (
 	Boolean Kind = iota
 	Number
 	String
+	StringList
 )
 
 type Value struct {
@@ -63,8 +65,9 @@ func (c Catalogue) Widget(key string) (Widget, bool) {
 }
 
 type Catalogue struct {
-	Settings []Definition
-	UI       Presentation
+	Collections []string
+	Settings    []Definition
+	UI          Presentation
 }
 
 func (c Catalogue) Definition(key string) (Definition, bool) {
@@ -111,6 +114,8 @@ func (v *Values) Set(c Catalogue, key string, value Value) error {
 		scalar = value.Number
 	case String:
 		scalar = value.Text
+	case StringList:
+		scalar = strings.Fields(value.Text)
 	default:
 		return fmt.Errorf("unsupported setting kind: %s", key)
 	}
@@ -168,6 +173,14 @@ func clone(tree map[string]any) map[string]any {
 	for key, value := range tree {
 		if nested, ok := value.(map[string]any); ok {
 			value = clone(nested)
+		} else if rows, ok := value.([]map[string]any); ok {
+			copyRows := make([]map[string]any, len(rows))
+			for i, row := range rows {
+				copyRows[i] = clone(row)
+			}
+			value = copyRows
+		} else if list, ok := value.([]string); ok {
+			value = append([]string{}, list...)
 		}
 		result[key] = value
 	}
@@ -182,8 +195,50 @@ func valueFromScalar(scalar any) Value {
 		return Value{Number: value}
 	case string:
 		return Value{Text: value}
+	case []string:
+		return Value{Text: strings.Join(value, " ")}
+	case []any:
+		var parts []string
+		for _, part := range value {
+			if text, ok := part.(string); ok {
+				parts = append(parts, text)
+			}
+		}
+		return Value{Text: strings.Join(parts, " ")}
 	}
 	return Value{}
 }
 
 func (f Field) IsPath() bool { return f.Control == "folder" || f.Control == "file" }
+
+// Collection items use the same field definitions as ordinary settings widgets.
+func (v Values) Collection(key string) []map[string]any {
+	raw, _ := lookup(v.overrides, strings.Split(key, "."))
+	rows, _ := raw.([]map[string]any)
+	result := make([]map[string]any, len(rows))
+	for i, row := range rows {
+		result[i] = clone(row)
+	}
+	return result
+}
+func (v *Values) SetCollection(key string, rows []map[string]any) {
+	if v.overrides == nil {
+		v.overrides = make(map[string]any)
+	}
+	copyRows := make([]map[string]any, len(rows))
+	for i, row := range rows {
+		copyRows[i] = clone(row)
+	}
+	insert(v.overrides, strings.Split(key, "."), copyRows)
+}
+func (v *Values) SetItem(key string, row map[string]any) {
+	if v.overrides == nil {
+		v.overrides = make(map[string]any)
+	}
+	insert(v.overrides, strings.Split(key, "."), clone(row))
+}
+func (v Values) Item(key string) map[string]any {
+	row, _ := lookup(v.overrides, strings.Split(key, "."))
+	table, _ := row.(map[string]any)
+	return clone(table)
+}

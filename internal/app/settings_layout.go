@@ -18,6 +18,11 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
 	footerHeight := max(gtx.Dp(30), smallHeight+gtx.Dp(12))
 	rows := len(s.fields)
+	labelGap := v.textWidth(gtx, " ", v.appearance.TextSize)
+	labelWidth := 0
+	for _, field := range s.fields {
+		labelWidth = max(labelWidth, v.textWidth(gtx, field.Label, v.appearance.TextSize))
+	}
 
 	return s.surface.layout(gtx, footerHeight, gtx.Dp(v.appearance.SettingsWidth), (rows+2)*rowHeight+footerHeight, v.appearance.Colors, func(gtx layout.Context) layout.Dimensions {
 		children := make([]layout.FlexChild, 0, rows+3)
@@ -45,7 +50,14 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 						}
 						value := v.settingText(field.Key)
 						if value == "" {
-							value = "Choose a folder"
+							switch field.Control {
+							case "folder":
+								value = "Choose a folder"
+							case "file":
+								value = "Choose a program"
+							default:
+								value = "Enter a value"
+							}
 						}
 						if i == s.selected && !s.selecting && !s.actionsFocused && v.settingsInteraction() == s {
 							size := image.Pt(gtx.Constraints.Max.X, textHeight)
@@ -54,10 +66,11 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 						}
 						return v.label(gtx, value, v.appearance.TextSize, v.appearance.Colors.Filename, text.Start)
 					}
-					valueWidth := min(gtx.Dp(250), gtx.Constraints.Max.X*3/5)
-					if field.Control == "toggle" {
-						valueWidth = v.textWidth(gtx, " ON  OFF ", v.appearance.TextSize) + gtx.Dp(8)
-					}
+					// Keep labels aligned at their measured width, reserving at least
+					// a third of narrow rows for values and the inter-column gap.
+					available := gtx.Constraints.Max.X
+					leftWidth := min(labelWidth+labelGap, max(0, available-gtx.Dp(8))*2/3)
+					valueWidth := max(0, available-leftWidth)
 					return v.columnLayout(gtx, valueWidth, func(gtx layout.Context) layout.Dimensions {
 						return v.label(gtx, field.Label, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 					}, func(gtx layout.Context) layout.Dimensions {
@@ -82,7 +95,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 			if v.settingsInteraction() != s || s.pending {
 				gtx.Source = gtx.Source.Disabled()
 			}
-			return s.actions.layout(gtx, []string{"Save", "Cancel", "Reset"}, selected, rowHeight, v.appearance.Colors,
+			return s.actions.layout(gtx, s.actionLabels(), selected, rowHeight, v.appearance.Colors,
 				func(gtx layout.Context, label string, fg color.NRGBA) layout.Dimensions {
 					return v.label(gtx, label, v.appearance.TextSize, fg, text.Middle)
 				})
@@ -100,8 +113,20 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				if field.IsPath() {
 					hint = "←/→ Choose folder · Enter Type · Ctrl+Enter Save"
 				}
+				if field.Control == "file" {
+					hint = "←/→ Choose file · Enter Type · Ctrl+Enter Save"
+				}
+				if field.Key == settings.EditorCollection+".ext" {
+					hint = "Space-separated extensions · * Fallback"
+				}
+				if field.Key == settings.EditorCollection+".args" {
+					hint = "%SelectedFiles% · One launch per rule"
+				}
 				if s.selecting {
 					hint = "Browse panels · Ctrl+Enter Save · Esc Return"
+					if field.Control == "file" {
+						hint = "Enter Choose file · Esc Return"
+					}
 				}
 				if s.editing {
 					hint = "Enter Preview · Ctrl+Enter Save · Esc Revert"
@@ -113,8 +138,17 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 					}
 					if s.action == 2 {
 						hint = "Enter Preview defaults"
+						if s.collection != "" {
+							hint = "Enter Delete rule"
+						}
 					}
 					hint += " · ←/→ Action · Ctrl+Enter Save"
+				}
+				if s.dirty && !s.editing && !s.selecting && !s.actionsFocused {
+					hint = "Ctrl+Enter Save · Cancel Discard"
+				}
+				if s.deleted {
+					hint = "Ctrl+Enter Save deletion · Cancel Discard"
 				}
 				fg := v.appearance.Colors.Foreground
 				if s.errorText != "" {

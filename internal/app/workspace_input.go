@@ -87,6 +87,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: "`"},
 			key.Filter{Focus: &v.focus, Name: "P", Required: key.ModCtrl | key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameF2},
+			key.Filter{Focus: &v.focus, Name: key.NameF4},
 			key.Filter{Focus: &v.focus, Name: key.NameF3, Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: key.NameF5},
 			key.Filter{Focus: &v.focus, Name: key.NameF6},
@@ -185,6 +186,9 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		v.finishSettingsWidget(gtx, true)
 		return
 	}
+	if (ke.Name == key.NameReturn || ke.Name == key.NameEnter) && ke.Modifiers == 0 && v.chooseSettingsFile(gtx) {
+		return
+	}
 	if v.interactionKey(gtx, ke) {
 		return
 	}
@@ -219,6 +223,11 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 			} else {
 				v.clipboardSelected(ke.Name == "X")
 			}
+		}
+		return
+	case key.NameF4:
+		if ke.Modifiers == 0 {
+			v.editSelectedFiles()
 		}
 		return
 	case key.NameF2:

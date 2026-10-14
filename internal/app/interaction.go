@@ -144,15 +144,30 @@ func (v *view) cancelInteraction(gtx layout.Context) bool {
 // Escape uses the same session cancellation as other input routes, with one
 // semantic cue. Submitted name mutations remain protected until reconciliation.
 func (v *view) escape(gtx layout.Context) {
-	if s := v.settingsInteraction(); s != nil && s.pending {
-		return
+	if s := v.settingsInteraction(); s != nil {
+		if s.pending {
+			return
+		}
+		if s.dirty && !s.editing && !s.selecting {
+			s.actionsFocused, s.action = true, 1
+			v.focusInteraction(gtx)
+			if v.sounds != nil {
+				v.sounds.Play(sound.MessageWarning)
+			}
+			return
+		}
 	}
 	if s := v.nameInteraction(); s != nil && s.pending {
 		return
 	}
 	v.dismissFeedback()
 	if s := v.settingsInteraction(); s != nil {
-		if s.selecting {
+		if s.editing {
+			s.editing = false
+			s.errorText = ""
+			s.actionsFocused = false
+			v.focusInteraction(gtx)
+		} else if s.selecting {
 			s.selecting = false
 			v.focusInteraction(gtx)
 		} else {

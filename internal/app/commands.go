@@ -46,6 +46,7 @@ func cmd(group, name string, nameKey key.Name, modifiers key.Modifiers, availabl
 
 // Catalogue order is the browsing order. Searches rank the complete label.
 var commands = []command{
+	cmd("File", "Edit", key.NameF4, 0, editorReady),
 	cmd("Entry", "Open", key.NameReturn, 0, selectedReady),
 	cmd("Entry", "Rename", key.NameF2, 0, func(v *view) bool {
 		return selectedReady(v) && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)

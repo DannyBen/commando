@@ -24,6 +24,7 @@ type loadRequest struct {
 	clipboard        *fileClipboardRequest
 	transfer         *transferRequest
 	settingsSave     *settingsSaveRequest
+	editor           *editorRequest
 }
 
 type loadResult struct {
@@ -43,6 +44,7 @@ type loadResult struct {
 	panelUpdates      []transferPanelUpdate
 	mutationDirectory string
 	settingsMessage   string
+	editorsStarted    int
 }
 
 type directoryLoader struct {
@@ -55,6 +57,7 @@ type directoryLoader struct {
 	completeClipboard func(browser.FileClipboard, []string) (browser.FileClipboard, error)
 	transfer          func(browser.TransferRequest) (browser.TransferResult, error)
 	readDirectory     func(string) (browser.Directory, error)
+	launchEditor      func(string, []string, string) error
 	busy              atomic.Int32
 	stopOnce          sync.Once
 	stopped           chan struct{}
@@ -78,6 +81,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		transfer:          browser.Transfer,
 		stopped:           make(chan struct{}),
 		readDirectory:     read,
+		launchEditor:      browser.LaunchEditor,
 	}
 	go func() {
 		defer close(l.stopped)
@@ -91,6 +95,21 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
+				if request.editor != nil {
+					result := loadResult{request: request}
+					for _, launch := range request.editor.launches {
+						if err := l.launchEditor(launch.Program, launch.Arguments, request.path); err != nil {
+							result.err = err
+							break
+						}
+						result.editorsStarted++
+					}
+					l.results <- result
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
 				if request.settingsSave != nil {
 					message, err := request.settingsSave.run()
 					l.results <- loadResult{request: request, settingsMessage: message, err: err}

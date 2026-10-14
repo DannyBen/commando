@@ -48,8 +48,8 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 			groups = append(groups, result.command.group)
 		}
 	}
-	if !slices.Equal(groups, []string{"Entry", "Navigation", "View", "Panel", "Selection", "Application"}) ||
-		s.results[0].command.label() != "Entry › Open" || s.results[1].command.label() != "Entry › Rename" {
+	if !slices.Equal(groups, []string{"File", "Entry", "Navigation", "View", "Panel", "Selection", "Application"}) ||
+		s.results[0].command.label() != "File › Edit" || s.results[1].command.label() != "Entry › Open" || s.results[2].command.label() != "Entry › Rename" {
 		t.Fatalf("blank search lost reviewed browsing order: %v", groups)
 	}
 	send(key.EditEvent{Text: "view"})
@@ -99,7 +99,7 @@ func TestPaletteSettingsDiscoveryRetainsSearchAndKeyboardFlow(t *testing.T) {
 			send(pressed(key.NameReturn))
 			start, end := v.commandSearch.Selection()
 			if v.paletteInteraction() != s || !s.settingsMode || s.query != "@" || v.commandSearch.Text() != "@" ||
-				start != 1 || end != 1 || len(s.results) != 3 || !router.Source().Focused(&v.commandSearch) || v.active != 1 {
+				start != 1 || end != 1 || len(s.results) != 4 || !router.Source().Focused(&v.commandSearch) || v.active != 1 {
 				t.Fatal("Settings command lost session, prefix, caret, results or search focus")
 			}
 			send(pressed(key.NameDownArrow))

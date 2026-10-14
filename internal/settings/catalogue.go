@@ -48,6 +48,18 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 		return Catalogue{}, err
 	}
 	var c Catalogue
+	// A single embedded array-table row is a collection's item template, not
+	// an effective rule. User collections start empty.
+	for _, path := range values.Keys() {
+		raw, _ := lookup(tree, path)
+		if rows, ok := raw.([]map[string]any); ok {
+			if len(rows) != 1 {
+				return c, fmt.Errorf("collection needs one template: %s", path)
+			}
+			c.Collections = append(c.Collections, strings.Join(path, "."))
+			insert(tree, path, rows[0])
+		}
+	}
 	groups := map[string]bool{}
 	owners := map[string]string{}
 	visible := map[string]bool{"": true}
@@ -67,6 +79,8 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 			d.Kind = Number
 		case string:
 			d.Kind = String
+		case []any:
+			d.Kind = StringList
 		default:
 			return c, fmt.Errorf("unsupported value type: %s", d.Key)
 		}

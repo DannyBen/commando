@@ -298,6 +298,20 @@ module/executable and `Commando` for the window title and data-folder name.
   current-item identity, scroll and focus in all panels showing the directory,
   including aliases. Hold new name mutations while recycling is pending.
 
+- F4 and File › Edit use marked files, otherwise the current file; exclude
+  folders, parents and drives. Programs › Editors provides New and saved-rule
+  widgets named by their space-separated extensions, with Extensions, Program
+  and Arg fields. Retain entered extension spelling/order; normalize only matching.
+  Extension matching ignores case and optional leading dots; `*` alone
+  is fallback. Specific rules precede fallback; overlapping rules use saved order.
+  Group files by matching rule and invoke each program once. `%SelectedFiles%`
+  expands after argument parsing into separate paths; never invoke a shell.
+  Reuse settings sessions, file picking, persistence and the shared worker.
+  File pickers change the value only on Enter over a file, returning to the widget;
+  folders open normally, and Escape returns without changing the file value.
+  Saved rules replace Reset with Delete, staged until Save and reversible through
+  Cancel; New has no Reset/Delete. Separate launches per file remain future work.
+
 ## Changes and Documentation
 
 - Discuss new interaction models with the user before implementing them.

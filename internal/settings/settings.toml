@@ -9,3 +9,9 @@ show_protected_system_files = false
 
 [application.data_folder]
 path = ""
+
+# Item template. No editor rules are installed by default.
+[[programs.editors]]
+ext = []
+path = ""
+args = "%SelectedFiles%"

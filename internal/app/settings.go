@@ -36,6 +36,8 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 		message = "Settings: unknown key"
 	case errors.Is(err, settings.ErrType):
 		message = "Settings: invalid value type"
+	case errors.Is(err, settings.ErrValue):
+		message = "Settings: invalid value"
 	case errors.Is(err, settings.ErrRange):
 		message = "Settings: value outside range"
 	}
@@ -69,6 +71,20 @@ func (v *view) settingsCatalogue() []command {
 			continue
 		}
 		key := widget.Key
+		if slices.Contains(settings.CatalogueDefault.Collections, key) {
+			group := settingsGroupLabel(widget.Parent) + " › " + widget.Label
+			add := func(index int, name string) {
+				catalogue = append(catalogue, command{group: group, name: name,
+					available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
+					execute:   func(v *view) { v.startCollectionWidget(key, index, name) }})
+			}
+			add(-1, "New")
+			for i, row := range v.settingsValues.Collection(key) {
+				extensions, _ := row["ext"].([]string)
+				add(i, strings.Join(extensions, " "))
+			}
+			continue
+		}
 		catalogue = append(catalogue, command{group: settingsGroupLabel(widget.Parent), name: widget.Label,
 			available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
 			execute:   func(v *view) { v.startSettingsWidget(key) },
@@ -96,6 +112,11 @@ type settingsSession struct {
 	actionsFocused     bool
 	action             int
 	pending            bool
+	collection         string
+	item               int
+	draft              settings.Values
+	deleted            bool
+	dirty              bool
 }
 
 type settingsSaveRequest struct {
@@ -151,7 +172,7 @@ func (v *view) startSettingsWidget(group string) {
 func (v *view) settingText(key string) string {
 	c := settings.CatalogueDefault
 	d, _ := c.Definition(key)
-	value := v.settingsValues.Get(c, key)
+	value := v.widgetValues().Get(c, key)
 	switch d.Kind {
 	case settings.Boolean:
 		if value.Bool {
@@ -181,7 +202,7 @@ func (v *view) adjustSetting(key string, direction int) {
 		return
 	}
 
-	value := v.settingsValues.Get(c, key)
+	value := v.widgetValues().Get(c, key)
 	before := value
 	switch d.Kind {
 	case settings.Boolean:
@@ -199,7 +220,7 @@ func (v *view) adjustSetting(key string, direction int) {
 	default:
 		return
 	}
-	if v.settingsValues.Set(c, key, value) == nil {
+	if v.setWidgetValue(key, value) == nil {
 		v.applySettings()
 		if value != before {
 			v.playNavigationSound()
@@ -230,6 +251,9 @@ func (v *view) applySettings() {
 }
 func (v *view) beginSettingEdit(gtx layout.Context) {
 	s := v.settingsInteraction()
+	if s.deleted {
+		return
+	}
 	field := s.fields[s.selected]
 	if field.Control == "toggle" {
 		v.adjustSetting(field.Key, 0)
@@ -262,7 +286,7 @@ func (v *view) applySettingDraft(gtx layout.Context) bool {
 		}
 		value.Bool = b
 	}
-	if err := v.settingsValues.Set(c, field.Key, value); err != nil {
+	if err := v.setWidgetValue(field.Key, value); err != nil {
 		s.errorText = "Value outside allowed range"
 		if d.Maximum != nil {
 			s.errorText = fmt.Sprintf("Use %g to %g", d.Minimum, *d.Maximum)
@@ -280,11 +304,31 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 	if s == nil || s.pending {
 		return
 	}
-	if save && s.editing && !v.applySettingDraft(gtx) {
+	if save && !s.deleted && s.editing && !v.applySettingDraft(gtx) {
 		return
 	}
 	if save && s.selecting {
 		v.updateSettingsSelection()
+	}
+	if save && s.collection != "" {
+		rows := s.before.Collection(s.collection)
+		if s.deleted {
+			rows = append(rows[:s.item], rows[s.item+1:]...)
+		} else {
+			row := s.draft.Item(s.collection)
+			if s.collection == settings.EditorCollection {
+				if err := settings.NormalizeEditor(row); err != nil {
+					s.errorText = err.Error()
+					return
+				}
+			}
+			if s.item < 0 {
+				rows = append(rows, row)
+			} else {
+				rows[s.item] = row
+			}
+		}
+		v.settingsValues.SetCollection(s.collection, rows)
 	}
 	if save && v.prepareSettingsSave != nil {
 		request := &settingsSaveRequest{session: s, run: v.prepareSettingsSave(v.settingsValues.Clone())}
@@ -349,16 +393,36 @@ func (v *view) updateSettingsSelection() {
 	field := s.fields[s.selected]
 	path := p.path
 	if field.Control == "file" {
-		if p.selected < 0 || p.selected >= len(p.items) {
-			return
-		}
-		file := p.items[p.selected].file
-		if file.Directory || file.Parent || file.Path != "" {
-			return
-		}
-		path = filepath.Join(p.path, file.Name)
+		return
 	}
-	_ = v.settingsValues.Set(settings.CatalogueDefault, field.Key, settings.Value{Text: path})
+
+	_ = v.setWidgetValue(field.Key, settings.Value{Text: path})
+}
+
+// A file picker changes its value only when the highlighted file is confirmed.
+// Folders continue through the shared browsing navigation handler.
+func (v *view) chooseSettingsFile(gtx layout.Context) bool {
+	s := v.settingsInteraction()
+	if s == nil || !s.selecting || s.fields[s.selected].Control != "file" {
+		return false
+	}
+	p := &v.panels[v.active]
+	if p.loading || p.drives || p.path == "" || p.selected < 0 || p.selected >= len(p.items) {
+		return false
+	}
+	file := p.items[p.selected].file
+	if file.Directory || file.Parent || file.Path != "" {
+		return false
+	}
+	field := s.fields[s.selected]
+	path := filepath.Join(p.path, file.Name)
+	if err := v.setWidgetValue(field.Key, settings.Value{Text: path}); err != nil {
+		return false
+	}
+	s.selecting = false
+	s.errorText = ""
+	v.focusInteraction(gtx)
+	return true
 }
 
 func (v *view) updateSettingsWidget(gtx layout.Context) {
@@ -411,6 +475,9 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 				break
 			}
 			if _, ok := e.(widget.ChangeEvent); ok {
+				if s.editor.Text() != v.settingText(s.fields[s.selected].Key) {
+					s.dirty = true
+				}
 				s.errorText = ""
 			}
 		}
@@ -433,6 +500,16 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			return
 		}
 		if ke.Name == key.NameTab {
+			if s.deleted {
+				direction := 1
+				if ke.Modifiers == key.ModShift {
+					direction = -1
+				}
+				s.actionsFocused = true
+				s.action = (s.action + direction + len(s.actionLabels())) % len(s.actionLabels())
+				v.playNavigationSound()
+				continue
+			}
 			if s.editing && !v.applySettingDraft(gtx) {
 				return
 			}
@@ -444,7 +521,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			if ke.Modifiers == key.ModShift {
 				direction = -1
 			}
-			next := (index + direction + len(s.fields) + 3) % (len(s.fields) + 3)
+			next := (index + direction + len(s.fields) + len(s.actionLabels())) % (len(s.fields) + len(s.actionLabels()))
 			s.actionsFocused = next >= len(s.fields)
 			if s.actionsFocused {
 				s.action = next - len(s.fields)
@@ -461,8 +538,11 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			case key.NameLeftArrow:
 				s.action = max(0, s.action-1)
 			case key.NameRightArrow:
-				s.action = min(2, s.action+1)
+				s.action = min(len(s.actionLabels())-1, s.action+1)
 			case key.NameUpArrow:
+				if s.deleted {
+					continue
+				}
 				s.actionsFocused = false
 				v.playNavigationSound()
 			case key.NameSpace:
@@ -531,16 +611,87 @@ func (v *view) activateSettingsAction(gtx layout.Context, action int) {
 	case 0:
 		v.finishSettingsWidget(gtx, true)
 	case 1:
-		v.settingsInteraction().selecting = false
+		s := v.settingsInteraction()
+		s.selecting, s.editing = false, false
+		s.dirty = false // Cancel explicitly discards the whole transaction.
 		v.escape(gtx)
 	case 2:
 		s := v.settingsInteraction()
+		if s.collection != "" {
+			if s.item < 0 {
+				return
+			}
+			s.deleted, s.dirty = true, true
+			s.editing, s.selecting = false, false
+			s.errorText = ""
+			s.action, s.actionsFocused = 0, true
+			v.focusInteraction(gtx)
+			return
+		}
 		s.editing, s.selecting = false, false
 		s.errorText = ""
 		for _, field := range s.fields {
+			if v.settingsValues.Overridden(field.Key) {
+				s.dirty = true
+			}
 			v.settingsValues.Reset(field.Key)
 		}
 		v.applySettings()
 		v.focusInteraction(gtx)
 	}
+}
+
+func (v *view) startCollectionWidget(collection string, index int, label string) {
+	rows := v.settingsValues.Collection(collection)
+	if index >= len(rows) {
+		return
+	}
+	v.startSettingsWidget(collection)
+	s := v.settingsInteraction()
+	if s == nil {
+		return
+	}
+	s.collection, s.item = collection, index
+	s.title += " › " + label
+	row := map[string]any{}
+	if index >= 0 {
+		row = rows[index]
+	}
+	s.draft.SetItem(collection, row)
+	for _, field := range s.fields {
+		if !s.draft.Overridden(field.Key) {
+			d, _ := settings.CatalogueDefault.Definition(field.Key)
+			_ = s.draft.Set(settings.CatalogueDefault, field.Key, d.Default)
+		}
+	}
+}
+func (v *view) widgetValues() *settings.Values {
+	if s := v.settingsWidget(); s != nil && s.collection != "" {
+		return &s.draft
+	}
+	return &v.settingsValues
+}
+func (s *settingsSession) actionLabels() []string {
+	if s.collection == "" {
+		return []string{"Save", "Cancel", "Reset"}
+	}
+	if s.item < 0 || s.deleted {
+		return []string{"Save", "Cancel"}
+	}
+	return []string{"Save", "Cancel", "Delete"}
+}
+
+// Dirty is sticky for this transaction: even a subsequently reverted edit
+// requires an explicit Save or Cancel before the widget can be dismissed.
+func (v *view) setWidgetValue(key string, value settings.Value) error {
+	values := v.widgetValues()
+	c := settings.CatalogueDefault
+	before, explicit := values.Get(c, key), values.Overridden(key)
+	if err := values.Set(c, key, value); err != nil {
+		return err
+	}
+	if s := v.settingsInteraction(); s != nil && (before != values.Get(c, key) || !explicit) {
+		s.dirty = true
+	}
+	return nil
 }

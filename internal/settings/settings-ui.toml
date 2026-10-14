@@ -53,3 +53,25 @@ title = "Data folder"
 label = "Folder"
 description = "Copy application data to this folder without replacing existing files. Restart Commando to use it."
 control = "folder"
+
+[programs]
+label = "Programs"
+
+[programs.editors]
+label = "Editors"
+title = "Editors"
+
+[programs.editors.ext]
+label = "Extensions"
+description = "Space-separated extensions, or * for the fallback editor."
+control = "input"
+
+[programs.editors.path]
+label = "Program"
+description = "Choose the editor executable."
+control = "file"
+
+[programs.editors.args]
+label = "Arg"
+description = "%SelectedFiles% passes each matching file as a separate argument."
+control = "input"

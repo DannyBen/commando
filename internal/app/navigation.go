@@ -92,6 +92,10 @@ func (v *view) acceptLoad(result loadResult) {
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
 	}
+	if result.request.editor != nil {
+		v.acceptEditorLaunch(result)
+		return
+	}
 	if result.request.settingsSave != nil {
 		v.acceptSettingsSave(result.request.settingsSave.session, result.settingsMessage, result.err)
 		return
