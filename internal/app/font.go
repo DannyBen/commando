@@ -18,14 +18,15 @@ func bundledFont(data []byte) []font.FontFace {
 	return faces
 }
 
-// Installed families are opt-in. Keep the bundled face last in the explicit
-// family list so an unavailable choice has a predictable fallback.
+// Keep the bundled face last in the explicit family list so an unavailable
+// choice has a predictable fallback. System fonts supply unsupported scripts,
+// including when the bundled family is selected.
 func fontShaper(data []byte, family string) (*text.Shaper, font.Typeface) {
 	faces := bundledFont(data)
 	bundled := faces[0].Font.Typeface
 	family = strings.TrimSpace(family)
 	if family == "" || strings.EqualFold(family, string(bundled)) {
-		return text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces)), bundled
+		return text.NewShaper(text.WithCollection(faces)), bundled
 	}
 	quote := func(name string) string {
 		return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(name) + `"`
