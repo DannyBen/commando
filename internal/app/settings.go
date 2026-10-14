@@ -47,6 +47,7 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 // Application bindings identify leaves; defaults and UI definitions live in TOML.
 const (
 	settingProtectedSystem  = "view.show_protected_system_files"
+	settingSoundsEnabled    = "feedback.sounds.enabled"
 	settingAutoColorEnabled = "appearance.autocolor.enabled"
 	settingLightness        = "appearance.autocolor.lightness"
 	settingChroma           = "appearance.autocolor.chroma"
@@ -178,7 +179,7 @@ func (v *view) startSettingsWidget(group string) {
 	})
 	if len(s.fields) > 0 {
 		if v.interaction.begin(s) && v.sounds != nil {
-			v.sounds.Play(sound.Settings)
+			v.playSound(sound.Settings)
 		}
 	}
 }
@@ -242,6 +243,9 @@ func (v *view) adjustSetting(key string, direction int) {
 }
 func (v *view) applySettings() {
 	c := settings.CatalogueDefault
+	if v.sounds != nil && !v.settingsValues.Get(c, settingSoundsEnabled).Bool {
+		v.sounds.Stop()
+	}
 	colors := defaultFilenameColors
 	colors.enabled = v.settingsValues.Get(c, settingAutoColorEnabled).Bool
 	colors.filenameLightness = v.settingsValues.Get(c, settingLightness).Number
@@ -368,7 +372,7 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		v.interaction.begin(s.palette)
 	}
 	if save && v.sounds != nil {
-		v.sounds.Play(sound.Settings)
+		v.playSound(sound.Settings)
 	}
 	v.focusInteraction(gtx)
 }
@@ -392,7 +396,7 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 	if message != "" {
 		v.showFeedback(s.panel, feedback.Info, message)
 	} else if v.sounds != nil {
-		v.sounds.Play(sound.Settings)
+		v.playSound(sound.Settings)
 	}
 }
 func (v *view) updateSettingsSelection() {

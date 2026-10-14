@@ -4,7 +4,7 @@ import "github.com/dannyben/commando/internal/sound"
 
 func (v *view) playNavigationSound() {
 	if v.sounds != nil {
-		v.sounds.Play(sound.Navigation)
+		v.playSound(sound.Navigation)
 	}
 }
 

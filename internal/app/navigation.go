@@ -70,7 +70,7 @@ func (v *view) queueLoad(request loadRequest) {
 	p.navigating = !request.refresh
 	p.feedback.ProgressAt("Reading folder", time.Now().Add(v.appearance.FeedbackProgressDelay))
 	if !request.refresh && v.sounds != nil {
-		v.sounds.Play(sound.DirectoryNavigation)
+		v.playSound(sound.DirectoryNavigation)
 	}
 }
 

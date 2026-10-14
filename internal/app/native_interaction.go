@@ -93,7 +93,7 @@ func (v *view) completeNative(completion shellCompletion) bool {
 		case completion.result.Cancelled:
 			v.showFeedback(panel, feedback.Info, "Drag cancelled")
 			if v.sounds != nil {
-				v.sounds.Play(sound.Cancel)
+				v.playSound(sound.Cancel)
 			}
 			v.panels[panel].feedback.Acknowledge()
 		case completion.result.Effect&1 != 0:

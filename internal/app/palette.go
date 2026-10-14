@@ -49,7 +49,7 @@ func (v *view) startPalette(gtx layout.Context) {
 		return
 	}
 	if v.sounds != nil {
-		v.sounds.Play(sound.Palette)
+		v.playSound(sound.Palette)
 	}
 	s.list.Axis = layout.Vertical
 	v.commandSearch.SetText("")

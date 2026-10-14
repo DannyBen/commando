@@ -103,7 +103,7 @@ func (v *view) playFeedbackSound(frame feedback.Frame) {
 	case feedback.Error:
 		cue = sound.MessageError
 	}
-	v.sounds.Play(cue)
+	v.playSound(cue)
 }
 
 func readError(err error) string {

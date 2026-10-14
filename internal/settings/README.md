@@ -40,6 +40,10 @@ value, with no underline or dimming.
 Appearance › Auto color includes an Enabled toggle. Turning it off uses semantic
 theme colors while retaining the generated-color parameters for re-enabling.
 
+Feedback › Sounds includes an Enabled toggle, on by default. It applies live to
+all application cues and stops queued/current audio when disabled. Individual cue
+volumes stay unchanged. Save, Cancel and Reset use the shared settings transaction.
+
 ## Editor rules
 
 `Programs › Editors › New` creates a rule. Saved rules appear by their space-separated extensions

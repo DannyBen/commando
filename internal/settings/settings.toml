@@ -16,3 +16,6 @@ path = ""
 ext = []
 path = ""
 args = "%SelectedFiles%"
+
+[feedback.sounds]
+enabled = true

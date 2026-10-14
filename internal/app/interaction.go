@@ -152,7 +152,7 @@ func (v *view) escape(gtx layout.Context) {
 			s.actionsFocused, s.action = true, 1
 			v.focusInteraction(gtx)
 			if v.sounds != nil {
-				v.sounds.Play(sound.MessageWarning)
+				v.playSound(sound.MessageWarning)
 			}
 			return
 		}
@@ -189,7 +189,7 @@ func (v *view) escape(gtx layout.Context) {
 		return
 	}
 	if v.sounds != nil {
-		v.sounds.Play(sound.Cancel)
+		v.playSound(sound.Cancel)
 	}
 	// Cancellation may produce a footer result, such as Copy cancelled. Its
 	// animation stays intact; the Escape cue already announces the result.

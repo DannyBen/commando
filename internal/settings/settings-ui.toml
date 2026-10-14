@@ -80,3 +80,15 @@ control = "file"
 label = "Arg"
 description = "%SelectedFiles% passes each matching file as a separate argument."
 control = "input"
+
+[feedback]
+label = "Feedback"
+
+[feedback.sounds]
+label = "Sounds"
+title = "Sounds"
+
+[feedback.sounds.enabled]
+label = "Enabled"
+description = "Play application sounds."
+control = "toggle"
