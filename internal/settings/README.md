@@ -44,6 +44,10 @@ Feedback › Sounds includes an Enabled toggle, on by default. It applies live t
 all application cues and stops queued/current audio when disabled. Individual cue
 volumes stay unchanged. Save, Cancel and Reset use the shared settings transaction.
 
+Feedback › Notifications includes an Animation toggle, on by default. Turning it
+off shows complete, steady messages without a typing or blinking cursor. Semantic
+sounds, delayed progress, message replacement and dismissal retain their behavior.
+
 ## Editor rules
 
 `Programs › Editors › New` creates a rule. Saved rules appear by their space-separated extensions

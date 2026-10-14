@@ -46,13 +46,14 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 
 // Application bindings identify leaves; defaults and UI definitions live in TOML.
 const (
-	settingProtectedSystem  = "view.show_protected_system_files"
-	settingSoundsEnabled    = "feedback.sounds.enabled"
-	settingAutoColorEnabled = "appearance.autocolor.enabled"
-	settingLightness        = "appearance.autocolor.lightness"
-	settingChroma           = "appearance.autocolor.chroma"
-	settingHue              = "appearance.autocolor.hue"
-	settingDataFolder       = "application.data_folder.path"
+	settingProtectedSystem       = "view.show_protected_system_files"
+	settingNotificationAnimation = "feedback.notifications.animation"
+	settingSoundsEnabled         = "feedback.sounds.enabled"
+	settingAutoColorEnabled      = "appearance.autocolor.enabled"
+	settingLightness             = "appearance.autocolor.lightness"
+	settingChroma                = "appearance.autocolor.chroma"
+	settingHue                   = "appearance.autocolor.hue"
+	settingDataFolder            = "application.data_folder.path"
 )
 
 func settingsGroupLabel(key string) string {
@@ -243,6 +244,7 @@ func (v *view) adjustSetting(key string, direction int) {
 }
 func (v *view) applySettings() {
 	c := settings.CatalogueDefault
+	v.appearance.Feedback.Enabled = v.settingsValues.Get(c, settingNotificationAnimation).Bool
 	if v.sounds != nil && !v.settingsValues.Get(c, settingSoundsEnabled).Bool {
 		v.sounds.Stop()
 	}

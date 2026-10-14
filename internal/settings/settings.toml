@@ -19,3 +19,6 @@ args = "%SelectedFiles%"
 
 [feedback.sounds]
 enabled = true
+
+[feedback.notifications]
+animation = true

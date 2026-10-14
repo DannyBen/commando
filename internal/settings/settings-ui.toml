@@ -92,3 +92,12 @@ title = "Sounds"
 label = "Enabled"
 description = "Play application sounds."
 control = "toggle"
+
+[feedback.notifications]
+label = "Notifications"
+title = "Notifications"
+
+[feedback.notifications.animation]
+label = "Animation"
+description = "Animate notification text and cursor."
+control = "toggle"
