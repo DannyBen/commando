@@ -13,6 +13,3 @@ A keyboard-first multi-panel file terminal for Windows.
 ## Usage
 
 Press Backtick or Ctrl+Shift+P to open the command palette and view key bindings.
-
-Application › Data folder copies application data to the chosen folder, keeping
-existing destination files and the original data. Restart Commando to use it.

@@ -10,11 +10,12 @@ import (
 // Commands dispatch through browsing's existing handlers. Availability is
 // checked again at execution; a worker may complete while the palette is open.
 type command struct {
-	group     string
-	name      string
-	binding   key.Event
-	available func(*view) bool
-	execute   func(*view) // Workspace actions can run without a keyboard binding.
+	group        string
+	name         string
+	binding      key.Event
+	available    func(*view) bool
+	execute      func(*view) // Workspace actions can run without a keyboard binding.
+	paletteQuery string      // Replace the search text while retaining the palette session.
 }
 
 // Workspace-dependent commands join their category in catalogue order. The
@@ -98,6 +99,7 @@ var commands = []command{
 	cmd("Selection", "Clear filter or marks", key.NameEscape, 0, nil),
 
 	cmd("Application", "Command palette", "`", 0, nil),
+	{group: "Application", name: "Settings", binding: key.Event{Name: "@", State: key.Press}, paletteQuery: "@"},
 }
 
 func (c command) label() string {

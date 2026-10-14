@@ -3,6 +3,7 @@ package app
 import (
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
@@ -100,6 +101,15 @@ func (v *view) choosePalette(gtx layout.Context) {
 	}
 	command := s.results[s.selected].command
 	if !command.allowed(v) {
+		return
+	}
+	if command.paletteQuery != "" {
+		v.commandSearch.SetText(command.paletteQuery)
+		caret := utf8.RuneCountInString(command.paletteQuery)
+		v.commandSearch.SetCaret(caret, caret)
+		s.openingBacktick = false
+		s.filter(command.paletteQuery)
+		v.focusInteraction(gtx)
 		return
 	}
 	v.stopPalette(gtx)

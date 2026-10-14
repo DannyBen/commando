@@ -79,6 +79,62 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 	}
 }
 
+func TestPaletteSettingsDiscoveryRetainsSearchAndKeyboardFlow(t *testing.T) {
+	for _, query := range []string{"", "settings"} {
+		t.Run("query="+query, func(t *testing.T) {
+			v := newPreviewView()
+			v.active = 1
+			send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+			send(pressed("`"))
+			s := v.paletteInteraction()
+			if query == "" {
+				send(pressed(key.NameEnd))
+			} else {
+				send(key.EditEvent{Text: query})
+			}
+			result := s.results[s.selected].command
+			if result.label() != "Application › Settings" || result.shortcut() != "@" {
+				t.Fatal("Settings was not discoverable with its shortcut", result.label(), result.shortcut())
+			}
+			send(pressed(key.NameReturn))
+			start, end := v.commandSearch.Selection()
+			if v.paletteInteraction() != s || !s.settingsMode || s.query != "@" || v.commandSearch.Text() != "@" ||
+				start != 1 || end != 1 || len(s.results) != 3 || !router.Source().Focused(&v.commandSearch) || v.active != 1 {
+				t.Fatal("Settings command lost session, prefix, caret, results or search focus")
+			}
+			send(pressed(key.NameDownArrow))
+			if s.selected != 1 {
+				t.Fatal("settings results lost keyboard navigation")
+			}
+			send(key.EditEvent{Range: key.Range{Start: 1, End: 1}, Text: "system"})
+			if s.query != "@system" || len(s.results) != 1 || s.results[0].command.label() != "View › System files" {
+				t.Fatal("typing did not refine settings search")
+			}
+			send(pressed(key.NameReturn))
+			if widget := v.settingsInteraction(); widget == nil || widget.palette != s || widget.panel != 1 {
+				t.Fatal("Enter did not open the widget in its original panel context")
+			}
+			send(pressed(key.NameEscape))
+			if v.paletteInteraction() != s || v.commandSearch.Text() != "@system" || !router.Source().Focused(&v.commandSearch) {
+				t.Fatal("widget cancellation did not restore settings search")
+			}
+			send(replacePalette(v, ""))
+			if s.settingsMode || len(s.results) != len(v.commandCatalogue()) {
+				t.Fatal("clearing the prefix did not restore commands")
+			}
+			send(pressed(key.NameEscape))
+			if !v.interaction.idle() || !router.Source().Focused(&v.focus) {
+				t.Fatal("Escape did not restore browsing focus")
+			}
+			before := v.panels[1].selected
+			send(pressed(key.NameDownArrow))
+			if v.panels[1].selected != before+1 {
+				t.Fatal("browsing keys stopped working after settings discovery")
+			}
+		})
+	}
+}
+
 func TestPaletteSearchPreservesPanelsAndRestoresFocus(t *testing.T) {
 	for _, opener := range []key.Event{pressed("`"), modified("P", key.ModCtrl|key.ModShift)} {
 		t.Run(string(opener.Name), func(t *testing.T) {
@@ -362,7 +418,7 @@ func TestPalettePreview(t *testing.T) {
 	if directory == "" {
 		t.Skip("optional headless palette preview")
 	}
-	for _, query := range []string{"", "panel", "xyz"} {
+	for _, query := range []string{"", "panel", "settings", "xyz"} {
 		v := newPreviewView()
 		var ops op.Ops
 		v.startPalette(layout.Context{Ops: &ops})
