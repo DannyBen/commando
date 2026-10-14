@@ -21,15 +21,20 @@ var themeFont = bundledFonts(themeFontFiles)
 // Theme holds the appearance choices independently of Gio's widget theme.
 // A future configuration loader can supply these values before creating a view.
 type Theme struct {
-	FilenameColors                   *filenameColorSettings
-	SettingsWidth                    unit.Dp
-	Colors                           ThemeColors
-	Font                             []font.FontFace
-	FontFamily                       string
-	FontWeight                       font.Weight
-	TextSize, SmallTextSize          unit.Sp
-	RowPaddingVertical               unit.Dp // Above and below the measured text height.
-	RowPaddingHorizontal             unit.Dp // Left and right of the row contents.
+	FilenameColors          *filenameColorSettings
+	SettingsWidth           unit.Dp
+	Colors                  ThemeColors
+	Font                    []font.FontFace
+	FontFamily              string
+	FontWeight              font.Weight
+	TextSize, SmallTextSize unit.Sp
+	// Padding is measured in dp per side. Minimum band heights and borders
+	// remain separate layout rules.
+	RowPaddingVertical               unit.Dp
+	HeaderFooterPaddingVertical      unit.Dp
+	LocationPaddingVertical          unit.Dp
+	SearchPaddingVertical            unit.Dp
+	ContentPaddingHorizontal         unit.Dp
 	OverlayMinWidth, OverlayMaxWidth unit.Dp
 	OverlayBackdropOpacity           float32 // Surface-color wash; 0 disables it, 1 is opaque.
 	Feedback                         feedback.Animations
@@ -98,17 +103,20 @@ var defaultTheme = Theme{
 		ScrollbarHover:         rgb(0xaaaaaa),
 		ScrollbarTrack:         color.NRGBA{}, // Transparent; shows the panel surface.
 	},
-	Font:                   themeFont,
-	FontFamily:             "Victor Mono",
-	FontWeight:             font.SemiBold,
-	TextSize:               15, // File rows and panel paths.
-	SmallTextSize:          12, // Column headings and panel footers.
-	RowPaddingVertical:     4,  // dp per side; row height grows with the font.
-	RowPaddingHorizontal:   14,
-	OverlayMinWidth:        480,
-	OverlayMaxWidth:        720,
-	OverlayBackdropOpacity: 0.15,
-	FeedbackProgressDelay:  500 * time.Millisecond,
+	Font:                        themeFont,
+	FontFamily:                  "Victor Mono",
+	FontWeight:                  font.SemiBold,
+	TextSize:                    15, // File rows and panel paths.
+	SmallTextSize:               12, // Column headings and panel footers.
+	RowPaddingVertical:          4,  // dp per side; row height grows with the font.
+	HeaderFooterPaddingVertical: 6,
+	LocationPaddingVertical:     5,
+	SearchPaddingVertical:       6,
+	ContentPaddingHorizontal:    14,
+	OverlayMinWidth:             480,
+	OverlayMaxWidth:             720,
+	OverlayBackdropOpacity:      0.15,
+	FeedbackProgressDelay:       500 * time.Millisecond,
 	Feedback: feedback.Animations{
 		Enabled: true,
 		Info:    defaultFeedbackAnimation,

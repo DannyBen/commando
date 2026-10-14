@@ -31,12 +31,12 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 	}
 	shortcutWidth += gtx.Dp(12)
 	// Row insets, the border and the list's occupied scrollbar track.
-	width := labelWidth + shortcutWidth + gtx.Dp(28+2) + gtx.Dp(list.Width())
+	width := labelWidth + shortcutWidth + gtx.Dp(2*max(0, v.appearance.ContentPaddingHorizontal)+2) + gtx.Dp(list.Width())
 	width = max(gtx.Dp(v.appearance.OverlayMinWidth), min(gtx.Dp(v.appearance.OverlayMaxWidth), width))
-	return s.surface.layout(gtx, locationBarHeight(gtx, textHeight), width, v.appearance.Colors, v.appearance.OverlayBackdropOpacity, func(gtx layout.Context) layout.Dimensions {
+	return s.surface.layout(gtx, v.locationBarHeight(gtx, textHeight), width, v.appearance.Colors, v.appearance.OverlayBackdropOpacity, func(gtx layout.Context) layout.Dimensions {
 		rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
-		searchHeight := max(gtx.Dp(40), textHeight+gtx.Dp(12))
-		footerHeight := max(gtx.Dp(28), v.textHeight(gtx, v.appearance.SmallTextSize)+gtx.Dp(12))
+		searchHeight := max(gtx.Dp(40), textHeight+gtx.Dp(2*max(0, v.appearance.SearchPaddingVertical)))
+		footerHeight := max(gtx.Dp(28), v.textHeight(gtx, v.appearance.SmallTextSize)+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
 		// Leave the panel footers visible. Tall text still gets one usable row
 		// when space permits; the outer clip bounds tiny windows safely.
 		available := max(0, gtx.Constraints.Max.Y-searchHeight-footerHeight-gtx.Dp(32))
@@ -59,7 +59,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.Y, gtx.Constraints.Max.Y = listHeight, listHeight
 				if len(s.results) == 0 {
-					return layout.Inset{Left: 14, Right: 14}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							message := "No commands found"
 							if s.settingsMode {
@@ -94,7 +94,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 						}
 						paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 						gtx.Constraints = layout.Exact(size)
-						return layout.Inset{Left: 14, Right: 14}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 								gtx.Constraints.Min.Y = 0
 								result := s.results[row]

@@ -19,7 +19,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.headerBand(gtx, locationBarHeight(gtx, textHeight), v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
+			return v.headerBand(gtx, v.locationBarHeight(gtx, textHeight), v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
 				fg := v.appearance.Colors.Foreground
 				if index == v.active {
 					fg = v.appearance.Colors.ActiveLocation
@@ -31,7 +31,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			}, index == v.active)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.band(gtx, max(gtx.Dp(28), smallTextHeight+gtx.Dp(12)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
+			return v.band(gtx, max(gtx.Dp(28), smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
 				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
 					return v.filterContents(gtx, index)
 				}
@@ -121,10 +121,10 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				return p.rows[row].Layout(gtx, contents)
 			})
 			// Keyboard menus anchor beside the revealed current row in client pixels.
-			headerHeight := locationBarHeight(gtx, textHeight) + max(gtx.Dp(28), smallTextHeight+gtx.Dp(12))
+			headerHeight := v.locationBarHeight(gtx, textHeight) + max(gtx.Dp(28), smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
 			panelX := (v.frameSize.X + gtx.Dp(1)) * index / len(v.panels)
 			y := (p.selected-p.list.Position.First)*rowHeight - p.list.Position.Offset
-			p.selectionAnchor = image.Pt(panelX+gtx.Dp(14), headerHeight+max(0, min(y+rowHeight, dims.Size.Y)))
+			p.selectionAnchor = image.Pt(panelX+gtx.Dp(max(0, v.appearance.ContentPaddingHorizontal)), headerHeight+max(0, min(y+rowHeight, dims.Size.Y)))
 			// Keep row widgets only around the visible viewport.
 			for row := range p.rows {
 				if row < p.list.Position.First-1 || row > p.list.Position.First+p.list.Position.Count {
@@ -134,7 +134,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			return dims
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			dims := v.band(gtx, max(gtx.Dp(30), smallTextHeight+gtx.Dp(12)), v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
+			dims := v.band(gtx, max(gtx.Dp(30), smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))), v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
 				return v.footerContents(gtx, index)
 			}, false)
 			if message := p.feedback.Current(); message != nil {
@@ -148,8 +148,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 func (p *panel) positionLabel() string { return fmt.Sprintf("%d / %d", p.selected+1, len(p.items)) }
 
 func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn) layout.Dimensions {
-	padding := max(0, v.appearance.RowPaddingHorizontal)
-	return layout.Inset{Left: padding, Right: padding}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
 			return v.columns(gtx, entry{name: mode.displayName(item), size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize)

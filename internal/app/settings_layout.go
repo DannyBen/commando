@@ -17,7 +17,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	smallHeight := v.textHeight(gtx, v.appearance.SmallTextSize)
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
 	headerHeight := max(1, rowHeight-gtx.Dp(1)) + gtx.Dp(2)
-	footerHeight := max(gtx.Dp(30), smallHeight+gtx.Dp(12))
+	footerHeight := max(gtx.Dp(30), smallHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
 	rows := len(s.fields)
 	labelGap := v.textWidth(gtx, " ", v.appearance.TextSize)
 	labelWidth := 0

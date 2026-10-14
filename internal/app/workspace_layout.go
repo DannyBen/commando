@@ -60,7 +60,7 @@ func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layo
 		paint.FillShape(gtx.Ops, v.appearance.Colors.Edge, clip.Rect{Max: image.Pt(size.X, gtx.Dp(2))}.Op())
 	}
 	gtx.Constraints = layout.Exact(size)
-	layout.Inset{Left: 14, Right: 14}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
 			return content(gtx)
@@ -69,8 +69,13 @@ func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layo
 	return layout.Dimensions{Size: size}
 }
 
-func locationBarHeight(gtx layout.Context, textHeight int) int {
-	return max(gtx.Dp(39), textHeight+gtx.Dp(10)) + gtx.Dp(2)
+func (v *view) locationBarHeight(gtx layout.Context, textHeight int) int {
+	return max(gtx.Dp(39), textHeight+gtx.Dp(2*max(0, v.appearance.LocationPaddingVertical))) + gtx.Dp(2)
+}
+
+func (v *view) contentInset() layout.Inset {
+	padding := max(0, v.appearance.ContentPaddingHorizontal)
+	return layout.Inset{Left: padding, Right: padding}
 }
 
 // Headers reserve the top edge separately from their centered content. Inactive

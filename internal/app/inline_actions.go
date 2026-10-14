@@ -181,8 +181,7 @@ func (v *view) inlineActionContents(gtx layout.Context, row, rowHeight int) layo
 	paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 	paint.FillShape(gtx.Ops, v.appearance.Colors.InlineEdge, clip.Rect{Max: image.Pt(gtx.Dp(3), rowHeight)}.Op())
 	gtx.Constraints = layout.Exact(size)
-	padding := max(0, v.appearance.RowPaddingHorizontal)
-	return layout.Inset{Left: padding, Right: padding}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
 			return v.label(gtx, value, v.appearance.TextSize, fg, text.Start)

@@ -280,8 +280,7 @@ func (v *view) nameContents(gtx layout.Context, metadata string, metaColor color
 			hint = "Folder name"
 		}
 	}
-	padding := max(0, v.appearance.RowPaddingHorizontal)
-	return layout.Inset{Left: padding, Right: padding}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
 			var trailing layout.Widget
