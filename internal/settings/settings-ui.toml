@@ -51,5 +51,5 @@ title = "Data folder"
 
 [application.data_folder.path]
 label = "Folder"
-description = "Browse another panel to choose a folder. Preview only; application data stays in its current location."
+description = "Copy application data to this folder without replacing existing files. Restart Commando to use it."
 control = "folder"

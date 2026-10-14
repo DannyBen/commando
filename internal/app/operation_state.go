@@ -83,6 +83,11 @@ func (v *view) finishOperations() {
 	if v.loader == nil {
 		return
 	}
+	// A settings save may still be queued behind reads. Finish it before
+	// stopping the worker so a destroyed window cannot lose the folder choice.
+	for s := v.settingsInteraction(); s != nil && s.pending; s = v.settingsInteraction() {
+		v.acceptLoad(<-v.loader.results)
+	}
 	v.loader.close()
 	for {
 		select {

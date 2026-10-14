@@ -87,12 +87,14 @@ func TestSettingsSaveFailureRetryAndCancel(t *testing.T) {
 				t.Fatal(err)
 			}
 			calls := 0
-			v.saveSettings = func(values settings.Values) error {
-				calls++
-				if calls == 1 {
-					return os.ErrPermission
+			v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
+				return func() (string, error) {
+					calls++
+					if calls == 1 {
+						return "", os.ErrPermission
+					}
+					return "", settings.Save(dir, values)
 				}
-				return settings.Save(dir, values)
 			}
 			openSettingsGroup(t, v, "appearance.autocolor")
 			v.adjustSetting(settingLightness, 1)

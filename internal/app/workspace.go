@@ -46,8 +46,10 @@ type panel struct {
 }
 
 type view struct {
-	settingsValues    settings.Values
-	saveSettings      func(settings.Values) error // nil in previews; storage uses the shared data folder.
+	settingsValues      settings.Values
+	prepareSettingsSave func(settings.Values) func() (string, error) // Captures UI state before worker I/O; nil in previews.
+	defaultDataFolder   string
+
 	appearance        Theme
 	theme             *material.Theme
 	panels            []panel

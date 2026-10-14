@@ -23,6 +23,7 @@ type loadRequest struct {
 	recycle          *recycleRequest
 	clipboard        *fileClipboardRequest
 	transfer         *transferRequest
+	settingsSave     *settingsSaveRequest
 }
 
 type loadResult struct {
@@ -41,6 +42,7 @@ type loadResult struct {
 	alreadyHere       bool
 	panelUpdates      []transferPanelUpdate
 	mutationDirectory string
+	settingsMessage   string
 }
 
 type directoryLoader struct {
@@ -89,6 +91,14 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
+				if request.settingsSave != nil {
+					message, err := request.settingsSave.run()
+					l.results <- loadResult{request: request, settingsMessage: message, err: err}
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
 				if request.clipboard != nil || request.transfer != nil || request.duplicate != nil {
 					var result loadResult
 					if request.duplicate != nil {

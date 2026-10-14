@@ -79,7 +79,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 			if s.actionsFocused && !s.selecting && !s.editing && v.settingsInteraction() == s {
 				selected = s.action
 			}
-			if v.settingsInteraction() != s {
+			if v.settingsInteraction() != s || s.pending {
 				gtx.Source = gtx.Source.Disabled()
 			}
 			return s.actions.layout(gtx, []string{"Save", "Cancel", "Reset"}, selected, rowHeight, v.appearance.Colors,

@@ -15,8 +15,9 @@ type interactionSession interface {
 }
 
 type interactionController struct {
-	current   interactionSession // nil is ordinary browsing.
-	suspended interactionSession
+	current      interactionSession // nil is ordinary browsing.
+	suspended    interactionSession
+	focusPending bool // Worker completions restore focus through the next frame's input source.
 }
 
 func (c *interactionController) operationsHeld() bool {
@@ -143,6 +144,9 @@ func (v *view) cancelInteraction(gtx layout.Context) bool {
 // Escape uses the same session cancellation as other input routes, with one
 // semantic cue. Submitted name mutations remain protected until reconciliation.
 func (v *view) escape(gtx layout.Context) {
+	if s := v.settingsInteraction(); s != nil && s.pending {
+		return
+	}
 	if s := v.nameInteraction(); s != nil && s.pending {
 		return
 	}

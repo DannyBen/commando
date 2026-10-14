@@ -95,11 +95,19 @@ type settingsSession struct {
 	actions            actionBar
 	actionsFocused     bool
 	action             int
+	pending            bool
+}
+
+type settingsSaveRequest struct {
+	session *settingsSession
+	run     func() (string, error)
 }
 
 func (s *settingsSession) interactionPanel() int { return s.panel }
 func (*settingsSession) blocksMutations() bool   { return true }
 func (s *settingsSession) protectsListing() bool { return !s.selecting }
+func (s *settingsSession) holdsOperations() bool { return s.pending }
+func (s *settingsSession) blocksPanels() bool    { return s.pending }
 func (s *settingsSession) canSuspendFor(next interactionSession) bool {
 	if !s.selecting {
 		return false
@@ -153,6 +161,9 @@ func (v *view) settingText(key string) string {
 	case settings.Number:
 		return strconv.FormatFloat(value.Number, 'f', -1, 64)
 	default:
+		if key == settingDataFolder && value.Text == "" {
+			return v.defaultDataFolder
+		}
 		return value.Text
 	}
 }
@@ -266,7 +277,7 @@ func (v *view) applySettingDraft(gtx layout.Context) bool {
 }
 func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 	s := v.settingsInteraction()
-	if s == nil {
+	if s == nil || s.pending {
 		return
 	}
 	if save && s.editing && !v.applySettingDraft(gtx) {
@@ -275,15 +286,19 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 	if save && s.selecting {
 		v.updateSettingsSelection()
 	}
-	if save && v.saveSettings != nil {
-		if err := v.saveSettings(v.settingsValues); err != nil {
-			s.errorText = "Could not save settings"
-			if errors.Is(err, os.ErrPermission) {
-				s.errorText = "Settings save: access denied"
+	if save && v.prepareSettingsSave != nil {
+		request := &settingsSaveRequest{session: s, run: v.prepareSettingsSave(v.settingsValues.Clone())}
+		s.pending = true
+		s.selecting = false
+		if v.loader != nil {
+			if !v.loader.submit(loadRequest{panel: s.panel, settingsSave: request}) {
+				v.acceptSettingsSave(s, "", errors.New("worker unavailable"))
 			}
-			v.focusInteraction(gtx)
-			return
+		} else {
+			message, err := request.run()
+			v.acceptSettingsSave(s, message, err)
 		}
+		return
 	}
 	if !save {
 		v.settingsValues = s.before
@@ -298,6 +313,29 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		v.sounds.Play(sound.Settings)
 	}
 	v.focusInteraction(gtx)
+}
+
+func (v *view) acceptSettingsSave(s *settingsSession, message string, err error) {
+	if v.settingsInteraction() != s {
+		return
+	}
+	s.pending = false
+	v.interaction.focusPending = true
+	if err != nil {
+		s.errorText = "Could not save settings"
+		if errors.Is(err, os.ErrPermission) {
+			s.errorText = "Settings save: access denied"
+		} else if errors.Is(err, errDataFolderPath) {
+			s.errorText = "Choose an absolute folder"
+		}
+		return
+	}
+	v.interaction.finish(s)
+	if message != "" {
+		v.showFeedback(s.panel, feedback.Info, message)
+	} else if v.sounds != nil {
+		v.sounds.Play(sound.Settings)
+	}
 }
 func (v *view) updateSettingsSelection() {
 	s := v.settingsInteraction()
@@ -325,6 +363,9 @@ func (v *view) updateSettingsSelection() {
 
 func (v *view) updateSettingsWidget(gtx layout.Context) {
 	s := v.settingsInteraction()
+	if s.pending {
+		return
+	}
 	if action, ok := s.actions.update(gtx); ok {
 		s.action, s.actionsFocused = action, true
 		v.activateSettingsAction(gtx, action)
@@ -483,6 +524,9 @@ func (v *view) settingsWidget() *settingsSession {
 }
 
 func (v *view) activateSettingsAction(gtx layout.Context, action int) {
+	if s := v.settingsInteraction(); s == nil || s.pending {
+		return
+	}
 	switch action {
 	case 0:
 		v.finishSettingsWidget(gtx, true)

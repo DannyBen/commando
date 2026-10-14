@@ -15,6 +15,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
 )
@@ -30,15 +31,24 @@ func Run() error {
 	if *preview != "" {
 		return renderPNG(*preview)
 	}
-	dataDir, err := defaultDataDir()
+	baseDir, err := defaultDataDir()
 	if err != nil {
 		return err
 	}
-	instance, primary, err := startInstance(dataDir)
+	// Keep the instance identity stable while a new data folder awaits restart.
+	instance, primary, err := startInstance(baseDir)
 	if err != nil || !primary {
 		return err
 	}
 	defer instance.close()
+	dataDir, folderErr := resolveDataFolder(baseDir)
+	if folderErr != nil {
+		fmt.Fprintln(os.Stderr, "cannot load data folder:", folderErr)
+	}
+	store := &dataFolderStore{base: baseDir, active: dataDir, chosen: dataDir}
+	if folderErr != nil {
+		store.chosen = "" // Saving a choice can repair an unreadable startup pointer.
+	}
 	settingsValues, settingsErr := settings.Load(dataDir, settings.CatalogueDefault)
 	if settingsErr != nil {
 		fmt.Fprintln(os.Stderr, "cannot load settings:", settingsErr)
@@ -84,9 +94,16 @@ func Run() error {
 			gioapp.MinSize(unit.Dp(minWindowWidth), unit.Dp(360)))
 		w.Option(native.options()...)
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate)
+		v.defaultDataFolder = baseDir
+		store.restoreLocation(&settingsValues)
 		v.restoreSettings(settingsValues, settingsErr)
-		v.saveSettings = func(values settings.Values) error {
-			return settings.Save(dataDir, values)
+		if folderErr != nil {
+			v.showFeedback(v.active, feedback.Error, "Cannot read data folder")
+		}
+		v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
+			state := v.sessionState(tracker.snapshot())
+			state.PanelWidth = tracker.sizingSnapshot().baseWidth
+			return func() (string, error) { return store.save(values, state) }
 		}
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		v.nativeKeys = keys
