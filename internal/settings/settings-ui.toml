@@ -118,6 +118,57 @@ min = 100.0
 max = 900.0
 step = 100.0
 
+[appearance.padding]
+label = "Padding"
+
+[appearance.padding.vertical]
+label = "Vertical"
+title = "Vertical"
+
+[appearance.padding.vertical.rows]
+label = "Rows"
+description = "Padding above and below file rows, settings controls and palette results, in dp."
+control = "stepper"
+min = 0.0
+step = 1.0
+integer = true
+
+[appearance.padding.vertical.headers_footers]
+label = "Headers and footers"
+description = "Padding above and below column headings and footers, in dp."
+control = "stepper"
+min = 0.0
+step = 1.0
+integer = true
+
+[appearance.padding.vertical.location]
+label = "Location"
+description = "Padding above and below location-bar text, in dp."
+control = "stepper"
+min = 0.0
+step = 1.0
+integer = true
+
+[appearance.padding.vertical.search]
+label = "Search"
+description = "Padding above and below palette-search text, in dp."
+control = "stepper"
+min = 0.0
+step = 1.0
+integer = true
+
+[appearance.padding.horizontal]
+label = "Horizontal"
+title = "Horizontal"
+
+[appearance.padding.horizontal.content]
+label = "Content"
+description = "Padding on each side of rows, headers, footers, settings and palette content, in dp."
+control = "stepper"
+min = 0.0
+step = 1.0
+integer = true
+
 [view]
 label = "View"
 

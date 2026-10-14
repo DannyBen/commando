@@ -31,7 +31,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			}, index == v.active)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.band(gtx, max(gtx.Dp(28), smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
+			return v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
 				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
 					return v.filterContents(gtx, index)
 				}
@@ -121,7 +121,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				return p.rows[row].Layout(gtx, contents)
 			})
 			// Keyboard menus anchor beside the revealed current row in client pixels.
-			headerHeight := v.locationBarHeight(gtx, textHeight) + max(gtx.Dp(28), smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
+			headerHeight := v.locationBarHeight(gtx, textHeight) + smallTextHeight + gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))
 			panelX := (v.frameSize.X + gtx.Dp(1)) * index / len(v.panels)
 			y := (p.selected-p.list.Position.First)*rowHeight - p.list.Position.Offset
 			p.selectionAnchor = image.Pt(panelX+gtx.Dp(max(0, v.appearance.ContentPaddingHorizontal)), headerHeight+max(0, min(y+rowHeight, dims.Size.Y)))
@@ -134,7 +134,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			return dims
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			dims := v.band(gtx, max(gtx.Dp(30), smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))), v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
+			dims := v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
 				return v.footerContents(gtx, index)
 			}, false)
 			if message := p.feedback.Current(); message != nil {

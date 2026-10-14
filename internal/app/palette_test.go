@@ -358,13 +358,15 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 		s := v.paletteInteraction()
 		bounds := s.surface.bounds
 		if tc.overlay != 0 && (bounds.Min.X != tc.left || bounds.Dx() != tc.overlay) ||
-			bounds.Min.X != (tc.width-bounds.Dx())/2 || bounds.Min.Y < int(40*tc.scale) || bounds.Max.Y > 480 {
+			bounds.Min.X != (tc.width-bounds.Dx())/2 || bounds.Min.Y < 0 || bounds.Max.Y > 480 {
 			t.Fatalf("width %d scale %g: overlay bounds %v", tc.width, tc.scale, s.surface.bounds)
 		}
 		if tc.overlay == 0 && (bounds.Dx() < int(float32(v.appearance.OverlayMinWidth)*tc.scale) || bounds.Dx() > int(float32(v.appearance.OverlayMaxWidth)*tc.scale)) {
 			t.Fatalf("content-sized palette exceeded theme bounds: %v", bounds)
 		}
-		if tc.scale == 1 && tc.fontSize == 15 && s.surface.bounds.Min.Y != 41 {
+		var measureOps op.Ops
+		measure := layout.Context{Ops: &measureOps, Metric: unit.Metric{PxPerDp: tc.scale, PxPerSp: tc.scale}}
+		if s.surface.bounds.Min.Y != v.locationBarHeight(measure, v.textHeight(measure, tc.fontSize)) {
 			t.Fatalf("palette did not start below the location bar and its separate edge: %v", s.surface.bounds)
 		}
 		send(pressed(key.NameEnd))

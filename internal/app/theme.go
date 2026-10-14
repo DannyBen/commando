@@ -28,8 +28,8 @@ type Theme struct {
 	FontFamily              string
 	FontWeight              font.Weight
 	TextSize, SmallTextSize unit.Sp
-	// Padding is measured in dp per side. Minimum band heights and borders
-	// remain separate layout rules.
+	// Padding is measured in dp per side. Border thicknesses remain separate
+	// layout rules.
 	RowPaddingVertical               unit.Dp
 	HeaderFooterPaddingVertical      unit.Dp
 	LocationPaddingVertical          unit.Dp

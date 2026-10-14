@@ -70,7 +70,7 @@ func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layo
 }
 
 func (v *view) locationBarHeight(gtx layout.Context, textHeight int) int {
-	return max(gtx.Dp(39), textHeight+gtx.Dp(2*max(0, v.appearance.LocationPaddingVertical))) + gtx.Dp(2)
+	return textHeight + gtx.Dp(2*max(0, v.appearance.LocationPaddingVertical)) + gtx.Dp(2)
 }
 
 func (v *view) contentInset() layout.Inset {

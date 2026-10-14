@@ -14,6 +14,7 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
@@ -67,6 +68,11 @@ const (
 	settingFontTextSize          = "appearance.font.text_size"
 	settingFontSmallTextSize     = "appearance.font.small_text_size"
 	settingFontWeight            = "appearance.font.weight"
+	settingPaddingRows           = "appearance.padding.vertical.rows"
+	settingPaddingHeadersFooters = "appearance.padding.vertical.headers_footers"
+	settingPaddingLocation       = "appearance.padding.vertical.location"
+	settingPaddingSearch         = "appearance.padding.vertical.search"
+	settingPaddingContent        = "appearance.padding.horizontal.content"
 )
 
 func settingsGroupLabel(key string) string {
@@ -269,6 +275,13 @@ func (v *view) adjustSetting(key string, direction int) {
 func (v *view) applySettings() {
 	c := settings.CatalogueDefault
 	v.applyFontSettings()
+	rows, bands, location := v.appearance.RowPaddingVertical, v.appearance.HeaderFooterPaddingVertical, v.appearance.LocationPaddingVertical
+	v.appearance.RowPaddingVertical = unit.Dp(v.settingsValues.Get(c, settingPaddingRows).Number)
+	v.appearance.HeaderFooterPaddingVertical = unit.Dp(v.settingsValues.Get(c, settingPaddingHeadersFooters).Number)
+	v.appearance.LocationPaddingVertical = unit.Dp(v.settingsValues.Get(c, settingPaddingLocation).Number)
+	v.appearance.SearchPaddingVertical = unit.Dp(v.settingsValues.Get(c, settingPaddingSearch).Number)
+	v.appearance.ContentPaddingHorizontal = unit.Dp(v.settingsValues.Get(c, settingPaddingContent).Number)
+	geometryChanged := rows != v.appearance.RowPaddingVertical || bands != v.appearance.HeaderFooterPaddingVertical || location != v.appearance.LocationPaddingVertical
 	v.appearance.Feedback.Enabled = v.settingsValues.Get(c, settingNotificationAnimation).Bool
 	if v.sounds != nil && !v.settingsValues.Get(c, settingSoundsEnabled).Bool {
 		v.sounds.Stop()
@@ -286,6 +299,9 @@ func (v *view) applySettings() {
 	v.appearance.FilenameColors = &colors
 	show := v.settingsValues.Get(c, settingProtectedSystem).Bool
 	apply := func(p *panel) {
+		if geometryChanged {
+			p.reveal = true
+		}
 		if p.showProtectedSystem != show {
 			p.ensureEntries()
 			p.showProtectedSystem = show

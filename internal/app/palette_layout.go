@@ -35,8 +35,8 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 	width = max(gtx.Dp(v.appearance.OverlayMinWidth), min(gtx.Dp(v.appearance.OverlayMaxWidth), width))
 	return s.surface.layout(gtx, v.locationBarHeight(gtx, textHeight), width, v.appearance.Colors, v.appearance.OverlayBackdropOpacity, func(gtx layout.Context) layout.Dimensions {
 		rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
-		searchHeight := max(gtx.Dp(40), textHeight+gtx.Dp(2*max(0, v.appearance.SearchPaddingVertical)))
-		footerHeight := max(gtx.Dp(28), v.textHeight(gtx, v.appearance.SmallTextSize)+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
+		searchHeight := textHeight + gtx.Dp(2*max(0, v.appearance.SearchPaddingVertical))
+		footerHeight := v.textHeight(gtx, v.appearance.SmallTextSize) + gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))
 		// Leave the panel footers visible. Tall text still gets one usable row
 		// when space permits; the outer clip bounds tiny windows safely.
 		available := max(0, gtx.Constraints.Max.Y-searchHeight-footerHeight-gtx.Dp(32))
