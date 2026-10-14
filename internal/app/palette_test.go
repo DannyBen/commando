@@ -99,7 +99,7 @@ func TestPaletteSettingsDiscoveryRetainsSearchAndKeyboardFlow(t *testing.T) {
 			send(pressed(key.NameReturn))
 			start, end := v.commandSearch.Selection()
 			if v.paletteInteraction() != s || !s.settingsMode || s.query != "@" || v.commandSearch.Text() != "@" ||
-				start != 1 || end != 1 || len(s.results) != 6 || !router.Source().Focused(&v.commandSearch) || v.active != 1 {
+				start != 1 || end != 1 || len(s.results) != len(v.settingsCatalogue()) || !router.Source().Focused(&v.commandSearch) || v.active != 1 {
 				t.Fatal("Settings command lost session, prefix, caret, results or search focus")
 			}
 			send(pressed(key.NameDownArrow))

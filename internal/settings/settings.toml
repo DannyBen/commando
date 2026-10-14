@@ -5,6 +5,15 @@ lightness = 0.36
 chroma = 0.35
 hue = 20.0
 
+[appearance.autocolor.selection]
+lightness_offset = 0.10
+
+[appearance.autocolor.special_files]
+hidden_lightness_offset = 0.06
+hidden_chroma_multiplier = 0.65
+dotfile_lightness_offset = 0.03
+dotfile_chroma_multiplier = 0.80
+
 [view]
 show_protected_system_files = false
 

@@ -255,9 +255,8 @@ func (c *Catalogue) addWidget(key, parent, owner string, m nodeMetadata, visible
 	if *m.Title == "" {
 		return "", fmt.Errorf("empty widget title: %s", key)
 	}
-	if owner != "" {
-		return "", fmt.Errorf("nested widget: %s", key)
-	}
+	// A titled child starts its own widget; untitled descendants retain the
+	// nearest titled ancestor as their field owner.
 	label := m.Palette
 	if label == "" && !leaf {
 		label = m.Label

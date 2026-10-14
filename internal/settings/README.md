@@ -11,8 +11,9 @@ step; progress steppers also require a finite minimum and maximum.
 
 Parent labels name palette categories. A `title` declares a widget on a group
 or a single setting and supplies its heading. `palette` can give that widget a
-different menu name; leaf `label` names its option. Group widgets collect their
-descendant fields, and nested widget declarations are rejected. The settings
+different menu name; leaf `label` names its option. Fields belong to their nearest
+titled ancestor. Parent widgets hold basic controls; titled children hold more
+specific controls. Aim for four or five fields per widget. The settings
 palette sorts by the full displayed label; metadata order determines field order.
 
 Labels and titles use sentence case. Widget headings include their category path.
@@ -43,6 +44,10 @@ value, with no underline or dimming.
 
 Appearance › Auto color includes an Enabled toggle. Turning it off uses semantic
 theme colors while retaining the generated-color parameters for re-enabling.
+Its Selection widget adjusts background lightness relative to file lightness.
+Special files adjusts lightness offsets and chroma multipliers for hidden
+attributes and dot-prefixed names; both modifiers apply when an entry has both.
+Each widget resets only its own fields.
 
 Feedback › Sounds includes an Enabled toggle, on by default. It applies live to
 all application cues and stops queued/current audio when disabled. Individual cue

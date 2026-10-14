@@ -145,6 +145,41 @@ label = "Enabled"
 	}
 }
 
+func TestNestedWidgetsOwnTheirNearestFields(t *testing.T) {
+	c, err := ParseCatalogue(`tools.basic = true
+tools.detail.value = 0.5
+tools.detail.extra.value = 0.2
+tools.other = true`, `
+[tools]
+label = "Tools"
+title = "Tools"
+[tools.basic]
+label = "Basic"
+[tools.detail]
+label = "Detail"
+title = "Detail"
+[tools.detail.value]
+label = "Value"
+[tools.detail.extra]
+label = "Extra"
+[tools.detail.extra.value]
+label = "Extra value"
+[tools.other]
+label = "Other"
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.UI.Widgets) != 2 || c.UI.Widgets[1].Parent != "tools" {
+		t.Fatalf("child widget lost its parent: %#v", c.UI.Widgets)
+	}
+	for i, want := range []string{"tools", "tools.detail", "tools.detail", "tools"} {
+		if c.UI.Fields[i].Widget != want {
+			t.Fatalf("%s belongs to %s, want %s", c.UI.Fields[i].Key, c.UI.Fields[i].Widget, want)
+		}
+	}
+}
+
 func TestCatalogueControlsIndependentOfValues(t *testing.T) {
 	for _, control := range []string{"input", "stepper", "stepper-progress"} {
 		c, err := ParseCatalogue(defaultTOML, strings.Replace(uiTOML, `control = "stepper-progress"`, `control = "`+control+`"`, 1))
@@ -183,7 +218,6 @@ func TestCatalogueRejectsInvalidDefinitions(t *testing.T) {
 		{"explicit parent", defaultTOML, strings.Replace(uiTOML, "label = \"Appearance\"", "label = \"Appearance\"\nparent = \"appearance.autocolor\"", 1)},
 		{"missing widget", defaultTOML, strings.Replace(uiTOML, "title = \"Auto color\"\n", "", 1)},
 		{"empty title", defaultTOML, strings.Replace(uiTOML, "title = \"Auto color\"", "title = \"\"", 1)},
-		{"nested widget", defaultTOML, strings.Replace(uiTOML, "label = \"Appearance\"", "label = \"Appearance\"\ntitle = \"Appearance\"", 1)},
 		{"control on category", defaultTOML, strings.Replace(uiTOML, "label = \"Appearance\"", "label = \"Appearance\"\ncontrol = \"input\"", 1)},
 		{"invalid visibility", defaultTOML, strings.Replace(uiTOML, "label = \"Appearance\"", "label = \"Appearance\"\nvisible = \"false\"", 1)},
 		{"ambiguous path", "\"files.extra\" = true", uiTOML},

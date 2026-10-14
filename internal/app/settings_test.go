@@ -137,10 +137,10 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	s := v.paletteInteraction()
-	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 6 {
+	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 8 {
 		t.Fatal("@ did not open settings-only palette")
 	}
-	for i, label := range []string{"Appearance › Auto color", "Application › Data folder", "Feedback › Notifications", "Feedback › Sounds", "Programs › Editors › New", "View › System files"} {
+	for i, label := range []string{"Appearance › Auto color", "Appearance › Auto color › Selection", "Appearance › Auto color › Special files", "Application › Data folder", "Feedback › Notifications", "Feedback › Sounds", "Programs › Editors › New", "View › System files"} {
 		if got := s.results[i].command.label(); got != label {
 			t.Fatalf("settings result %d = %q; want %q", i, got, label)
 		}
@@ -151,7 +151,7 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 		}
 	}
 	send(key.EditEvent{Range: key.Range{Start: 1, End: 1}, Text: "appearance autocolor"})
-	if len(s.results) != 1 || s.results[0].command.label() != "Appearance › Auto color" {
+	if len(s.results) != 3 || s.results[0].command.label() != "Appearance › Auto color" {
 		t.Fatal("settings search did not use existing fuzzy matching")
 	}
 	send(pressed(key.NameReturn))

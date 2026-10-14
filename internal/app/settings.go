@@ -53,6 +53,11 @@ const (
 	settingLightness             = "appearance.autocolor.lightness"
 	settingChroma                = "appearance.autocolor.chroma"
 	settingHue                   = "appearance.autocolor.hue"
+	settingSelectionLightness    = "appearance.autocolor.selection.lightness_offset"
+	settingHiddenLightness       = "appearance.autocolor.special_files.hidden_lightness_offset"
+	settingHiddenChroma          = "appearance.autocolor.special_files.hidden_chroma_multiplier"
+	settingDotfileLightness      = "appearance.autocolor.special_files.dotfile_lightness_offset"
+	settingDotfileChroma         = "appearance.autocolor.special_files.dotfile_chroma_multiplier"
 	settingDataFolder            = "application.data_folder.path"
 )
 
@@ -253,6 +258,11 @@ func (v *view) applySettings() {
 	colors.filenameLightness = v.settingsValues.Get(c, settingLightness).Number
 	colors.filenameChroma = v.settingsValues.Get(c, settingChroma).Number
 	colors.hueSeed = v.settingsValues.Get(c, settingHue).Number
+	colors.activeBackgroundLightnessOffset = v.settingsValues.Get(c, settingSelectionLightness).Number
+	colors.hiddenLightnessOffset = v.settingsValues.Get(c, settingHiddenLightness).Number
+	colors.hiddenChromaMultiplier = v.settingsValues.Get(c, settingHiddenChroma).Number
+	colors.dotfileLightnessOffset = v.settingsValues.Get(c, settingDotfileLightness).Number
+	colors.dotfileChromaMultiplier = v.settingsValues.Get(c, settingDotfileChroma).Number
 	v.appearance.FilenameColors = &colors
 	show := v.settingsValues.Get(c, settingProtectedSystem).Bool
 	apply := func(p *panel) {

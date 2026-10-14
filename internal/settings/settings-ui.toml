@@ -37,6 +37,54 @@ min = 0.0
 max = 360.0
 step = 1.0
 
+[appearance.autocolor.selection]
+label = "Selection"
+title = "Selection"
+
+[appearance.autocolor.selection.lightness_offset]
+label = "Lightness offset"
+description = "Adjust selection background lightness relative to its file color."
+control = "stepper-progress"
+min = -1.0
+max = 1.0
+step = 0.01
+
+[appearance.autocolor.special_files]
+label = "Special files"
+title = "Special files"
+
+[appearance.autocolor.special_files.hidden_lightness_offset]
+label = "Hidden lightness offset"
+description = "Add to generated lightness for entries with the hidden attribute."
+control = "stepper-progress"
+min = -1.0
+max = 1.0
+step = 0.01
+
+[appearance.autocolor.special_files.hidden_chroma_multiplier]
+label = "Hidden chroma multiplier"
+description = "Multiply generated chroma for entries with the hidden attribute."
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.autocolor.special_files.dotfile_lightness_offset]
+label = "Dotfile lightness offset"
+description = "Add to generated lightness for entries whose names start with a dot."
+control = "stepper-progress"
+min = -1.0
+max = 1.0
+step = 0.01
+
+[appearance.autocolor.special_files.dotfile_chroma_multiplier]
+label = "Dotfile chroma multiplier"
+description = "Multiply generated chroma for entries whose names start with a dot."
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
 [view]
 label = "View"
 

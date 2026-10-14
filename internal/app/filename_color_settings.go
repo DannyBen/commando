@@ -1,8 +1,7 @@
 package app
 
-// Edit these experiment parameters, then rebuild. Lightness is 0–1; chroma
-// controls saturation; the seed is a hue rotation in degrees. Out-of-gamut
-// colors lose chroma while retaining lightness and hue.
+// Fallback colors for themes without an applied settings snapshot. Lightness
+// is 0–1; out-of-gamut colors lose chroma while retaining lightness and hue.
 var defaultFilenameColors = filenameColorSettings{
 	enabled:                         true,
 	filenameLightness:               0.36,
