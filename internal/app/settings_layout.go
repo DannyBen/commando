@@ -16,6 +16,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
 	smallHeight := v.textHeight(gtx, v.appearance.SmallTextSize)
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
+	headerHeight := max(1, rowHeight-gtx.Dp(1)) + gtx.Dp(2)
 	footerHeight := max(gtx.Dp(30), smallHeight+gtx.Dp(12))
 	rows := len(s.fields)
 	labelGap := v.textWidth(gtx, " ", v.appearance.TextSize)
@@ -24,10 +25,10 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 		labelWidth = max(labelWidth, v.textWidth(gtx, field.Label, v.appearance.TextSize))
 	}
 
-	return s.surface.layout(gtx, footerHeight, gtx.Dp(v.appearance.SettingsWidth), (rows+2)*rowHeight+footerHeight, v.appearance.Colors, func(gtx layout.Context) layout.Dimensions {
+	return s.surface.layout(gtx, footerHeight, gtx.Dp(v.appearance.SettingsWidth), headerHeight+(rows+1)*rowHeight+footerHeight, v.appearance.Colors, func(gtx layout.Context) layout.Dimensions {
 		children := make([]layout.FlexChild, 0, rows+3)
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.band(gtx, rowHeight, v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
+			return v.headerBand(gtx, headerHeight, v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
 				return v.label(gtx, s.title, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 			}, true)
 		}))

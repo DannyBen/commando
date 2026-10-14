@@ -94,7 +94,7 @@ func (v *view) update(gtx layout.Context) {
 			key.Filter{Focus: &v.focus, Name: key.NameEscape},
 			key.Filter{Focus: &v.focus, Name: key.NameUpArrow, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameDownArrow, Optional: key.ModShift},
-			key.Filter{Focus: &v.focus, Name: insertKey},
+			key.Filter{Focus: &v.focus, Name: insertKey, Optional: key.ModShift},
 			key.Filter{Focus: &v.focus, Name: key.NameSpace},
 			key.Filter{Focus: &v.focus, Name: "A", Required: key.ModCtrl},
 			key.Filter{Focus: &v.focus, Name: "C", Required: key.ModCtrl, Optional: key.ModShift},
@@ -321,6 +321,10 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		}
 		return
 	case insertKey:
+		if ke.Modifiers == key.ModShift {
+			v.pasteFiles()
+			return
+		}
 		if ke.Modifiers != 0 || p.loading {
 			return
 		}

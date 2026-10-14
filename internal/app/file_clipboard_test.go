@@ -91,6 +91,34 @@ func markClipboardItems(t *testing.T, p *panel) {
 	selectName(t, p, "z.txt")
 }
 
+func TestShiftInsertPastesFilesThroughSharedTransfer(t *testing.T) {
+	for _, native := range []bool{false, true} {
+		v, source, target := clipboardView(t)
+		c := attachTestFileClipboard(v)
+		c.data = browser.FileClipboard{Paths: []string{filepath.Join(source, "a.txt")}, Sequence: 1}
+		v.active = 1
+		v.nativeKeys = &nativeKeyInput{invalidate: func() {}}
+		send, _ := panelInputFrames(v)
+		if native {
+			v.nativeKeys.push(modified(insertKey, key.ModShift))
+			send()
+		} else {
+			send(modified(insertKey, key.ModShift))
+		}
+		waitLoaded(t, v, 1)
+		send()
+		data, err := os.ReadFile(filepath.Join(target, "a.txt"))
+		if err != nil || string(data) != "alpha" || v.active != 1 {
+			t.Fatalf("native=%v: Shift+Insert did not paste into the active folder: %q %v", native, data, err)
+		}
+		c.Lock()
+		if !reflect.DeepEqual(c.data.Paths, []string{filepath.Join(source, "a.txt")}) || c.data.Move {
+			t.Error("copy clipboard did not remain reusable")
+		}
+		c.Unlock()
+	}
+}
+
 func TestClipboardCopiesMarkedMixedItemsIntoActiveFolder(t *testing.T) {
 	v, source, target := clipboardView(t)
 	c := attachTestFileClipboard(v)

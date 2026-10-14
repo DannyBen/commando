@@ -364,8 +364,8 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 		if tc.overlay == 0 && (bounds.Dx() < int(float32(v.appearance.OverlayMinWidth)*tc.scale) || bounds.Dx() > int(float32(v.appearance.OverlayMaxWidth)*tc.scale)) {
 			t.Fatalf("content-sized palette exceeded theme bounds: %v", bounds)
 		}
-		if tc.scale == 1 && tc.fontSize == 15 && s.surface.bounds.Min.Y != 40 {
-			t.Fatalf("palette did not start below the 40px location bar: %v", s.surface.bounds)
+		if tc.scale == 1 && tc.fontSize == 15 && s.surface.bounds.Min.Y != 41 {
+			t.Fatalf("palette did not start below the location bar and its separate edge: %v", s.surface.bounds)
 		}
 		send(pressed(key.NameEnd))
 		pos := s.list.Position

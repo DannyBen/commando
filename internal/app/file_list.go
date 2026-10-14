@@ -19,7 +19,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.band(gtx, locationBarHeight(gtx, textHeight), v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
+			return v.headerBand(gtx, locationBarHeight(gtx, textHeight), v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
 				fg := v.appearance.Colors.Foreground
 				if index == v.active {
 					fg = v.appearance.Colors.ActiveLocation

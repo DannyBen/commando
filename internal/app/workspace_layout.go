@@ -70,7 +70,23 @@ func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layo
 }
 
 func locationBarHeight(gtx layout.Context, textHeight int) int {
-	return max(gtx.Dp(40), textHeight+gtx.Dp(12))
+	return max(gtx.Dp(39), textHeight+gtx.Dp(10)) + gtx.Dp(2)
+}
+
+// Headers reserve the top edge separately from their centered content. Inactive
+// headers reserve the same strip so neighboring panels retain aligned geometry.
+func (v *view) headerBand(gtx layout.Context, height int, bg color.NRGBA, content layout.Widget, active bool) layout.Dimensions {
+	size := image.Pt(gtx.Constraints.Max.X, height)
+	edgeHeight := min(height, gtx.Dp(2))
+	edge := bg
+	if active {
+		edge = v.appearance.Colors.Edge
+	}
+	paint.FillShape(gtx.Ops, edge, clip.Rect{Max: image.Pt(size.X, edgeHeight)}.Op())
+	defer op.Offset(image.Pt(0, edgeHeight)).Push(gtx.Ops).Pop()
+	gtx.Constraints = layout.Exact(image.Pt(size.X, max(0, height-edgeHeight)))
+	v.band(gtx, gtx.Constraints.Max.Y, bg, content, false)
+	return layout.Dimensions{Size: size}
 }
 
 func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp) layout.Dimensions {
