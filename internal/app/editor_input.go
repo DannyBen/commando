@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"unicode"
 )
 
 // Request the same clipboard transfer used by Gio's Ctrl+V handling. The editor
@@ -17,9 +18,34 @@ func pasteWithInsert(gtx layout.Context, editor *widget.Editor, ke key.Event) {
 	}
 }
 
-func (v *view) updateEditorPaste(gtx layout.Context, editor *widget.Editor) {
+// Delete through the public editor API so Unicode selection and Undo remain
+// native. Ctrl+Backspace removes a selection, otherwise the preceding word
+// together with trailing whitespace.
+func deletePreviousWord(editor *widget.Editor) bool {
+	if editor.ReadOnly {
+		return false
+	}
+	start, end := editor.Selection()
+	if start == end {
+		runes := []rune(editor.Text())
+		for start > 0 && unicode.IsSpace(runes[start-1]) {
+			start--
+		}
+		for start > 0 && !unicode.IsSpace(runes[start-1]) {
+			start--
+		}
+		if start == end {
+			return false
+		}
+		editor.SetCaret(start, end)
+	}
+	return editor.Delete(1) != 0
+}
+
+func (v *view) updateEditorInput(gtx layout.Context, editor *widget.Editor) {
 	for {
-		e, ok := gtx.Event(key.Filter{Focus: editor, Name: insertKey, Required: key.ModShift})
+		e, ok := gtx.Event(key.Filter{Focus: editor, Name: insertKey, Required: key.ModShift},
+			key.Filter{Focus: editor, Name: key.NameDeleteBackward, Required: key.ModCtrl})
 		if !ok {
 			return
 		}
@@ -27,7 +53,13 @@ func (v *view) updateEditorPaste(gtx layout.Context, editor *widget.Editor) {
 			if ke.State == key.Press {
 				v.dismissFeedback()
 			}
-			pasteWithInsert(gtx, editor, ke)
+			if ke.Name == key.NameDeleteBackward {
+				if ke.State == key.Press && ke.Modifiers == key.ModCtrl && gtx.Focused(editor) {
+					deletePreviousWord(editor)
+				}
+			} else {
+				pasteWithInsert(gtx, editor, ke)
+			}
 		}
 	}
 }

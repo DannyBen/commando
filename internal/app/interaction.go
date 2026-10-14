@@ -221,7 +221,7 @@ func (v *view) updateInteraction(gtx layout.Context) bool {
 		return v.settingsInteraction() != s || !s.selecting
 	}
 	if v.filterInteraction() != nil {
-		v.updateEditorPaste(gtx, &v.filterEditor)
+		v.updateEditorInput(gtx, &v.filterEditor)
 		v.updateFilter(gtx)
 		return v.activeEditor() != nil
 	}
@@ -239,13 +239,13 @@ func (v *view) updateInteraction(gtx layout.Context) bool {
 	}
 	switch v.interaction.current.(type) {
 	case *nameSession:
-		v.updateEditorPaste(gtx, &v.nameEditor)
+		v.updateEditorInput(gtx, &v.nameEditor)
 		v.updateName(gtx)
 	case *locationSession:
-		v.updateEditorPaste(gtx, &v.location)
+		v.updateEditorInput(gtx, &v.location)
 		v.updateLocation(gtx)
 	case *paletteSession:
-		v.updateEditorPaste(gtx, &v.commandSearch)
+		v.updateEditorInput(gtx, &v.commandSearch)
 		v.updatePalette(gtx)
 	}
 	return v.activeEditor() != nil

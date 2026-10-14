@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"gioui.org/io/event"
 	"gioui.org/io/input"
@@ -14,7 +15,80 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"gioui.org/widget"
 )
+
+func TestDeletePreviousWordSelectionUnicodeWhitespaceAndReadOnly(t *testing.T) {
+	for _, tc := range []struct {
+		text, want string
+		start, end int
+		readOnly   bool
+	}{
+		{"one two", "one ", 7, 7, false},
+		{"one two  ", "one ", 9, 9, false},
+		{"one two three", "one  three", 7, 7, false},
+		{"one two", " two", 0, 3, false},
+		{"one two", " two", 3, 0, false},
+		{"hello שלום", "hello ", 10, 10, false},
+		{"hello café", "hello ", 11, 11, false},
+		{"one\u2003two", "one\u2003", 7, 7, false},
+		{"word", "word", 0, 0, false},
+		{"word", "word", 4, 4, true},
+	} {
+		var editor widget.Editor
+		editor.SetText(tc.text)
+		editor.SetCaret(tc.start, tc.end)
+		editor.ReadOnly = tc.readOnly
+		deletePreviousWord(&editor)
+		if editor.Text() != tc.want {
+			t.Errorf("%q selection %d/%d: got %q, want %q", tc.text, tc.start, tc.end, editor.Text(), tc.want)
+		}
+	}
+}
+
+func TestCtrlBackspaceAcrossEditorsPreservesUndoFocusAndMarks(t *testing.T) {
+	for _, name := range []string{"rename", "create", "location", "palette", "filter", "settings"} {
+		t.Run(name, func(t *testing.T) {
+			v := newPreviewView()
+			v.panels[0].selected = 12
+			router, send := clipboardFrames(v)
+			switch name {
+			case "rename":
+				send(pressed(key.NameF2))
+			case "create":
+				send(newFolderKey())
+			case "location":
+				send(modified("D", key.ModAlt))
+			case "palette":
+				send(pressed("`"))
+			case "filter":
+				send(key.EditEvent{Text: "/"})
+			case "settings":
+				v.startSettingsWidget("appearance.font")
+				send()
+				send(pressed(key.NameReturn))
+			}
+			editor := v.activeEditor()
+			editor.SetText("one two")
+			editor.SetCaret(7, 7)
+			send()
+			marks := len(v.panels[0].marks)
+			send(modified(key.NameDeleteBackward, key.ModCtrl))
+			if editor.Text() != "one " || !router.Source().Focused(editor) || len(v.panels[0].marks) != marks {
+				t.Fatal("word deletion changed focus/marks or did not delete the word", editor.Text())
+			}
+			send(modified("Z", key.ModCtrl))
+			if editor.Text() != "one two" {
+				t.Fatal("word deletion was not undoable", editor.Text())
+			}
+			editor.SetCaret(utf8.RuneCountInString(editor.Text()), utf8.RuneCountInString(editor.Text()))
+			send(key.Event{Name: key.NameDeleteBackward, State: key.Release, Modifiers: key.ModCtrl})
+			if editor.Text() != "one two" {
+				t.Fatal("key release deleted text")
+			}
+		})
+	}
+}
 
 func clipboardFrames(v *view) (*input.Router, func(...event.Event)) {
 	router := new(input.Router)

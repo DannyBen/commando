@@ -517,7 +517,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		}
 	}
 	if s.editing {
-		v.updateEditorPaste(gtx, &s.editor)
+		v.updateEditorInput(gtx, &s.editor)
 		for {
 			e, ok := s.editor.Update(gtx)
 			if !ok {

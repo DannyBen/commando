@@ -97,7 +97,7 @@ control = "input"
 [appearance.font.text_size]
 label = "Text size"
 description = "Size of file rows, paths and controls."
-control = "stepper"
+control = "stepper-progress"
 min = 6.0
 max = 48.0
 step = 1.0
@@ -105,7 +105,7 @@ step = 1.0
 [appearance.font.small_text_size]
 label = "Small text size"
 description = "Size of column headings and panel footers."
-control = "stepper"
+control = "stepper-progress"
 min = 6.0
 max = 48.0
 step = 1.0
@@ -113,7 +113,7 @@ step = 1.0
 [appearance.font.weight]
 label = "Weight"
 description = "400 is regular; 700 is bold. Uses the closest weight available in the family."
-control = "stepper"
+control = "stepper-progress"
 min = 100.0
 max = 900.0
 step = 100.0
