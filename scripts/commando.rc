@@ -2,4 +2,4 @@
 
 IDI_COMMANDO ICON "assets/app-icon/app-icon.ico"
 
-JETBRAINS_MONO_LICENSE RCDATA "internal/app/fonts/OFL.txt"
+BUNDLED_FONT_LICENSE RCDATA "internal/app/fonts/OFL.txt"

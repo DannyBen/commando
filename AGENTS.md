@@ -320,6 +320,7 @@ module/executable and `Commando` for the window title and data-folder name.
 
 ## Changes and Documentation
 
+- Do not edit any README file unless the user explicitly requests a README update.
 - Discuss new interaction models with the user before implementing them.
 - Do not add tooltips. Name editing and transfer targeting use in-panel UI;
   command search uses a modal overlay. Windows transfer dialogs and context

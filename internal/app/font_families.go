@@ -51,7 +51,7 @@ func (v *view) requestFontFamilies() {
 }
 
 func (v *view) fontFamilyChoices() []string {
-	bundled := string(bundledFont(v.appearance.Font)[0].Font.Typeface)
+	bundled := string(v.appearance.Font[0].Font.Typeface)
 	return completionCandidates(append([]string{bundled}, v.fontFamilies...))
 }
 

@@ -10,10 +10,30 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/settings"
+	"golang.org/x/image/math/fixed"
 )
+
+func TestBundledVictorMonoWeightsWithoutSystemFonts(t *testing.T) {
+	faces := defaultTheme.Font
+	if len(faces) != 7 || faces[0].Font.Typeface != "Victor Mono" || faces[0].Font.Weight != font.Normal {
+		t.Fatal("bundle must contain seven Victor Mono weights, with Regular first")
+	}
+	shaper := text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces))
+	seen := make(map[text.GlyphID]bool)
+	for weight := 100; weight <= 700; weight += 100 {
+		shaper.LayoutString(text.Parameters{Font: font.Font{Typeface: "Victor Mono", Weight: font.Weight(weight - 400)},
+			PxPerEm: fixed.I(15), MaxWidth: 1000}, "A")
+		glyph, ok := shaper.NextGlyph()
+		if !ok || seen[glyph.ID] {
+			t.Fatalf("bundled weight %d did not render its own face", weight)
+		}
+		seen[glyph.ID] = true
+	}
+}
 
 func TestFontWidgetInputPreviewCancelResetAndPersistence(t *testing.T) {
 	v := newPreviewView()
@@ -32,9 +52,7 @@ func TestFontWidgetInputPreviewCancelResetAndPersistence(t *testing.T) {
 	}
 	v.adjustSetting(settingFontTextSize, 1)
 	v.adjustSetting(settingFontSmallTextSize, 1)
-	for range 3 {
-		v.adjustSetting(settingFontWeight, 1)
-	}
+	v.adjustSetting(settingFontWeight, 1)
 	if v.appearance.TextSize != 16 || v.appearance.SmallTextSize != 13 || v.appearance.FontWeight != font.Bold ||
 		v.textEditor(&widget.Editor{}, "").Font.Weight != font.Bold || v.appearance.RowPaddingVertical != before.RowPaddingVertical {
 		t.Fatal("font settings did not preview together or changed geometry")
@@ -48,7 +66,7 @@ func TestFontWidgetInputPreviewCancelResetAndPersistence(t *testing.T) {
 	v.startSettingsWidget("appearance.font")
 	_ = v.setWidgetValue(settingFontFamily, settings.Value{Text: "Arial"})
 	v.adjustSetting(settingFontTextSize, 2)
-	v.adjustSetting(settingFontWeight, 3)
+	v.adjustSetting(settingFontWeight, 1)
 	dir := t.TempDir()
 	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
 		return func() (string, error) { return "", settings.Save(dir, values) }
@@ -82,7 +100,7 @@ func TestUnavailableFontUsesBundledMetricsAndSizeRemainsLive(t *testing.T) {
 	width := v.textWidth(gtx, "Commando file 123.txt", v.appearance.TextSize)
 	height := v.textHeight(gtx, v.appearance.TextSize)
 	v.startSettingsWidget("appearance.font")
-	for _, family := range []string{"Commando missing family 918273", "", "  JetBrains Mono NL  "} {
+	for _, family := range []string{"Commando missing family 918273", "", "  Victor Mono  "} {
 		if err := v.setWidgetValue(settingFontFamily, settings.Value{Text: family}); err != nil {
 			t.Fatal(err)
 		}

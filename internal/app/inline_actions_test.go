@@ -176,7 +176,8 @@ func TestCompactInlineActionsKeepSubjectAndChoicesVisible(t *testing.T) {
 		frame := func() {
 			ops.Reset()
 			v.layout(layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Now: time.Now(),
-				Source: router.Source(), Constraints: layout.Exact(image.Pt(720, 360))})
+				// Leave room for three complete rows at 48sp with tall font metrics.
+				Source: router.Source(), Constraints: layout.Exact(image.Pt(720, 420))})
 			router.Frame(&ops)
 		}
 		frame()

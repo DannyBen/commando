@@ -1,7 +1,7 @@
 package app
 
 import (
-	_ "embed"
+	"embed"
 	"image/color"
 	"time"
 
@@ -11,10 +11,12 @@ import (
 	"github.com/dannyben/commando/internal/feedback"
 )
 
-// Change this asset to choose a different bundled font.
+// All upright weights share one family. Regular is the default face.
 //
-//go:embed fonts/JetBrainsMonoNL-Regular.ttf
-var themeFont []byte
+//go:embed fonts/VictorMono-*.ttf
+var themeFontFiles embed.FS
+
+var themeFont = bundledFonts(themeFontFiles)
 
 // Theme holds the appearance choices independently of Gio's widget theme.
 // A future configuration loader can supply these values before creating a view.
@@ -22,7 +24,7 @@ type Theme struct {
 	FilenameColors                   *filenameColorSettings
 	SettingsWidth                    unit.Dp
 	Colors                           ThemeColors
-	Font                             []byte
+	Font                             []font.FontFace
 	FontFamily                       string
 	FontWeight                       font.Weight
 	TextSize, SmallTextSize          unit.Sp
@@ -97,7 +99,8 @@ var defaultTheme = Theme{
 		ScrollbarTrack:         color.NRGBA{}, // Transparent; shows the panel surface.
 	},
 	Font:                   themeFont,
-	FontFamily:             "JetBrains Mono NL",
+	FontFamily:             "Victor Mono",
+	FontWeight:             font.SemiBold,
 	TextSize:               15, // File rows and panel paths.
 	SmallTextSize:          12, // Column headings and panel footers.
 	RowPaddingVertical:     4,  // dp per side; row height grows with the font.

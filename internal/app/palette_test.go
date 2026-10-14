@@ -348,7 +348,7 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 		{800, 160, 480, 1, 15},
 		{960, 240, 480, 1, 15},
 		{1600, 560, 480, 1, 15},
-		{1200, 98, 1003, 1.5, 24},
+		{1200, 0, 0, 1.5, 24}, // Content-sized width depends on font metrics.
 		{720, 0, 720, 1, 48},
 	} {
 		v := newPreviewView()
@@ -356,8 +356,13 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 		send, _ := paletteFrames(v, image.Pt(tc.width, 480), unit.Metric{PxPerDp: tc.scale, PxPerSp: tc.scale})
 		send(pressed("`"))
 		s := v.paletteInteraction()
-		if s.surface.bounds.Min.X != tc.left || s.surface.bounds.Dx() != tc.overlay || s.surface.bounds.Min.Y < int(40*tc.scale) || s.surface.bounds.Max.Y > 480 {
+		bounds := s.surface.bounds
+		if tc.overlay != 0 && (bounds.Min.X != tc.left || bounds.Dx() != tc.overlay) ||
+			bounds.Min.X != (tc.width-bounds.Dx())/2 || bounds.Min.Y < int(40*tc.scale) || bounds.Max.Y > 480 {
 			t.Fatalf("width %d scale %g: overlay bounds %v", tc.width, tc.scale, s.surface.bounds)
+		}
+		if tc.overlay == 0 && (bounds.Dx() < int(float32(v.appearance.OverlayMinWidth)*tc.scale) || bounds.Dx() > int(float32(v.appearance.OverlayMaxWidth)*tc.scale)) {
+			t.Fatalf("content-sized palette exceeded theme bounds: %v", bounds)
 		}
 		if tc.scale == 1 && tc.fontSize == 15 && s.surface.bounds.Min.Y != 40 {
 			t.Fatalf("palette did not start below the 40px location bar: %v", s.surface.bounds)
@@ -371,7 +376,7 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 		if s.selected != 0 || s.list.Position.First != 0 || s.list.Position.Offset > 0 {
 			t.Fatalf("Home did not reveal the first result: selected=%d position=%+v", s.selected, s.list.Position)
 		}
-		bounds := s.surface.bounds
+		bounds = s.surface.bounds
 		send(replacePalette(v, "focus"))
 		if s.surface.bounds.Min.X != bounds.Min.X || s.surface.bounds.Dx() != bounds.Dx() {
 			t.Fatal("searching changed the palette width")
