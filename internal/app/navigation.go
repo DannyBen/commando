@@ -96,6 +96,15 @@ func (v *view) acceptLoad(result loadResult) {
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
 	}
+	if result.request.fontFamilies {
+		v.fontFamiliesLoading = false
+		v.fontFamilies = append([]string{}, result.fontFamilies...)
+		if s := v.settingsInteraction(); s != nil {
+			s.completion.candidates = v.fontFamilyChoices()
+			s.completion.update(&s.editor)
+		}
+		return
+	}
 	if result.request.editor != nil {
 		v.acceptEditorLaunch(result)
 		return

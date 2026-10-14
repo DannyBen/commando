@@ -49,6 +49,8 @@ type view struct {
 	settingsValues      settings.Values
 	prepareSettingsSave func(settings.Values) func() (string, error) // Captures UI state before worker I/O; nil in previews.
 	defaultDataFolder   string
+	fontFamilies        []string
+	fontFamiliesLoading bool
 
 	appearance        Theme
 	theme             *material.Theme

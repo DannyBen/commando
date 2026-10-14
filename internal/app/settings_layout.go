@@ -44,6 +44,9 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 							if path {
 								hint = "Path"
 							}
+							if field.Key == settingFontFamily {
+								return v.completionEditor(gtx, &s.editor, &s.completion, hint)
+							}
 							return v.textEditor(&s.editor, hint).Layout(gtx)
 						}
 						if field.Control == "toggle" {
@@ -131,6 +134,11 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				}
 				if s.editing {
 					hint = "Enter Preview · Ctrl+Enter Save · Esc Revert"
+					if s.fields[s.selected].Key == settingFontFamily && s.completion.suffix() != "" {
+						hint = "Tab Complete · ↑/↓ Suggest · Enter Preview"
+					}
+				} else if s.fields[s.selected].Key == settingFontFamily {
+					hint = "←/→ Font · Enter Type · Ctrl+Enter Save"
 				}
 				if s.actionsFocused && !s.selecting && !s.editing {
 					hint = "Enter Save changes"
@@ -144,9 +152,6 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 						}
 					}
 					hint += " · ←/→ Action · Ctrl+Enter Save"
-				}
-				if s.dirty && !s.editing && !s.selecting && !s.actionsFocused {
-					hint = "Ctrl+Enter Save · Cancel Discard"
 				}
 				if s.deleted {
 					hint = "Ctrl+Enter Save deletion · Cancel Discard"

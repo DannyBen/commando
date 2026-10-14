@@ -118,4 +118,12 @@ func TestFontWidgetPreview(t *testing.T) {
 	if err := renderViewPNG(filepath.Join(dir, "settings-font.png"), v); err != nil {
 		t.Fatal(err)
 	}
+	s := v.settingsInteraction()
+	s.completion.candidates = []string{"Victor Mono", "Victor Sans"}
+	s.editing = true
+	s.editor.SetText("Vic")
+	s.editor.SetCaret(3, 3)
+	if err := renderViewPNG(filepath.Join(dir, "settings-font-completion.png"), v); err != nil {
+		t.Fatal(err)
+	}
 }

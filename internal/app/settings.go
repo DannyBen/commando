@@ -129,6 +129,7 @@ type settingsSession struct {
 	draft              settings.Values
 	deleted            bool
 	dirty              bool
+	completion         inlineCompletion
 }
 
 type settingsSaveRequest struct {
@@ -188,6 +189,12 @@ func (v *view) startSettingsWidget(group string) {
 		return 1
 	})
 	if len(s.fields) > 0 {
+		for _, field := range s.fields {
+			if field.Key == settingFontFamily {
+				s.completion.candidates = v.fontFamilyChoices()
+				v.requestFontFamilies()
+			}
+		}
 		if v.interaction.begin(s) && v.sounds != nil {
 			v.playSound(sound.Settings)
 		}
@@ -213,6 +220,10 @@ func (v *view) settingText(key string) string {
 	}
 }
 func (v *view) adjustSetting(key string, direction int) {
+	if key == settingFontFamily {
+		v.cycleFontFamily(direction)
+		return
+	}
 	c := settings.CatalogueDefault
 	d, _ := c.Definition(key)
 	control := ""
@@ -298,6 +309,7 @@ func (v *view) beginSettingEdit(gtx layout.Context) {
 	s.errorText = ""
 	s.editor.SetText(v.settingText(field.Key))
 	s.editor.SetCaret(0, utf8.RuneCountInString(s.editor.Text()))
+	s.completion.update(&s.editor)
 	v.focusInteraction(gtx)
 }
 func (v *view) applySettingDraft(gtx layout.Context) bool {
@@ -491,6 +503,8 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	}
 	if !s.editing {
 		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow}, key.Filter{Focus: focus, Name: key.NameLeftArrow}, key.Filter{Focus: focus, Name: key.NameRightArrow}, key.Filter{Focus: focus, Name: key.NameSpace})
+	} else if s.fields[s.selected].Key == settingFontFamily {
+		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow})
 	}
 	var keys []key.Event
 	for {
@@ -517,7 +531,27 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			}
 		}
 	}
+	if s.editing && s.fields[s.selected].Key == settingFontFamily {
+		s.completion.update(&s.editor)
+	}
 	for _, ke := range keys {
+		if s.editing && s.fields[s.selected].Key == settingFontFamily {
+			if ke.Name == key.NameTab && ke.Modifiers == 0 && s.completion.accept(&s.editor) {
+				s.dirty = true
+				s.errorText = ""
+				continue
+			}
+			if ke.Name == key.NameUpArrow || ke.Name == key.NameDownArrow {
+				direction := 1
+				if ke.Name == key.NameUpArrow {
+					direction = -1
+				}
+				if s.completion.cycle(direction) {
+					v.playNavigationSound()
+				}
+				continue
+			}
+		}
 		if ke.Name == key.NameEscape {
 			v.escape(gtx)
 			return

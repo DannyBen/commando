@@ -55,6 +55,11 @@ live; Save persists them, Cancel restores the previous values, and Reset restore
 the bundled family and default sizes/weight. Unavailable or blank families use
 the bundled font. Weight uses the closest available face; the bundled font
 currently includes only regular. Row padding is independent of font settings.
+Left/Right cycles installed families while Family is focused. During editing,
+typing suggests a matching suffix; Up/Down cycles suggestions and Tab accepts.
+Enter previews the typed name, and Escape discards the unfinished edit. Suggestions
+appear only at the end of the input with no selection; native caret movement and
+Undo retain their normal behavior.
 
 Feedback › Sounds includes an Enabled toggle, on by default. It applies live to
 all application cues and stops queued/current audio when disabled. Individual cue

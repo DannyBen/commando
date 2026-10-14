@@ -27,6 +27,7 @@ type loadRequest struct {
 	transfer         *transferRequest
 	settingsSave     *settingsSaveRequest
 	editor           *editorRequest
+	fontFamilies     bool
 }
 
 type loadResult struct {
@@ -48,6 +49,7 @@ type loadResult struct {
 	settingsMessage   string
 	editorsStarted    int
 	externalOpen      bool
+	fontFamilies      []string
 }
 
 type directoryLoader struct {
@@ -100,6 +102,13 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
+				if request.fontFamilies {
+					l.results <- loadResult{request: request, fontFamilies: readFontFamilies()}
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
 				if request.editor != nil {
 					result := loadResult{request: request}
 					for _, launch := range request.editor.launches {
