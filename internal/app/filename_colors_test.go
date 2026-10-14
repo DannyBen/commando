@@ -191,3 +191,37 @@ func TestFilenameColorPreview(t *testing.T) {
 		}
 	}
 }
+
+func TestDisabledAutoColorUsesSemanticThemeColors(t *testing.T) {
+	theme := defaultTheme
+	generated := defaultFilenameColors
+	generated.enabled = false
+	theme.FilenameColors = &generated
+	theme.Colors.Metadata = rgb(0x123456)
+	theme.Colors.SelectedMetadata = rgb(0xabcdef)
+	for _, file := range []browser.Entry{
+		{Name: "..", Directory: true, Parent: true}, {Name: "folder", Directory: true},
+		{Name: "notes.txt"}, {Name: ".env"}, {Name: "hidden.json", Hidden: true},
+		{Name: "C:", Path: `C:\`},
+	} {
+		for _, active := range []bool{false, true} {
+			for _, cut := range []bool{false, true} {
+				bg, name, metadata := theme.entryColors(file, active, cut)
+				wantBG, wantName, wantMetadata := theme.Colors.Surface, theme.Colors.Filename, theme.Colors.Metadata
+				if active {
+					wantBG, wantName, wantMetadata = theme.Colors.Selected, theme.Colors.SelectedName, theme.Colors.SelectedMetadata
+				}
+				if cut {
+					wantName = theme.Colors.CutFilename
+					if active {
+						wantName = theme.Colors.SelectedCutFilename
+					}
+					wantMetadata = wantName
+				}
+				if bg != wantBG || name != wantName || metadata != wantMetadata {
+					t.Fatalf("%s active=%v cut=%v did not use semantic colors", file.Name, active, cut)
+				}
+			}
+		}
+	}
+}

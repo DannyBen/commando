@@ -46,11 +46,12 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 
 // Application bindings identify leaves; defaults and UI definitions live in TOML.
 const (
-	settingProtectedSystem = "view.show_protected_system_files"
-	settingLightness       = "appearance.autocolor.lightness"
-	settingChroma          = "appearance.autocolor.chroma"
-	settingHue             = "appearance.autocolor.hue"
-	settingDataFolder      = "application.data_folder.path"
+	settingProtectedSystem  = "view.show_protected_system_files"
+	settingAutoColorEnabled = "appearance.autocolor.enabled"
+	settingLightness        = "appearance.autocolor.lightness"
+	settingChroma           = "appearance.autocolor.chroma"
+	settingHue              = "appearance.autocolor.hue"
+	settingDataFolder       = "application.data_folder.path"
 )
 
 func settingsGroupLabel(key string) string {
@@ -163,6 +164,18 @@ func (v *view) startSettingsWidget(group string) {
 			s.fields = append(s.fields, field)
 		}
 	}
+	// Enabled switches lead their widget; other fields retain metadata order.
+	slices.SortStableFunc(s.fields, func(a, b settings.Field) int {
+		enabled := func(f settings.Field) bool { return f.Control == "toggle" && strings.HasSuffix(f.Key, ".enabled") }
+		first, second := enabled(a), enabled(b)
+		if first == second {
+			return 0
+		}
+		if first {
+			return -1
+		}
+		return 1
+	})
 	if len(s.fields) > 0 {
 		if v.interaction.begin(s) && v.sounds != nil {
 			v.sounds.Play(sound.Settings)
@@ -230,6 +243,7 @@ func (v *view) adjustSetting(key string, direction int) {
 func (v *view) applySettings() {
 	c := settings.CatalogueDefault
 	colors := defaultFilenameColors
+	colors.enabled = v.settingsValues.Get(c, settingAutoColorEnabled).Bool
 	colors.filenameLightness = v.settingsValues.Get(c, settingLightness).Number
 	colors.filenameChroma = v.settingsValues.Get(c, settingChroma).Number
 	colors.hueSeed = v.settingsValues.Get(c, settingHue).Number

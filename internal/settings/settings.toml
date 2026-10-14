@@ -1,5 +1,6 @@
 # Embedded defaults. User settings.toml contains explicit value overrides only.
 [appearance.autocolor]
+enabled = true
 lightness = 0.36
 chroma = 0.35
 hue = 20.0

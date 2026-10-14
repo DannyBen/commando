@@ -155,10 +155,10 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 		t.Fatal("settings search did not use existing fuzzy matching")
 	}
 	send(pressed(key.NameReturn))
-	if v.paletteInteraction() != nil || v.settingsInteraction() == nil || len(v.settingsInteraction().fields) != 3 {
+	if v.paletteInteraction() != nil || v.settingsInteraction() == nil || len(v.settingsInteraction().fields) != 4 {
 		t.Fatal("palette did not open color widget")
 	}
-	if widget := v.settingsInteraction(); widget.title != "Appearance › Auto color" || widget.fields[0].Label != "Lightness" {
+	if widget := v.settingsInteraction(); widget.title != "Appearance › Auto color" || widget.fields[0].Label != "Enabled" {
 		t.Fatal("widget did not use its metadata title and option labels")
 	}
 	send(pressed(key.NameEscape))
@@ -182,6 +182,7 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	send(pressed(key.NameReturn))
+	send(pressed(key.NameTab))
 	send(pressed(key.NameRightArrow))
 	if v.appearance.FilenameColors.filenameLightness != 0.37 {
 		t.Fatal("adjustment did not preview live")
@@ -199,6 +200,7 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	send(pressed(key.NameEscape))
 	send(key.EditEvent{Text: "@"})
 	send(pressed(key.NameReturn))
+	send(pressed(key.NameTab))
 	send(pressed(key.NameRightArrow))
 	send(modified(key.NameReturn, key.ModCtrl))
 	if !v.interaction.idle() || v.settingText(settingLightness) != "0.37" {
@@ -206,6 +208,7 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	}
 	send(key.EditEvent{Text: "@"})
 	send(pressed(key.NameReturn))
+	send(pressed(key.NameTab))
 	send(pressed(key.NameRightArrow))
 	v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
 	send(pressed(key.NameReturn))
@@ -219,6 +222,7 @@ func TestSettingsWidgetDirectValueInput(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	send(pressed(key.NameReturn))
+	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 4}, Text: "2"})
 	send(modified(key.NameReturn, key.ModCtrl))
@@ -233,6 +237,7 @@ func TestSettingsWidgetDirectValueInput(t *testing.T) {
 	}
 	send(key.EditEvent{Text: "@"})
 	send(pressed(key.NameReturn))
+	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 3}, Text: "0.2"})
 	send(pressed(key.NameEscape))
@@ -379,6 +384,10 @@ func TestSettingsWidgetPreview(t *testing.T) {
 	if err := renderViewPNG(filepath.Join(directory, "settings-color-widget.png"), v); err != nil {
 		t.Fatal(err)
 	}
+	v.settingsInteraction().selected = 1
+	if err := renderViewPNG(filepath.Join(directory, "settings-color-widget-unfocused-toggle.png"), v); err != nil {
+		t.Fatal(err)
+	}
 	v.finishSettingsWidget(layout.Context{}, false)
 	openSettingsGroup(t, v, "view.show_protected_system_files")
 	if err := renderViewPNG(filepath.Join(directory, "settings-boolean-widget.png"), v); err != nil {
@@ -450,6 +459,9 @@ func TestSettingsAdjustmentsTickOnlyWhenValueChanges(t *testing.T) {
 			send, _ := panelInputFrames(v)
 			send(key.EditEvent{Text: tc.query})
 			send(pressed(key.NameReturn))
+			if tc.field == settingLightness {
+				send(pressed(key.NameTab))
+			}
 			recorded := &recordedSounds{}
 			v.sounds = recorded
 			for _, ke := range tc.keys {
@@ -551,6 +563,10 @@ func TestSettingsActionBarKeyboardFocus(t *testing.T) {
 		t.Fatal("Tab did not visit all fields")
 	}
 	send(pressed(key.NameTab))
+	if s.selected != 3 || s.actionsFocused {
+		t.Fatal("Tab did not visit Initial hue")
+	}
+	send(pressed(key.NameTab))
 	if !s.actionsFocused || s.action != 0 {
 		t.Fatal("Tab did not reach Save")
 	}
@@ -605,6 +621,7 @@ func TestSettingsSaveClickKeepsInvalidDraftEditable(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	send(pressed(key.NameReturn))
+	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 4}, Text: "2"})
 	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(240, 405)}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(240, 405)})
@@ -625,7 +642,7 @@ func TestSettingsEscapeLeavesInputBeforeWidget(t *testing.T) {
 		field int
 		text  string
 	}{
-		{"appearance.autocolor", 0, "invalid number"},
+		{"appearance.autocolor", 1, "invalid number"},
 		{"application.data_folder", 0, "unfinished folder"},
 		{settings.EditorCollection, 0, "*.txt"},
 		{settings.EditorCollection, 1, "unfinished program"},
@@ -681,6 +698,7 @@ func TestSettingsCancelActionClosesWhileEditing(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
 	v.startSettingsWidget("appearance.autocolor")
+	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{End: 4}, Text: "0.8"})
 	v.activateSettingsAction(layout.Context{}, 1)
@@ -739,6 +757,7 @@ func TestUnchangedWidgetAndInputCanCloseWithEscape(t *testing.T) {
 		send, _ := panelInputFrames(v)
 		v.startSettingsWidget("appearance.autocolor")
 		s := v.settingsInteraction()
+		s.selected = 1
 		if edit {
 			send(pressed(key.NameReturn))
 			send(pressed(key.NameEscape))
@@ -770,5 +789,71 @@ func TestDirtySettingsFailedSaveStillNeedsExplicitCancel(t *testing.T) {
 	v.activateSettingsAction(layout.Context{}, 1)
 	if !v.interaction.idle() || v.settingText(settingLightness) != "0.36" {
 		t.Fatal("Cancel failed after save error")
+	}
+}
+
+func TestAutoColorEnabledLiveCancelAndPersistence(t *testing.T) {
+	v := newPreviewView()
+	dir := t.TempDir()
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingLightness, settings.Value{Number: 0.5})
+	v.applySettings()
+	p := &v.panels[v.active]
+	selected, marked, position := p.selected, len(p.marks), p.list.Position
+	if !v.appearance.FilenameColors.enabled {
+		t.Fatal("auto color did not default to enabled")
+	}
+	send, _ := panelInputFrames(v)
+	v.startSettingsWidget("appearance.autocolor")
+	s := v.settingsInteraction()
+	for i, field := range s.fields {
+		if field.Key == settingAutoColorEnabled {
+			s.selected = i
+		}
+	}
+	send(pressed(key.NameSpace))
+	if v.appearance.FilenameColors.enabled || !s.dirty || p.selected != selected || len(p.marks) != marked || p.list.Position.First != position.First {
+		t.Fatal("toggle did not apply live or changed listing state")
+	}
+	v.activateSettingsAction(layout.Context{}, 1)
+	if !v.appearance.FilenameColors.enabled || v.settingsValues.Overridden(settingAutoColorEnabled) {
+		t.Fatal("Cancel did not restore enabled default")
+	}
+	v.startSettingsWidget("appearance.autocolor")
+	v.adjustSetting(settingAutoColorEnabled, 0)
+	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
+		return func() (string, error) { return "", settings.Save(dir, values) }
+	}
+	v.finishSettingsWidget(layout.Context{}, true)
+	loaded, err := settings.Load(dir, settings.CatalogueDefault)
+	if err != nil || loaded.Get(settings.CatalogueDefault, settingAutoColorEnabled).Bool || loaded.Get(settings.CatalogueDefault, settingLightness).Number != 0.5 {
+		t.Fatalf("saved toggle/color preferences = %#v, %v", loaded, err)
+	}
+	restored := newPreviewView()
+	restored.restoreSettings(loaded, nil)
+	if restored.appearance.FilenameColors.enabled {
+		t.Fatal("startup did not apply disabled auto color")
+	}
+	restored.startSettingsWidget("appearance.autocolor")
+	restored.activateSettingsAction(layout.Context{}, 2)
+	if !restored.appearance.FilenameColors.enabled {
+		t.Fatal("Reset did not restore enabled default")
+	}
+	restored.finishSettingsWidget(layout.Context{}, false)
+	if restored.appearance.FilenameColors.enabled {
+		t.Fatal("Cancel did not undo Reset")
+	}
+}
+
+func TestAutoColorDisabledPreview(t *testing.T) {
+	dir := os.Getenv("COMMANDO_PREVIEW_SETTINGS")
+	if dir == "" {
+		t.Skip("optional disabled auto color preview")
+	}
+	v := newPreviewView()
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingAutoColorEnabled, settings.Value{Bool: false})
+	v.applySettings()
+	v.startSettingsWidget("appearance.autocolor")
+	if err := renderViewPNG(filepath.Join(dir, "settings-autocolor-disabled.png"), v); err != nil {
+		t.Fatal(err)
 	}
 }

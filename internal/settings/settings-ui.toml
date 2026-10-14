@@ -8,6 +8,11 @@ label = "Appearance"
 label = "Auto color"
 title = "Auto color"
 
+[appearance.autocolor.enabled]
+label = "Enabled"
+description = "Use generated file and selection colors."
+control = "toggle"
+
 [appearance.autocolor.lightness]
 label = "Lightness"
 description = "Adjust the lightness of generated file colors."

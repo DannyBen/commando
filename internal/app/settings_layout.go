@@ -34,6 +34,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 		for i, field := range s.fields {
 			d, _ := settings.CatalogueDefault.Definition(field.Key)
 			path := field.IsPath()
+			focused := i == s.selected && !s.selecting && !s.actionsFocused && v.settingsInteraction() == s
 
 			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, rowHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
@@ -46,7 +47,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 							return v.textEditor(&s.editor, hint).Layout(gtx)
 						}
 						if field.Control == "toggle" {
-							return v.settingsBoolean(gtx, v.settingsValues.Get(settings.CatalogueDefault, field.Key).Bool, textHeight)
+							return v.settingsBoolean(gtx, v.widgetValues().Get(settings.CatalogueDefault, field.Key).Bool, focused, textHeight)
 						}
 						value := v.settingText(field.Key)
 						if value == "" {
@@ -59,7 +60,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 								value = "Enter a value"
 							}
 						}
-						if i == s.selected && !s.selecting && !s.actionsFocused && v.settingsInteraction() == s {
+						if focused {
 							size := image.Pt(gtx.Constraints.Max.X, textHeight)
 							paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: size}.Op())
 							return v.label(gtx, value, v.appearance.TextSize, v.appearance.Colors.SelectedName, text.Start)
@@ -162,22 +163,33 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	})
 }
 
-func (v *view) settingsBoolean(gtx layout.Context, enabled bool, height int) layout.Dimensions {
+func (v *view) settingsBoolean(gtx layout.Context, enabled, focused bool, height int) layout.Dimensions {
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.settingsBooleanChoice(gtx, " ON ", enabled, height)
+			return v.settingsBooleanChoice(gtx, " ON ", enabled, focused, height)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.settingsBooleanChoice(gtx, " OFF ", !enabled, height)
+			return v.settingsBooleanChoice(gtx, " OFF ", !enabled, focused, height)
 		}),
 	)
 }
-func (v *view) settingsBooleanChoice(gtx layout.Context, label string, selected bool, height int) layout.Dimensions {
+func (v *view) settingsBooleanChoice(gtx layout.Context, label string, selected, focused bool, height int) layout.Dimensions {
 	width := v.textWidth(gtx, label, v.appearance.TextSize)
 	fg := v.appearance.Colors.Filename
-	if selected {
-		paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: image.Pt(width, height)}.Op())
-		fg = v.appearance.Colors.SelectedName
+	if focused {
+		if selected {
+			paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: image.Pt(width, height)}.Op())
+			fg = v.appearance.Colors.SelectedName
+		}
+	} else if !selected {
+		fg = v.appearance.Colors.Muted
+		fg.A = uint8(uint16(fg.A) * 4 / 5)
 	}
-	return v.label(gtx, label, v.appearance.TextSize, fg, text.Start)
+	dims := v.label(gtx, label, v.appearance.TextSize, fg, text.Start)
+	if selected && !focused {
+		padding := v.textWidth(gtx, " ", v.appearance.TextSize)
+		y := max(0, height-gtx.Dp(1))
+		paint.FillShape(gtx.Ops, fg, clip.Rect{Min: image.Pt(padding, y), Max: image.Pt(max(padding, width-padding), height)}.Op())
+	}
+	return dims
 }

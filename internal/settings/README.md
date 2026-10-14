@@ -33,6 +33,13 @@ use defaults. Syntax errors, unknown paths, incorrect types and out-of-range
 values reject the entire file and use defaults, leaving the file untouched.
 The contextual footer reports the failure; stderr includes diagnostic details.
 
+Enabled toggles lead their widget. Unfocused toggles underline the active value
+and lightly dim the inactive value. Focused toggles use a background on the active
+value, with no underline or dimming.
+
+Appearance › Auto color includes an Enabled toggle. Turning it off uses semantic
+theme colors while retaining the generated-color parameters for re-enabling.
+
 ## Editor rules
 
 `Programs › Editors › New` creates a rule. Saved rules appear by their space-separated extensions

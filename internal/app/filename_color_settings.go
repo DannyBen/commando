@@ -4,6 +4,7 @@ package app
 // controls saturation; the seed is a hue rotation in degrees. Out-of-gamut
 // colors lose chroma while retaining lightness and hue.
 var defaultFilenameColors = filenameColorSettings{
+	enabled:                         true,
 	filenameLightness:               0.36,
 	filenameChroma:                  0.35,
 	hueSeed:                         20,
@@ -15,6 +16,7 @@ var defaultFilenameColors = filenameColorSettings{
 }
 
 type filenameColorSettings struct {
+	enabled                                         bool
 	activeBackgroundLightnessOffset                 float64
 	filenameLightness, filenameChroma, hueSeed      float64
 	hiddenLightnessOffset, hiddenChromaMultiplier   float64

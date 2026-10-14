@@ -152,7 +152,7 @@ func TestCatalogueControlsIndependentOfValues(t *testing.T) {
 			t.Fatal(err)
 		}
 		d, _ := c.Definition("appearance.autocolor.lightness")
-		if d.Kind != Number || d.Default.Number != 0.36 || c.UI.Fields[0].Control != control {
+		if d.Kind != Number || d.Default.Number != 0.36 || c.UI.Fields[1].Control != control {
 			t.Fatal("control choice changed value type or default")
 		}
 	}
@@ -161,7 +161,7 @@ func TestCatalogueControlsIndependentOfValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.UI.Fields[0].Control != "input" || c.UI.Fields[3].Control != "toggle" {
+	if c.UI.Fields[1].Control != "input" || c.UI.Fields[0].Control != "toggle" {
 		t.Fatal("incorrect inferred controls")
 	}
 }

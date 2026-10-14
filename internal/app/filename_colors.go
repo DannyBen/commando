@@ -114,11 +114,11 @@ func (value oklchColor) rgb() color.NRGBA {
 // Shared row styling keeps directory/drive and cut precedence in one place.
 func (t Theme) entryColors(file browser.Entry, active, cut bool) (background, filename, metadata color.NRGBA) {
 	background, filename = t.Colors.Surface, t.Colors.Filename
-	generated := file.Path == ""
 	colors := defaultFilenameColors
 	if t.FilenameColors != nil {
 		colors = *t.FilenameColors
 	}
+	generated := colors.enabled && file.Path == ""
 	if generated {
 		filename = colors.filename(file).rgb()
 	}
@@ -137,6 +137,12 @@ func (t Theme) entryColors(file browser.Entry, active, cut bool) (background, fi
 			filename = t.Colors.SelectedCutFilename
 		}
 	}
-	metadata = filename
+	metadata = t.Colors.Metadata
+	if active {
+		metadata = t.Colors.SelectedMetadata
+	}
+	if generated || cut {
+		metadata = filename
+	}
 	return
 }
