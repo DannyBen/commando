@@ -23,7 +23,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 		children := make([]layout.FlexChild, 0, rows+1)
 		for i, field := range s.fields {
 			d, _ := settings.CatalogueDefault.Definition(field.Key)
-			path := d.Kind == settings.Folder || d.Kind == settings.File
+			path := field.IsPath()
 
 			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, rowHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
@@ -35,7 +35,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 							}
 							return v.textEditor(&s.editor, hint).Layout(gtx)
 						}
-						if d.Kind == settings.Boolean {
+						if field.Control == "toggle" {
 							return v.settingsBoolean(gtx, v.settingsValues.Get(settings.CatalogueDefault, field.Key).Bool, textHeight)
 						}
 						value := v.settingText(field.Key)
@@ -50,14 +50,14 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 						return v.label(gtx, value, v.appearance.TextSize, v.appearance.Colors.Filename, text.Start)
 					}
 					valueWidth := min(gtx.Dp(250), gtx.Constraints.Max.X*3/5)
-					if d.Kind == settings.Boolean {
+					if field.Control == "toggle" {
 						valueWidth = v.textWidth(gtx, " ON  OFF ", v.appearance.TextSize) + gtx.Dp(8)
 					}
 					return v.columnLayout(gtx, valueWidth, func(gtx layout.Context) layout.Dimensions {
 						return v.label(gtx, field.Label, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 					}, func(gtx layout.Context) layout.Dimensions {
 						dims := control(gtx)
-						if d.Kind == settings.Number && d.Maximum != nil {
+						if field.Control == "stepper-progress" {
 							ratio := (v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number - d.Minimum) / (*d.Maximum - d.Minimum)
 							y := textHeight - gtx.Dp(1)
 							width := gtx.Constraints.Max.X
@@ -84,12 +84,15 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 		}))
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, footerHeight, v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
-				hint := "←/→ Adjust · Enter Type · Ctrl+Enter Save"
-				d, _ := settings.CatalogueDefault.Definition(s.fields[s.selected].Key)
-				if d.Kind == settings.Boolean {
+				field := s.fields[s.selected]
+				hint := "Enter Type · Ctrl+Enter Save"
+				if field.Control == "stepper" || field.Control == "stepper-progress" {
+					hint = "←/→ Adjust · Enter Type · Ctrl+Enter Save"
+				}
+				if field.Control == "toggle" {
 					hint = "←/→ Choose · Enter Toggle · Ctrl+Enter Save"
 				}
-				if d.Kind == settings.Folder || d.Kind == settings.File {
+				if field.IsPath() {
 					hint = "←/→ Choose folder · Enter Type · Ctrl+Enter Save"
 				}
 				if s.selecting {

@@ -47,6 +47,7 @@ type panel struct {
 
 type view struct {
 	settingsValues    settings.Values
+	saveSettings      func(settings.Values) error // nil in previews; storage uses the shared data folder.
 	appearance        Theme
 	theme             *material.Theme
 	panels            []panel

@@ -1,8 +1,10 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,6 +16,15 @@ import (
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
+)
+
+// Application bindings identify leaves; defaults and UI definitions live in TOML.
+const (
+	settingProtectedSystem = "files.show_protected_system"
+	settingLightness       = "appearance.filenames.lightness"
+	settingChroma          = "appearance.filenames.chroma"
+	settingHue             = "appearance.filenames.hue"
+	settingDataFolder      = "storage.data_folder"
 )
 
 func settingsGroupLabel(key string) string {
@@ -106,9 +117,9 @@ func (v *view) settingText(key string) string {
 	switch d.Kind {
 	case settings.Boolean:
 		if value.Bool {
-			return "On"
+			return "true"
 		}
-		return "Off"
+		return "false"
 	case settings.Number:
 		return strconv.FormatFloat(value.Number, 'f', -1, 64)
 	default:
@@ -118,6 +129,17 @@ func (v *view) settingText(key string) string {
 func (v *view) adjustSetting(key string, direction int) {
 	c := settings.CatalogueDefault
 	d, _ := c.Definition(key)
+	control := ""
+	for _, field := range c.UI.Fields {
+		if field.Key == key {
+			control = field.Control
+			break
+		}
+	}
+	if control != "toggle" && control != "stepper" && control != "stepper-progress" {
+		return
+	}
+
 	value := v.settingsValues.Get(c, key)
 	before := value
 	switch d.Kind {
@@ -146,11 +168,11 @@ func (v *view) adjustSetting(key string, direction int) {
 func (v *view) applySettings() {
 	c := settings.CatalogueDefault
 	colors := defaultFilenameColors
-	colors.filenameLightness = v.settingsValues.Get(c, settings.Lightness).Number
-	colors.filenameChroma = v.settingsValues.Get(c, settings.Chroma).Number
-	colors.hueSeed = v.settingsValues.Get(c, settings.Hue).Number
+	colors.filenameLightness = v.settingsValues.Get(c, settingLightness).Number
+	colors.filenameChroma = v.settingsValues.Get(c, settingChroma).Number
+	colors.hueSeed = v.settingsValues.Get(c, settingHue).Number
 	v.appearance.FilenameColors = &colors
-	show := v.settingsValues.Get(c, settings.ProtectedSystem).Bool
+	show := v.settingsValues.Get(c, settingProtectedSystem).Bool
 	apply := func(p *panel) {
 		if p.showProtectedSystem != show {
 			p.ensureEntries()
@@ -168,8 +190,7 @@ func (v *view) applySettings() {
 func (v *view) beginSettingEdit(gtx layout.Context) {
 	s := v.settingsInteraction()
 	field := s.fields[s.selected]
-	d, _ := settings.CatalogueDefault.Definition(field.Key)
-	if d.Kind == settings.Boolean {
+	if field.Control == "toggle" {
 		v.adjustSetting(field.Key, 0)
 		return
 	}
@@ -192,6 +213,13 @@ func (v *view) applySettingDraft(gtx layout.Context) bool {
 			return false
 		}
 		value.Number = n
+	} else if d.Kind == settings.Boolean {
+		b, err := strconv.ParseBool(strings.TrimSpace(s.editor.Text()))
+		if err != nil {
+			s.errorText = "Enter true or false"
+			return false
+		}
+		value.Bool = b
 	}
 	if err := v.settingsValues.Set(c, field.Key, value); err != nil {
 		s.errorText = "Value outside allowed range"
@@ -217,6 +245,16 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 	if save && s.selecting {
 		v.updateSettingsSelection()
 	}
+	if save && v.saveSettings != nil {
+		if err := v.saveSettings(v.settingsValues); err != nil {
+			s.errorText = "Could not save settings"
+			if errors.Is(err, os.ErrPermission) {
+				s.errorText = "Settings save: access denied"
+			}
+			v.focusInteraction(gtx)
+			return
+		}
+	}
 	if !save {
 		v.settingsValues = s.before
 		v.applySettings()
@@ -241,9 +279,8 @@ func (v *view) updateSettingsSelection() {
 		return
 	}
 	field := s.fields[s.selected]
-	d, _ := settings.CatalogueDefault.Definition(field.Key)
 	path := p.path
-	if d.Kind == settings.File {
+	if field.Control == "file" {
 		if p.selected < 0 || p.selected >= len(p.items) {
 			return
 		}
@@ -366,8 +403,8 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			}
 			continue
 		}
-		d, _ := settings.CatalogueDefault.Definition(s.fields[s.selected].Key)
-		if (d.Kind == settings.Folder || d.Kind == settings.File) && (ke.Name == key.NameLeftArrow || ke.Name == key.NameRightArrow) {
+		field := s.fields[s.selected]
+		if field.IsPath() && (ke.Name == key.NameLeftArrow || ke.Name == key.NameRightArrow) {
 			s.selecting = true
 			if ke.Name == key.NameLeftArrow {
 				v.switchPanel(-1)
@@ -396,7 +433,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		case key.NameRightArrow:
 			v.adjustSetting(s.fields[s.selected].Key, 1)
 		case key.NameSpace:
-			if d.Kind == settings.Boolean {
+			if field.Control == "toggle" {
 				v.adjustSetting(s.fields[s.selected].Key, 0)
 			}
 		}

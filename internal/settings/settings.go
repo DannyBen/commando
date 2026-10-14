@@ -4,6 +4,7 @@ package settings
 import (
 	"fmt"
 	"math"
+	"strings"
 )
 
 type Kind uint8
@@ -11,8 +12,7 @@ type Kind uint8
 const (
 	Boolean Kind = iota
 	Number
-	Folder
-	File
+	String
 )
 
 type Value struct {
@@ -41,43 +41,6 @@ type Catalogue struct {
 	UI       Presentation
 }
 
-const (
-	ProtectedSystem = "files.show_protected_system"
-	Lightness       = "appearance.filenames.lightness"
-	Chroma          = "appearance.filenames.chroma"
-	Hue             = "appearance.filenames.hue"
-	DataFolder      = "storage.data_folder"
-)
-
-var CatalogueDefault = Catalogue{
-	Settings: []Definition{
-		{Key: ProtectedSystem, Kind: Boolean, Default: Value{Bool: false}},
-		{Key: Lightness, Kind: Number, Default: Value{Number: 0.36}, Minimum: 0, Maximum: maximum(1), Step: 0.01},
-		{Key: Chroma, Kind: Number, Default: Value{Number: 0.35}, Minimum: 0, Maximum: maximum(0.5), Step: 0.01},
-		{Key: Hue, Kind: Number, Default: Value{Number: 20}, Minimum: 0, Maximum: maximum(360), Step: 1},
-		{Key: DataFolder, Kind: Folder, Default: Value{Text: ""}},
-	},
-	UI: Presentation{
-		Groups: []Group{
-			{Key: "appearance", Label: "Appearance"},
-			{Key: "appearance.colors", Parent: "appearance", Label: "Colors"},
-
-			{Key: "files", Label: "Files"},
-			{Key: "files.visibility", Parent: "files", Label: "Visibility"},
-			{Key: "storage", Label: "Storage"},
-			{Key: "storage.folder", Parent: "storage", Label: "Data folder"},
-		},
-		Fields: []Field{
-			{Key: ProtectedSystem, Group: "files.visibility", Label: "Show protected system entries", Description: "Include entries with both hidden and system attributes.", Control: "toggle"},
-			{Key: Lightness, Group: "appearance.colors", Label: "Lightness", Description: "Adjust the lightness of filename colors.", Control: "stepper"},
-			{Key: Chroma, Group: "appearance.colors", Label: "Chroma", Description: "Adjust the color intensity of filenames.", Control: "stepper"},
-			{Key: Hue, Group: "appearance.colors", Label: "Initial hue", Description: "Rotate the filename color palette.", Control: "stepper"},
-			{Key: DataFolder, Group: "storage.folder", Label: "Data folder", Description: "Browse another panel to choose a folder. Preview only; application data stays in its current location.", Control: "path"},
-		},
-	},
-}
-
-func maximum(n float64) *float64 { return &n }
 func (c Catalogue) Definition(key string) (Definition, bool) {
 	for _, d := range c.Settings {
 		if d.Key == key {
@@ -89,17 +52,20 @@ func (c Catalogue) Definition(key string) (Definition, bool) {
 
 // Values contains only explicit overrides, including values equal to a default.
 // Persistence is deliberately separate from the catalogue and effective values.
-type Values struct{ overrides map[string]Value }
+type Values struct{ overrides map[string]any }
 
 func (v *Values) Get(c Catalogue, key string) Value {
-	if value, ok := v.overrides[key]; ok {
-		return value
+	if value, ok := lookup(v.overrides, strings.Split(key, ".")); ok {
+		return valueFromScalar(value)
 	}
 	d, _ := c.Definition(key)
 	return d.Default
 }
-func (v *Values) Overridden(key string) bool { _, ok := v.overrides[key]; return ok }
-func (v *Values) Reset(key string)           { delete(v.overrides, key) }
+func (v *Values) Overridden(key string) bool {
+	_, ok := lookup(v.overrides, strings.Split(key, "."))
+	return ok
+}
+func (v *Values) Reset(key string) { remove(v.overrides, strings.Split(key, ".")) }
 func (v *Values) Set(c Catalogue, key string, value Value) error {
 	d, ok := c.Definition(key)
 	if !ok {
@@ -109,18 +75,89 @@ func (v *Values) Set(c Catalogue, key string, value Value) error {
 		return fmt.Errorf("value outside range: %s", key)
 	}
 	if v.overrides == nil {
-		v.overrides = make(map[string]Value)
+		v.overrides = make(map[string]any)
 	}
-	v.overrides[key] = value
+	var scalar any
+	switch d.Kind {
+	case Boolean:
+		scalar = value.Bool
+	case Number:
+		scalar = value.Number
+	case String:
+		scalar = value.Text
+	default:
+		return fmt.Errorf("unsupported setting kind: %s", key)
+	}
+	insert(v.overrides, strings.Split(key, "."), scalar)
 	return nil
 }
 
 // Clone retains override presence as well as values, so cancelled previews do
 // not pin inherited defaults.
 func (v Values) Clone() Values {
-	copy := Values{overrides: make(map[string]Value, len(v.overrides))}
-	for key, value := range v.overrides {
-		copy.overrides[key] = value
-	}
-	return copy
+	return Values{overrides: clone(v.overrides)}
 }
+
+func lookup(tree map[string]any, path []string) (any, bool) {
+	for _, part := range path[:len(path)-1] {
+		next, ok := tree[part].(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		tree = next
+	}
+	value, ok := tree[path[len(path)-1]]
+	return value, ok
+}
+
+func insert(tree map[string]any, path []string, value any) {
+	for _, part := range path[:len(path)-1] {
+		next, ok := tree[part].(map[string]any)
+		if !ok {
+			next = make(map[string]any)
+			tree[part] = next
+		}
+		tree = next
+	}
+	tree[path[len(path)-1]] = value
+}
+
+func remove(tree map[string]any, path []string) {
+	if len(path) == 1 {
+		delete(tree, path[0])
+		return
+	}
+	next, ok := tree[path[0]].(map[string]any)
+	if !ok {
+		return
+	}
+	remove(next, path[1:])
+	if len(next) == 0 {
+		delete(tree, path[0])
+	}
+}
+
+func clone(tree map[string]any) map[string]any {
+	result := make(map[string]any, len(tree))
+	for key, value := range tree {
+		if nested, ok := value.(map[string]any); ok {
+			value = clone(nested)
+		}
+		result[key] = value
+	}
+	return result
+}
+
+func valueFromScalar(scalar any) Value {
+	switch value := scalar.(type) {
+	case bool:
+		return Value{Bool: value}
+	case float64:
+		return Value{Number: value}
+	case string:
+		return Value{Text: value}
+	}
+	return Value{}
+}
+
+func (f Field) IsPath() bool { return f.Control == "folder" || f.Control == "file" }

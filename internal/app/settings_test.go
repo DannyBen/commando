@@ -2,6 +2,8 @@ package app
 
 import (
 	"errors"
+	"fmt"
+	"github.com/BurntSushi/toml"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,6 +22,56 @@ func openSettingsGroup(t *testing.T, v *view, group string) {
 	v.startSettingsWidget(group)
 	if v.settingsInteraction() == nil {
 		t.Fatalf("could not open %s", group)
+	}
+}
+
+func TestSettingsSaveFailureRetryAndCancel(t *testing.T) {
+	for _, retry := range []bool{false, true} {
+		t.Run(fmt.Sprint("retry=", retry), func(t *testing.T) {
+			v := newPreviewView()
+			dir := t.TempDir()
+			path := filepath.Join(dir, "settings.toml")
+			if err := settings.Save(dir, v.settingsValues); err != nil {
+				t.Fatal(err)
+			}
+			calls := 0
+			v.saveSettings = func(values settings.Values) error {
+				calls++
+				if calls == 1 {
+					return os.ErrPermission
+				}
+				return settings.Save(dir, values)
+			}
+			openSettingsGroup(t, v, "appearance.filenames")
+			v.adjustSetting(settingLightness, 1)
+			s := v.settingsInteraction()
+			v.finishSettingsWidget(layout.Context{}, true)
+			if v.settingsInteraction() != s || s.errorText != "Settings save: access denied" || v.settingText(settingLightness) != "0.37" {
+				t.Fatal("failed save lost the editable preview or error")
+			}
+			if got, err := os.ReadFile(path); err != nil || string(got) != "" {
+				t.Fatal("failed save changed saved settings", err)
+			}
+			v.finishSettingsWidget(layout.Context{}, retry)
+			if !v.interaction.idle() {
+				t.Fatal("retry or cancel did not close widget")
+			}
+			if retry {
+				if calls != 2 {
+					t.Fatal("retry did not save")
+				}
+			} else if calls != 1 || v.settingsValues.Overridden(settingLightness) || v.settingText(settingLightness) != "0.36" {
+				t.Fatal("cancel saved or retained failed preview")
+			}
+			var saved struct {
+				Appearance struct{ Filenames struct{ Lightness float64 } }
+			}
+			md, err := toml.DecodeFile(path, &saved)
+			if err != nil || md.IsDefined("appearance", "filenames", "lightness") != retry || retry && saved.Appearance.Filenames.Lightness != 0.37 {
+				t.Fatalf("saved settings = %#v, %v", saved, err)
+			}
+
+		})
 	}
 }
 
@@ -75,7 +127,7 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 		t.Fatal("Tab did not navigate controls")
 	}
 	send(pressed(key.NameEscape))
-	if v.paletteInteraction() == nil || v.settingsValues.Overridden(settings.Lightness) || v.settingsValues.Overridden(settings.Chroma) || v.appearance.FilenameColors.filenameLightness != 0.36 {
+	if v.paletteInteraction() == nil || v.settingsValues.Overridden(settingLightness) || v.settingsValues.Overridden(settingChroma) || v.appearance.FilenameColors.filenameLightness != 0.36 {
 		t.Fatal("Escape did not restore inherited original values")
 	}
 	send(pressed(key.NameEscape))
@@ -83,14 +135,14 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameRightArrow))
 	send(modified(key.NameReturn, key.ModCtrl))
-	if !v.interaction.idle() || v.settingText(settings.Lightness) != "0.37" {
+	if !v.interaction.idle() || v.settingText(settingLightness) != "0.37" {
 		t.Fatal("Ctrl+Enter did not commit and close")
 	}
 	send(key.EditEvent{Text: "@"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameRightArrow))
 	send(pressed(key.NameEscape))
-	if v.settingText(settings.Lightness) != "0.37" || !v.settingsValues.Overridden(settings.Lightness) {
+	if v.settingText(settingLightness) != "0.37" || !v.settingsValues.Overridden(settingLightness) {
 		t.Fatal("revert lost prior committed override")
 	}
 }
@@ -104,7 +156,7 @@ func TestSettingsWidgetDirectValueInput(t *testing.T) {
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 4}, Text: "2"})
 	send(modified(key.NameReturn, key.ModCtrl))
 	s := v.settingsInteraction()
-	if s == nil || !s.editing || s.errorText == "" || v.settingsValues.Overridden(settings.Lightness) {
+	if s == nil || !s.editing || s.errorText == "" || v.settingsValues.Overridden(settingLightness) {
 		t.Fatal("invalid number committed")
 	}
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 1}, Text: "0.5"})
@@ -117,7 +169,7 @@ func TestSettingsWidgetDirectValueInput(t *testing.T) {
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 3}, Text: "0.2"})
 	send(pressed(key.NameEscape))
-	if v.paletteInteraction() == nil || v.settingText(settings.Lightness) != "0.5" {
+	if v.paletteInteraction() == nil || v.settingText(settingLightness) != "0.5" {
 		t.Fatal("Escape did not cancel unfinished draft")
 	}
 }
@@ -132,24 +184,24 @@ func TestSettingsPathPanelSelection(t *testing.T) {
 		t.Fatal("storage widget missing")
 	}
 	send(pressed(key.NameRightArrow))
-	if !s.selecting || v.active != 1 || v.settingText(settings.DataFolder) != v.panels[1].path {
+	if !s.selecting || v.active != 1 || v.settingText(settingDataFolder) != v.panels[1].path {
 		t.Fatal("arrow did not start live folder selection")
 	}
-	before := v.settingText(settings.DataFolder)
+	before := v.settingText(settingDataFolder)
 	send(pressed(key.NameDownArrow))
-	if v.settingText(settings.DataFolder) != before {
+	if v.settingText(settingDataFolder) != before {
 		t.Fatal("highlighting child changed folder path")
 	}
 	send(pressed(key.NameRightArrow))
-	if v.active != 2 || v.settingText(settings.DataFolder) != v.panels[2].path {
+	if v.active != 2 || v.settingText(settingDataFolder) != v.panels[2].path {
 		t.Fatal("second selector panel did not update path")
 	}
 	send(pressed(key.NameEscape))
-	if s.selecting || v.settingsInteraction() != s || v.settingText(settings.DataFolder) != v.panels[2].path {
+	if s.selecting || v.settingsInteraction() != s || v.settingText(settingDataFolder) != v.panels[2].path {
 		t.Fatal("Escape did not return to widget with draft")
 	}
 	send(pressed(key.NameEscape))
-	if v.paletteInteraction() == nil || v.settingsValues.Overridden(settings.DataFolder) {
+	if v.paletteInteraction() == nil || v.settingsValues.Overridden(settingDataFolder) {
 		t.Fatal("second Escape did not revert path")
 	}
 	send(pressed(key.NameEscape))
@@ -162,21 +214,21 @@ func TestSettingsPathPanelSelection(t *testing.T) {
 	send(pressed(key.NameRightArrow))
 	chosen := v.panels[v.active].path
 	send(modified(key.NameReturn, key.ModCtrl))
-	if !v.interaction.idle() || v.settingText(settings.DataFolder) != chosen {
+	if !v.interaction.idle() || v.settingText(settingDataFolder) != chosen {
 		t.Fatal("Ctrl+Enter from panels did not save")
 	}
 }
 
 func TestSettingsPickerDirectoryReadsAndChildOwnership(t *testing.T) {
 	v := newPreviewView()
-	openSettingsGroup(t, v, "storage.folder")
+	openSettingsGroup(t, v, "storage")
 	s := v.settingsInteraction()
 	s.selecting = true
 	v.updateSettingsSelection()
-	before := v.settingText(settings.DataFolder)
+	before := v.settingText(settingDataFolder)
 	v.acceptLoad(loadResult{request: loadRequest{panel: 0, path: "/missing"}, err: errors.New("failed")})
 	v.updateSettingsSelection()
-	if v.settingText(settings.DataFolder) != before {
+	if v.settingText(settingDataFolder) != before {
 		t.Fatal("failed read changed path")
 	}
 	v.loader = &directoryLoader{requests: make(chan loadRequest, 1), results: make(chan loadResult, 1)}
@@ -189,7 +241,7 @@ func TestSettingsPickerDirectoryReadsAndChildOwnership(t *testing.T) {
 		t.Fatal("chooser blocked folder navigation")
 	}
 	v.updateSettingsSelection()
-	if v.settingText(settings.DataFolder) != expected {
+	if v.settingText(settingDataFolder) != expected {
 		t.Fatal("successful navigation did not update path")
 	}
 	v.startLocation(layout.Context{})
@@ -210,7 +262,7 @@ func TestSettingsPickerDirectoryReadsAndChildOwnership(t *testing.T) {
 	v.panels[0].drives = true
 	s.selecting = true
 	v.updateSettingsSelection()
-	if v.settingText(settings.DataFolder) != expected {
+	if v.settingText(settingDataFolder) != expected {
 		t.Fatal("drive screen supplied a path")
 	}
 }
@@ -228,7 +280,7 @@ func TestSettingsPathTextEditorKeepsCaretKeys(t *testing.T) {
 		t.Fatal("caret movement entered panels")
 	}
 	send(modified(key.NameReturn, key.ModCtrl))
-	if v.settingText(settings.DataFolder) != `D:\my folder` || !v.interaction.idle() {
+	if v.settingText(settingDataFolder) != `D:\my folder` || !v.interaction.idle() {
 		t.Fatal("typed path was not saved")
 	}
 }
@@ -246,17 +298,17 @@ func TestSettingsWidgetPreview(t *testing.T) {
 		t.Fatal(err)
 	}
 	v.stopPalette(layout.Context{})
-	openSettingsGroup(t, v, "appearance.colors")
+	openSettingsGroup(t, v, "appearance.filenames")
 	if err := renderViewPNG(filepath.Join(directory, "settings-color-widget.png"), v); err != nil {
 		t.Fatal(err)
 	}
 	v.finishSettingsWidget(layout.Context{}, false)
-	openSettingsGroup(t, v, "files.visibility")
+	openSettingsGroup(t, v, "files")
 	if err := renderViewPNG(filepath.Join(directory, "settings-boolean-widget.png"), v); err != nil {
 		t.Fatal(err)
 	}
 	v.finishSettingsWidget(layout.Context{}, false)
-	openSettingsGroup(t, v, "storage.folder")
+	openSettingsGroup(t, v, "storage")
 	s := v.settingsInteraction()
 	s.selecting = true
 	v.switchPanelTo(1)
@@ -303,10 +355,10 @@ func TestSettingsAdjustmentsTickOnlyWhenValueChanges(t *testing.T) {
 		initial            settings.Value
 		keys               []key.Event
 	}{
-		{"slider", "@colors", settings.Lightness, settings.Value{Number: 1}, []key.Event{
+		{"slider", "@colors", settingLightness, settings.Value{Number: 1}, []key.Event{
 			pressed(key.NameRightArrow), pressed(key.NameLeftArrow), pressed(key.NameRightArrow), pressed(key.NameRightArrow),
 		}},
-		{"boolean", "@files", settings.ProtectedSystem, settings.Value{Bool: false}, []key.Event{
+		{"boolean", "@files", settingProtectedSystem, settings.Value{Bool: false}, []key.Event{
 			pressed(key.NameRightArrow), pressed(key.NameLeftArrow), pressed(key.NameLeftArrow), pressed(key.NameRightArrow),
 		}},
 	} {
@@ -350,7 +402,7 @@ func TestSettingsEscapeRestoresPalettePosition(t *testing.T) {
 		t.Fatal("Escape lost palette query, selection or viewport")
 	}
 	send(pressed(key.NameReturn))
-	if v.settingsInteraction() == nil || v.settingsInteraction().fields[0].Key != settings.ProtectedSystem {
+	if v.settingsInteraction() == nil || v.settingsInteraction().fields[0].Key != settingProtectedSystem {
 		t.Fatal("restored selection opened wrong setting")
 	}
 }
@@ -358,19 +410,19 @@ func TestSettingsEscapeRestoresPalettePosition(t *testing.T) {
 func TestSettingsResetToDefaultsIsReversible(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	_ = v.settingsValues.Set(settings.CatalogueDefault, settings.DataFolder, settings.Value{Text: "chosen folder"})
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingDataFolder, settings.Value{Text: "chosen folder"})
 	send(key.EditEvent{Text: "@storage"})
 	source := v.paletteInteraction()
 	send(pressed(key.NameReturn))
 	send(modified(key.NameTab, key.ModShift))
 	send(pressed(key.NameReturn))
 	s := v.settingsInteraction()
-	if s == nil || !s.actionsFocused || s.action != 2 || v.settingsValues.Overridden(settings.DataFolder) {
+	if s == nil || !s.actionsFocused || s.action != 2 || v.settingsValues.Overridden(settingDataFolder) {
 		t.Fatal("Reset did not preview inherited default")
 	}
 	send(pressed(key.NameLeftArrow))
 	send(pressed(key.NameReturn))
-	if v.paletteInteraction() != source || v.settingText(settings.DataFolder) != "chosen folder" {
+	if v.paletteInteraction() != source || v.settingText(settingDataFolder) != "chosen folder" {
 		t.Fatal("Cancel did not undo reset and restore palette")
 	}
 	send(pressed(key.NameReturn))
@@ -379,7 +431,7 @@ func TestSettingsResetToDefaultsIsReversible(t *testing.T) {
 	send(pressed(key.NameLeftArrow))
 	send(pressed(key.NameLeftArrow))
 	send(pressed(key.NameReturn))
-	if !v.interaction.idle() || v.settingsValues.Overridden(settings.DataFolder) {
+	if !v.interaction.idle() || v.settingsValues.Overridden(settingDataFolder) {
 		t.Fatal("Save did not commit removal of override")
 	}
 }
@@ -390,19 +442,19 @@ func TestSettingsBooleanChoicesUseArrowDirection(t *testing.T) {
 	send(key.EditEvent{Text: "@files"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameLeftArrow))
-	if !v.settingsValues.Get(settings.CatalogueDefault, settings.ProtectedSystem).Bool {
+	if !v.settingsValues.Get(settings.CatalogueDefault, settingProtectedSystem).Bool {
 		t.Fatal("Left did not select ON")
 	}
 	send(pressed(key.NameLeftArrow))
-	if !v.settingsValues.Get(settings.CatalogueDefault, settings.ProtectedSystem).Bool {
+	if !v.settingsValues.Get(settings.CatalogueDefault, settingProtectedSystem).Bool {
 		t.Fatal("Left toggled away from ON")
 	}
 	send(pressed(key.NameRightArrow))
-	if v.settingsValues.Get(settings.CatalogueDefault, settings.ProtectedSystem).Bool {
+	if v.settingsValues.Get(settings.CatalogueDefault, settingProtectedSystem).Bool {
 		t.Fatal("Right did not select OFF")
 	}
 	send(pressed(key.NameReturn))
-	if !v.settingsValues.Get(settings.CatalogueDefault, settings.ProtectedSystem).Bool {
+	if !v.settingsValues.Get(settings.CatalogueDefault, settingProtectedSystem).Bool {
 		t.Fatal("Enter did not toggle")
 	}
 }
@@ -446,24 +498,24 @@ func TestSettingsActionBarKeyboardFocus(t *testing.T) {
 func TestSettingsActionBarMouse(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	_ = v.settingsValues.Set(settings.CatalogueDefault, settings.DataFolder, settings.Value{Text: "chosen folder"})
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingDataFolder, settings.Value{Text: "chosen folder"})
 	send(key.EditEvent{Text: "@storage"})
 	send(pressed(key.NameReturn))
 	click := func(x float32) {
 		send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(x, 405)}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(x, 405)})
 	}
 	click(550)
-	if v.settingsInteraction() == nil || v.settingsValues.Overridden(settings.DataFolder) {
+	if v.settingsInteraction() == nil || v.settingsValues.Overridden(settingDataFolder) {
 		t.Fatal("Reset click did not preview defaults")
 	}
 	click(400)
-	if v.paletteInteraction() == nil || v.settingText(settings.DataFolder) != "chosen folder" {
+	if v.paletteInteraction() == nil || v.settingText(settingDataFolder) != "chosen folder" {
 		t.Fatal("Cancel click did not undo reset")
 	}
 	send(pressed(key.NameReturn))
 	click(550)
 	click(240)
-	if !v.interaction.idle() || v.settingsValues.Overridden(settings.DataFolder) {
+	if !v.interaction.idle() || v.settingsValues.Overridden(settingDataFolder) {
 		t.Fatal("Save click did not commit reset")
 	}
 }
@@ -482,7 +534,7 @@ func TestSettingsSaveClickKeepsInvalidDraftEditable(t *testing.T) {
 	}
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 1}, Text: "0.5"})
 	send(pressed(key.NameReturn))
-	if v.settingsInteraction() != s || s.editing || v.settingText(settings.Lightness) != "0.5" {
+	if v.settingsInteraction() != s || s.editing || v.settingText(settingLightness) != "0.5" {
 		t.Fatal("correcting input did not preview within widget")
 	}
 }

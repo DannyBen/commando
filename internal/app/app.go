@@ -15,6 +15,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
 )
 
@@ -79,6 +80,9 @@ func Run() error {
 			gioapp.MinSize(unit.Dp(minWindowWidth), unit.Dp(360)))
 		w.Option(native.options()...)
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate)
+		v.saveSettings = func(values settings.Values) error {
+			return settings.Save(dataDir, values)
+		}
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		v.nativeKeys = keys
 		v.shellExecutor = native.shellExecutor(w)
