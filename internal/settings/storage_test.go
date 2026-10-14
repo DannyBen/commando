@@ -13,10 +13,10 @@ func TestSaveOverrides(t *testing.T) {
 	c.Settings = append(append([]Definition(nil), c.Settings...), Definition{Key: "files.editor", Kind: String})
 	var v Values
 	for key, value := range map[string]Value{
-		"files.show_protected_system":    {Bool: false}, // An explicit default must remain explicit.
-		"appearance.filenames.lightness": {Number: 0.5},
-		"storage.data_folder":            {Text: "C:\\folder: #1\\\"quoted\"\nnext\tline"},
-		"files.editor":                   {Text: "null"},
+		"view.show_protected_system_files": {Bool: false}, // An explicit default must remain explicit.
+		"appearance.autocolor.lightness":   {Number: 0.5},
+		"application.data_folder.path":     {Text: "C:\\folder: #1\\\"quoted\"\nnext\tline"},
+		"files.editor":                     {Text: "null"},
 	} {
 		if err := v.Set(c, key, value); err != nil {
 			t.Fatal(err)
@@ -27,14 +27,15 @@ func TestSaveOverrides(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]any{
-		"appearance": map[string]any{"filenames": map[string]any{"lightness": 0.5}},
-		"files":      map[string]any{"show_protected_system": false, "editor": "null"},
-		"storage":    map[string]any{"data_folder": "C:\\folder: #1\\\"quoted\"\nnext\tline"},
+		"appearance":  map[string]any{"autocolor": map[string]any{"lightness": 0.5}},
+		"files":       map[string]any{"editor": "null"},
+		"view":        map[string]any{"show_protected_system_files": false},
+		"application": map[string]any{"data_folder": map[string]any{"path": "C:\\folder: #1\\\"quoted\"\nnext\tline"}},
 	}
 	assertSavedTOML(t, dir, want)
 	// Reset drops an override; saving replaces the previous document rather
 	// than retaining stale keys or expanding inherited defaults.
-	v.Reset("appearance.filenames.lightness")
+	v.Reset("appearance.autocolor.lightness")
 	if err := Save(dir, v); err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -14,17 +15,40 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
+	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
 )
 
+func (v *view) restoreSettings(values settings.Values, err error) {
+	v.settingsValues = values
+	v.applySettings()
+	if err == nil {
+		return
+	}
+	message := "Cannot read settings"
+	switch {
+	case errors.Is(err, os.ErrPermission):
+		message = "Settings: access denied"
+	case errors.Is(err, settings.ErrSyntax):
+		message = "Settings: invalid TOML"
+	case errors.Is(err, settings.ErrUnknownKey):
+		message = "Settings: unknown key"
+	case errors.Is(err, settings.ErrType):
+		message = "Settings: invalid value type"
+	case errors.Is(err, settings.ErrRange):
+		message = "Settings: value outside range"
+	}
+	v.showFeedback(v.active, feedback.Error, message)
+}
+
 // Application bindings identify leaves; defaults and UI definitions live in TOML.
 const (
-	settingProtectedSystem = "files.show_protected_system"
-	settingLightness       = "appearance.filenames.lightness"
-	settingChroma          = "appearance.filenames.chroma"
-	settingHue             = "appearance.filenames.hue"
-	settingDataFolder      = "storage.data_folder"
+	settingProtectedSystem = "view.show_protected_system_files"
+	settingLightness       = "appearance.autocolor.lightness"
+	settingChroma          = "appearance.autocolor.chroma"
+	settingHue             = "appearance.autocolor.hue"
+	settingDataFolder      = "application.data_folder.path"
 )
 
 func settingsGroupLabel(key string) string {
@@ -40,23 +64,19 @@ func settingsGroupLabel(key string) string {
 }
 func (v *view) settingsCatalogue() []command {
 	var catalogue []command
-	for _, group := range settings.CatalogueDefault.UI.Groups {
-		fields := false
-		for _, field := range settings.CatalogueDefault.UI.Fields {
-			if field.Group == group.Key {
-				fields = true
-				break
-			}
-		}
-		if !fields {
+	for _, widget := range settings.CatalogueDefault.UI.Widgets {
+		if !widget.Visible {
 			continue
 		}
-		key := group.Key
-		catalogue = append(catalogue, command{group: settingsGroupLabel(group.Parent), name: group.Label,
+		key := widget.Key
+		catalogue = append(catalogue, command{group: settingsGroupLabel(widget.Parent), name: widget.Label,
 			available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
 			execute:   func(v *view) { v.startSettingsWidget(key) },
 		})
 	}
+	slices.SortStableFunc(catalogue, func(a, b command) int {
+		return strings.Compare(a.label(), b.label())
+	})
 	return catalogue
 }
 
@@ -65,6 +85,7 @@ func (v *view) settingsCatalogue() []command {
 type settingsSession struct {
 	panel, selected    int
 	fields             []settings.Field
+	title              string
 	before             settings.Values
 	editor             widget.Editor
 	editing, selecting bool
@@ -98,9 +119,18 @@ func (v *view) startSettingsWidget(group string) {
 	if !v.interaction.idle() || !v.actionAllowed(actionMutation) {
 		return
 	}
-	s := &settingsSession{panel: v.active, before: v.settingsValues.Clone(), editor: widget.Editor{SingleLine: true, Submit: true}}
+	spec, ok := settings.CatalogueDefault.Widget(group)
+	if !ok || !spec.Visible {
+		return
+	}
+
+	title := spec.Title
+	if parent := settingsGroupLabel(spec.Parent); parent != "" {
+		title = parent + " › " + title
+	}
+	s := &settingsSession{panel: v.active, title: title, before: v.settingsValues.Clone(), editor: widget.Editor{SingleLine: true, Submit: true}}
 	for _, field := range settings.CatalogueDefault.UI.Fields {
-		if field.Group == group {
+		if field.Widget == group && field.Visible {
 			s.fields = append(s.fields, field)
 		}
 	}

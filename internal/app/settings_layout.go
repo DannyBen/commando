@@ -19,8 +19,13 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	footerHeight := max(gtx.Dp(30), smallHeight+gtx.Dp(12))
 	rows := len(s.fields)
 
-	return s.surface.layout(gtx, footerHeight, gtx.Dp(v.appearance.SettingsWidth), (rows+1)*rowHeight+footerHeight, v.appearance.Colors, func(gtx layout.Context) layout.Dimensions {
-		children := make([]layout.FlexChild, 0, rows+1)
+	return s.surface.layout(gtx, footerHeight, gtx.Dp(v.appearance.SettingsWidth), (rows+2)*rowHeight+footerHeight, v.appearance.Colors, func(gtx layout.Context) layout.Dimensions {
+		children := make([]layout.FlexChild, 0, rows+3)
+		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return v.band(gtx, rowHeight, v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
+				return v.label(gtx, s.title, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
+			}, true)
+		}))
 		for i, field := range s.fields {
 			d, _ := settings.CatalogueDefault.Definition(field.Key)
 			path := field.IsPath()

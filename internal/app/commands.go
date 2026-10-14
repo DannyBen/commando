@@ -100,7 +100,12 @@ var commands = []command{
 	cmd("Application", "Command palette", "`", 0, nil),
 }
 
-func (c command) label() string { return c.group + " › " + c.name }
+func (c command) label() string {
+	if c.group == "" {
+		return c.name
+	}
+	return c.group + " › " + c.name
+}
 
 func (c command) allowed(v *view) bool { return c.available == nil || c.available(v) }
 

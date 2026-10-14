@@ -25,16 +25,17 @@ func embeddedCatalogue() Catalogue {
 	return c
 }
 
-type fieldMetadata struct {
-	Label, Description, Control string
-	Minimum                     *float64 `toml:"min"`
-	Maximum                     *float64 `toml:"max"`
-	Step                        float64
+type nodeMetadata struct {
+	Label, Palette, Description, Control string
+	Title                                *string
+	Visible                              *bool
+	Minimum                              *float64 `toml:"min"`
+	Maximum                              *float64 `toml:"max"`
+	Step                                 float64
 }
 
-// ParseCatalogue compiles nested defaults and matching UI metadata into the
-// ordered catalogue used by generic widgets. Value paths are independent of
-// control choices. Palette groups follow parent value paths.
+// ParseCatalogue builds widgets from titled metadata nodes, independently of
+// their number of fields. Hidden nodes retain their values and validation.
 func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 	var tree map[string]any
 	values, err := toml.Decode(defaults, &tree)
@@ -48,15 +49,11 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 	}
 	var c Catalogue
 	groups := map[string]bool{}
+	owners := map[string]string{}
+	visible := map[string]bool{"": true}
 	knownMetadata := map[string]bool{}
-	for _, path := range values.Keys() {
-		scalar, ok := lookup(tree, path)
-		if !ok {
-			continue
-		}
-		if _, table := scalar.(map[string]any); table {
-			continue
-		}
+	for _, path := range orderedLeaves(tree, values.Keys(), metadata.Keys()) {
+		scalar, _ := lookup(tree, path)
 		for _, part := range path {
 			if part == "" || strings.Contains(part, ".") {
 				return c, fmt.Errorf("ambiguous setting path: %s", path)
@@ -73,44 +70,50 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 		default:
 			return c, fmt.Errorf("unsupported value type: %s", d.Key)
 		}
-		// Every parent on the value path is a group. Decode only its label;
-		// descendants are validated as their own groups or fields below.
 		for depth := 1; depth < len(path); depth++ {
 			parentPath := path[:depth]
 			key := strings.Join(parentPath, ".")
 			if groups[key] {
 				continue
 			}
-			primitive, err := metadataAt(&metadata, ui, parentPath)
+			m, err := readMetadata(&metadata, ui, parentPath)
 			if err != nil {
 				return c, err
 			}
-			var group struct{ Label string }
-			if err := metadata.PrimitiveDecode(primitive, &group); err != nil {
+			if m.Control != "" || m.Minimum != nil || m.Maximum != nil || m.Step != 0 {
+				return c, fmt.Errorf("control on group: %s", key)
+			}
+			parent := strings.Join(parentPath[:depth-1], ".")
+			visible[key] = visible[parent] && (m.Visible == nil || *m.Visible)
+			owner, err := c.addWidget(key, parent, owners[parent], m, visible[key], false)
+			if err != nil {
 				return c, err
 			}
-			if group.Label == "" {
+			owners[key] = owner
+			label := m.Label
+			if label == "" && m.Title != nil {
+				w, _ := c.Widget(key)
+				label = w.Label
+			}
+			if label == "" && visible[key] {
 				return c, fmt.Errorf("missing group label: %s", key)
 			}
-			c.UI.Groups = append(c.UI.Groups, Group{Key: key, Parent: strings.Join(parentPath[:depth-1], "."), Label: group.Label})
+			c.UI.Groups = append(c.UI.Groups, Group{Key: key, Parent: parent, Label: label})
 			groups[key] = true
-			knownMetadata[key], knownMetadata[key+".label"] = true, true
+			allowMetadata(knownMetadata, key, false)
 		}
-		primitive, err := metadataAt(&metadata, ui, path)
+		m, err := readMetadata(&metadata, ui, path)
 		if err != nil {
 			return c, err
 		}
-		var m fieldMetadata
-		if err := metadata.PrimitiveDecode(primitive, &m); err != nil {
+		parent := strings.Join(path[:len(path)-1], ".")
+		fieldVisible := visible[parent] && (m.Visible == nil || *m.Visible)
+		owner, err := c.addWidget(d.Key, parent, owners[parent], m, fieldVisible, true)
+		if err != nil {
 			return c, err
 		}
-		if m.Label == "" {
-			return c, fmt.Errorf("missing field label: %s", d.Key)
-		}
-		group := strings.Join(path[:len(path)-1], ".")
-		if group == "" {
-			group = d.Key
-			c.UI.Groups = append(c.UI.Groups, Group{Key: group, Label: m.Label})
+		if fieldVisible && (m.Label == "" || owner == "") {
+			return c, fmt.Errorf("missing field label or widget: %s", d.Key)
 		}
 		if m.Control == "" {
 			m.Control = "input"
@@ -148,11 +151,8 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 			return c, err
 		}
 		c.Settings = append(c.Settings, d)
-		c.UI.Fields = append(c.UI.Fields, Field{Key: d.Key, Group: group, Label: m.Label, Description: m.Description, Control: m.Control})
-		knownMetadata[d.Key] = true
-		for _, property := range []string{"label", "description", "control", "min", "max", "step"} {
-			knownMetadata[d.Key+"."+property] = true
-		}
+		c.UI.Fields = append(c.UI.Fields, Field{Key: d.Key, Widget: owner, Label: m.Label, Description: m.Description, Control: m.Control, Visible: fieldVisible})
+		allowMetadata(knownMetadata, d.Key, true)
 	}
 	if len(c.Settings) == 0 {
 		return c, fmt.Errorf("no settings defined")
@@ -162,7 +162,97 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 			return c, fmt.Errorf("unknown UI metadata: %s", path)
 		}
 	}
+	// A visible widget needs at least one visible field to be offered.
+	for i := range c.UI.Widgets {
+		w := &c.UI.Widgets[i]
+		hasFields := false
+		for _, field := range c.UI.Fields {
+			if field.Widget == w.Key && field.Visible {
+				hasFields = true
+				break
+			}
+		}
+		w.Visible = w.Visible && hasFields
+	}
 	return c, nil
+}
+
+// Metadata order determines discovery and control order, including when the
+// defaults use a different order or the metadata uses dotted declarations.
+func orderedLeaves(tree map[string]any, defaults, ui []toml.Key) []toml.Key {
+	var result []toml.Key
+	seen := map[string]bool{}
+	visit := func(path toml.Key) {
+		for depth := 1; depth <= len(path); depth++ {
+			prefix := path[:depth]
+			value, ok := lookup(tree, prefix)
+			if !ok {
+				break
+			}
+			if _, table := value.(map[string]any); table {
+				continue
+			}
+			key := strings.Join(prefix, ".")
+			if !seen[key] {
+				result = append(result, prefix)
+				seen[key] = true
+			}
+			break
+		}
+	}
+	for _, path := range ui {
+		visit(path)
+	}
+	// Missing UI definitions must still be rejected.
+	for _, path := range defaults {
+		visit(path)
+	}
+	return result
+}
+
+func readMetadata(md *toml.MetaData, ui map[string]toml.Primitive, path []string) (nodeMetadata, error) {
+	var m nodeMetadata
+	primitive, err := metadataAt(md, ui, path)
+	if err == nil {
+		err = md.PrimitiveDecode(primitive, &m)
+	}
+	return m, err
+}
+
+func allowMetadata(known map[string]bool, key string, leaf bool) {
+	known[key] = true
+	for _, property := range []string{"label", "palette", "title", "visible", "description"} {
+		known[key+"."+property] = true
+	}
+	if leaf {
+		for _, property := range []string{"control", "min", "max", "step"} {
+			known[key+"."+property] = true
+		}
+	}
+}
+
+func (c *Catalogue) addWidget(key, parent, owner string, m nodeMetadata, visible, leaf bool) (string, error) {
+	if m.Title == nil {
+		if m.Palette != "" {
+			return "", fmt.Errorf("palette name without widget title: %s", key)
+		}
+		return owner, nil
+	}
+	if *m.Title == "" {
+		return "", fmt.Errorf("empty widget title: %s", key)
+	}
+	if owner != "" {
+		return "", fmt.Errorf("nested widget: %s", key)
+	}
+	label := m.Palette
+	if label == "" && !leaf {
+		label = m.Label
+	}
+	if label == "" {
+		label = *m.Title
+	}
+	c.UI.Widgets = append(c.UI.Widgets, Widget{Key: key, Parent: parent, Label: label, Title: *m.Title, Visible: visible})
+	return key, nil
 }
 
 func finite(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0) }

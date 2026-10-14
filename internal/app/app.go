@@ -39,6 +39,10 @@ func Run() error {
 		return err
 	}
 	defer instance.close()
+	settingsValues, settingsErr := settings.Load(dataDir, settings.CatalogueDefault)
+	if settingsErr != nil {
+		fmt.Fprintln(os.Stderr, "cannot load settings:", settingsErr)
+	}
 	saved, err := loadState(dataDir)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "cannot load state:", err)
@@ -80,6 +84,7 @@ func Run() error {
 			gioapp.MinSize(unit.Dp(minWindowWidth), unit.Dp(360)))
 		w.Option(native.options()...)
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate)
+		v.restoreSettings(settingsValues, settingsErr)
 		v.saveSettings = func(values settings.Values) error {
 			return settings.Save(dataDir, values)
 		}

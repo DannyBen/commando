@@ -1,46 +1,55 @@
-# Parent sections define palette groups; leaf sections describe controls.
+# Labels name categories and options. Titles declare settings widgets.
+# A widget's palette name defaults to its label; palette can override it.
+# visible = false hides a node and its descendants from settings UI only.
 [appearance]
 label = "Appearance"
 
-[appearance.filenames]
-label = "Colors"
+[appearance.autocolor]
+label = "Auto color"
+title = "Auto color"
 
-[appearance.filenames.lightness]
+[appearance.autocolor.lightness]
 label = "Lightness"
-description = "Adjust the lightness of filename colors."
+description = "Adjust the lightness of generated file colors."
 control = "stepper-progress"
 min = 0.0
 max = 1.0
 step = 0.01
 
-[appearance.filenames.chroma]
+[appearance.autocolor.chroma]
 label = "Chroma"
-description = "Adjust the color intensity of filenames."
+description = "Adjust the color intensity of generated file colors."
 control = "stepper-progress"
 min = 0.0
 max = 0.5
 step = 0.01
 
-[appearance.filenames.hue]
+[appearance.autocolor.hue]
 label = "Initial hue"
-description = "Rotate the filename color palette."
+description = "Rotate the generated file color palette."
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
 
-[files]
-label = "Files"
+[view]
+label = "View"
 
-[files.show_protected_system]
+[view.show_protected_system_files]
+palette = "System files"
+title = "System files"
 label = "Show protected system entries"
 description = "Include entries with both hidden and system attributes."
 control = "toggle"
 
-[storage]
-label = "Storage"
+[application]
+label = "Application"
 
-[storage.data_folder]
+[application.data_folder]
 label = "Data folder"
+title = "Data folder"
+
+[application.data_folder.path]
+label = "Folder"
 description = "Browse another panel to choose a folder. Preview only; application data stays in its current location."
 control = "folder"

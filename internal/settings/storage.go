@@ -16,7 +16,9 @@ func Save(dataDir string, v Values) error {
 		return fmt.Errorf("data folder is empty")
 	}
 	var data bytes.Buffer
-	if err := toml.NewEncoder(&data).Encode(v.overrides); err != nil {
+	encoder := toml.NewEncoder(&data)
+	encoder.Indent = ""
+	if err := encoder.Encode(v.overrides); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(dataDir, 0700); err != nil {

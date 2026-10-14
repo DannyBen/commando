@@ -2,9 +2,17 @@
 package settings
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
+)
+
+var (
+	ErrSyntax     = errors.New("invalid TOML syntax")
+	ErrUnknownKey = errors.New("unknown setting")
+	ErrType       = errors.New("invalid setting type")
+	ErrRange      = errors.New("value outside range")
 )
 
 type Kind uint8
@@ -31,11 +39,29 @@ type Definition struct {
 }
 
 type Group struct{ Key, Parent, Label string }
-type Field struct{ Key, Group, Label, Description, Control string }
-type Presentation struct {
-	Groups []Group
-	Fields []Field
+type Widget struct {
+	Key, Parent, Label, Title string
+	Visible                   bool
 }
+type Field struct {
+	Key, Widget, Label, Description, Control string
+	Visible                                  bool
+}
+type Presentation struct {
+	Groups  []Group
+	Widgets []Widget
+	Fields  []Field
+}
+
+func (c Catalogue) Widget(key string) (Widget, bool) {
+	for _, w := range c.UI.Widgets {
+		if w.Key == key {
+			return w, true
+		}
+	}
+	return Widget{}, false
+}
+
 type Catalogue struct {
 	Settings []Definition
 	UI       Presentation
@@ -69,10 +95,10 @@ func (v *Values) Reset(key string) { remove(v.overrides, strings.Split(key, ".")
 func (v *Values) Set(c Catalogue, key string, value Value) error {
 	d, ok := c.Definition(key)
 	if !ok {
-		return fmt.Errorf("unknown setting: %s", key)
+		return fmt.Errorf("%w: %s", ErrUnknownKey, key)
 	}
 	if d.Kind == Number && (math.IsNaN(value.Number) || math.IsInf(value.Number, 0) || value.Number < d.Minimum || d.Maximum != nil && value.Number > *d.Maximum) {
-		return fmt.Errorf("value outside range: %s", key)
+		return fmt.Errorf("%w: %s", ErrRange, key)
 	}
 	if v.overrides == nil {
 		v.overrides = make(map[string]any)

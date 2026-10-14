@@ -1,8 +1,11 @@
-# Default values. User settings.toml overrides only the values explicitly saved.
-appearance.filenames.lightness = 0.36
-appearance.filenames.chroma = 0.35
-appearance.filenames.hue = 20.0
+# Embedded defaults. User settings.toml contains explicit value overrides only.
+[appearance.autocolor]
+lightness = 0.36
+chroma = 0.35
+hue = 20.0
 
-files.show_protected_system = false
+[view]
+show_protected_system_files = false
 
-storage.data_folder = ""
+[application.data_folder]
+path = ""

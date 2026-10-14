@@ -3,7 +3,6 @@ package app
 import (
 	"errors"
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,10 +11,63 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"github.com/BurntSushi/toml"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
 )
+
+func TestStartupSettingsApplyBeforeDirectoryResults(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte("appearance.autocolor.lightness = 0.5\nview.show_protected_system_files = true\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	values, err := settings.Load(dir, settings.CatalogueDefault)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := newView([]panel{{path: dir, loading: true, selected: -1}})
+	v.restoreSettings(values, nil)
+	v.acceptLoad(loadResult{request: loadRequest{panel: 0, path: dir}, directory: browser.Directory{Path: dir, Entries: []browser.Entry{
+		{Name: "protected.sys", Hidden: true, System: true},
+	}}})
+	if v.appearance.FilenameColors.filenameLightness != 0.5 || len(v.panels[0].items) != 1 || v.panels[0].items[0].name != "protected.sys" {
+		t.Fatal("startup settings were not applied to initial directory results")
+	}
+	openSettingsGroup(t, v, "appearance.autocolor")
+	v.adjustSetting(settingLightness, 1)
+	v.finishSettingsWidget(layout.Context{}, false)
+	if v.settingText(settingLightness) != "0.5" {
+		t.Fatal("cancel did not restore the loaded override")
+	}
+}
+
+func TestStartupSettingsErrorsSurviveInitialRead(t *testing.T) {
+	for _, tc := range []struct {
+		err     error
+		message string
+	}{
+		{settings.ErrSyntax, "Settings: invalid TOML"},
+		{settings.ErrUnknownKey, "Settings: unknown key"},
+		{settings.ErrType, "Settings: invalid value type"},
+		{settings.ErrRange, "Settings: value outside range"},
+		{os.ErrPermission, "Settings: access denied"},
+		{errors.New("read failure"), "Cannot read settings"},
+	} {
+		v := newView([]panel{{path: "sample", loading: true}, {path: "sample", loading: true}})
+		v.active = 1
+		v.restoreSettings(settings.Values{}, fmt.Errorf("startup: %w", tc.err))
+		v.acceptLoad(loadResult{request: loadRequest{panel: 1}, directory: browser.Directory{Path: "sample"}})
+		message := v.panels[1].feedback.Current()
+		if message == nil || message.Kind != feedback.Error || message.Text != tc.message || v.active != 1 {
+			t.Fatalf("startup failure lost its contextual feedback: %#v", message)
+		}
+		if v.panels[0].feedback.Current() != nil || v.settingText(settingLightness) != "0.36" {
+			t.Fatal("startup failure affected another pane or changed defaults")
+		}
+	}
+}
 
 func openSettingsGroup(t *testing.T, v *view, group string) {
 	t.Helper()
@@ -42,7 +94,7 @@ func TestSettingsSaveFailureRetryAndCancel(t *testing.T) {
 				}
 				return settings.Save(dir, values)
 			}
-			openSettingsGroup(t, v, "appearance.filenames")
+			openSettingsGroup(t, v, "appearance.autocolor")
 			v.adjustSetting(settingLightness, 1)
 			s := v.settingsInteraction()
 			v.finishSettingsWidget(layout.Context{}, true)
@@ -64,10 +116,10 @@ func TestSettingsSaveFailureRetryAndCancel(t *testing.T) {
 				t.Fatal("cancel saved or retained failed preview")
 			}
 			var saved struct {
-				Appearance struct{ Filenames struct{ Lightness float64 } }
+				Appearance struct{ Autocolor struct{ Lightness float64 } }
 			}
 			md, err := toml.DecodeFile(path, &saved)
-			if err != nil || md.IsDefined("appearance", "filenames", "lightness") != retry || retry && saved.Appearance.Filenames.Lightness != 0.37 {
+			if err != nil || md.IsDefined("appearance", "autocolor", "lightness") != retry || retry && saved.Appearance.Autocolor.Lightness != 0.37 {
 				t.Fatalf("saved settings = %#v, %v", saved, err)
 			}
 
@@ -83,18 +135,26 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 3 {
 		t.Fatal("@ did not open settings-only palette")
 	}
+	for i, label := range []string{"Appearance › Auto color", "Application › Data folder", "View › System files"} {
+		if got := s.results[i].command.label(); got != label {
+			t.Fatalf("settings result %d = %q; want %q", i, got, label)
+		}
+	}
 	for _, result := range s.results {
 		if result.command.group == "Settings" || result.command.binding.Name != "" {
 			t.Fatal("settings listed as browsing commands")
 		}
 	}
-	send(key.EditEvent{Range: key.Range{Start: 1, End: 1}, Text: "appearance colors"})
-	if len(s.results) != 1 || s.results[0].command.label() != "Appearance › Colors" {
+	send(key.EditEvent{Range: key.Range{Start: 1, End: 1}, Text: "appearance autocolor"})
+	if len(s.results) != 1 || s.results[0].command.label() != "Appearance › Auto color" {
 		t.Fatal("settings search did not use existing fuzzy matching")
 	}
 	send(pressed(key.NameReturn))
 	if v.paletteInteraction() != nil || v.settingsInteraction() == nil || len(v.settingsInteraction().fields) != 3 {
 		t.Fatal("palette did not open color widget")
+	}
+	if widget := v.settingsInteraction(); widget.title != "Appearance › Auto color" || widget.fields[0].Label != "Lightness" {
+		t.Fatal("widget did not use its metadata title and option labels")
 	}
 	send(pressed(key.NameEscape))
 	send(pressed(key.NameEscape))
@@ -177,7 +237,7 @@ func TestSettingsWidgetDirectValueInput(t *testing.T) {
 func TestSettingsPathPanelSelection(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@storage"})
+	send(key.EditEvent{Text: "@application"})
 	send(pressed(key.NameReturn))
 	s := v.settingsInteraction()
 	if s == nil {
@@ -205,7 +265,7 @@ func TestSettingsPathPanelSelection(t *testing.T) {
 		t.Fatal("second Escape did not revert path")
 	}
 	send(pressed(key.NameEscape))
-	send(key.EditEvent{Text: "@storage"})
+	send(key.EditEvent{Text: "@application"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameUpArrow))
 	if v.settingsInteraction().selecting {
@@ -221,7 +281,7 @@ func TestSettingsPathPanelSelection(t *testing.T) {
 
 func TestSettingsPickerDirectoryReadsAndChildOwnership(t *testing.T) {
 	v := newPreviewView()
-	openSettingsGroup(t, v, "storage")
+	openSettingsGroup(t, v, "application.data_folder")
 	s := v.settingsInteraction()
 	s.selecting = true
 	v.updateSettingsSelection()
@@ -270,7 +330,7 @@ func TestSettingsPickerDirectoryReadsAndChildOwnership(t *testing.T) {
 func TestSettingsPathTextEditorKeepsCaretKeys(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@storage"})
+	send(key.EditEvent{Text: "@application"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Text: `D:\my folder`})
@@ -298,17 +358,17 @@ func TestSettingsWidgetPreview(t *testing.T) {
 		t.Fatal(err)
 	}
 	v.stopPalette(layout.Context{})
-	openSettingsGroup(t, v, "appearance.filenames")
+	openSettingsGroup(t, v, "appearance.autocolor")
 	if err := renderViewPNG(filepath.Join(directory, "settings-color-widget.png"), v); err != nil {
 		t.Fatal(err)
 	}
 	v.finishSettingsWidget(layout.Context{}, false)
-	openSettingsGroup(t, v, "files")
+	openSettingsGroup(t, v, "view.show_protected_system_files")
 	if err := renderViewPNG(filepath.Join(directory, "settings-boolean-widget.png"), v); err != nil {
 		t.Fatal(err)
 	}
 	v.finishSettingsWidget(layout.Context{}, false)
-	openSettingsGroup(t, v, "storage")
+	openSettingsGroup(t, v, "application.data_folder")
 	s := v.settingsInteraction()
 	s.selecting = true
 	v.switchPanelTo(1)
@@ -321,7 +381,7 @@ func TestSettingsWidgetPreview(t *testing.T) {
 func TestSettingsDockBlocksOnlyItsOwnPointerArea(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@storage"})
+	send(key.EditEvent{Text: "@application"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameRightArrow))
 	before := v.panels[1].selected
@@ -338,8 +398,11 @@ func TestSettingsDockBlocksOnlyItsOwnPointerArea(t *testing.T) {
 func TestSettingsSingleFieldNavigationStaysSilent(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@files"})
+	send(key.EditEvent{Text: "@system"})
 	send(pressed(key.NameReturn))
+	if s := v.settingsInteraction(); s == nil || s.title != "View › System files" || s.fields[0].Label != "Show protected system entries" {
+		t.Fatal("single-setting widget conflated its title and option label")
+	}
 	recorded := &recordedSounds{}
 	v.sounds = recorded
 	send(pressed(key.NameUpArrow))
@@ -355,10 +418,10 @@ func TestSettingsAdjustmentsTickOnlyWhenValueChanges(t *testing.T) {
 		initial            settings.Value
 		keys               []key.Event
 	}{
-		{"slider", "@colors", settingLightness, settings.Value{Number: 1}, []key.Event{
+		{"slider", "@autocolor", settingLightness, settings.Value{Number: 1}, []key.Event{
 			pressed(key.NameRightArrow), pressed(key.NameLeftArrow), pressed(key.NameRightArrow), pressed(key.NameRightArrow),
 		}},
-		{"boolean", "@files", settingProtectedSystem, settings.Value{Bool: false}, []key.Event{
+		{"boolean", "@system", settingProtectedSystem, settings.Value{Bool: false}, []key.Event{
 			pressed(key.NameRightArrow), pressed(key.NameLeftArrow), pressed(key.NameLeftArrow), pressed(key.NameRightArrow),
 		}},
 	} {
@@ -394,6 +457,7 @@ func TestSettingsEscapeRestoresPalettePosition(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	send(pressed(key.NameDownArrow))
+	send(pressed(key.NameDownArrow))
 	source := v.paletteInteraction()
 	selected, position, query := source.selected, source.list.Position, v.commandSearch.Text()
 	send(pressed(key.NameReturn))
@@ -411,7 +475,7 @@ func TestSettingsResetToDefaultsIsReversible(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
 	_ = v.settingsValues.Set(settings.CatalogueDefault, settingDataFolder, settings.Value{Text: "chosen folder"})
-	send(key.EditEvent{Text: "@storage"})
+	send(key.EditEvent{Text: "@application"})
 	source := v.paletteInteraction()
 	send(pressed(key.NameReturn))
 	send(modified(key.NameTab, key.ModShift))
@@ -439,7 +503,7 @@ func TestSettingsResetToDefaultsIsReversible(t *testing.T) {
 func TestSettingsBooleanChoicesUseArrowDirection(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@files"})
+	send(key.EditEvent{Text: "@system"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameLeftArrow))
 	if !v.settingsValues.Get(settings.CatalogueDefault, settingProtectedSystem).Bool {
@@ -499,7 +563,7 @@ func TestSettingsActionBarMouse(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
 	_ = v.settingsValues.Set(settings.CatalogueDefault, settingDataFolder, settings.Value{Text: "chosen folder"})
-	send(key.EditEvent{Text: "@storage"})
+	send(key.EditEvent{Text: "@application"})
 	send(pressed(key.NameReturn))
 	click := func(x float32) {
 		send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(x, 405)}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(x, 405)})
