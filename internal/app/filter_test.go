@@ -13,6 +13,8 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/settings"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 func TestFilterOpeningSlashNeverSurvivesAFrame(t *testing.T) {
@@ -57,6 +59,34 @@ func TestFilterFromPalette(t *testing.T) {
 	send(key.EditEvent{Text: "go"})
 	if v.panels[0].filter != "go" {
 		t.Fatal("palette filter did not accept its first text input")
+	}
+}
+
+func TestFilterEnterSound(t *testing.T) {
+	for _, name := range []key.Name{key.NameReturn, key.NameEnter} {
+		for _, enabled := range []bool{true, false} {
+			v := newPreviewView()
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundsEnabled, settings.Value{Bool: enabled})
+			recorded := &recordedSounds{}
+			v.sounds = recorded
+			send, _ := panelInputFrames(v)
+			send(pressed("/"), key.EditEvent{Text: "/"})
+			send(key.EditEvent{Text: "go"})
+			selected, path := v.panels[0].selected, v.panels[0].path
+			recorded.played = nil
+			send(pressed(name))
+			if !v.interaction.idle() || v.panels[0].filter != "go" || v.panels[0].selected != selected || v.panels[0].path != path {
+				t.Fatal("Enter did not retain the filtered listing and return to browsing")
+			}
+			send(key.Event{Name: name, State: key.Release})
+			var want []sound.Name
+			if enabled {
+				want = []sound.Name{sound.Navigation}
+			}
+			if !slices.Equal(recorded.played, want) {
+				t.Fatalf("key %s, sounds enabled %v: got %v, want %v", name, enabled, recorded.played, want)
+			}
+		}
 	}
 }
 

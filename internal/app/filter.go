@@ -109,6 +109,7 @@ func (v *view) updateFilter(gtx layout.Context) {
 			return
 		case key.NameReturn, key.NameEnter:
 			v.stopFilter(gtx)
+			v.playNavigationSound()
 			return
 		case key.NameUpArrow, key.NameDownArrow:
 			delta := 1
