@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 )
 
@@ -49,8 +48,16 @@ path = 'C:\user folder\#data'
 			t.Fatal(err)
 		}
 		reloaded, err := Load(dir, CatalogueDefault)
-		if err != nil || !reflect.DeepEqual(values, reloaded) {
-			t.Fatal("save/load changed explicit overrides", err)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, key := range []string{"appearance.autocolor.lightness", "appearance.autocolor.hue", "view.show_protected_system_files", "application.data_folder.path"} {
+			if reloaded.Get(CatalogueDefault, key) != values.Get(CatalogueDefault, key) {
+				t.Fatalf("save/load changed effective value %s", key)
+			}
+		}
+		if reloaded.Overridden("appearance.autocolor.hue") || reloaded.Overridden("view.show_protected_system_files") {
+			t.Fatal("Save retained explicit default values")
 		}
 	}
 }

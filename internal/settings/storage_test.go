@@ -13,7 +13,7 @@ func TestSaveOverrides(t *testing.T) {
 	c.Settings = append(append([]Definition(nil), c.Settings...), Definition{Key: "files.editor", Kind: String})
 	var v Values
 	for key, value := range map[string]Value{
-		"view.show_protected_system_files": {Bool: false}, // An explicit default must remain explicit.
+		"view.show_protected_system_files": {Bool: false}, // Explicit defaults are omitted on Save.
 		"appearance.autocolor.lightness":   {Number: 0.5},
 		"application.data_folder.path":     {Text: "C:\\folder: #1\\\"quoted\"\nnext\tline"},
 		"files.editor":                     {Text: "null"},
@@ -29,7 +29,6 @@ func TestSaveOverrides(t *testing.T) {
 	want := map[string]any{
 		"appearance":  map[string]any{"autocolor": map[string]any{"lightness": 0.5}},
 		"files":       map[string]any{"editor": "null"},
-		"view":        map[string]any{"show_protected_system_files": false},
 		"application": map[string]any{"data_folder": map[string]any{"path": "C:\\folder: #1\\\"quoted\"\nnext\tline"}},
 	}
 	assertSavedTOML(t, dir, want)
@@ -82,5 +81,152 @@ func assertSavedTOML(t *testing.T, dir string, want map[string]any) {
 	entries, err := os.ReadDir(dir)
 	if err != nil || len(entries) != 1 {
 		t.Fatalf("unexpected data files: %v, %v", entries, err)
+	}
+}
+
+func TestSaveReturningToDefaultsRemovesKeysAndEmptyTables(t *testing.T) {
+	var values Values
+	dir := t.TempDir()
+	for key, value := range map[string]Value{
+		"feedback.notifications.animation": {Bool: false},
+		"appearance.autocolor.lightness":   {Number: 0.5},
+		"application.data_folder.path":     {Text: "chosen folder"},
+		"appearance.autocolor.chroma":      {Number: 0.2},
+	} {
+		if err := values.Set(CatalogueDefault, key, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := Save(dir, values); err != nil {
+		t.Fatal(err)
+	}
+	for key, value := range map[string]Value{
+		"feedback.notifications.animation": {Bool: true},
+		"appearance.autocolor.lightness":   {Number: 0.36},
+		"application.data_folder.path":     {Text: ""},
+	} {
+		if err := values.Set(CatalogueDefault, key, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before := values.Clone()
+	if err := Save(dir, values); err != nil {
+		t.Fatal(err)
+	}
+	assertSavedTOML(t, dir, map[string]any{"appearance": map[string]any{"autocolor": map[string]any{"chroma": 0.2}}})
+	if !reflect.DeepEqual(values, before) {
+		t.Fatal("Save changed the caller's transaction")
+	}
+	restored, err := Load(dir, CatalogueDefault)
+	if err != nil || !restored.Get(CatalogueDefault, "feedback.notifications.animation").Bool || restored.Get(CatalogueDefault, "appearance.autocolor.lightness").Number != 0.36 || restored.Get(CatalogueDefault, "appearance.autocolor.chroma").Number != 0.2 {
+		t.Fatal("filtered settings did not reload correctly", err)
+	}
+}
+
+func TestSaveCleansExistingExplicitDefaultsOnUnrelatedEdit(t *testing.T) {
+	dir := t.TempDir()
+	source := `feedback.notifications.animation = true
+feedback.sounds.enabled = true
+appearance.autocolor.lightness = 0.36
+appearance.autocolor.hue = 20
+`
+	if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	values, err := Load(dir, CatalogueDefault)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := values.Set(CatalogueDefault, "view.show_protected_system_files", Value{Bool: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(dir, values); err != nil {
+		t.Fatal(err)
+	}
+	assertSavedTOML(t, dir, map[string]any{"view": map[string]any{"show_protected_system_files": true}})
+}
+
+func TestSaveCollectionDefaultsRecursivelyPreservesItems(t *testing.T) {
+	// An arbitrary collection with nested tables and collections exercises the
+	// same persistence path as application settings, without editor-specific keys.
+	c := Catalogue{Collections: []string{"profiles", "profiles.rules"}, Settings: []Definition{
+		{Key: "profiles.name", Kind: String, Default: Value{Text: ""}},
+		{Key: "profiles.options.enabled", Kind: Boolean, Default: Value{Bool: true}},
+		{Key: "profiles.options.count", Kind: Number, Default: Value{Number: 2}},
+		{Key: "profiles.rules.token", Kind: String, Default: Value{Text: "all"}},
+		{Key: "profiles.rules.include", Kind: StringList, Default: Value{Text: "x y"}},
+	}}
+	defaults := map[string]any{"name": "", "options": map[string]any{"enabled": true, "count": float64(2)}}
+	var values Values
+	values.SetCollection("profiles", []map[string]any{
+		defaults,
+		{"name": "kept", "options": map[string]any{"enabled": true, "count": float64(5)}, "rules": []map[string]any{
+			{"token": "all", "include": []string{"x", "y"}},
+			{"token": "custom", "include": []string{"y", "x"}},
+			{"token": "all", "include": []string{"x", "y"}},
+		}},
+		defaults,
+	})
+	dir := t.TempDir()
+	before := values.Clone()
+	if err := save(dir, values, c); err != nil {
+		t.Fatal(err)
+	}
+	var document map[string]any
+	if _, err := toml.DecodeFile(filepath.Join(dir, "settings.toml"), &document); err != nil {
+		t.Fatal(err)
+	}
+	items, ok := document["profiles"].([]map[string]any)
+	if !ok || len(items) != 3 || len(items[0]) != 0 || len(items[2]) != 0 {
+		t.Fatalf("collection lost empty items or order: %#v", document)
+	}
+	options := items[1]["options"].(map[string]any)
+	if len(options) != 1 || options["count"] != float64(5) {
+		t.Fatalf("nested table defaults remain: %#v", options)
+	}
+	rules := items[1]["rules"].([]map[string]any)
+	if len(rules) != 3 || len(rules[0]) != 0 || len(rules[2]) != 0 || rules[1]["token"] != "custom" || !reflect.DeepEqual(rules[1]["include"], []any{"y", "x"}) {
+		t.Fatalf("nested collection was not filtered generically: %#v", rules)
+	}
+	restored, err := Load(dir, c)
+	if err != nil || !reflect.DeepEqual(restored.Collection("profiles"), before.Collection("profiles")) {
+		t.Fatalf("collection defaults did not round trip: %#v, %v", restored.Collection("profiles"), err)
+	}
+	if !reflect.DeepEqual(values, before) {
+		t.Fatal("collection filtering changed transaction data")
+	}
+}
+
+func TestSaveEmptyCollectionsAndDefaultStringLists(t *testing.T) {
+	c := Catalogue{Collections: []string{"items"}, Settings: []Definition{
+		{Key: "items.value", Kind: String},
+		{Key: "options.names", Kind: StringList, Default: Value{Text: "a b"}},
+		{Key: "options.empty", Kind: StringList},
+	}}
+	var values Values
+	values.SetCollection("items", nil)
+	_ = values.Set(c, "options.names", Value{Text: "a b"})
+	_ = values.Set(c, "options.empty", Value{Text: ""})
+	dir := t.TempDir()
+	if err := save(dir, values, c); err != nil {
+		t.Fatal(err)
+	}
+	assertSavedTOML(t, dir, map[string]any{})
+}
+
+func TestFilteredSaveFailureKeepsTransaction(t *testing.T) {
+	var values Values
+	_ = values.Set(CatalogueDefault, "feedback.notifications.animation", Value{Bool: true})
+	values.SetCollection(EditorCollection, []map[string]any{{"ext": []string{"txt"}, "path": "editor.exe", "args": SelectedFilesToken}})
+	before := values.Clone()
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "settings.toml"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(dir, values); err == nil {
+		t.Fatal("inaccessible destination accepted")
+	}
+	if !reflect.DeepEqual(values, before) {
+		t.Fatal("failed save modified transaction values")
 	}
 }

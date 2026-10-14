@@ -80,7 +80,7 @@ func (c Catalogue) Definition(key string) (Definition, bool) {
 }
 
 // Values contains only explicit overrides, including values equal to a default.
-// Persistence is deliberately separate from the catalogue and effective values.
+// Persistence filters defaults from a copy, independently of transaction state.
 type Values struct{ overrides map[string]any }
 
 func (v *Values) Get(c Catalogue, key string) Value {

@@ -24,9 +24,13 @@ reserve at least a third for values.
 their values, validation and persistence. The application binds paths to effects
 in Go.
 
-Overrides form a nested value tree. Save uses the TOML library to write only
-explicit overrides to `settings.toml` in the shared data folder. Reset removes
-an override; cancellation restores the previous tree. Previews bypass storage.
+Overrides form a nested value tree. Save filters a copy against built-in defaults
+and uses the TOML library to rewrite `settings.toml` with only differing values.
+Empty tables and empty collections are omitted. Each collection item is filtered
+against its template; item order and membership remain intact, including items
+whose fields all match defaults. Loading supplies omitted fields from defaults.
+Reset removes an override; cancellation restores the previous transaction tree.
+Previews bypass storage.
 
 Startup reads and validates user overrides before applying them. Missing files
 use defaults. Syntax errors, unknown paths, incorrect types and out-of-range
@@ -78,8 +82,8 @@ source panel's folder. Missing rules and launch failures use panel feedback.
 
 Embedded array tables supply one item template for a collection, with defaults
 and field metadata handled by the same catalogue as scalar widgets. They do not
-install effective rules. User array tables store the collection; empty lists
-preserve deletion of all rules. Collection drafts share the settings transaction,
+install effective rules. User array tables store the collection; missing or empty collections contain
+no items. Collection drafts share the settings transaction,
 file picker and action bar, with no Reset action.
 
 Escape leaves input editing or selection first. Once any widget change occurs,

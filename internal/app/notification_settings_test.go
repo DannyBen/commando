@@ -132,3 +132,29 @@ func TestNotificationsSettingsPreview(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestNotificationsReturningToOnRemovesSavedOverride(t *testing.T) {
+	v := newPreviewView()
+	dir := t.TempDir()
+	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
+		return func() (string, error) { return "", settings.Save(dir, values) }
+	}
+	v.startSettingsWidget("feedback.notifications")
+	v.adjustSetting(settingNotificationAnimation, 0)
+	v.finishSettingsWidget(layout.Context{}, true)
+	disabled, err := settings.Load(dir, settings.CatalogueDefault)
+	if err != nil || !disabled.Overridden(settingNotificationAnimation) || disabled.Get(settings.CatalogueDefault, settingNotificationAnimation).Bool {
+		t.Fatal("Animation Off did not persist", err)
+	}
+	v.startSettingsWidget("feedback.notifications")
+	v.adjustSetting(settingNotificationAnimation, 0)
+	v.finishSettingsWidget(layout.Context{}, true)
+	data, err := os.ReadFile(filepath.Join(dir, "settings.toml"))
+	if err != nil || len(data) != 0 {
+		t.Fatalf("returning Animation to On retained a default override or empty tables: %q, %v", data, err)
+	}
+	restored, err := settings.Load(dir, settings.CatalogueDefault)
+	if err != nil || restored.Overridden(settingNotificationAnimation) || !restored.Get(settings.CatalogueDefault, settingNotificationAnimation).Bool {
+		t.Fatal("Animation On did not inherit its default", err)
+	}
+}

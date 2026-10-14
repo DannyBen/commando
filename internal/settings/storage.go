@@ -9,16 +9,20 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// Save encodes the nested override tree through TOML. Inherited defaults and
-// UI metadata are never written to the user document.
+// Save rewrites the user document with non-default values only. Collections
+// use the same recursive filtering against their item templates.
 func Save(dataDir string, v Values) error {
+	return save(dataDir, v, CatalogueDefault)
+}
+
+func save(dataDir string, v Values, c Catalogue) error {
 	if dataDir == "" {
 		return fmt.Errorf("data folder is empty")
 	}
 	var data bytes.Buffer
 	encoder := toml.NewEncoder(&data)
 	encoder.Indent = ""
-	if err := encoder.Encode(v.overrides); err != nil {
+	if err := encoder.Encode(v.withoutDefaults(c).overrides); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(dataDir, 0700); err != nil {

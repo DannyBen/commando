@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -48,45 +49,11 @@ func Load(dataDir string, c Catalogue) (Values, error) {
 		if !exists {
 			continue
 		}
-		rows, ok := raw.([]map[string]any)
-		if empty, yes := raw.([]any); yes && len(empty) == 0 {
-			rows, ok = []map[string]any{}, true
+		normalized, err := loadCollection(c, collection, raw)
+		if err != nil {
+			return Values{}, err
 		}
-		if !ok {
-			return Values{}, fmt.Errorf("%w: %s", ErrType, collection)
-		}
-		normalized := make([]map[string]any, len(rows))
-		for i, row := range rows {
-			var item Values
-			for name, raw := range row {
-				key := collection + "." + name
-				d, known := c.Definition(key)
-				if !known {
-					return Values{}, fmt.Errorf("%w: %s", ErrUnknownKey, key)
-				}
-				scalar, err := validatedScalar(d, raw)
-				if err != nil {
-					return Values{}, err
-				}
-				if err := item.Set(c, key, valueFromScalar(scalar)); err != nil {
-					return Values{}, err
-				}
-				if d.Kind == StringList {
-					insert(item.overrides, strings.Split(key, "."), scalar)
-				}
-			}
-			for _, d := range c.Settings {
-				if strings.HasPrefix(d.Key, collection+".") && !item.Overridden(d.Key) {
-					_ = item.Set(c, d.Key, d.Default)
-				}
-			}
-			normalized[i] = item.Item(collection)
-			if collection == EditorCollection {
-				if err := NormalizeEditor(normalized[i]); err != nil {
-					return Values{}, fmt.Errorf("%w: %s: %v", ErrValue, collection, err)
-				}
-			}
-		}
+
 		result.SetCollection(collection, normalized)
 	}
 	for _, path := range metadata.Keys() {
@@ -158,4 +125,92 @@ func validatedScalar(d Definition, raw any) (any, error) {
 		return nil, fmt.Errorf("%w: %s", ErrType, d.Key)
 	}
 	return raw, nil
+}
+
+// Collection items reuse the catalogue's scalar, table and collection rules.
+func loadCollection(c Catalogue, key string, raw any) ([]map[string]any, error) {
+	rows, ok := raw.([]map[string]any)
+	if empty, yes := raw.([]any); yes && len(empty) == 0 {
+		rows, ok = []map[string]any{}, true
+	}
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", ErrType, key)
+	}
+	result := make([]map[string]any, len(rows))
+	for i, row := range rows {
+		var item Values
+		if err := loadItem(c, key, row, &item); err != nil {
+			return nil, err
+		}
+		for _, d := range c.Settings {
+			if !strings.HasPrefix(d.Key, key+".") {
+				continue
+			}
+			nested := false
+			for _, collection := range c.Collections {
+				if strings.HasPrefix(collection, key+".") && strings.HasPrefix(d.Key, collection+".") {
+					nested = true
+					break
+				}
+			}
+			if !nested && !item.Overridden(d.Key) {
+				_ = item.Set(c, d.Key, d.Default)
+			}
+		}
+		result[i] = item.Item(key)
+		if key == EditorCollection {
+			if err := NormalizeEditor(result[i]); err != nil {
+				return nil, fmt.Errorf("%w: %s: %v", ErrValue, key, err)
+			}
+		}
+	}
+	return result, nil
+}
+
+func loadItem(c Catalogue, prefix string, row map[string]any, item *Values) error {
+	for name, raw := range row {
+		key := prefix + "." + name
+		if name == "" || strings.Contains(name, ".") {
+			return fmt.Errorf("%w: %s", ErrUnknownKey, key)
+		}
+		if slices.Contains(c.Collections, key) {
+			rows, err := loadCollection(c, key, raw)
+			if err != nil {
+				return err
+			}
+			item.SetCollection(key, rows)
+			continue
+		}
+		if d, known := c.Definition(key); known {
+			scalar, err := validatedScalar(d, raw)
+			if err != nil {
+				return err
+			}
+			if err := item.Set(c, key, valueFromScalar(scalar)); err != nil {
+				return err
+			}
+			if d.Kind == StringList {
+				insert(item.overrides, strings.Split(key, "."), scalar)
+			}
+			continue
+		}
+		group := false
+		for _, d := range c.Settings {
+			if strings.HasPrefix(d.Key, key+".") {
+				group = true
+				break
+			}
+		}
+		if !group {
+			return fmt.Errorf("%w: %s", ErrUnknownKey, key)
+		}
+		children, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("%w: %s", ErrType, key)
+		}
+		if err := loadItem(c, key, children, item); err != nil {
+			return err
+		}
+	}
+	return nil
 }
