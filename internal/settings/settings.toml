@@ -32,11 +32,6 @@ lightness = 0.5
 chroma = 0.2
 hue = 265.0
 
-[appearance.theme.marked]
-lightness = 0.7
-chroma = 0.18
-hue = 65.0
-
 [appearance.theme.selection]
 lightness = 0.55
 chroma = 0.2

@@ -45,7 +45,6 @@ type Theme struct {
 type ThemeColors struct {
 	Surface, Header, Footer, Border, Foreground, Muted color.NRGBA
 	Edge, ActiveLocation                               color.NRGBA
-	Marked                                             color.NRGBA // Left-edge bar for marked files and folders.
 	Filename, Metadata                                 color.NRGBA
 	CutFilename                                        color.NRGBA
 	Selected, SelectedName, SelectedMetadata           color.NRGBA

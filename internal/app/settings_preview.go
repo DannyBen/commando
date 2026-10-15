@@ -24,8 +24,6 @@ func (v *view) settingsPreviewItems(kind string) previewSamples {
 		return previewSamples{{label: label, foreground: fg, background: bg}}
 	}
 	switch kind {
-	case "mark":
-		return previewSamples{{"File mark", c.Foreground, c.Surface, c.Marked}}
 	case "edge":
 		return previewSamples{{"Edge mark", c.Foreground, c.Surface, c.Edge}}
 	case "secondary":

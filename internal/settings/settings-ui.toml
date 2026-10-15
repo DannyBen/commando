@@ -258,33 +258,6 @@ min = 0.0
 max = 360.0
 step = 1.0
 
-[appearance.theme.marked]
-preview = "mark"
-category = "Accents"
-label = "File marks"
-title = "File marks"
-
-[appearance.theme.marked.lightness]
-label = "Lightness"
-control = "stepper-progress"
-min = 0.0
-max = 1.0
-step = 0.01
-
-[appearance.theme.marked.chroma]
-label = "Chroma"
-control = "stepper-progress"
-min = 0.0
-max = 0.5
-step = 0.01
-
-[appearance.theme.marked.hue]
-label = "Hue"
-control = "stepper-progress"
-min = 0.0
-max = 360.0
-step = 1.0
-
 [appearance.theme.selection]
 category = "Selection"
 label = "Background"

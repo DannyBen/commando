@@ -97,9 +97,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					edge := color.NRGBA{}
 					if naming && v.nameInteraction().draft() {
 						edge = v.appearance.Colors.InlineEdge
-					} else if p.marks[storedRow] {
-						edge = v.appearance.Colors.Marked
-					} else if storedRow == p.selected && index != v.active {
+					} else if p.marks[storedRow] || (storedRow == p.selected && index != v.active) {
 						edge = v.appearance.Colors.Edge
 					}
 					return v.fileRowSurface(gtx, size, bg, edge, func(gtx layout.Context) layout.Dimensions {

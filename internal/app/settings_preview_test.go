@@ -44,10 +44,6 @@ func TestSettingsPreviewsAreSelectiveAndSpecific(t *testing.T) {
 	if len(selected) != 1 || selected[0].foreground != v.appearance.Colors.SelectedName || selected[0].background != v.appearance.Colors.Selected {
 		t.Fatal("selected text preview must show its actual background and foreground")
 	}
-	mark := v.settingsPreviewItems("mark")[0]
-	if mark.edge != v.appearance.Colors.Marked {
-		t.Fatal("mark sample does not show the actual mark")
-	}
 	edge := v.settingsPreviewItems("edge")[0]
 	if edge.edge != v.appearance.Colors.Edge {
 		t.Fatal("edge sample does not show the actual edge mark")
@@ -55,7 +51,7 @@ func TestSettingsPreviewsAreSelectiveAndSpecific(t *testing.T) {
 }
 
 func TestSettingsPreviewAddsOnlyOneRow(t *testing.T) {
-	for _, role := range []string{"marked", "notification", "error"} {
+	for _, role := range []string{"edge", "notification", "error"} {
 		v := newPreviewView()
 		v.startSettingsWidget(colorPrefix + role)
 		s := v.settingsInteraction()
@@ -83,7 +79,7 @@ func TestPreviewSampleUsesNormalTextBaseline(t *testing.T) {
 				gtx.Constraints.Min.Y = 0
 				return v.label(gtx, "Mark", v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 			})
-			sample := v.settingsPreviewItems("mark").layout(v, gtx, height)
+			sample := v.settingsPreviewItems("edge").layout(v, gtx, height)
 			if sample.Baseline != normal.Baseline {
 				t.Fatalf("scale %g padding %g: sample baseline %d, normal %d", scale, padding, sample.Baseline, normal.Baseline)
 			}
@@ -127,7 +123,7 @@ func TestSettingsPreviewRowsRender(t *testing.T) {
 	if dir == "" {
 		t.Skip("optional compact preview rows")
 	}
-	for _, role := range []string{"background", "marked", "edge", "notification", "error", "text_selection", "selected_text"} {
+	for _, role := range []string{"background", "edge", "notification", "error", "text_selection", "selected_text"} {
 		v := newPreviewView()
 		v.applySettings()
 		v.startSettingsWidget(colorPrefix + role)
