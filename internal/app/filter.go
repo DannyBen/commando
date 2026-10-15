@@ -4,6 +4,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/text"
@@ -83,15 +84,6 @@ func (v *view) updateFilter(gtx layout.Context) {
 			key.Filter{Focus: &v.filterEditor, Name: key.NameUpArrow},
 			key.Filter{Focus: &v.filterEditor, Name: key.NameDownArrow},
 			key.Filter{Name: key.NameTab, Optional: key.ModShift},
-			key.Filter{Focus: &v.filterEditor, Name: "1", Required: key.ModAlt},
-			key.Filter{Focus: &v.filterEditor, Name: "2", Required: key.ModAlt},
-			key.Filter{Focus: &v.filterEditor, Name: "3", Required: key.ModAlt},
-			key.Filter{Focus: &v.filterEditor, Name: "4", Required: key.ModAlt},
-			key.Filter{Focus: &v.filterEditor, Name: "5", Required: key.ModAlt},
-			key.Filter{Focus: &v.filterEditor, Name: "6", Required: key.ModAlt},
-			key.Filter{Focus: &v.filterEditor, Name: "7", Required: key.ModAlt},
-			key.Filter{Focus: &v.filterEditor, Name: "8", Required: key.ModAlt},
-			key.Filter{Focus: &v.filterEditor, Name: "9", Required: key.ModAlt},
 		)
 		if !ok {
 			break
@@ -101,8 +93,37 @@ func (v *view) updateFilter(gtx layout.Context) {
 		}
 	}
 	v.updateFilterText(gtx)
+	// Let native text editing consume its keys before offering configurable
+	// panel-focus shortcuts to the filter session.
+	var focusFilters []event.Filter
+	for index := range v.panels {
+		c := v.resolveCommandBindings(panelFocusCommand(index + 1))
+		for slot := range c.bindings {
+			if shortcut := c.effectiveShortcut(slot); shortcut.Name != "" {
+				focusFilters = append(focusFilters, key.Filter{Focus: &v.filterEditor, Name: shortcut.Name, Required: shortcut.Modifiers})
+				if shortcut.Name == key.NameReturn {
+					focusFilters = append(focusFilters, key.Filter{Focus: &v.filterEditor, Name: key.NameEnter, Required: shortcut.Modifiers})
+				}
+			}
+		}
+	}
+	for {
+		e, ok := gtx.Event(focusFilters...)
+		if !ok {
+			break
+		}
+		if ke, ok := e.(key.Event); ok && ke.State == key.Press {
+			keys = append(keys, ke)
+		}
+	}
+
 	for _, ke := range keys {
 		v.dismissFeedback()
+		if ke.Modifiers != 0 && ke.Name != key.NameTab {
+			v.stopFilter(gtx)
+			v.browseKey(gtx, ke)
+			return
+		}
 		switch ke.Name {
 		case key.NameEscape:
 			v.escape(gtx)

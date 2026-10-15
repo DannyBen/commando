@@ -161,7 +161,7 @@ func loadItem(c Catalogue, prefix string, row map[string]any, item *Values) erro
 			}
 			continue
 		}
-		group := false
+		group := c.DynamicGroup != nil && c.DynamicGroup(key)
 		for _, d := range c.Settings {
 			if strings.HasPrefix(d.Key, key+".") {
 				group = true

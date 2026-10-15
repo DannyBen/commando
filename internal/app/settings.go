@@ -101,9 +101,9 @@ func (v *view) settingsCatalogue() []command {
 				if index < 0 {
 					id = "settings." + key + ".new"
 				}
-				catalogue = append(catalogue, command{id: id, group: group, name: name,
+				catalogue = append(catalogue, v.resolveCommandBindings(command{id: id, group: group, name: name,
 					available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
-					execute:   func(v *view) { v.startCollectionWidget(key, index, name) }})
+					execute:   func(v *view) { v.startCollectionWidget(key, index, name) }}))
 			}
 			add(-1, "New")
 			for i, row := range v.settingsValues.Collection(key) {
@@ -112,10 +112,10 @@ func (v *view) settingsCatalogue() []command {
 			}
 			continue
 		}
-		catalogue = append(catalogue, command{id: "settings." + key, group: settingsGroupLabel(widget.Parent), name: widget.Label,
+		catalogue = append(catalogue, v.resolveCommandBindings(command{id: "settings." + key, group: settingsGroupLabel(widget.Parent), name: widget.Label,
 			available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
 			execute:   func(v *view) { v.startSettingsWidget(key) },
-		})
+		}))
 	}
 	slices.SortStableFunc(catalogue, func(a, b command) int {
 		return strings.Compare(a.label(), b.label())

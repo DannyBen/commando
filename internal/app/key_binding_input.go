@@ -19,7 +19,7 @@ func (v *view) browsingKeyFilters() []event.Filter {
 		key.Filter{Focus: &v.focus, Name: key.NameUpArrow, Optional: key.ModShift},
 		key.Filter{Focus: &v.focus, Name: key.NameDownArrow, Optional: key.ModShift},
 	}
-	for _, c := range v.commandCatalogue() {
+	for _, c := range v.shortcutCommands() {
 		for slot := range c.bindings {
 			s := c.effectiveShortcut(slot)
 			if s.Name == "" || s.Modifiers == 0 && (s.Name == "/" || s.Name == "@") {
@@ -35,7 +35,7 @@ func (v *view) browsingKeyFilters() []event.Filter {
 }
 
 func (v *view) dispatchTextShortcut(gtx layout.Context, text string) bool {
-	for _, c := range v.commandCatalogue() {
+	for _, c := range v.shortcutCommands() {
 		for slot := range c.bindings {
 			trigger := c.effectiveShortcut(slot).textTrigger()
 			if trigger == "" || text != trigger && (c.paletteQuery == "" || !strings.HasPrefix(text, trigger)) {
@@ -61,7 +61,8 @@ func (v *view) updateNativeBindings() {
 		return
 	}
 	var names []rune
-	for _, c := range v.commandCatalogue() {
+	for _, c := range bindingCommands(v.settingsValues) {
+		c = v.resolveCommandBindings(c)
 		for slot := range c.bindings {
 			s := c.effectiveShortcut(slot)
 			if name := []rune(s.Name); s.Modifiers&key.ModAlt != 0 && len(name) == 1 {

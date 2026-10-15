@@ -70,6 +70,9 @@ type Catalogue struct {
 	Collections []string
 	Settings    []Definition
 	UI          Presentation
+	// Dynamic definitions support indexed settings without bounding their count.
+	DynamicDefinition func(string) (Definition, bool)
+	DynamicGroup      func(string) bool
 	// ValidateOverrides checks related values after loading all fields. It may
 	// remove invalid overrides so recovery can preserve unrelated settings.
 	ValidateOverrides func(*Values) error
@@ -80,6 +83,9 @@ func (c Catalogue) Definition(key string) (Definition, bool) {
 		if d.Key == key {
 			return d, true
 		}
+	}
+	if c.DynamicDefinition != nil {
+		return c.DynamicDefinition(key)
 	}
 	return Definition{}, false
 }

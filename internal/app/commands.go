@@ -1,7 +1,6 @@
 package app
 
 import (
-	"strconv"
 	"strings"
 
 	"gioui.org/io/key"
@@ -29,14 +28,7 @@ func (v *view) commandCatalogue() []command {
 		catalogue = append(catalogue, v.resolveCommandBindings(c))
 		if c.group == "Panel" && (i == len(commands)-1 || commands[i+1].group != "Panel") {
 			for index := range v.panels {
-				number := strconv.Itoa(index + 1)
-				focus := command{id: "panel.focus_" + number, group: "Panel", name: "Focus " + number,
-					available: func(v *view) bool { return index < len(v.panels) },
-					execute:   func(v *view) { v.switchPanelTo(index) }}
-				if index < 9 {
-					focus.bindings[0].Default = shortcut{Name: key.Name(number), Modifiers: key.ModAlt}
-				}
-				catalogue = append(catalogue, focus)
+				catalogue = append(catalogue, v.resolveCommandBindings(panelFocusCommand(index+1)))
 			}
 		}
 	}

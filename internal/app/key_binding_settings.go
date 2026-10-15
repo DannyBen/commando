@@ -4,6 +4,7 @@ import (
 	"errors"
 	"slices"
 	"strconv"
+	"strings"
 
 	"gioui.org/io/key"
 	"github.com/dannyben/commando/internal/settings"
@@ -18,37 +19,45 @@ func bindingSettingKey(id string, slot int) string {
 func bindingSettingsCatalogue() settings.Catalogue {
 	catalogue := settings.CatalogueDefault
 	catalogue.Settings = slices.Clone(catalogue.Settings)
-	for _, c := range commands {
-		for slot, binding := range c.bindings {
-			catalogue.Settings = append(catalogue.Settings, settings.Definition{
-				Key: bindingSettingKey(c.id, slot), Kind: settings.String,
-				Validate: func(value settings.Value) error {
-					override, err := parseBindingOverride(value.Text)
-					if err != nil {
-						return err
-					}
-					if _, err := binding.resolve(override); err != nil {
-						return err
-					}
-					if override.Mode != bindingAssigned {
-						return nil
-					}
-					s := override.Shortcut
-					if s.Name == key.NameSpace || len(s.Name) == 1 {
-						if s.Modifiers&(key.ModCtrl|key.ModAlt|key.ModSuper|key.ModCommand) == 0 && !c.defaultShortcut(s) {
-							return errors.New("use a modified key")
-						}
-					}
-					if s.Name == key.NameReturn && s.Modifiers&key.ModAlt != 0 || s.Name == contextMenuKey && s.Modifiers != 0 {
-						return errors.New("unsupported native shortcut")
-					}
-					return nil
-				},
-			})
+	for _, c := range bindingCommands(settings.Values{}) {
+		for slot := range c.bindings {
+			catalogue.Settings = append(catalogue.Settings, bindingDefinition(c, slot))
 		}
+	}
+	catalogue.DynamicDefinition = dynamicBindingDefinition
+	catalogue.DynamicGroup = func(group string) bool {
+		_, ok := panelFocusNumber(strings.TrimPrefix(group, "keybindings."))
+		return strings.HasPrefix(group, "keybindings.") && ok
 	}
 	catalogue.ValidateOverrides = validateBindingOverrides
 	return catalogue
+}
+
+func bindingDefinition(c command, slot int) settings.Definition {
+	return settings.Definition{Key: bindingSettingKey(c.id, slot), Kind: settings.String,
+		Validate: func(value settings.Value) error {
+			override, err := parseBindingOverride(value.Text)
+			if err != nil {
+				return err
+			}
+			if _, err := c.bindings[slot].resolve(override); err != nil {
+				return err
+			}
+			if override.Mode != bindingAssigned {
+				return nil
+			}
+			s := override.Shortcut
+			if s.Name == key.NameSpace || len(s.Name) == 1 {
+				if s.Modifiers&(key.ModCtrl|key.ModAlt|key.ModSuper|key.ModCommand) == 0 && !c.defaultShortcut(s) {
+					return errors.New("use a modified key")
+				}
+			}
+			if s.Name == key.NameReturn && s.Modifiers&key.ModAlt != 0 || s.Name == contextMenuKey && s.Modifiers != 0 {
+				return errors.New("unsupported native shortcut")
+			}
+			return nil
+		},
+	}
 }
 
 func (v *view) resolveCommandBindings(c command) command {
@@ -91,11 +100,7 @@ func findBindingConflict(values settings.Values) *bindingConflict {
 		used[shortcut{Name: name}] = bindingOwner{name: "Row navigation"}
 		used[shortcut{Name: name, Modifiers: key.ModShift}] = bindingOwner{name: "Range selection"}
 	}
-	// Numbered panel shortcuts retain their identities even in a smaller workspace.
-	for number := 1; number <= 9; number++ {
-		used[shortcut{Name: key.Name(strconv.Itoa(number)), Modifiers: key.ModAlt}] = bindingOwner{name: "Focus " + strconv.Itoa(number)}
-	}
-	for _, c := range commands {
+	for _, c := range bindingCommands(values) {
 		c = v.resolveCommandBindings(c)
 		for slot := range c.bindings {
 			s := c.effectiveShortcut(slot)

@@ -15,13 +15,13 @@ func (v *view) canEditShortcuts(c command) bool {
 	if !v.canOfferInteraction(v.active, actionMutation) {
 		return false
 	}
-	for _, builtin := range commands {
-		if builtin.id == c.id {
-			for _, binding := range builtin.bindings {
-				if !binding.Protected {
-					return true
-				}
-			}
+	// Generated entries opt in by carrying a stable persistent identity.
+	if c.id == "" {
+		return false
+	}
+	for _, binding := range c.bindings {
+		if !binding.Protected {
+			return true
 		}
 	}
 	return false
@@ -186,6 +186,7 @@ func (v *view) restoreWidgetPalette(s *settingsSession, saved bool) {
 	p := s.palette
 	if s.bindingCommand != nil {
 		p.commands = v.commandCatalogue()
+		p.settingsCommands = v.settingsCatalogue()
 		for i := range p.results {
 			p.results[i].command = v.resolveCommandBindings(p.results[i].command)
 		}

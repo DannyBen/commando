@@ -125,7 +125,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	if v.interactionKey(gtx, ke) {
 		return
 	}
-	for _, command := range v.commandCatalogue() {
+	for _, command := range v.shortcutCommands() {
 		if !command.matches(ke) {
 			continue
 		}
