@@ -86,6 +86,9 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 						dims := control(gtx)
 						if field.Control == "stepper-progress" {
 							ratio := (v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number - d.Minimum) / (*d.Maximum - d.Minimum)
+							if bounds, ok := settings.ThemeColorRange(v.settingsValues, settings.CatalogueDefault, field.Key); ok {
+								ratio = bounds.Progress(v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number)
+							}
 							y := textHeight - gtx.Dp(1)
 							width := gtx.Constraints.Max.X
 							paint.FillShape(gtx.Ops, v.appearance.Colors.Border, clip.Rect{Min: image.Pt(0, y), Max: image.Pt(width, y+gtx.Dp(1))}.Op())
@@ -96,6 +99,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				}, false)
 			}))
 		}
+
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			selected := -1
 			if s.actionsFocused && !s.selecting && !s.editing && !s.capturing && v.settingsInteraction() == s {
@@ -115,6 +119,9 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				hint := "Enter Type · Ctrl+Enter Save"
 				if field.Control == "stepper" || field.Control == "stepper-progress" {
 					hint = "←/→ Adjust · Enter Type · Ctrl+Enter Save"
+					if bounds, ok := settings.ThemeColorRange(v.settingsValues, settings.CatalogueDefault, field.Key); ok {
+						hint = bounds.Label() + " · ←/→ Adjust · Enter Type"
+					}
 				}
 				if field.Control == "toggle" {
 					hint = "←/→ Choose · Enter Toggle · Ctrl+Enter Save"

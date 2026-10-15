@@ -235,6 +235,9 @@ func (v *view) settingText(key string) string {
 		}
 		return "false"
 	case settings.Number:
+		if strings.HasPrefix(key, "appearance.theme.") {
+			return strconv.FormatFloat(math.Round(value.Number*10000)/10000, 'f', -1, 64)
+		}
 		return strconv.FormatFloat(value.Number, 'f', -1, 64)
 	default:
 		if key == settingDataFolder && value.Text == "" {
@@ -271,6 +274,10 @@ func (v *view) adjustSetting(key string, direction int) {
 			value.Bool = direction < 0
 		}
 	case settings.Number:
+		if bounds, ok := settings.ThemeColorRange(*v.widgetValues(), c, key); ok {
+			value.Number = bounds.Step(value.Number, float64(direction)*d.Step)
+			break
+		}
 		scale := 1 / d.Step
 		value.Number = max(d.Minimum, math.Round(value.Number*scale+float64(direction))/scale)
 		if d.Maximum != nil {
@@ -281,7 +288,7 @@ func (v *view) adjustSetting(key string, direction int) {
 	}
 	if v.setWidgetValue(key, value) == nil {
 		v.applySettings()
-		if value != before {
+		if v.widgetValues().Get(c, key) != before {
 			v.announceInteraction(eventValueChanged)
 		}
 	}
@@ -289,6 +296,10 @@ func (v *view) adjustSetting(key string, direction int) {
 func (v *view) applySettings() {
 	v.updateNativeBindings()
 	c := settings.CatalogueDefault
+	settings.ClampThemeColors(&v.settingsValues, c)
+	v.appearance.Colors = themeColorsFromSettings(v.settingsValues)
+	v.theme.Fg, v.theme.Bg = v.appearance.Colors.Foreground, v.appearance.Colors.Surface
+	v.theme.ContrastBg, v.theme.ContrastFg = v.appearance.Colors.Selected, v.appearance.Colors.SelectedName
 	v.applyFontSettings()
 	rows, bands, location := v.appearance.RowPaddingVertical, v.appearance.HeaderFooterPaddingVertical, v.appearance.LocationPaddingVertical
 	v.appearance.RowPaddingVertical = unit.Dp(v.settingsValues.Get(c, settingPaddingRows).Number)
@@ -851,6 +862,9 @@ func (v *view) setWidgetValue(key string, value settings.Value) error {
 	before, explicit := values.Get(c, key), values.Overridden(key)
 	if err := values.Set(c, key, value); err != nil {
 		return err
+	}
+	if strings.HasPrefix(key, "appearance.theme.") {
+		settings.ClampThemeColors(values, c)
 	}
 	if s := v.settingsInteraction(); s != nil && (before != values.Get(c, key) || !explicit) {
 		s.dirty = true

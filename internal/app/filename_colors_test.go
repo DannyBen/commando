@@ -149,11 +149,13 @@ func TestEntryColorPrecedence(t *testing.T) {
 		for _, special := range []browser.Entry{{Name: "C:", Path: `C:\`}} {
 			specialBG, specialName, specialMetadata := theme.entryColors(special, active, false)
 			wantBG, wantName = theme.Colors.Surface, theme.Colors.Filename
+			wantMetadata := theme.Colors.Metadata
 			if active {
 				wantBG, wantName = theme.Colors.Selected, theme.Colors.SelectedName
+				wantMetadata = theme.Colors.SelectedMetadata
 			}
-			if specialBG != wantBG || specialName != wantName || specialMetadata != specialName {
-				t.Fatal("drive styling changed or mismatched filename/metadata")
+			if specialBG != wantBG || specialName != wantName || specialMetadata != wantMetadata {
+				t.Fatal("drive styling did not use semantic theme colors")
 			}
 		}
 	}

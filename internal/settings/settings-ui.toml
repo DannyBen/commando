@@ -85,6 +85,487 @@ min = 0.0
 max = 1.0
 step = 0.01
 
+[appearance.theme]
+label = "Theme"
+
+[appearance.theme.background]
+category = "Background"
+label = "Main"
+title = "Main"
+
+[appearance.theme.background.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.background.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.background.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.alt_background]
+category = "Background"
+label = "Alternate"
+title = "Alternate"
+
+[appearance.theme.alt_background.linked]
+label = "Link to Main"
+control = "toggle"
+
+[appearance.theme.alt_background.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.alt_background.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.alt_background.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.border]
+category = "Accents"
+label = "Border"
+title = "Border"
+
+[appearance.theme.border.linked]
+label = "Link to Edge"
+control = "toggle"
+
+[appearance.theme.border.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.border.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.border.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.text]
+category = "Text"
+label = "Primary"
+title = "Primary"
+
+[appearance.theme.text.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.text.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.text.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.secondary_text]
+category = "Text"
+label = "Secondary"
+title = "Secondary"
+
+[appearance.theme.secondary_text.linked]
+label = "Link to Primary"
+control = "toggle"
+
+[appearance.theme.secondary_text.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.secondary_text.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.secondary_text.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.edge]
+category = "Accents"
+label = "Edge"
+title = "Edge"
+
+[appearance.theme.edge.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.edge.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.edge.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.marked]
+category = "Accents"
+label = "Marks"
+title = "Marks"
+
+[appearance.theme.marked.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.marked.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.marked.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.selection]
+category = "Selection"
+label = "Background"
+title = "Background"
+
+[appearance.theme.selection.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.selection.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.selection.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.selected_text]
+category = "Selection"
+label = "Text"
+title = "Text"
+
+[appearance.theme.selected_text.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.selected_text.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.selected_text.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.text_selection]
+category = "Text"
+label = "Selected background"
+title = "Selected background"
+
+[appearance.theme.text_selection.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.text_selection.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.text_selection.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.cut_text]
+category = "Cut items"
+label = "Normal"
+title = "Normal"
+
+[appearance.theme.cut_text.linked]
+label = "Link to Text › Secondary"
+control = "toggle"
+
+[appearance.theme.cut_text.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.cut_text.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.cut_text.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.selected_cut_text]
+category = "Cut items"
+label = "Selected"
+title = "Selected"
+
+[appearance.theme.selected_cut_text.linked]
+label = "Link to Selection › Text"
+control = "toggle"
+
+[appearance.theme.selected_cut_text.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.selected_cut_text.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.selected_cut_text.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.notification]
+category = "Notifications"
+label = "Root"
+title = "Root"
+
+[appearance.theme.notification.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.notification.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.notification.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.info]
+category = "Notifications"
+label = "Info"
+title = "Info"
+
+[appearance.theme.info.linked]
+label = "Link to Root"
+control = "toggle"
+
+[appearance.theme.info.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.info.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.info.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.success]
+category = "Notifications"
+label = "Success"
+title = "Success"
+
+[appearance.theme.success.linked]
+label = "Link to Root"
+control = "toggle"
+
+[appearance.theme.success.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.success.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.success.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.warning]
+category = "Notifications"
+label = "Warning"
+title = "Warning"
+
+[appearance.theme.warning.linked]
+label = "Link to Root"
+control = "toggle"
+
+[appearance.theme.warning.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.warning.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.warning.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
+[appearance.theme.error]
+category = "Notifications"
+label = "Error"
+title = "Error"
+
+[appearance.theme.error.linked]
+label = "Link to Root"
+control = "toggle"
+
+[appearance.theme.error.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.error.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.error.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
 [appearance.font]
 label = "Font"
 title = "Font"

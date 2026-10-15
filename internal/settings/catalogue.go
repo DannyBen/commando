@@ -28,6 +28,7 @@ func embeddedCatalogue() Catalogue {
 
 type nodeMetadata struct {
 	Label, Palette, Description, Control string
+	Category                             string
 	Identity                             string
 	Title                                *string
 	Visible                              *bool
@@ -257,7 +258,7 @@ func readMetadata(md *toml.MetaData, ui map[string]toml.Primitive, path []string
 
 func allowMetadata(known map[string]bool, key string, leaf bool) {
 	known[key] = true
-	for _, property := range []string{"label", "palette", "title", "visible", "description", "identity"} {
+	for _, property := range []string{"label", "palette", "title", "visible", "description", "identity", "category"} {
 		known[key+"."+property] = true
 	}
 	if leaf {
@@ -269,6 +270,9 @@ func allowMetadata(known map[string]bool, key string, leaf bool) {
 
 func (c *Catalogue) addWidget(key, parent, owner string, m nodeMetadata, visible, leaf bool) (string, error) {
 	if m.Title == nil {
+		if m.Category != "" {
+			return "", fmt.Errorf("category without widget title: %s", key)
+		}
 		if m.Palette != "" {
 			return "", fmt.Errorf("palette name without widget title: %s", key)
 		}
@@ -285,6 +289,14 @@ func (c *Catalogue) addWidget(key, parent, owner string, m nodeMetadata, visible
 	}
 	if label == "" {
 		label = *m.Title
+	}
+	// Categories organize discovery without changing setting keys or ownership.
+	if m.Category != "" {
+		categoryKey := parent + "/" + m.Category
+		if !slices.ContainsFunc(c.UI.Groups, func(g Group) bool { return g.Key == categoryKey }) {
+			c.UI.Groups = append(c.UI.Groups, Group{Key: categoryKey, Parent: parent, Label: m.Category})
+		}
+		parent = categoryKey
 	}
 	c.UI.Widgets = append(c.UI.Widgets, Widget{Key: key, Parent: parent, Label: label, Title: *m.Title, Visible: visible})
 	return key, nil
