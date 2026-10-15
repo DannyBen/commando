@@ -637,7 +637,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		key.Filter{Focus: focus, Name: key.NameTab, Optional: key.ModShift},
 	}
 	if !s.editing {
-		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow}, key.Filter{Focus: focus, Name: key.NameLeftArrow}, key.Filter{Focus: focus, Name: key.NameRightArrow}, key.Filter{Focus: focus, Name: key.NameSpace})
+		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow}, key.Filter{Focus: focus, Name: key.NameLeftArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameRightArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameSpace})
 		if s.fields[s.selected].Control == "shortcut" {
 			filters = append(filters, key.Filter{Focus: focus, Name: key.NameDeleteForward})
 		}
@@ -673,6 +673,17 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		s.completion.update(&s.editor)
 	}
 	for _, ke := range keys {
+		if ke.Modifiers == key.ModCtrl && (ke.Name == key.NameLeftArrow || ke.Name == key.NameRightArrow) {
+			field := s.fields[s.selected]
+			if !s.editing && !s.actionsFocused && (field.Control == "stepper" || field.Control == "stepper-progress") {
+				direction := 10
+				if ke.Name == key.NameLeftArrow {
+					direction = -10
+				}
+				v.adjustSetting(field.Key, direction)
+			}
+			continue
+		}
 		if ke.Name == key.NameDeleteForward && !s.actionsFocused && s.fields[s.selected].Control == "shortcut" {
 			before := v.shortcutSettingText(s, s.fields[s.selected].Key)
 			if v.setShortcutDraft("none") && v.shortcutSettingText(s, s.fields[s.selected].Key) != before {

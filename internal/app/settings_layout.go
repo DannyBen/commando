@@ -49,7 +49,6 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, rowHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
 					control := func(gtx layout.Context) layout.Dimensions {
 						if s.capturing && s.selected == i {
-							paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, textHeight)}.Op())
 							return v.label(gtx, "Press shortcut…", v.appearance.TextSize, v.appearance.Colors.SelectedName, text.Start)
 						}
 						if s.editing && s.selected == i {
@@ -77,8 +76,6 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 							}
 						}
 						if focused {
-							size := image.Pt(gtx.Constraints.Max.X, textHeight)
-							paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: size}.Op())
 							return v.label(gtx, value, v.appearance.TextSize, v.appearance.Colors.SelectedName, text.Start)
 						}
 						return v.label(gtx, value, v.appearance.TextSize, v.appearance.Colors.Filename, text.Start)
@@ -92,7 +89,10 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 						return v.label(gtx, field.Label, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 					}, func(gtx layout.Context) layout.Dimensions {
 						valueControl := func(gtx layout.Context) layout.Dimensions {
-							dims := control(gtx)
+							if focused && !s.editing && field.Control != "toggle" {
+								paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, textHeight)}.Op())
+							}
+							dims := (layout.Inset{Left: 4, Right: 4}).Layout(gtx, control)
 							if field.Control == "stepper-progress" {
 								ratio := (v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number - d.Minimum) / (*d.Maximum - d.Minimum)
 								y := textHeight - gtx.Dp(1)

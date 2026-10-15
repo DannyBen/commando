@@ -932,3 +932,61 @@ func TestCutLightnessSettingsPreviewCancelAndPersistence(t *testing.T) {
 		t.Fatal("cut offset stopped working with Auto color disabled")
 	}
 }
+
+func TestSettingsCtrlArrowsUseLargerNumericSteps(t *testing.T) {
+	for _, tc := range []struct {
+		name, widget, key    string
+		row                  int
+		initial, right, left float64
+	}{
+		{"fractional", "appearance.autocolor", settingLightness, 1, 0.36, 0.46, 0.36},
+		{"unbounded", "appearance.autocolor", settingSalt, 3, 0, 10, 0},
+		{"font size", "appearance.font", settingFontTextSize, 1, 15, 25, 15},
+		{"upper limit", colorPrefix + "background", colorPrefix + "background.lightness", 1, 0.98, 1, 0.9},
+		{"hue wrap", colorPrefix + "background", colorPrefix + "background.hue", 3, 355, 5, 355},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := newPreviewView()
+			_ = v.settingsValues.Set(settings.CatalogueDefault, tc.key, settings.Value{Number: tc.initial})
+			v.startSettingsWidget(tc.widget)
+			s := v.settingsInteraction()
+			s.selected = tc.row
+			send, _ := panelInputFrames(v)
+			send(modified(key.NameRightArrow, key.ModCtrl))
+			if got := v.settingsValues.Get(settings.CatalogueDefault, tc.key).Number; got != tc.right || !s.dirty {
+				t.Fatalf("Ctrl+Right = %g; want %g", got, tc.right)
+			}
+			send(modified(key.NameLeftArrow, key.ModCtrl))
+			if got := v.settingsValues.Get(settings.CatalogueDefault, tc.key).Number; got != tc.left {
+				t.Fatalf("Ctrl+Left = %g; want %g", got, tc.left)
+			}
+		})
+	}
+}
+
+func TestSettingsCtrlArrowsKeepTextEditingAndChoices(t *testing.T) {
+	v := newPreviewView()
+	v.startSettingsWidget(settingThemeCustomize)
+	send, _ := panelInputFrames(v)
+	s := v.settingsInteraction()
+	send(modified(key.NameRightArrow, key.ModCtrl))
+	if v.settingsInteraction() != s || themeElementKey(s) != colorPrefix+"background" || s.dirty {
+		t.Fatal("Ctrl+Right cycled Element")
+	}
+	send(pressed(key.NameDownArrow), pressed(key.NameReturn))
+	text := s.editor.Text()
+	s.editor.SetCaret(len(text), len(text))
+	send()
+	send(modified(key.NameLeftArrow, key.ModCtrl))
+	start, end := s.editor.Selection()
+	if !s.editing || s.editor.Text() != text || start >= len(text) || start != end || s.dirty {
+		t.Fatal("Ctrl+Left did not retain native text editing")
+	}
+	v.finishSettingsWidget(layout.Context{}, false)
+	v.startSettingsWidget("appearance.autocolor")
+	s = v.settingsInteraction()
+	send(modified(key.NameLeftArrow, key.ModCtrl))
+	if s.dirty || !v.settingsValues.Get(settings.CatalogueDefault, settingAutoColorEnabled).Bool {
+		t.Fatal("Ctrl+Left changed a toggle")
+	}
+}
