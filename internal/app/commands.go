@@ -166,6 +166,15 @@ func (c command) effectiveShortcut(slot int) shortcut {
 	return s
 }
 
+func (c command) defaultShortcut(s shortcut) bool {
+	for _, binding := range c.bindings {
+		if binding.Default == s {
+			return true
+		}
+	}
+	return false
+}
+
 // Palette and keyboard execution share actions, never synthetic key events.
 func (v *view) executeCommand(gtx layout.Context, c command) {
 	// Opening and going up finish filename-prefix input even when no directory
@@ -174,6 +183,10 @@ func (v *view) executeCommand(gtx layout.Context, c command) {
 		v.panels[v.active].prefix = ""
 	}
 	if !c.allowed(v) {
+		return
+	}
+	if c.paletteQuery != "" {
+		v.openPaletteQuery(gtx, c.paletteQuery)
 		return
 	}
 	if c.execute != nil {

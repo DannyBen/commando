@@ -3,8 +3,6 @@ package app
 import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"strings"
-	"unicode/utf8"
 )
 
 func (v *view) update(gtx layout.Context) {
@@ -93,18 +91,7 @@ func (v *view) update(gtx layout.Context) {
 			}
 			// Consume the invocation text before moving focus to the editor.
 			// Opening on its key event would send this slash to the new field.
-			if edit.Text == "/" {
-				v.startFilter(gtx)
-				return
-			}
-			if strings.HasPrefix(edit.Text, "@") && v.interaction.idle() {
-				v.startPalette(gtx)
-				if s := v.paletteInteraction(); s != nil {
-					v.commandSearch.SetText(edit.Text)
-					end := utf8.RuneCountInString(edit.Text)
-					v.commandSearch.SetCaret(end, end)
-					s.filter(edit.Text)
-				}
+			if v.dispatchTextShortcut(gtx, edit.Text) {
 				return
 			}
 			v.typeToSelect(edit.Text, gtx.Now)
@@ -150,7 +137,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		v.executeCommand(gtx, command)
 		if command.id == "application.command_palette" {
 			if s := v.paletteInteraction(); s != nil {
-				s.openingBacktick = ke.Name == "`"
+				s.openingBacktick = ke.Name == "`" && ke.Modifiers == 0
 			}
 		}
 		return

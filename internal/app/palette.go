@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
@@ -94,6 +95,23 @@ func (v *view) stopPalette(gtx layout.Context) {
 	}
 }
 
+// The query prefix is palette syntax, independent of the command's bindings.
+func (v *view) openPaletteQuery(gtx layout.Context, query string) {
+	if v.paletteInteraction() == nil {
+		v.startPalette(gtx)
+	}
+	s := v.paletteInteraction()
+	if s == nil {
+		return
+	}
+	v.commandSearch.SetText(query)
+	caret := utf8.RuneCountInString(query)
+	v.commandSearch.SetCaret(caret, caret)
+	s.openingBacktick = false
+	s.filter(query)
+	v.focusInteraction(gtx)
+}
+
 func (v *view) choosePalette(gtx layout.Context) {
 	s := v.paletteInteraction()
 	if s == nil || s.selected < 0 || s.selected >= len(s.results) {
@@ -104,12 +122,7 @@ func (v *view) choosePalette(gtx layout.Context) {
 		return
 	}
 	if command.paletteQuery != "" {
-		v.commandSearch.SetText(command.paletteQuery)
-		caret := utf8.RuneCountInString(command.paletteQuery)
-		v.commandSearch.SetCaret(caret, caret)
-		s.openingBacktick = false
-		s.filter(command.paletteQuery)
-		v.focusInteraction(gtx)
+		v.executeCommand(gtx, command)
 		return
 	}
 	v.stopPalette(gtx)
@@ -168,7 +181,6 @@ func (v *view) updatePalette(gtx layout.Context) {
 			key.Filter{Focus: &v.commandSearch, Name: key.NamePageDown},
 			key.Filter{Focus: &v.commandSearch, Name: key.NameReturn},
 			key.Filter{Focus: &v.commandSearch, Name: key.NameEnter},
-			key.Filter{Focus: &v.commandSearch, Name: "P", Required: key.ModCtrl | key.ModShift},
 			key.Filter{Focus: &v.commandSearch, Name: "E", Required: key.ModCtrl},
 		)
 		if !ok {
@@ -191,9 +203,6 @@ func (v *view) updatePalette(gtx layout.Context) {
 		case key.NameEscape:
 			v.escape(gtx)
 			return
-		case "P":
-			v.stopPalette(gtx)
-			return
 		case key.NameReturn, key.NameEnter:
 			v.choosePalette(gtx)
 			return
@@ -215,5 +224,29 @@ func (v *view) updatePalette(gtx layout.Context) {
 			v.playNavigationSound()
 		}
 		s.reveal = true
+	}
+	// Text editing and fixed palette controls claim their keys first. Remaining
+	// modified palette bindings can close it without stealing native editor keys.
+	var toggles []event.Filter
+	for _, c := range s.commands {
+		if c.id != "application.command_palette" {
+			continue
+		}
+		for slot := range c.bindings {
+			binding := c.effectiveShortcut(slot)
+			if binding.Name != "" && binding.Modifiers != 0 {
+				toggles = append(toggles, key.Filter{Focus: &v.commandSearch, Name: binding.Name, Required: binding.Modifiers})
+			}
+		}
+	}
+	for len(toggles) > 0 {
+		e, ok := gtx.Event(toggles...)
+		if !ok {
+			break
+		}
+		if ke, ok := e.(key.Event); ok && ke.State == key.Press {
+			v.stopPalette(gtx)
+			return
+		}
 	}
 }

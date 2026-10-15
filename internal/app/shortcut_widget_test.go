@@ -163,8 +163,8 @@ func TestShortcutWidgetConflictsAndProtectedSlots(t *testing.T) {
 	send(pressed(key.NameEscape))
 	_, s = openShortcutWidget(t, v, send, "Entry Paste")
 	send(pressed(key.NameDownArrow), pressed(key.NameReturn))
-	if s.capturing || s.errorText != "Shortcut is protected" || v.settingText(s.fields[1].Key) != "Shift+Insert (protected)" {
-		t.Fatal("fixed native alias was editable")
+	if !s.capturing || v.settingText(s.fields[1].Key) != "Shift+Insert" {
+		t.Fatal("native alias was not editable")
 	}
 }
 

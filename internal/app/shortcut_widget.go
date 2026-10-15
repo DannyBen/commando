@@ -2,6 +2,8 @@ package app
 
 import (
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
@@ -15,8 +17,8 @@ func (v *view) canEditShortcuts(c command) bool {
 	}
 	for _, builtin := range commands {
 		if builtin.id == c.id {
-			for slot, binding := range builtin.bindings {
-				if bindingConfigurable(builtin, slot) && !binding.Protected {
+			for _, binding := range builtin.bindings {
+				if !binding.Protected {
 					return true
 				}
 			}
@@ -50,7 +52,7 @@ func (v *view) startShortcutWidget(gtx layout.Context) {
 }
 
 func shortcutFieldEditable(s *settingsSession, slot int) bool {
-	return bindingConfigurable(*s.bindingCommand, slot) && !s.bindingCommand.bindings[slot].Protected
+	return !s.bindingCommand.bindings[slot].Protected
 }
 
 func (v *view) shortcutSettingText(s *settingsSession, field string) string {
@@ -100,6 +102,11 @@ func (v *view) updateShortcutCapture(gtx layout.Context) {
 			if s := v.settingsInteraction(); s == nil || !s.capturing {
 				return
 			}
+		} else if edit, ok := e.(key.EditEvent); ok && utf8.RuneCountInString(edit.Text) == 1 && strings.TrimSpace(edit.Text) != "" {
+			if v.setShortcutDraft(edit.Text) {
+				v.finishShortcutCapture(gtx)
+				return
+			}
 		}
 	}
 }
@@ -108,7 +115,6 @@ func (v *view) captureShortcutKey(gtx layout.Context, ke key.Event) {
 	if ke.State != key.Press {
 		return
 	}
-	s := v.settingsInteraction()
 	v.dismissFeedback()
 	if ke.Name == key.NameEscape && ke.Modifiers == 0 {
 		v.escape(gtx)
@@ -118,15 +124,24 @@ func (v *view) captureShortcutKey(gtx layout.Context, ke key.Event) {
 	case key.NameCtrl, key.NameShift, key.NameAlt, key.NameSuper, key.NameCommand:
 		return
 	}
+	// Printable keys may produce a different symbol through the keyboard layout
+	// (for example Shift+2 produces @). Capture their text rather than the keycode.
+	if len(ke.Name) == 1 && ke.Modifiers&(key.ModCtrl|key.ModAlt|key.ModSuper|key.ModCommand) == 0 {
+		return
+	}
 	name := ke.Name
 	if name == key.NameEnter {
 		name = key.NameReturn
 	}
 	if v.setShortcutDraft((shortcut{Name: name, Modifiers: ke.Modifiers}).String()) {
-		v.setShortcutCapture(s, false)
-		v.playSound(sound.Settings)
-		v.focusInteraction(gtx)
+		v.finishShortcutCapture(gtx)
 	}
+}
+
+func (v *view) finishShortcutCapture(gtx layout.Context) {
+	v.setShortcutCapture(v.settingsInteraction(), false)
+	v.playSound(sound.Settings)
+	v.focusInteraction(gtx)
 }
 
 func (v *view) setShortcutDraft(text string) bool {

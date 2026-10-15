@@ -1,8 +1,11 @@
 package app
 
 import (
+	"strings"
+
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/layout"
 )
 
 func (v *view) browsingKeyFilters() []event.Filter {
@@ -29,6 +32,28 @@ func (v *view) browsingKeyFilters() []event.Filter {
 		}
 	}
 	return filters
+}
+
+func (v *view) dispatchTextShortcut(gtx layout.Context, text string) bool {
+	for _, c := range v.commandCatalogue() {
+		for slot := range c.bindings {
+			trigger := c.effectiveShortcut(slot).textTrigger()
+			if trigger == "" || text != trigger && (c.paletteQuery == "" || !strings.HasPrefix(text, trigger)) {
+				continue
+			}
+			if c.paletteQuery != "" && !v.interaction.idle() {
+				continue
+			}
+			// A palette query command may receive its prefix and initial search
+			// together. The prefix remains @ even when its invocation key changes.
+			v.executeCommand(gtx, c)
+			if c.paletteQuery != "" && v.paletteInteraction() != nil {
+				v.openPaletteQuery(gtx, c.paletteQuery+strings.TrimPrefix(text, trigger))
+			}
+			return true
+		}
+	}
+	return false
 }
 
 func (v *view) updateNativeBindings() {

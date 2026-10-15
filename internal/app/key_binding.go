@@ -14,6 +14,13 @@ type shortcut struct {
 	Modifiers key.Modifiers
 }
 
+func (s shortcut) textTrigger() string {
+	if s.Modifiers == 0 && (s.Name == "/" || s.Name == "@" || s.Name == "`") {
+		return string(s.Name)
+	}
+	return ""
+}
+
 type commandBinding struct {
 	Default   shortcut
 	Protected bool
