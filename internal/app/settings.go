@@ -785,6 +785,7 @@ func (v *view) activateSettingsAction(gtx layout.Context, action int) {
 			}
 		}
 		v.applySettings()
+		v.playSound(sound.Settings)
 		v.focusInteraction(gtx)
 	}
 }

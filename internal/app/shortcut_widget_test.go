@@ -239,4 +239,11 @@ func TestShortcutWidgetSoundsForClearAndCapture(t *testing.T) {
 	if len(recorder.played) != 0 {
 		t.Fatal("key release played a sound")
 	}
+	// Move from Shortcut 1 through Shortcut 2, Save and Cancel to Reset.
+	send(pressed(key.NameTab), pressed(key.NameTab), pressed(key.NameTab), pressed(key.NameTab))
+	recorder.played = nil
+	send(pressed(key.NameReturn))
+	if !slices.Equal(recorder.played, []sound.Name{sound.Settings}) {
+		t.Fatal("Reset did not play one settings cue", recorder.played)
+	}
 }
