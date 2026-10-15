@@ -38,6 +38,9 @@ func loadDocument(data []byte, c Catalogue) (Values, error) {
 	}
 	var result Values
 	err := loadItem(c, "", tree, &result)
+	if c.ValidateOverrides != nil {
+		err = errors.Join(err, c.ValidateOverrides(&result))
+	}
 	return result, err
 }
 

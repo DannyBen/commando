@@ -15,9 +15,19 @@ func Save(dataDir string, v Values) error {
 	return save(dataDir, v, CatalogueDefault)
 }
 
+func (c Catalogue) Save(dataDir string, v Values) error {
+	return save(dataDir, v, c)
+}
+
 func save(dataDir string, v Values, c Catalogue) error {
 	if dataDir == "" {
 		return fmt.Errorf("data folder is empty")
+	}
+	if c.ValidateOverrides != nil {
+		validated := v.Clone()
+		if err := c.ValidateOverrides(&validated); err != nil {
+			return err
+		}
 	}
 	var data bytes.Buffer
 	encoder := toml.NewEncoder(&data)

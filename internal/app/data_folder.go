@@ -70,7 +70,7 @@ func (s *dataFolderStore) save(values settings.Values, state sessionState) (stri
 			return "", err
 		}
 	}
-	if err := settings.Save(s.active, values); err != nil {
+	if err := bindingSettingsCatalogue().Save(s.active, values); err != nil {
 		return "", err
 	}
 	if samePath(target, s.chosen) {

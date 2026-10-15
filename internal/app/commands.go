@@ -15,6 +15,7 @@ type command struct {
 	group        string
 	name         string
 	bindings     [2]commandBinding
+	overrides    [2]bindingOverride
 	available    func(*view) bool
 	execute      func(*view) // Workspace actions can run without a keyboard binding.
 	paletteQuery string      // Replace the search text while retaining the palette session.
@@ -25,7 +26,7 @@ type command struct {
 func (v *view) commandCatalogue() []command {
 	catalogue := make([]command, 0, len(commands)+len(v.panels))
 	for i, c := range commands {
-		catalogue = append(catalogue, c)
+		catalogue = append(catalogue, v.resolveCommandBindings(c))
 		if c.group == "Panel" && (i == len(commands)-1 || commands[i+1].group != "Panel") {
 			for index := range v.panels {
 				number := strconv.Itoa(index + 1)
@@ -140,8 +141,8 @@ func (c command) allowed(v *view) bool { return c.available == nil || c.availabl
 
 func (c command) shortcut() string {
 	var labels []string
-	for _, binding := range c.bindings {
-		if label := binding.Default.String(); label != "" {
+	for slot := range c.bindings {
+		if label := c.effectiveShortcut(slot).String(); label != "" {
 			labels = append(labels, label)
 		}
 	}
@@ -149,12 +150,20 @@ func (c command) shortcut() string {
 }
 
 func (c command) matches(e key.Event) bool {
-	for _, binding := range c.bindings {
-		if binding.Default.matches(e) {
+	for slot := range c.bindings {
+		if c.effectiveShortcut(slot).matches(e) {
 			return true
 		}
 	}
 	return false
+}
+
+func (c command) effectiveShortcut(slot int) shortcut {
+	s, err := c.bindings[slot].resolve(c.overrides[slot])
+	if err != nil {
+		return c.bindings[slot].Default
+	}
+	return s
 }
 
 // Palette and keyboard execution share actions, never synthetic key events.

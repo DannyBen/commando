@@ -2,6 +2,7 @@ package app
 
 import (
 	"sync"
+	"unicode"
 
 	"gioui.org/io/key"
 )
@@ -16,6 +17,27 @@ type nativeKeyInput struct {
 	events     []key.Event
 	invalidate func()
 	interacted bool
+	altText    map[rune]bool
+}
+
+func (q *nativeKeyInput) setAltText(names []rune) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.altText = make(map[rune]bool, len(names))
+	for _, name := range names {
+		q.altText[unicode.ToLower(name)] = true
+	}
+}
+
+// Gio receives the key event. Its extra Windows system-character message must
+// not reach the default menu handler and ring a bell for an assigned shortcut.
+func (q *nativeKeyInput) suppressesAltText(name rune) bool {
+	if q == nil {
+		return false
+	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.altText[unicode.ToLower(name)]
 }
 
 func (q *nativeKeyInput) noticeInteraction() {

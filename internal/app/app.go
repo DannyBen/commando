@@ -49,7 +49,7 @@ func Run() error {
 	if folderErr != nil {
 		store.chosen = "" // Saving a choice can repair an unreadable startup pointer.
 	}
-	settingsValues, settingsErr := settings.LoadAndRepair(dataDir, settings.CatalogueDefault)
+	settingsValues, settingsErr := settings.LoadAndRepair(dataDir, bindingSettingsCatalogue())
 	if settingsErr != nil {
 		fmt.Fprintln(os.Stderr, "settings:", settingsErr)
 	}
@@ -108,6 +108,7 @@ func Run() error {
 		}
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		v.nativeKeys = keys
+		v.updateNativeBindings()
 		v.shellExecutor = native.shellExecutor(w)
 		v.shellTrace = shellTrace
 		sounds := sound.NewPlayer()

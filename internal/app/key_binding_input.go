@@ -1,0 +1,48 @@
+package app
+
+import (
+	"gioui.org/io/event"
+	"gioui.org/io/key"
+)
+
+func (v *view) browsingKeyFilters() []event.Filter {
+	filters := []event.Filter{
+		key.FocusFilter{Target: &v.focus},
+		// Retain Tab in the ordered event stream and leave picker confirmation
+		// independent of configurable browsing commands.
+		key.Filter{Name: key.NameTab, Optional: key.ModShift},
+		key.Filter{Focus: &v.focus, Name: key.NameReturn, Optional: key.ModCtrl},
+		key.Filter{Focus: &v.focus, Name: key.NameEnter, Optional: key.ModCtrl},
+		key.Filter{Focus: &v.focus, Name: key.NameUpArrow, Optional: key.ModShift},
+		key.Filter{Focus: &v.focus, Name: key.NameDownArrow, Optional: key.ModShift},
+	}
+	for _, c := range v.commandCatalogue() {
+		for slot := range c.bindings {
+			s := c.effectiveShortcut(slot)
+			if s.Name == "" || s.Modifiers == 0 && (s.Name == "/" || s.Name == "@") {
+				continue // These existing triggers enter through text events.
+			}
+			filters = append(filters, key.Filter{Focus: &v.focus, Name: s.Name, Required: s.Modifiers})
+			if s.Name == key.NameReturn {
+				filters = append(filters, key.Filter{Focus: &v.focus, Name: key.NameEnter, Required: s.Modifiers})
+			}
+		}
+	}
+	return filters
+}
+
+func (v *view) updateNativeBindings() {
+	if v.nativeKeys == nil {
+		return
+	}
+	var names []rune
+	for _, c := range v.commandCatalogue() {
+		for slot := range c.bindings {
+			s := c.effectiveShortcut(slot)
+			if name := []rune(s.Name); s.Modifiers&key.ModAlt != 0 && len(name) == 1 {
+				names = append(names, name[0])
+			}
+		}
+	}
+	v.nativeKeys.setAltText(names)
+}

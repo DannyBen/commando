@@ -76,6 +76,10 @@ func (s shortcut) String() string {
 		name = "Left"
 	case key.NameRightArrow:
 		name = "Right"
+	case key.NameUpArrow:
+		name = "Up"
+	case key.NameDownArrow:
+		name = "Down"
 	case key.NameHome:
 		name = "Home"
 	case key.NameEnd:
@@ -92,6 +96,8 @@ func (s shortcut) String() string {
 		name = "Esc"
 	case contextMenuKey:
 		name = "Menu"
+	case "+":
+		name = "Plus"
 	}
 	var parts []string
 	for _, modifier := range []struct {

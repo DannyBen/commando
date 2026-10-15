@@ -232,6 +232,11 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 	}
 	// Gio already receives the key event for Alt+D. Its extra system-character
 	// message otherwise reaches the default Windows menu handler and rings a bell.
+	if message == wmSysChar && lParam&(1<<29) != 0 {
+		if native, ok := nativeWindows.Load(hwnd); ok && native.(*nativeWindow).keys.suppressesAltText(rune(wParam)) {
+			return 0
+		}
+	}
 	if message == wmSysChar && (wParam == '/' || wParam == 'd' || wParam == 'D' || wParam >= '1' && wParam <= '9') && lParam&(1<<29) != 0 {
 		return 0
 	}

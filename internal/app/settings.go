@@ -278,6 +278,7 @@ func (v *view) adjustSetting(key string, direction int) {
 	}
 }
 func (v *view) applySettings() {
+	v.updateNativeBindings()
 	c := settings.CatalogueDefault
 	v.applyFontSettings()
 	rows, bands, location := v.appearance.RowPaddingVertical, v.appearance.HeaderFooterPaddingVertical, v.appearance.LocationPaddingVertical

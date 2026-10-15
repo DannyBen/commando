@@ -32,13 +32,14 @@ type Value struct {
 }
 
 type Definition struct {
-	Key     string
-	Kind    Kind
-	Default Value
-	Minimum float64
-	Maximum *float64 // nil means unbounded.
-	Step    float64
-	Integer bool
+	Key      string
+	Kind     Kind
+	Default  Value
+	Minimum  float64
+	Maximum  *float64 // nil means unbounded.
+	Step     float64
+	Integer  bool
+	Validate func(Value) error
 }
 
 type Group struct{ Key, Parent, Label string }
@@ -69,6 +70,9 @@ type Catalogue struct {
 	Collections []string
 	Settings    []Definition
 	UI          Presentation
+	// ValidateOverrides checks related values after loading all fields. It may
+	// remove invalid overrides so recovery can preserve unrelated settings.
+	ValidateOverrides func(*Values) error
 }
 
 func (c Catalogue) Definition(key string) (Definition, bool) {
@@ -111,6 +115,11 @@ func (v *Values) Set(c Catalogue, key string, value Value) error {
 		// Keep integer step increments exact in the numeric value store.
 		if math.Abs(value.Number) > 1<<53-1 {
 			return fmt.Errorf("%w: %s", ErrRange, key)
+		}
+	}
+	if d.Validate != nil {
+		if err := d.Validate(value); err != nil {
+			return fmt.Errorf("%w: %s: %v", ErrValue, key, err)
 		}
 	}
 	if v.overrides == nil {

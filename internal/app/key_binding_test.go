@@ -74,3 +74,23 @@ func TestShortcutMatchingUsesExactModifiersAndPresses(t *testing.T) {
 		t.Fatal("unassigned shortcut matched an event")
 	}
 }
+
+func TestBindingOverrideParsingAndRoundTrip(t *testing.T) {
+	for _, text := range []string{"Ctrl+Y", "Ctrl+Shift+Y", "F12", "Ctrl+Plus", "Alt+Right", "Shift+Insert", "Menu", "Ctrl+Enter", "Ctrl+Space", "Super+Q"} {
+		override, err := parseBindingOverride(text)
+		if err != nil || override.Mode != bindingAssigned || override.Shortcut.String() != text {
+			t.Fatalf("%q did not round-trip: %+v, %v", text, override, err)
+		}
+	}
+	for _, text := range []string{"Ctrl", "Ctrl+", "Ctrl+Ctrl+Y", "Bogus+Y", "F13", "F01", "Enter+Y", "Ctrl+Unknown"} {
+		if _, err := parseBindingOverride(text); err == nil {
+			t.Fatalf("invalid shortcut %q accepted", text)
+		}
+	}
+	if override, err := parseBindingOverride(""); err != nil || override.Mode != bindingInherited {
+		t.Fatal("missing value did not inherit", err)
+	}
+	if override, err := parseBindingOverride("none"); err != nil || override.Mode != bindingUnassigned {
+		t.Fatal("none did not unassign", err)
+	}
+}
