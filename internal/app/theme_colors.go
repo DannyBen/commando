@@ -28,10 +28,14 @@ func themeColorsFromSettings(values settings.Values) ThemeColors {
 }
 
 func themeColorValue(values settings.Values, prefix string) color.NRGBA {
+	return themeColorCoordinates(values, prefix).oklch().rgb()
+}
+
+func themeColorCoordinates(values settings.Values, prefix string) lshColor {
 	n := func(component string) float64 {
 		return values.Get(settings.CatalogueDefault, prefix+"."+component).Number
 	}
-	return lshColor{n("lightness"), n("saturation"), n("hue")}.oklch().rgb()
+	return lshColor{n("lightness"), n("saturation"), n("hue")}
 }
 
 func (v *view) settingSwatch(key string) (color.NRGBA, bool) {
@@ -40,4 +44,14 @@ func (v *view) settingSwatch(key string) (color.NRGBA, bool) {
 		return color.NRGBA{}, false
 	}
 	return themeColorValue(v.settingsValues, prefix), true
+}
+
+// Preserve LSH coordinates directly, including hue/saturation on achromatic
+// colors. Sampling rendered RGB here would lose those editable coordinates.
+func themePalette(values settings.Values) map[string]lshColor {
+	result := make(map[string]lshColor)
+	for _, spec := range themeElements() {
+		result[strings.TrimPrefix(spec.Key, themeSettingPrefix)] = themeColorCoordinates(values, spec.Key)
+	}
+	return result
 }

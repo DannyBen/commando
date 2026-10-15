@@ -124,8 +124,8 @@ func TestThemeRecipeRepeatableVariedAndReadable(t *testing.T) {
 	for _, mode := range []string{"Dark", "Midtone", "Light"} {
 		for i, bg := range steps {
 			fg := steps[(i+5)%len(steps)]
-			colors := r.generate(mode, bg, fg, 50)
-			if !reflect.DeepEqual(colors, r.generate(mode, bg, fg, 50)) {
+			colors := r.generate(mode, bg, fg, 50, nil)
+			if !reflect.DeepEqual(colors, r.generate(mode, bg, fg, 50, nil)) {
 				t.Fatal("same inputs produced different palettes")
 			}
 			for name, c := range colors {
@@ -148,16 +148,16 @@ func TestThemeRecipeRepeatableVariedAndReadable(t *testing.T) {
 				}
 			}
 		}
-		tame, wild := r.generate(mode, 1, 1, 50), r.generate(mode, 600, 600, 50)
+		tame, wild := r.generate(mode, 1, 1, 50, nil), r.generate(mode, 600, 600, 50, nil)
 		if reflect.DeepEqual(tame, wild) {
 			t.Fatal("distant inputs generated the same palette")
 		}
 		// Foreground changes retain the background family; variations are reversible.
-		if tame["background"] != r.generate(mode, 1, 400, 50)["background"] {
+		if tame["background"] != r.generate(mode, 1, 400, 50, nil)["background"] {
 			t.Fatal("foreground control changed the background")
 		}
 		// Early steps should feel related rather than redraw the palette.
-		next := r.generate(mode, 2, 2, 50)
+		next := r.generate(mode, 2, 2, 50, nil)
 		for _, role := range []string{"background", "alt_background", "edge", "selection"} {
 			a, b := tame[role], next[role]
 			if math.Abs(a.l-b.l) > 0.02 || math.Abs(lshFromOKLCH(a).s-lshFromOKLCH(b).s) > 15 || math.Min(wrapHue(a.h-b.h), wrapHue(b.h-a.h)) > 30 {
@@ -173,7 +173,7 @@ func TestThemeRecipeRejectsBrokenDefinitions(t *testing.T) {
 		strings.Replace(themeGeneratorTOML, "period = 31.0", "period = 0.0", 1),
 		strings.Replace(themeGeneratorTOML, "base = \"background\"", "base = \"unknown\"", 1),
 		strings.Replace(themeGeneratorTOML, "saturation_wave = 10.5", "saturation_wav = 10.5", 1),
-		strings.Replace(themeGeneratorTOML, "name = \"warning\"", "name = \"info\"", 1),
+		strings.Replace(themeGeneratorTOML, "[colors.warning]", "[colors.info]", 1),
 	} {
 		if _, err := parseThemeRecipe(source); err == nil {
 			t.Fatal("accepted invalid recipe")
@@ -205,7 +205,7 @@ func TestThemeGeneratorRespondsEarlyAndExploresLightness(t *testing.T) {
 		return math.Abs(float64(a.R)-float64(b.R)) + math.Abs(float64(a.G)-float64(b.G)) + math.Abs(float64(a.B)-float64(b.B))
 	}
 	for _, mode := range []string{"Dark", "Midtone", "Light"} {
-		first := defaultThemeRecipe.generate(mode, 1, 1, 50)
+		first := defaultThemeRecipe.generate(mode, 1, 1, 50, nil)
 		for _, control := range []string{"background", "foreground"} {
 			bg, fg := 1.0, 1.0
 			roles := []string{"background", "alt_background", "border"}
@@ -215,7 +215,7 @@ func TestThemeGeneratorRespondsEarlyAndExploresLightness(t *testing.T) {
 				fg = 2
 				roles = []string{"edge", "selection", "text_selection"}
 			}
-			next := defaultThemeRecipe.generate(mode, bg, fg, 50)
+			next := defaultThemeRecipe.generate(mode, bg, fg, 50, nil)
 			change := 0.0
 			for _, role := range roles {
 				change += distance(first[role].rgb(), next[role].rgb())
@@ -229,7 +229,7 @@ func TestThemeGeneratorRespondsEarlyAndExploresLightness(t *testing.T) {
 		}
 		low, high := 1.0, 0.0
 		for n := 1.0; n <= 720; n += 23 {
-			l := defaultThemeRecipe.generate(mode, n, 1, 50)["background"].l
+			l := defaultThemeRecipe.generate(mode, n, 1, 50, nil)["background"].l
 			low, high = min(low, l), max(high, l)
 		}
 		if high-low < 0.12 {
@@ -242,8 +242,8 @@ func TestThemeColorfulnessAndForegroundVariation(t *testing.T) {
 	roles := []string{"border", "edge", "error", "info", "success", "warning"}
 	for _, mode := range []string{"Dark", "Midtone", "Light"} {
 		for _, n := range []float64{1, 17, 70, 340, 719} {
-			muted := defaultThemeRecipe.generate(mode, n, n, 20)
-			vivid := defaultThemeRecipe.generate(mode, n, n, 100)
+			muted := defaultThemeRecipe.generate(mode, n, n, 20, nil)
+			vivid := defaultThemeRecipe.generate(mode, n, n, 100, nil)
 			low, high := 0.0, 0.0
 			for _, role := range roles {
 				low += oklchFromRGB(muted[role].rgb()).c
@@ -252,7 +252,7 @@ func TestThemeColorfulnessAndForegroundVariation(t *testing.T) {
 			if high < low*1.2 {
 				t.Fatalf("%s/%g: Colorfulness failed to increase displayed chroma: %.3f to %.3f", mode, n, low, high)
 			}
-			gray := defaultThemeRecipe.generate(mode, n, n, 0)
+			gray := defaultThemeRecipe.generate(mode, n, n, 0, nil)
 			for role, value := range gray {
 				rgb := value.rgb()
 				if rgb.R != rgb.G || rgb.G != rgb.B {
@@ -272,8 +272,8 @@ func TestThemeColorfulnessAndForegroundVariation(t *testing.T) {
 				}
 			}
 		}
-		first := defaultThemeRecipe.generate(mode, 1, 1, 50)
-		next := defaultThemeRecipe.generate(mode, 1, 2, 50)
+		first := defaultThemeRecipe.generate(mode, 1, 1, 50, nil)
+		next := defaultThemeRecipe.generate(mode, 1, 2, 50, nil)
 		if first["border"].rgb() == next["border"].rgb() {
 			t.Fatal("Foreground did not change the border")
 		}
