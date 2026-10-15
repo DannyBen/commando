@@ -64,6 +64,9 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 						if field.Control == "toggle" {
 							return v.settingsBoolean(gtx, v.widgetValues().Get(settings.CatalogueDefault, field.Key).Bool, focused, textHeight)
 						}
+						if field.Control == "choice" {
+							return v.settingsChoices(gtx, d.Choices, v.settingText(field.Key), focused, textHeight)
+						}
 						value := v.settingText(field.Key)
 						if value == "" {
 							switch field.Control {
@@ -89,7 +92,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 						return v.label(gtx, field.Label, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 					}, func(gtx layout.Context) layout.Dimensions {
 						valueControl := func(gtx layout.Context) layout.Dimensions {
-							if focused && !s.editing && field.Control != "toggle" {
+							if focused && !s.editing && field.Control != "toggle" && field.Control != "choice" {
 								paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, textHeight)}.Op())
 							}
 							dims := (layout.Inset{Left: 4, Right: 4}).Layout(gtx, control)
@@ -148,6 +151,9 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				}
 				if field.Control == "toggle" {
 					hint = "←/→ Choose · Enter Toggle · Ctrl+Enter Save"
+				}
+				if field.Control == "choice" {
+					hint = "←/→ Choose · Enter Cycle · Ctrl+Enter Save"
 				}
 				if field.IsPath() {
 					hint = "←/→ Choose folder · Enter Type · Ctrl+Enter Save"
@@ -218,14 +224,24 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 func (v *view) settingsBoolean(gtx layout.Context, enabled, focused bool, height int) layout.Dimensions {
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.settingsBooleanChoice(gtx, " ON ", enabled, focused, height)
+			return v.settingsChoice(gtx, " ON ", enabled, focused, height)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.settingsBooleanChoice(gtx, " OFF ", !enabled, focused, height)
+			return v.settingsChoice(gtx, " OFF ", !enabled, focused, height)
 		}),
 	)
 }
-func (v *view) settingsBooleanChoice(gtx layout.Context, label string, selected, focused bool, height int) layout.Dimensions {
+func (v *view) settingsChoices(gtx layout.Context, choices []string, value string, focused bool, height int) layout.Dimensions {
+	children := make([]layout.FlexChild, 0, len(choices))
+	for _, choice := range choices {
+		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return v.settingsChoice(gtx, " "+choice+" ", choice == value, focused, height)
+		}))
+	}
+	return layout.Flex{Alignment: layout.Middle}.Layout(gtx, children...)
+}
+
+func (v *view) settingsChoice(gtx layout.Context, label string, selected, focused bool, height int) layout.Dimensions {
 	width := v.textWidth(gtx, label, v.appearance.TextSize)
 	fg := v.appearance.Colors.Filename
 	if focused {

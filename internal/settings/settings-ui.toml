@@ -96,6 +96,38 @@ step = 0.01
 [appearance.theme]
 label = "Theme"
 
+[appearance.theme.generator]
+label = "Generator"
+title = "Generator"
+preview = "notifications"
+
+[appearance.theme.generator.mode]
+label = "Mode"
+control = "choice"
+choices = ["Dark", "Midtone", "Light"]
+
+[appearance.theme.generator.background]
+label = "Background variation"
+control = "stepper"
+min = 1.0
+step = 1.0
+integer = true
+
+[appearance.theme.generator.foreground]
+label = "Foreground variation"
+control = "stepper"
+min = 1.0
+step = 1.0
+integer = true
+
+[appearance.theme.generator.colorfulness]
+label = "Colorfulness"
+control = "stepper-progress"
+min = 0.0
+max = 100.0
+step = 1.0
+integer = true
+
 [appearance.theme.background]
 label = "Background"
 title = "Background"

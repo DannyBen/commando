@@ -22,11 +22,15 @@ const (
 func themeElements() []settings.Widget {
 	var elements []settings.Widget
 	for _, spec := range settings.CatalogueDefault.UI.Widgets {
-		if strings.HasPrefix(spec.Key, themeSettingPrefix) {
+		if isThemeColorWidget(spec.Key) {
 			elements = append(elements, spec)
 		}
 	}
 	return elements
+}
+
+func isThemeColorWidget(key string) bool {
+	return strings.HasPrefix(key, themeSettingPrefix) && key != settingThemeGenerator
 }
 
 func themeElementNames() []string {

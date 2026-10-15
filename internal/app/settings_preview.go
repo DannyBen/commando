@@ -24,6 +24,13 @@ func (v *view) settingsPreviewItems(kind string) previewSamples {
 		return previewSamples{{label: label, foreground: fg, background: bg}}
 	}
 	switch kind {
+	case "notifications":
+		return previewSamples{
+			{"Info", c.Info, c.Footer, color.NRGBA{}},
+			{"Success", c.Success, c.Footer, color.NRGBA{}},
+			{"Warning", c.Warning, c.Footer, color.NRGBA{}},
+			{"Error", c.Error, c.Footer, color.NRGBA{}},
+		}
 	case "edge":
 		return previewSamples{{"Accent mark", c.Foreground, c.Surface, c.Edge}}
 	case "secondary":

@@ -94,7 +94,7 @@ func (v *view) settingsCatalogue() []command {
 			continue
 		}
 		key := widget.Key
-		if strings.HasPrefix(key, themeSettingPrefix) {
+		if isThemeColorWidget(key) {
 			if themeAdded {
 				continue
 			}
@@ -220,7 +220,7 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 			s.fields = append(s.fields, field)
 		}
 	}
-	if strings.HasPrefix(group, themeSettingPrefix) {
+	if isThemeColorWidget(group) {
 		s.title = "Appearance › Theme › Customize"
 		s.fields = append([]settings.Field{{Key: settingThemeElement, Label: "Element", Control: "input"}}, s.fields...)
 		s.completion.candidates = themeElementNames()
@@ -290,13 +290,24 @@ func (v *view) adjustSetting(key string, direction int) {
 			break
 		}
 	}
-	if control != "toggle" && control != "stepper" && control != "stepper-progress" {
+	if control != "toggle" && control != "choice" && control != "stepper" && control != "stepper-progress" {
 		return
 	}
 
 	value := v.widgetValues().Get(c, key)
 	before := value
 	switch d.Kind {
+	case settings.String:
+		if len(d.Choices) == 0 {
+			return
+		}
+		index := slices.Index(d.Choices, value.Text)
+		if direction == 0 {
+			index = (index + 1) % len(d.Choices)
+		} else {
+			index = max(0, min(len(d.Choices)-1, index+direction))
+		}
+		value.Text = d.Choices[index]
 	case settings.Boolean:
 		if direction == 0 {
 			value.Bool = !value.Bool
@@ -315,6 +326,9 @@ func (v *view) adjustSetting(key string, direction int) {
 			}
 		}
 	default:
+		return
+	}
+	if strings.HasPrefix(key, settingThemeGenerator+".") && value == before {
 		return
 	}
 	if v.setWidgetValue(key, value) == nil {
@@ -382,7 +396,7 @@ func (v *view) beginSettingEdit(gtx layout.Context) {
 		v.beginShortcutCapture(gtx)
 		return
 	}
-	if field.Control == "toggle" {
+	if field.Control == "toggle" || field.Control == "choice" {
 		v.adjustSetting(field.Key, 0)
 		return
 	}
@@ -821,7 +835,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		case key.NameRightArrow:
 			v.adjustSetting(s.fields[s.selected].Key, 1)
 		case key.NameSpace:
-			if field.Control == "toggle" {
+			if field.Control == "toggle" || field.Control == "choice" {
 				v.adjustSetting(s.fields[s.selected].Key, 0)
 			}
 		}
@@ -878,6 +892,10 @@ func (v *view) activateSettingsAction(gtx layout.Context, action int) {
 				s.dirty = true
 			}
 			v.widgetValues().Reset(field.Key)
+		}
+		if s.fields[0].Widget == settingThemeGenerator {
+			v.generateTheme()
+			s.dirty = true
 		}
 		if s.bindingCommand != nil {
 			if conflict := findBindingConflict(s.draft); conflict != nil {
@@ -941,6 +959,12 @@ func (v *view) setWidgetValue(key string, value settings.Value) error {
 	before, explicit := values.Get(c, key), values.Overridden(key)
 	if err := values.Set(c, key, value); err != nil {
 		return err
+	}
+	if strings.HasPrefix(key, settingThemeGenerator+".") {
+		v.generateTheme()
+		if s := v.settingsInteraction(); s != nil {
+			s.dirty = true
+		}
 	}
 	if s := v.settingsInteraction(); s != nil && (before != values.Get(c, key) || !explicit) {
 		s.dirty = true

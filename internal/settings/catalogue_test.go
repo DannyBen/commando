@@ -250,3 +250,31 @@ func TestNestedOverridesCloneAndReset(t *testing.T) {
 		t.Fatal("reset left empty tables")
 	}
 }
+
+func TestStringChoiceValidation(t *testing.T) {
+	defaults := "[theme]\nmode = \"Dark\"\n"
+	ui := "[theme]\nlabel = \"Theme\"\ntitle = \"Theme\"\n[theme.mode]\nlabel = \"Mode\"\ncontrol = \"choice\"\nchoices = [\"Dark\", \"Midtone\", \"Light\"]\n"
+	c, err := ParseCatalogue(defaults, ui)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var values Values
+	if err := values.Set(c, "theme.mode", Value{Text: "Light"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := values.Set(c, "theme.mode", Value{Text: "Other"}); !errors.Is(err, ErrValue) {
+		t.Fatal("accepted unknown choice", err)
+	}
+	for _, invalid := range []string{
+		strings.Replace(ui, `choices = ["Dark", "Midtone", "Light"]`, `choices = []`, 1),
+		strings.Replace(ui, `"Midtone"`, `"Dark"`, 1),
+		strings.Replace(ui, `"Midtone"`, `""`, 1),
+	} {
+		if _, err := ParseCatalogue(defaults, invalid); err == nil {
+			t.Fatal("accepted invalid choices")
+		}
+	}
+	if _, err := ParseCatalogue(strings.Replace(defaults, "Dark", "Other", 1), ui); err == nil {
+		t.Fatal("accepted default outside choices")
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 )
 
@@ -39,6 +40,7 @@ type Definition struct {
 	Maximum  *float64 // nil means unbounded.
 	Step     float64
 	Integer  bool
+	Choices  []string
 	Validate func(Value) error
 }
 
@@ -130,6 +132,9 @@ func (v *Values) Set(c Catalogue, key string, value Value) error {
 		if err := d.Validate(value); err != nil {
 			return fmt.Errorf("%w: %s: %v", ErrValue, key, err)
 		}
+	}
+	if len(d.Choices) > 0 && !slices.Contains(d.Choices, value.Text) {
+		return fmt.Errorf("%w: %s", ErrValue, key)
 	}
 	if v.overrides == nil {
 		v.overrides = make(map[string]any)

@@ -1,4 +1,10 @@
 # Embedded defaults. User settings.toml contains explicit value overrides only.
+[appearance.theme.generator]
+mode = "Light"
+background = 1.0
+foreground = 1.0
+colorfulness = 50.0
+
 [appearance.theme.background]
 lightness = 1.0
 chroma = 0.0
