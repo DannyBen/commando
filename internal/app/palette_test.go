@@ -18,6 +18,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
 )
 
@@ -61,6 +62,9 @@ func TestPaletteOpensActiveDataFolderInOriginatingPanel(t *testing.T) {
 	waitLoaded(t, v, 1)
 	if v.panels[1].path != data || v.panels[0].path != left || v.active != 1 || !v.interaction.idle() || !router.Source().Focused(&v.focus) {
 		t.Fatal("data-folder command lost its active folder, panel context or browsing focus")
+	}
+	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Info || message.Text != "Data folder" {
+		t.Fatal("data-folder command did not identify the folder through Info feedback")
 	}
 }
 

@@ -210,6 +210,8 @@ func (v *view) acceptLoad(result loadResult) {
 	}
 	if result.pathMissing {
 		v.showFeedback(result.request.panel, feedback.Warning, "Path not found")
+	} else if result.request.successMessage != "" {
+		v.showFeedback(result.request.panel, feedback.Info, result.request.successMessage)
 	}
 }
 

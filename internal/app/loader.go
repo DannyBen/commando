@@ -13,6 +13,7 @@ import (
 type loadRequest struct {
 	panel            int
 	path, selectName string
+	successMessage   string
 	refresh          bool
 	autoRefresh      bool
 	shortcut         bool // Resolve a .lnk before deciding between folder navigation and native opening.

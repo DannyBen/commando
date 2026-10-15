@@ -103,7 +103,9 @@ func defaultCommands() []command {
 			available: func(v *view) bool {
 				return v.activeDataFolder != "" && v.loader != nil && v.canOfferInteraction(v.active, actionBrowse)
 			},
-			execute: func(v *view) { v.load(v.active, v.activeDataFolder, "") }},
+			execute: func(v *view) {
+				v.queueLoad(loadRequest{panel: v.active, path: v.activeDataFolder, successMessage: "Data folder"})
+			}},
 		{id: "application.settings", group: "Application", name: "Settings", bindings: [2]commandBinding{{Default: shortcut{Name: "@"}}}, paletteQuery: "@"},
 	}
 	for i := range catalogue {
