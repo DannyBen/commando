@@ -192,196 +192,48 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	if v.interactionKey(gtx, ke) {
 		return
 	}
-	p := &v.panels[v.active]
-	next := p.selected
-	page := max(1, p.list.Position.Count-1)
-	switch ke.Name {
-	case contextMenuKey:
-		if ke.Modifiers == 0 {
-			v.startContextMenu(gtx, v.active, p.selected, false)
+	for _, command := range v.commandCatalogue() {
+		if !command.matches(ke) {
+			continue
 		}
-		return
-	case "/":
-		if ke.Modifiers == key.ModAlt {
-			v.startContextMenu(gtx, v.active, p.selected, false)
-		} else if ke.Modifiers == 0 {
-			v.startFilter(gtx)
+		// Space remains a marking gesture on non-markable rows too; its text
+		// event must not start a filename prefix when the action is unavailable.
+		if command.id == "selection.toggle_mark" && v.panels[v.active].prefix == "" {
+			v.suppressSpaceText = true
 		}
-		return
-	case "`", "P":
-		if ke.Name == "`" && ke.Modifiers == 0 || ke.Name == "P" && ke.Modifiers == key.ModCtrl|key.ModShift {
-			v.startPalette(gtx)
+		v.executeCommand(gtx, command)
+		if command.id == "application.command_palette" {
 			if s := v.paletteInteraction(); s != nil {
 				s.openingBacktick = ke.Name == "`"
 			}
 		}
 		return
-	case "C", "X", "V":
-		if ke.Name == "C" && ke.Modifiers == key.ModCtrl|key.ModShift {
-			v.copySelectedPaths(gtx)
-		} else if ke.Modifiers == key.ModCtrl {
-			if ke.Name == "V" {
-				v.pasteFiles()
-			} else {
-				v.clipboardSelected(ke.Name == "X")
-			}
-		}
-		return
-	case key.NameF4:
-		if ke.Modifiers == 0 {
-			v.editSelectedFiles()
-		}
-		return
-	case key.NameF2:
-		v.startName(gtx, nameRename)
-		return
-	case key.NameF3:
-		if ke.Modifiers == key.ModCtrl {
-			v.toggleMetadataSort()
-		}
-		return
-	case key.NameF5, key.NameF6:
-		if ke.Modifiers == 0 {
-			v.startPanelTransfer(ke.Name == key.NameF6)
-		}
-		return
-	case key.NameDeleteForward:
-		if ke.Modifiers == 0 {
-			v.recycleSelected()
-		}
-		return
-	case key.NameTab:
-		direction := 1
-		if ke.Modifiers&key.ModShift != 0 {
-			direction = -1
-		}
-		v.switchPanelTo(v.panelNeighbor(direction, true, -1))
-		return
-	case "M":
-		direction := 1
-		if ke.Modifiers&key.ModShift != 0 {
-			direction = -1
-		}
-		p.metadata = p.metadata.cycle(direction)
-		if p.sortByMetadata && !p.loading && v.interaction.idle() {
-			p.resort()
-		}
-		return
-	case "W":
-		if ke.Modifiers == key.ModCtrl {
-			v.closePanel()
-		}
-		if ke.Modifiers == key.ModCtrl|key.ModShift {
-			v.reopenPanel()
-		}
-		return
-	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
-		if ke.Modifiers == key.ModAlt {
-			index := int(ke.Name[0] - '1')
-			if index < len(v.panels) {
-				v.switchPanelTo(index)
-			}
-		}
-		return
-	case "D":
-		if ke.Modifiers == key.ModCtrl|key.ModShift {
-			v.startDrag(gtx, v.active, p.selected, true)
-		} else if ke.Modifiers == key.ModCtrl {
-			v.duplicateSelected()
-		} else if ke.Modifiers == key.ModAlt {
-			v.startLocation(gtx)
-		}
-		return
-	case "R":
-		v.refreshPanel()
-		return
-	case "H":
-		if ke.Modifiers == key.ModCtrl {
-			v.cycleVisibility()
-		}
-		return
-	case "N":
-		kind := nameCreateFile
-		if ke.Modifiers&key.ModShift != 0 {
-			kind = nameCreateFolder
-		}
-		v.startName(gtx, kind)
-		return
-	case key.NameEscape:
-		v.escape(gtx)
-		return
-	case "A":
-		p.prefix = ""
-		p.markAll()
-		return
-	case key.NameSpace:
-		if p.prefix == "" {
-			p.toggleMark(p.selected)
-			v.suppressSpaceText = true
-		}
-		return
-	case insertKey:
-		if ke.Modifiers == key.ModShift {
-			v.pasteFiles()
-			return
-		}
-		if ke.Modifiers != 0 || p.loading {
-			return
-		}
-		p.toggleMark(p.selected)
-		next++
-	case key.NameLeftArrow, key.NameRightArrow:
-		direction := 1
-		if ke.Name == key.NameLeftArrow {
-			direction = -1
-		}
-		if ke.Modifiers == key.ModShift {
-			v.swapPanel(direction)
-		} else if ke.Modifiers == key.ModAlt {
-			v.addPanel(direction)
-		} else if ke.Modifiers&key.ModCtrl != 0 {
-			v.openAdjacent(direction)
-		} else {
-			v.switchPanel(direction)
-		}
-		return
-	case key.NameReturn, key.NameEnter:
-		p.prefix = ""
-		v.activateSelected()
-		return
-	case key.NameDeleteBackward:
-		p.prefix = ""
-		v.parentFolder()
-		return
+	}
+	// Row movement and range marking remain fixed browsing interactions.
+	p := &v.panels[v.active]
+	next := p.selected
+	switch ke.Name {
 	case key.NameUpArrow:
 		next--
 	case key.NameDownArrow:
 		next++
-	case key.NameHome:
-		next = 0
-	case key.NameEnd:
-		next = len(p.items) - 1
-	case key.NamePageUp:
-		next -= page
-	case key.NamePageDown:
-		next += page
 	default:
 		return
 	}
-	v.selectBrowsingRow(ke, next)
+	v.selectBrowsingRow(next, ke.Modifiers&key.ModShift != 0, true)
 }
 
-func (v *view) selectBrowsingRow(ke key.Event, next int) {
+func (v *view) selectBrowsingRow(next int, extendMarks, navigationSound bool) {
 	p := &v.panels[v.active]
 	p.prefix = ""
 	if len(p.items) == 0 {
 		return
 	}
 	next = max(0, min(next, len(p.items)-1))
-	if next != p.selected && ke.Name != insertKey {
+	if next != p.selected && navigationSound {
 		v.playNavigationSound()
 	}
-	if ke.Modifiers&key.ModShift != 0 {
+	if extendMarks {
 		p.markTo(next)
 	} else {
 		p.markRange = nil

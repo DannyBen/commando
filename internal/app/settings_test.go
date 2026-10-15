@@ -148,7 +148,7 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 		}
 	}
 	for _, result := range s.results {
-		if result.command.group == "Settings" || result.command.binding.Name != "" {
+		if result.command.group == "Settings" || result.command.shortcut() != "" {
 			t.Fatal("settings listed as browsing commands")
 		}
 	}

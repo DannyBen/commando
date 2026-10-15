@@ -96,7 +96,12 @@ func (v *view) settingsCatalogue() []command {
 		if slices.Contains(settings.CatalogueDefault.Collections, key) {
 			group := settingsGroupLabel(widget.Parent) + " › " + widget.Label
 			add := func(index int, name string) {
-				catalogue = append(catalogue, command{group: group, name: name,
+				// Saved collection rows need persistent identities before they can be bound.
+				id := ""
+				if index < 0 {
+					id = "settings." + key + ".new"
+				}
+				catalogue = append(catalogue, command{id: id, group: group, name: name,
 					available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
 					execute:   func(v *view) { v.startCollectionWidget(key, index, name) }})
 			}
@@ -107,7 +112,7 @@ func (v *view) settingsCatalogue() []command {
 			}
 			continue
 		}
-		catalogue = append(catalogue, command{group: settingsGroupLabel(widget.Parent), name: widget.Label,
+		catalogue = append(catalogue, command{id: "settings." + key, group: settingsGroupLabel(widget.Parent), name: widget.Label,
 			available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
 			execute:   func(v *view) { v.startSettingsWidget(key) },
 		})

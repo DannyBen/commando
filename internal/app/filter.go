@@ -116,7 +116,7 @@ func (v *view) updateFilter(gtx layout.Context) {
 			if ke.Name == key.NameUpArrow {
 				delta = -1
 			}
-			v.selectBrowsingRow(ke, v.panels[v.active].selected+delta)
+			v.selectBrowsingRow(v.panels[v.active].selected+delta, false, true)
 		default:
 			v.stopFilter(gtx)
 			v.browseKey(gtx, ke)
