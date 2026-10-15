@@ -31,10 +31,6 @@ func TestSettingsPreviewsAreSelectiveAndSpecific(t *testing.T) {
 			t.Fatalf("%s should show only its own sample", role)
 		}
 	}
-	root, _ := settings.CatalogueDefault.Widget(colorPrefix + "notification")
-	if len(v.settingsPreviewItems(root.Preview)) != 4 {
-		t.Fatal("notification root must show all four colors")
-	}
 	for _, spec := range settings.CatalogueDefault.UI.Widgets {
 		if spec.Preview != "" && len(v.settingsPreviewItems(spec.Preview)) == 0 {
 			t.Fatalf("unknown preview %q", spec.Preview)
@@ -50,8 +46,8 @@ func TestSettingsPreviewsAreSelectiveAndSpecific(t *testing.T) {
 	}
 }
 
-func TestSettingsPreviewAddsOnlyOneRow(t *testing.T) {
-	for _, role := range []string{"edge", "notification", "error"} {
+func TestThemePreviewReservesItsRow(t *testing.T) {
+	for _, role := range []string{"edge", "background", "error"} {
 		v := newPreviewView()
 		v.startSettingsWidget(colorPrefix + role)
 		s := v.settingsInteraction()
@@ -60,9 +56,8 @@ func TestSettingsPreviewAddsOnlyOneRow(t *testing.T) {
 		with := v.layoutSettingsWidget(gtx)
 		s.preview = ""
 		without := v.layoutSettingsWidget(gtx)
-		rowHeight := v.textHeight(gtx, v.appearance.TextSize) + gtx.Dp(2*v.appearance.RowPaddingVertical)
-		if with.Size.X != without.Size.X || with.Size.Y-without.Size.Y != rowHeight {
-			t.Fatal("preview changed more than one settings row")
+		if with.Size.X != without.Size.X || with.Size.Y != without.Size.Y {
+			t.Fatal("theme preview changed widget geometry")
 		}
 	}
 }
@@ -94,7 +89,7 @@ func TestSettingsPreviewRetainsEditingAndUpdatesLive(t *testing.T) {
 	s := v.settingsInteraction()
 	current, marks := v.panels[0].selected, maps.Clone(v.panels[0].marks)
 	send, advance := panelInputFrames(v)
-	send(pressed(key.NameDownArrow)) // Link toggle -> Lightness.
+	send(pressed(key.NameDownArrow)) // Element -> Lightness.
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 4}, Text: "0.6"})
 	start, end := s.editor.Selection()
@@ -123,7 +118,7 @@ func TestSettingsPreviewRowsRender(t *testing.T) {
 	if dir == "" {
 		t.Skip("optional compact preview rows")
 	}
-	for _, role := range []string{"background", "edge", "notification", "error", "text_selection", "selected_text"} {
+	for _, role := range []string{"background", "edge", "background", "error", "text_selection", "selected_text"} {
 		v := newPreviewView()
 		v.applySettings()
 		v.startSettingsWidget(colorPrefix + role)

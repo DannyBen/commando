@@ -15,7 +15,7 @@ func TestAutoColorChildWidgetsLiveCancelResetAndSave(t *testing.T) {
 		widget, title string
 		keys          []string
 	}{
-		{"appearance.autocolor.selection", "Selection", []string{settingSelectionLightness}},
+		{"appearance.autocolor.selection", "Selection", []string{settingSelectionLightness, settingCutLightness}},
 		{"appearance.autocolor.special_files", "Special files", []string{settingHiddenLightness, settingHiddenChroma, settingDotfileLightness, settingDotfileChroma}},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
@@ -38,6 +38,8 @@ func TestAutoColorChildWidgetsLiveCancelResetAndSave(t *testing.T) {
 				value := s.filename(file)
 				if key == settingSelectionLightness {
 					value = s.activeBackground(value)
+				} else if key == settingCutLightness {
+					value = s.cutColor(value)
 				}
 				return value
 			}
@@ -94,7 +96,7 @@ func TestAutoColorChildWidgetsLiveCancelResetAndSave(t *testing.T) {
 			restored.startSettingsWidget("appearance.autocolor")
 			restored.adjustSetting(settingAutoColorEnabled, 0)
 			if restored.appearance.FilenameColors.enabled {
-				t.Fatal("parent Enabled did not disable child color effects")
+				t.Fatal("Enabled did not disable generated colors")
 			}
 			for _, key := range tc.keys {
 				if restored.settingsValues.Get(settings.CatalogueDefault, key) != v.settingsValues.Get(settings.CatalogueDefault, key) {

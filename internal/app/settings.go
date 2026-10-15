@@ -58,6 +58,7 @@ const (
 	settingChroma                = "appearance.autocolor.chroma"
 	settingSalt                  = "appearance.autocolor.salt"
 	settingSelectionLightness    = "appearance.autocolor.selection.lightness_offset"
+	settingCutLightness          = "appearance.autocolor.selection.cut_lightness_offset"
 	settingHiddenLightness       = "appearance.autocolor.special_files.hidden_lightness_offset"
 	settingHiddenChroma          = "appearance.autocolor.special_files.hidden_chroma_multiplier"
 	settingDotfileLightness      = "appearance.autocolor.special_files.dotfile_lightness_offset"
@@ -87,11 +88,20 @@ func settingsGroupLabel(key string) string {
 }
 func (v *view) settingsCatalogue() []command {
 	var catalogue []command
+	themeAdded := false
 	for _, widget := range settings.CatalogueDefault.UI.Widgets {
 		if !widget.Visible {
 			continue
 		}
 		key := widget.Key
+		if strings.HasPrefix(key, themeSettingPrefix) {
+			if themeAdded {
+				continue
+			}
+			themeAdded = true
+			key = settingThemeCustomize
+			widget.Parent, widget.Label = "appearance.theme", "Customize"
+		}
 		if slices.Contains(settings.CatalogueDefault.Collections, key) {
 			group := settingsGroupLabel(widget.Parent) + " › " + widget.Label
 			rows := v.settingsValues.Collection(key)
@@ -143,6 +153,7 @@ type settingsSession struct {
 	actions            actionBar
 	actionsFocused     bool
 	action             int
+	afterSave          func() // Optional navigation after a successful save.
 	pending            bool
 	collection         string
 	item               int
@@ -185,9 +196,17 @@ func (v *view) startSettingsWidget(group string) {
 	if !v.interaction.idle() || !v.actionAllowed(actionMutation) {
 		return
 	}
+	if s := v.newSettingsWidget(group); s != nil {
+		v.startInteraction(s)
+	}
+}
+func (v *view) newSettingsWidget(group string) *settingsSession {
+	if group == settingThemeCustomize {
+		group = themeSettingPrefix + "background"
+	}
 	spec, ok := settings.CatalogueDefault.Widget(group)
 	if !ok || !spec.Visible {
-		return
+		return nil
 	}
 
 	title := spec.Title
@@ -200,6 +219,11 @@ func (v *view) startSettingsWidget(group string) {
 		if field.Widget == group && field.Visible {
 			s.fields = append(s.fields, field)
 		}
+	}
+	if strings.HasPrefix(group, themeSettingPrefix) {
+		s.title = "Appearance › Theme › Customize"
+		s.fields = append([]settings.Field{{Key: settingThemeElement, Label: "Element", Control: "input"}}, s.fields...)
+		s.completion.candidates = themeElementNames()
 	}
 	// Enabled switches lead their widget; other fields retain metadata order.
 	slices.SortStableFunc(s.fields, func(a, b settings.Field) int {
@@ -220,10 +244,14 @@ func (v *view) startSettingsWidget(group string) {
 				v.requestFontFamilies()
 			}
 		}
-		v.startInteraction(s)
+		return s
 	}
+	return nil
 }
 func (v *view) settingText(key string) string {
+	if key == settingThemeElement {
+		return themeElementName(v.settingsWidget())
+	}
 	if s := v.settingsWidget(); s != nil && s.bindingCommand != nil {
 		return v.shortcutSettingText(s, key)
 	}
@@ -276,14 +304,15 @@ func (v *view) adjustSetting(key string, direction int) {
 			value.Bool = direction < 0
 		}
 	case settings.Number:
-		if bounds, ok := settings.ThemeColorRange(*v.widgetValues(), c, key); ok {
-			value.Number = bounds.Step(value.Number, float64(direction)*d.Step)
-			break
-		}
 		scale := 1 / d.Step
-		value.Number = max(d.Minimum, math.Round(value.Number*scale+float64(direction))/scale)
-		if d.Maximum != nil {
-			value.Number = min(*d.Maximum, value.Number)
+		value.Number = math.Round(value.Number*scale+float64(direction)) / scale
+		if strings.HasPrefix(key, themeSettingPrefix) && strings.HasSuffix(key, ".hue") {
+			value.Number = math.Mod(value.Number+360, 360)
+		} else {
+			value.Number = max(d.Minimum, value.Number)
+			if d.Maximum != nil {
+				value.Number = min(*d.Maximum, value.Number)
+			}
 		}
 	default:
 		return
@@ -298,7 +327,6 @@ func (v *view) adjustSetting(key string, direction int) {
 func (v *view) applySettings() {
 	v.updateNativeBindings()
 	c := settings.CatalogueDefault
-	settings.ClampThemeColors(&v.settingsValues, c)
 	v.appearance.Colors = themeColorsFromSettings(v.settingsValues)
 	v.theme.Fg, v.theme.Bg = v.appearance.Colors.Foreground, v.appearance.Colors.Surface
 	v.theme.ContrastBg, v.theme.ContrastFg = v.appearance.Colors.Selected, v.appearance.Colors.SelectedName
@@ -320,6 +348,7 @@ func (v *view) applySettings() {
 	colors.filenameChroma = v.settingsValues.Get(c, settingChroma).Number
 	colors.salt = v.settingsValues.Get(c, settingSalt).Number
 	colors.activeBackgroundLightnessOffset = v.settingsValues.Get(c, settingSelectionLightness).Number
+	colors.cutLightnessOffset = v.settingsValues.Get(c, settingCutLightness).Number
 	colors.hiddenLightnessOffset = v.settingsValues.Get(c, settingHiddenLightness).Number
 	colors.hiddenChromaMultiplier = v.settingsValues.Get(c, settingHiddenChroma).Number
 	colors.dotfileLightnessOffset = v.settingsValues.Get(c, settingDotfileLightness).Number
@@ -366,6 +395,17 @@ func (v *view) applySettingDraft(gtx layout.Context) bool {
 	s := v.settingsInteraction()
 	c := settings.CatalogueDefault
 	field := s.fields[s.selected]
+	if field.Key == settingThemeElement {
+		for _, spec := range themeElements() {
+			if strings.EqualFold(strings.TrimSpace(s.editor.Text()), spec.Label) {
+				s.editing = false
+				v.switchThemeElement(gtx, spec.Key)
+				return false // The replacement editor owns subsequent input.
+			}
+		}
+		s.errorText = "Choose a theme element"
+		return false
+	}
 	d, _ := c.Definition(field.Key)
 	value := settings.Value{Text: s.editor.Text()}
 	if d.Kind == settings.Number {
@@ -473,6 +513,11 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		v.applySettings()
 	}
 	v.interaction.finish(s)
+	if save && s.afterSave != nil {
+		s.afterSave()
+		v.focusInteraction(gtx)
+		return
+	}
 	v.restoreWidgetPalette(s, save)
 	if save {
 		v.announceInteraction(eventSettingsSaved)
@@ -487,6 +532,7 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 	s.pending = false
 	v.interaction.focusPending = true
 	if err != nil {
+		s.afterSave = nil
 		s.errorText = "Could not save settings"
 		if errors.Is(err, os.ErrPermission) {
 			s.errorText = "Settings save: access denied"
@@ -500,6 +546,10 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 		v.applySettings()
 	}
 	v.interaction.finish(s)
+	if s.afterSave != nil {
+		s.afterSave()
+		return
+	}
 	v.restoreWidgetPalette(s, true)
 	if message != "" {
 		v.showFeedback(s.panel, feedback.Info, message)
@@ -569,6 +619,9 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	if s.selecting {
 		return
 	}
+	if isThemeWidget(s) {
+		v.updateThemeClipboard(gtx, s)
+	}
 	if s.capturing {
 		v.updateShortcutCapture(gtx)
 		return
@@ -588,7 +641,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		if s.fields[s.selected].Control == "shortcut" {
 			filters = append(filters, key.Filter{Focus: focus, Name: key.NameDeleteForward})
 		}
-	} else if s.fields[s.selected].Key == settingFontFamily {
+	} else if s.completesField() {
 		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow})
 	}
 	var keys []key.Event
@@ -609,14 +662,14 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 				break
 			}
 			if _, ok := e.(widget.ChangeEvent); ok {
-				if s.editor.Text() != v.settingText(s.fields[s.selected].Key) {
+				if s.fields[s.selected].Key != settingThemeElement && s.editor.Text() != v.settingText(s.fields[s.selected].Key) {
 					s.dirty = true
 				}
 				s.errorText = ""
 			}
 		}
 	}
-	if s.editing && s.fields[s.selected].Key == settingFontFamily {
+	if s.editing && s.completesField() {
 		s.completion.update(&s.editor)
 	}
 	for _, ke := range keys {
@@ -627,9 +680,11 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			}
 			continue
 		}
-		if s.editing && s.fields[s.selected].Key == settingFontFamily {
+		if s.editing && s.completesField() {
 			if ke.Name == key.NameTab && ke.Modifiers == 0 && s.completion.accept(&s.editor) {
-				s.dirty = true
+				if s.fields[s.selected].Key != settingThemeElement {
+					s.dirty = true
+				}
 				s.errorText = ""
 				continue
 			}
@@ -718,6 +773,14 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			continue
 		}
 		field := s.fields[s.selected]
+		if field.Key == settingThemeElement && (ke.Name == key.NameLeftArrow || ke.Name == key.NameRightArrow) {
+			direction := 1
+			if ke.Name == key.NameLeftArrow {
+				direction = -1
+			}
+			v.cycleThemeElement(gtx, direction)
+			return
+		}
 		if field.IsPath() && (ke.Name == key.NameLeftArrow || ke.Name == key.NameRightArrow) {
 			s.selecting = true
 			if ke.Name == key.NameLeftArrow {
@@ -797,6 +860,9 @@ func (v *view) activateSettingsAction(gtx layout.Context, action int) {
 		s.editing, s.selecting = false, false
 		s.errorText = ""
 		for _, field := range s.fields {
+			if field.Key == settingThemeElement {
+				continue
+			}
 			if v.widgetValues().Overridden(field.Key) {
 				s.dirty = true
 			}
@@ -864,9 +930,6 @@ func (v *view) setWidgetValue(key string, value settings.Value) error {
 	before, explicit := values.Get(c, key), values.Overridden(key)
 	if err := values.Set(c, key, value); err != nil {
 		return err
-	}
-	if strings.HasPrefix(key, "appearance.theme.") {
-		settings.ClampThemeColors(values, c)
 	}
 	if s := v.settingsInteraction(); s != nil && (before != values.Get(c, key) || !explicit) {
 		s.dirty = true

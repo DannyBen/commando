@@ -139,10 +139,10 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	s := v.paletteInteraction()
-	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 26 {
+	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 12 {
 		t.Fatal("@ did not open settings-only palette")
 	}
-	for i, label := range []string{"Appearance › Auto color", "Appearance › Auto color › Selection", "Appearance › Auto color › Special files", "Appearance › Font", "Appearance › Padding › Horizontal", "Appearance › Padding › Vertical", "Appearance › Theme › Accents › Border", "Appearance › Theme › Accents › Edge", "Appearance › Theme › Background › Alternate", "Appearance › Theme › Background › Main", "Appearance › Theme › Cut items › Normal", "Appearance › Theme › Notifications › Error", "Appearance › Theme › Notifications › Info", "Appearance › Theme › Notifications › Root", "Appearance › Theme › Notifications › Success", "Appearance › Theme › Notifications › Warning", "Appearance › Theme › Selection › Background", "Appearance › Theme › Selection › Text", "Appearance › Theme › Text › Primary", "Appearance › Theme › Text › Secondary", "Appearance › Theme › Text › Selected background", "Application › Data folder", "Feedback › Notifications", "Feedback › Sounds", "Programs › Editors › New", "View › System files"} {
+	for i, label := range []string{"Appearance › Auto color", "Appearance › Auto color › Selection", "Appearance › Auto color › Special files", "Appearance › Font", "Appearance › Padding › Horizontal", "Appearance › Padding › Vertical", "Appearance › Theme › Customize", "Application › Data folder", "Feedback › Notifications", "Feedback › Sounds", "Programs › Editors › New", "View › System files"} {
 		if got := s.results[i].command.label(); got != label {
 			t.Fatalf("settings result %d = %q; want %q", i, got, label)
 		}
@@ -889,5 +889,46 @@ func TestAutoColorDisabledPreview(t *testing.T) {
 	v.startSettingsWidget("appearance.autocolor")
 	if err := renderViewPNG(filepath.Join(dir, "settings-autocolor-disabled.png"), v); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCutLightnessSettingsPreviewCancelAndPersistence(t *testing.T) {
+	v := newPreviewView()
+	v.applySettings()
+	v.startSettingsWidget("appearance.autocolor.selection")
+	s := v.settingsInteraction()
+	if len(s.fields) != 2 || s.fields[0].Label != "Background lightness offset" || s.fields[1].Label != "Cut entries lightness offset" {
+		t.Fatal("Selection does not expose the two lightness offsets")
+	}
+	v.adjustSetting(settingCutLightness, 1)
+	if v.appearance.FilenameColors.cutLightnessOffset != 0.21 || !s.dirty {
+		t.Fatal("cut offset did not preview")
+	}
+	v.finishSettingsWidget(layout.Context{}, false)
+	if v.appearance.FilenameColors.cutLightnessOffset != 0.20 {
+		t.Fatal("Cancel did not restore cut offset")
+	}
+	_ = v.setWidgetValue(settingAutoColorEnabled, settings.Value{Bool: false})
+	v.startSettingsWidget("appearance.autocolor.selection")
+	_ = v.setWidgetValue(settingCutLightness, settings.Value{Number: -0.10})
+	v.applySettings()
+	dir := t.TempDir()
+	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
+		return func() (string, error) { return "", settings.Save(dir, values) }
+	}
+	v.finishSettingsWidget(layout.Context{}, true)
+	values, err := settings.Load(dir, settings.CatalogueDefault)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored := newPreviewView()
+	restored.restoreSettings(values, nil)
+	if restored.appearance.FilenameColors.enabled || restored.appearance.FilenameColors.cutLightnessOffset != -0.10 {
+		t.Fatal("disabled Auto color and cut offset did not persist independently")
+	}
+	_, normal, _ := restored.appearance.entryColors(browser.Entry{Name: "notes.txt"}, false, false)
+	_, cut, _ := restored.appearance.entryColors(browser.Entry{Name: "notes.txt"}, false, true)
+	if cut == normal {
+		t.Fatal("cut offset stopped working with Auto color disabled")
 	}
 }

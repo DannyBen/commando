@@ -128,11 +128,11 @@ func TestSemanticColorRoundTrip(t *testing.T) {
 
 func TestSelectedCutSwapsColorsAndUsesSelectionAdjustment(t *testing.T) {
 	theme := defaultTheme
-	theme.Colors.CutFilename = rgb(0x336699)
 	s := defaultFilenameColors
 	theme.FilenameColors = &s
 	file := browser.Entry{Name: "notes.txt"}
-	base := oklchFromRGB(theme.Colors.CutFilename)
+	base := s.filename(file)
+	base.l += s.cutLightnessOffset
 	for _, offset := range []float64{-0.1, 0, 0.1} {
 		s.activeBackgroundLightnessOffset = offset
 		background, name, metadata := theme.entryColors(file, true, true)
@@ -143,8 +143,8 @@ func TestSelectedCutSwapsColorsAndUsesSelectionAdjustment(t *testing.T) {
 			t.Fatalf("selected cut background ignored lightness adjustment: %g", got)
 		}
 		other, _, _ := theme.entryColors(browser.Entry{Name: "image.png"}, true, true)
-		if other != background {
-			t.Fatal("selected cut background used extension color instead of cut color")
+		if other == background {
+			t.Fatal("cut entries lost their extension colors")
 		}
 	}
 }
@@ -169,9 +169,11 @@ func TestEntryColorPrecedence(t *testing.T) {
 	theme = defaultTheme
 	for _, active := range []bool{false, true} {
 		cutBG, cutName, cutMetadata := theme.entryColors(file, active, true)
-		wantBG, wantName := bg, theme.Colors.CutFilename
+		cutValue := s.filename(file)
+		cutValue.l += s.cutLightnessOffset
+		wantBG, wantName := bg, cutValue.rgb()
 		if active {
-			wantBG, wantName = s.activeBackground(oklchFromRGB(theme.Colors.CutFilename)).rgb(), theme.Colors.Surface
+			wantBG, wantName = s.activeBackground(cutValue).rgb(), theme.Colors.Surface
 		}
 		if cutBG != wantBG || cutName != wantName || cutMetadata != cutName {
 			t.Fatal("cut color did not follow ordinary selection styling")
@@ -270,7 +272,9 @@ func TestDisabledAutoColorUsesSemanticThemeColors(t *testing.T) {
 					wantBG, wantName, wantMetadata = theme.Colors.Selected, theme.Colors.SelectedName, theme.Colors.SelectedMetadata
 				}
 				if cut && !active {
-					wantName = theme.Colors.CutFilename
+					cutValue := oklchFromRGB(theme.Colors.Filename)
+					cutValue.l = clampLightness(cutValue.l + generated.cutLightnessOffset)
+					wantName = cutValue.rgb()
 					wantMetadata = wantName
 				}
 				if bg != wantBG || name != wantName || metadata != wantMetadata {
@@ -278,5 +282,36 @@ func TestDisabledAutoColorUsesSemanticThemeColors(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestCutLightnessKeepsFileColorsAndClampsBeforeSelection(t *testing.T) {
+	theme := defaultTheme
+	s := defaultFilenameColors
+	theme.FilenameColors = &s
+	file := browser.Entry{Name: "notes.txt"}
+	for _, offset := range []float64{-0.1, 0, 0.2} {
+		s.cutLightnessOffset = offset
+		_, normal, _ := theme.entryColors(file, false, false)
+		background, cut, metadata := theme.entryColors(file, false, true)
+		before, after := oklchFromRGB(normal), oklchFromRGB(cut)
+		if background != theme.Colors.Surface || cut != metadata || math.Abs(after.l-before.l-offset) > 0.005 {
+			t.Fatalf("offset %g did not adjust file and metadata lightness", offset)
+		}
+		if math.Abs(after.h-before.h) > 1 {
+			t.Fatalf("offset %g changed file hue", offset)
+		}
+	}
+	// Cut reaches white first, then selection darkens that adjusted color.
+	s.filenameLightness, s.cutLightnessOffset, s.activeBackgroundLightnessOffset = 0.9, 0.2, -0.1
+	_, cut, _ := theme.entryColors(file, false, true)
+	background, _, _ := theme.entryColors(file, true, true)
+	if math.Abs(oklchFromRGB(cut).l-1) > 0.005 || math.Abs(oklchFromRGB(background).l-0.9) > 0.005 {
+		t.Fatal("selection did not follow the clamped cut color")
+	}
+	s.cutLightnessOffset = -1
+	_, cut, _ = theme.entryColors(file, false, true)
+	if cut != rgb(0) {
+		t.Fatal("negative cut offset did not clamp at black")
 	}
 }

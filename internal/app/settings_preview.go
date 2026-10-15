@@ -25,15 +25,13 @@ func (v *view) settingsPreviewItems(kind string) previewSamples {
 	}
 	switch kind {
 	case "edge":
-		return previewSamples{{"Edge mark", c.Foreground, c.Surface, c.Edge}}
+		return previewSamples{{"Accent mark", c.Foreground, c.Surface, c.Edge}}
 	case "secondary":
 		return sample("Secondary text", c.Muted, c.Surface)
 	case "selected_text":
 		return sample("Selected text", c.SelectedName, c.Selected)
 	case "text_selection":
 		return sample("Selected text", c.EditorText, c.TextSelection)
-	case "cut":
-		return sample("Cut item", c.CutFilename, c.Surface)
 	case "info":
 		return sample("Info text", c.Info, c.Footer)
 	case "success":
@@ -42,11 +40,7 @@ func (v *view) settingsPreviewItems(kind string) previewSamples {
 		return sample("Warning text", c.Warning, c.Footer)
 	case "error":
 		return sample("Error text", c.Error, c.Footer)
-	case "notifications":
-		return previewSamples{{label: "Info", foreground: c.Info, background: c.Footer},
-			{label: "Success", foreground: c.Success, background: c.Footer},
-			{label: "Warning", foreground: c.Warning, background: c.Footer},
-			{label: "Error", foreground: c.Error, background: c.Footer}}
+
 	}
 	return nil
 }

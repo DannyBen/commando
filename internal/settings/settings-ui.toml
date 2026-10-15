@@ -42,8 +42,16 @@ label = "Selection"
 title = "Selection"
 
 [appearance.autocolor.selection.lightness_offset]
-label = "Lightness offset"
+label = "Background lightness offset"
 description = "Adjust selection background lightness relative to its file color."
+control = "stepper-progress"
+min = -1.0
+max = 1.0
+step = 0.01
+
+[appearance.autocolor.selection.cut_lightness_offset]
+label = "Cut entries lightness offset"
+description = "Adjust cut entries relative to their normal color, including when Auto color is disabled."
 control = "stepper-progress"
 min = -1.0
 max = 1.0
@@ -89,9 +97,8 @@ step = 0.01
 label = "Theme"
 
 [appearance.theme.background]
-category = "Background"
-label = "Main"
-title = "Main"
+label = "Background"
+title = "Background"
 
 [appearance.theme.background.lightness]
 label = "Lightness"
@@ -115,13 +122,8 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.alt_background]
-category = "Background"
-label = "Alternate"
-title = "Alternate"
-
-[appearance.theme.alt_background.linked]
-label = "Link to Main"
-control = "toggle"
+label = "Background alternate"
+title = "Background alternate"
 
 [appearance.theme.alt_background.lightness]
 label = "Lightness"
@@ -145,13 +147,8 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.border]
-category = "Accents"
 label = "Border"
 title = "Border"
-
-[appearance.theme.border.linked]
-label = "Link to Edge"
-control = "toggle"
 
 [appearance.theme.border.lightness]
 label = "Lightness"
@@ -174,10 +171,35 @@ min = 0.0
 max = 360.0
 step = 1.0
 
+[appearance.theme.edge]
+preview = "edge"
+label = "Accent"
+title = "Accent"
+
+[appearance.theme.edge.lightness]
+label = "Lightness"
+control = "stepper-progress"
+min = 0.0
+max = 1.0
+step = 0.01
+
+[appearance.theme.edge.chroma]
+label = "Chroma"
+control = "stepper-progress"
+min = 0.0
+max = 0.5
+step = 0.01
+
+[appearance.theme.edge.hue]
+label = "Hue"
+control = "stepper-progress"
+min = 0.0
+max = 360.0
+step = 1.0
+
 [appearance.theme.text]
-category = "Text"
-label = "Primary"
-title = "Primary"
+label = "Text"
+title = "Text"
 
 [appearance.theme.text.lightness]
 label = "Lightness"
@@ -202,13 +224,8 @@ step = 1.0
 
 [appearance.theme.secondary_text]
 preview = "secondary"
-category = "Text"
-label = "Secondary"
-title = "Secondary"
-
-[appearance.theme.secondary_text.linked]
-label = "Link to Primary"
-control = "toggle"
+label = "Text secondary"
+title = "Text secondary"
 
 [appearance.theme.secondary_text.lightness]
 label = "Lightness"
@@ -231,27 +248,26 @@ min = 0.0
 max = 360.0
 step = 1.0
 
-[appearance.theme.edge]
-preview = "edge"
-category = "Accents"
-label = "Edge"
-title = "Edge"
+[appearance.theme.text_selection]
+preview = "text_selection"
+label = "Text selection"
+title = "Text selection"
 
-[appearance.theme.edge.lightness]
+[appearance.theme.text_selection.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
 max = 1.0
 step = 0.01
 
-[appearance.theme.edge.chroma]
+[appearance.theme.text_selection.chroma]
 label = "Chroma"
 control = "stepper-progress"
 min = 0.0
 max = 0.5
 step = 0.01
 
-[appearance.theme.edge.hue]
+[appearance.theme.text_selection.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
@@ -259,9 +275,8 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.selection]
-category = "Selection"
-label = "Background"
-title = "Background"
+label = "Selection background"
+title = "Selection background"
 
 [appearance.theme.selection.lightness]
 label = "Lightness"
@@ -286,9 +301,8 @@ step = 1.0
 
 [appearance.theme.selected_text]
 preview = "selected_text"
-category = "Selection"
-label = "Text"
-title = "Text"
+label = "Selection text"
+title = "Selection text"
 
 [appearance.theme.selected_text.lightness]
 label = "Lightness"
@@ -311,85 +325,26 @@ min = 0.0
 max = 360.0
 step = 1.0
 
-[appearance.theme.text_selection]
-preview = "text_selection"
-category = "Text"
-label = "Selected background"
-title = "Selected background"
+[appearance.theme.error]
+preview = "error"
+label = "Error text"
+title = "Error text"
 
-[appearance.theme.text_selection.lightness]
+[appearance.theme.error.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
 max = 1.0
 step = 0.01
 
-[appearance.theme.text_selection.chroma]
+[appearance.theme.error.chroma]
 label = "Chroma"
 control = "stepper-progress"
 min = 0.0
 max = 0.5
 step = 0.01
 
-[appearance.theme.text_selection.hue]
-label = "Hue"
-control = "stepper-progress"
-min = 0.0
-max = 360.0
-step = 1.0
-
-[appearance.theme.cut_text]
-preview = "cut"
-category = "Cut items"
-label = "Normal"
-title = "Normal"
-
-[appearance.theme.cut_text.linked]
-label = "Link to Text › Secondary"
-control = "toggle"
-
-[appearance.theme.cut_text.lightness]
-label = "Lightness"
-control = "stepper-progress"
-min = 0.0
-max = 1.0
-step = 0.01
-
-[appearance.theme.cut_text.chroma]
-label = "Chroma"
-control = "stepper-progress"
-min = 0.0
-max = 0.5
-step = 0.01
-
-[appearance.theme.cut_text.hue]
-label = "Hue"
-control = "stepper-progress"
-min = 0.0
-max = 360.0
-step = 1.0
-
-[appearance.theme.notification]
-preview = "notifications"
-category = "Notifications"
-label = "Root"
-title = "Root"
-
-[appearance.theme.notification.lightness]
-label = "Lightness"
-control = "stepper-progress"
-min = 0.0
-max = 1.0
-step = 0.01
-
-[appearance.theme.notification.chroma]
-label = "Chroma"
-control = "stepper-progress"
-min = 0.0
-max = 0.5
-step = 0.01
-
-[appearance.theme.notification.hue]
+[appearance.theme.error.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
@@ -398,13 +353,8 @@ step = 1.0
 
 [appearance.theme.info]
 preview = "info"
-category = "Notifications"
-label = "Info"
-title = "Info"
-
-[appearance.theme.info.linked]
-label = "Link to Root"
-control = "toggle"
+label = "Info text"
+title = "Info text"
 
 [appearance.theme.info.lightness]
 label = "Lightness"
@@ -429,13 +379,8 @@ step = 1.0
 
 [appearance.theme.success]
 preview = "success"
-category = "Notifications"
-label = "Success"
-title = "Success"
-
-[appearance.theme.success.linked]
-label = "Link to Root"
-control = "toggle"
+label = "Success text"
+title = "Success text"
 
 [appearance.theme.success.lightness]
 label = "Lightness"
@@ -460,13 +405,8 @@ step = 1.0
 
 [appearance.theme.warning]
 preview = "warning"
-category = "Notifications"
-label = "Warning"
-title = "Warning"
-
-[appearance.theme.warning.linked]
-label = "Link to Root"
-control = "toggle"
+label = "Warning text"
+title = "Warning text"
 
 [appearance.theme.warning.lightness]
 label = "Lightness"
@@ -483,37 +423,6 @@ max = 0.5
 step = 0.01
 
 [appearance.theme.warning.hue]
-label = "Hue"
-control = "stepper-progress"
-min = 0.0
-max = 360.0
-step = 1.0
-
-[appearance.theme.error]
-preview = "error"
-category = "Notifications"
-label = "Error"
-title = "Error"
-
-[appearance.theme.error.linked]
-label = "Link to Root"
-control = "toggle"
-
-[appearance.theme.error.lightness]
-label = "Lightness"
-control = "stepper-progress"
-min = 0.0
-max = 1.0
-step = 0.01
-
-[appearance.theme.error.chroma]
-label = "Chroma"
-control = "stepper-progress"
-min = 0.0
-max = 0.5
-step = 0.01
-
-[appearance.theme.error.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0

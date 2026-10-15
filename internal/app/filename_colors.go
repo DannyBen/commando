@@ -27,7 +27,7 @@ func filenameColorKey(file browser.Entry) string {
 type oklchColor struct{ l, c, h float64 }
 
 // Inverse of linearRGB's matrices and rgb's transfer function. This lets a
-// semantic filename color use the same selection transform as generated colors.
+// theme filename color use the same cut transform as generated colors.
 func oklchFromRGB(value color.NRGBA) oklchColor {
 	decode := func(n uint8) float64 {
 		v := float64(n) / 255
@@ -75,6 +75,11 @@ func (s filenameColorSettings) filename(file browser.Entry) oklchColor {
 
 func (s filenameColorSettings) activeBackground(value oklchColor) oklchColor {
 	value.l = clampLightness(value.l + s.activeBackgroundLightnessOffset)
+	return value
+}
+
+func (s filenameColorSettings) cutColor(value oklchColor) oklchColor {
+	value.l = clampLightness(value.l + s.cutLightnessOffset)
 	return value
 }
 
@@ -154,10 +159,11 @@ func (t Theme) entryColors(file browser.Entry, active, cut bool) (background, fi
 		filename = value.rgb()
 	}
 	if cut {
-		filename = t.Colors.CutFilename
-		if generated && active {
+		if !generated {
 			value = oklchFromRGB(filename)
 		}
+		value = colors.cutColor(value)
+		filename = value.rgb()
 	}
 	metadata = t.Colors.Metadata
 	if generated || cut {

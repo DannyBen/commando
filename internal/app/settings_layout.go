@@ -20,7 +20,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	footerHeight := smallHeight + gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))
 	rows := len(s.fields)
 	samples := v.settingsPreviewItems(s.preview)
-	if len(samples) > 0 {
+	if len(samples) > 0 || isThemeWidget(s) {
 		rows++
 	}
 	labelGap := v.textWidth(gtx, " ", v.appearance.TextSize)
@@ -28,7 +28,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	for _, field := range s.fields {
 		labelWidth = max(labelWidth, v.textWidth(gtx, field.Label, v.appearance.TextSize))
 	}
-	if len(samples) > 0 {
+	if len(samples) > 0 || isThemeWidget(s) {
 		labelWidth = max(labelWidth, v.textWidth(gtx, "Preview", v.appearance.TextSize))
 	}
 
@@ -57,7 +57,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 							if path {
 								hint = "Path"
 							}
-							if field.Key == settingFontFamily {
+							if s.completesField() && s.selected == i {
 								return v.completionEditor(gtx, &s.editor, &s.completion, hint)
 							}
 							return v.textEditor(&s.editor, hint).Layout(gtx)
@@ -95,9 +95,6 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 							dims := control(gtx)
 							if field.Control == "stepper-progress" {
 								ratio := (v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number - d.Minimum) / (*d.Maximum - d.Minimum)
-								if bounds, ok := settings.ThemeColorRange(v.settingsValues, settings.CatalogueDefault, field.Key); ok {
-									ratio = bounds.Progress(v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number)
-								}
 								y := textHeight - gtx.Dp(1)
 								width := gtx.Constraints.Max.X
 								paint.FillShape(gtx.Ops, v.appearance.Colors.Border, clip.Rect{Min: image.Pt(0, y), Max: image.Pt(width, y+gtx.Dp(1))}.Op())
@@ -114,12 +111,15 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 			}))
 		}
 
-		if len(samples) > 0 {
+		if len(samples) > 0 || isThemeWidget(s) {
 			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, rowHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
 					available := gtx.Constraints.Max.X
 					leftWidth := min(labelWidth+labelGap, max(0, available-gtx.Dp(8))*2/3)
 					return v.columnLayout(gtx, max(0, available-leftWidth), func(gtx layout.Context) layout.Dimensions {
+						if len(samples) == 0 {
+							return layout.Dimensions{}
+						}
 						return v.label(gtx, "Preview", v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 					}, func(gtx layout.Context) layout.Dimensions { return samples.layout(v, gtx, rowHeight) })
 				}, false)
@@ -145,9 +145,6 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				hint := "Enter Type · Ctrl+Enter Save"
 				if field.Control == "stepper" || field.Control == "stepper-progress" {
 					hint = "←/→ Adjust · Enter Type · Ctrl+Enter Save"
-					if bounds, ok := settings.ThemeColorRange(v.settingsValues, settings.CatalogueDefault, field.Key); ok {
-						hint = bounds.Label() + " · ←/→ Adjust · Enter Type"
-					}
 				}
 				if field.Control == "toggle" {
 					hint = "←/→ Choose · Enter Toggle · Ctrl+Enter Save"
@@ -181,10 +178,10 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				}
 				if s.editing {
 					hint = "Enter Preview · Ctrl+Enter Save · Esc Revert"
-					if s.fields[s.selected].Key == settingFontFamily && s.completion.suffix() != "" {
+					if s.completesField() && s.completion.suffix() != "" {
 						hint = "Tab Complete · ↑/↓ Suggest · Enter Preview"
 					}
-				} else if s.fields[s.selected].Key == settingFontFamily {
+				} else if s.completesField() {
 					hint = "←/→ Font · Enter Type · Ctrl+Enter Save"
 				}
 				if s.actionsFocused && !s.selecting && !s.editing && !s.capturing {
@@ -202,6 +199,9 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				}
 				if s.deleted {
 					hint = "Ctrl+Enter Save deletion · Cancel Discard"
+				}
+				if isThemeWidget(s) && s.selected == 0 && !s.editing && !s.actionsFocused {
+					hint = "←/→ Element · Ctrl+C Copy · Ctrl+V Paste"
 				}
 				fg := v.appearance.Colors.Foreground
 				if s.errorText != "" {

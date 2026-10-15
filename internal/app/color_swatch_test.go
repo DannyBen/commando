@@ -18,6 +18,7 @@ func TestHueSwatchTracksAllColorComponents(t *testing.T) {
 	v.startSettingsWidget(colorPrefix + "edge")
 	before := v.appearance.Colors.Edge
 	send, _ := panelInputFrames(v)
+	send(pressed(key.NameDownArrow)) // Element -> Lightness.
 	for i, component := range []string{"lightness", "chroma", "hue"} {
 		previous := v.appearance.Colors.Edge
 		send(pressed(key.NameRightArrow))
@@ -67,11 +68,11 @@ func TestSettingsSwatchPreviews(t *testing.T) {
 	if dir == "" {
 		t.Skip("optional color swatch previews")
 	}
-	for _, role := range []string{"background", "edge", "notification"} {
+	for _, role := range []string{"background", "edge", "error"} {
 		v := newPreviewView()
 		v.applySettings()
 		v.startSettingsWidget(colorPrefix + role)
-		v.settingsInteraction().selected = 2
+		v.settingsInteraction().selected = 3
 		if err := renderViewPNG(filepath.Join(dir, "theme-swatch-"+role+".png"), v); err != nil {
 			t.Fatal(err)
 		}

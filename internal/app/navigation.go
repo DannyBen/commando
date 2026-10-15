@@ -98,7 +98,7 @@ func (v *view) acceptLoad(result loadResult) {
 	if result.request.fontFamilies {
 		v.fontFamiliesLoading = false
 		v.fontFamilies = append([]string{}, result.fontFamilies...)
-		if s := v.settingsInteraction(); s != nil {
+		if s := v.settingsInteraction(); s != nil && !isThemeWidget(s) {
 			s.completion.candidates = v.fontFamilyChoices()
 			s.completion.update(&s.editor)
 		}
