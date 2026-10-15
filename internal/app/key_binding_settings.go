@@ -26,7 +26,14 @@ func bindingSettingsCatalogue() settings.Catalogue {
 	}
 	catalogue.DynamicDefinition = dynamicBindingDefinition
 	catalogue.DynamicGroup = func(group string) bool {
-		_, ok := panelFocusNumber(strings.TrimPrefix(group, "keybindings."))
+		commandID := strings.TrimPrefix(group, "keybindings.")
+		if commandID == strings.TrimSuffix(editorRuleCommandPrefix, ".") {
+			return true
+		}
+		if _, ok := editorRuleBindingID(commandID); ok {
+			return true
+		}
+		_, ok := panelFocusNumber(commandID)
 		return strings.HasPrefix(group, "keybindings.") && ok
 	}
 	catalogue.ValidateOverrides = validateBindingOverrides
@@ -74,6 +81,7 @@ func (v *view) resolveCommandBindings(c command) command {
 // recovery cannot create a second conflict by reverting only one side of a swap.
 // The existing settings recovery flow backs up the original document first.
 func validateBindingOverrides(values *settings.Values) error {
+	pruneRuleBindings(values)
 	if conflict := findBindingConflict(*values); conflict != nil {
 		values.Reset("keybindings")
 		return conflict

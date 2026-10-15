@@ -37,6 +37,7 @@ path = ""
 
 # Item template. No editor rules are installed by default.
 [[programs.editors]]
+id = ""
 ext = []
 path = ""
 args = "%SelectedFiles%"

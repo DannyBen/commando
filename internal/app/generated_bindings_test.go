@@ -162,9 +162,12 @@ func TestSettingsShortcutWidgetSaveDispatchAndReset(t *testing.T) {
 	}
 }
 
-func TestEditorsNewBindingLeavesSavedRulesUnbindable(t *testing.T) {
+func TestEditorsNewAndSavedRulesAreSeparatelyBindable(t *testing.T) {
 	v := newPreviewView()
 	v.settingsValues.SetCollection(settings.EditorCollection, []map[string]any{{"ext": []string{"txt"}, "program": "editor", "args": "%SelectedFiles%"}})
+	if err := settings.CatalogueDefault.NormalizeIdentities(&v.settingsValues); err != nil {
+		t.Fatal(err)
+	}
 	var newCommand, saved command
 	for _, c := range v.settingsCatalogue() {
 		if c.name == "New" {
@@ -174,7 +177,7 @@ func TestEditorsNewBindingLeavesSavedRulesUnbindable(t *testing.T) {
 			saved = c
 		}
 	}
-	if !v.canEditShortcuts(newCommand) || v.canEditShortcuts(saved) {
+	if !v.canEditShortcuts(newCommand) || !v.canEditShortcuts(saved) || saved.id == newCommand.id {
 		t.Fatal("collection shortcut eligibility is wrong")
 	}
 	setTestShortcut(t, v, newCommand.id, 0, "Ctrl+Y")

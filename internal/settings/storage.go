@@ -23,9 +23,12 @@ func save(dataDir string, v Values, c Catalogue) error {
 	if dataDir == "" {
 		return fmt.Errorf("data folder is empty")
 	}
+	v = v.Clone()
+	if err := c.NormalizeIdentities(&v); err != nil {
+		return err
+	}
 	if c.ValidateOverrides != nil {
-		validated := v.Clone()
-		if err := c.ValidateOverrides(&validated); err != nil {
+		if err := c.ValidateOverrides(&v); err != nil {
 			return err
 		}
 	}

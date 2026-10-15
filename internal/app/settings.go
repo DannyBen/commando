@@ -95,18 +95,23 @@ func (v *view) settingsCatalogue() []command {
 		key := widget.Key
 		if slices.Contains(settings.CatalogueDefault.Collections, key) {
 			group := settingsGroupLabel(widget.Parent) + " › " + widget.Label
+			rows := v.settingsValues.Collection(key)
 			add := func(index int, name string) {
-				// Saved collection rows need persistent identities before they can be bound.
+				// Collection rows use stable IDs independently of their labels and order.
 				id := ""
 				if index < 0 {
 					id = "settings." + key + ".new"
+				} else if field := settings.CatalogueDefault.CollectionIdentities[key]; field != "" {
+					if value, _ := rows[index][field].(string); settings.ValidIdentity(value) {
+						id = "settings." + key + ".rules." + value
+					}
 				}
 				catalogue = append(catalogue, v.resolveCommandBindings(command{id: id, group: group, name: name,
 					available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
 					execute:   func(v *view) { v.startCollectionWidget(key, index, name) }}))
 			}
 			add(-1, "New")
-			for i, row := range v.settingsValues.Collection(key) {
+			for i, row := range rows {
 				extensions, _ := row["ext"].([]string)
 				add(i, strings.Join(extensions, " "))
 			}
@@ -425,6 +430,11 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 			}
 		}
 		v.settingsValues.SetCollection(s.collection, rows)
+		if err := settings.CatalogueDefault.NormalizeIdentities(&v.settingsValues); err != nil {
+			s.errorText = "Cannot identify rule"
+			return
+		}
+		pruneRuleBindings(&v.settingsValues)
 	}
 	if save && v.prepareSettingsSave != nil {
 		values := v.settingsValues

@@ -67,9 +67,11 @@ func (c Catalogue) Widget(key string) (Widget, bool) {
 }
 
 type Catalogue struct {
-	Collections []string
-	Settings    []Definition
-	UI          Presentation
+	// CollectionIdentities declares each collection's hidden stable identity field.
+	CollectionIdentities map[string]string
+	Collections          []string
+	Settings             []Definition
+	UI                   Presentation
 	// Dynamic definitions support indexed settings without bounding their count.
 	DynamicDefinition func(string) (Definition, bool)
 	DynamicGroup      func(string) bool

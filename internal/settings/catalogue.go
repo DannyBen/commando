@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -27,6 +28,7 @@ func embeddedCatalogue() Catalogue {
 
 type nodeMetadata struct {
 	Label, Palette, Description, Control string
+	Identity                             string
 	Title                                *string
 	Visible                              *bool
 	Minimum                              *float64 `toml:"min"`
@@ -98,6 +100,15 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 			if m.Control != "" || m.Minimum != nil || m.Maximum != nil || m.Step != 0 {
 				return c, fmt.Errorf("control on group: %s", key)
 			}
+			if m.Identity != "" {
+				if !slices.Contains(c.Collections, key) {
+					return c, fmt.Errorf("identity on non-collection: %s", key)
+				}
+				if c.CollectionIdentities == nil {
+					c.CollectionIdentities = map[string]string{}
+				}
+				c.CollectionIdentities[key] = m.Identity
+			}
 			parent := strings.Join(parentPath[:depth-1], ".")
 			visible[key] = visible[parent] && (m.Visible == nil || *m.Visible)
 			owner, err := c.addWidget(key, parent, owners[parent], m, visible[key], false)
@@ -120,6 +131,9 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 		m, err := readMetadata(&metadata, ui, path)
 		if err != nil {
 			return c, err
+		}
+		if m.Identity != "" {
+			return c, fmt.Errorf("identity on field: %s", d.Key)
 		}
 		parent := strings.Join(path[:len(path)-1], ".")
 		fieldVisible := visible[parent] && (m.Visible == nil || *m.Visible)
@@ -190,6 +204,12 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 		}
 		w.Visible = w.Visible && hasFields
 	}
+	for collection, field := range c.CollectionIdentities {
+		d, ok := c.Definition(collection + "." + field)
+		if !ok || d.Kind != String || d.Default.Text != "" || strings.Contains(field, ".") {
+			return c, fmt.Errorf("invalid collection identity: %s", collection)
+		}
+	}
 	return c, nil
 }
 
@@ -237,7 +257,7 @@ func readMetadata(md *toml.MetaData, ui map[string]toml.Primitive, path []string
 
 func allowMetadata(known map[string]bool, key string, leaf bool) {
 	known[key] = true
-	for _, property := range []string{"label", "palette", "title", "visible", "description"} {
+	for _, property := range []string{"label", "palette", "title", "visible", "description", "identity"} {
 		known[key+"."+property] = true
 	}
 	if leaf {

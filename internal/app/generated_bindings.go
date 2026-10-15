@@ -35,7 +35,7 @@ func (v *view) shortcutCommands() []command {
 // ownership until cleared. Only live panels appear in the palette and dispatch.
 func bindingCommands(values settings.Values) []command {
 	catalogue := slices.Clone(commands)
-	for _, c := range (&view{}).settingsCatalogue() {
+	for _, c := range (&view{settingsValues: values}).settingsCatalogue() {
 		if c.id != "" {
 			catalogue = append(catalogue, c)
 		}
@@ -56,9 +56,33 @@ func bindingCommands(values settings.Values) []command {
 func dynamicBindingDefinition(field string) (settings.Definition, bool) {
 	for slot := range 2 {
 		id := strings.TrimPrefix(strings.TrimSuffix(field, ".shortcut_"+strconv.Itoa(slot+1)), "keybindings.")
+		if ruleID, ok := editorRuleBindingID(id); ok && field == bindingSettingKey(id, slot) {
+			return bindingDefinition(command{id: editorRuleCommandPrefix + ruleID}, slot), true
+		}
 		if number, ok := panelFocusNumber(id); ok && field == bindingSettingKey(id, slot) {
 			return bindingDefinition(panelFocusCommand(number), slot), true
 		}
 	}
 	return settings.Definition{}, false
+}
+
+const editorRuleCommandPrefix = "settings.programs.editors.rules."
+
+func editorRuleBindingID(commandID string) (string, bool) {
+	id := strings.TrimPrefix(commandID, editorRuleCommandPrefix)
+	return id, strings.HasPrefix(commandID, editorRuleCommandPrefix) && settings.ValidIdentity(id)
+}
+
+func pruneRuleBindings(values *settings.Values) {
+	live := map[string]bool{}
+	for _, row := range values.Collection(settings.EditorCollection) {
+		id, _ := row["id"].(string)
+		live[id] = true
+	}
+	prefix := "keybindings." + editorRuleCommandPrefix
+	for id := range values.Item(strings.TrimSuffix(prefix, ".")) {
+		if !live[id] {
+			values.Reset(prefix + id)
+		}
+	}
 }

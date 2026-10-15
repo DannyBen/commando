@@ -195,6 +195,7 @@ control = "folder"
 label = "Programs"
 
 [programs.editors]
+identity = "id"
 label = "Editors"
 title = "Editors"
 
@@ -233,3 +234,7 @@ title = "Notifications"
 label = "Animation"
 description = "Animate notification text and cursor."
 control = "toggle"
+
+[programs.editors.id]
+label = "ID"
+visible = false

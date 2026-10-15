@@ -88,6 +88,12 @@ func loadCollection(c Catalogue, key string, raw any) ([]map[string]any, error) 
 	result := make([]map[string]any, 0, len(rows))
 	var failures []error
 	for _, row := range rows {
+		identity := c.CollectionIdentities[key]
+		rawID, hasID := row[identity]
+		if identity != "" {
+			row = clone(row)
+			delete(row, identity)
+		}
 		var item Values
 		if err := loadItem(c, key, row, &item); err != nil {
 			failures = append(failures, err)
@@ -119,8 +125,12 @@ func loadCollection(c Catalogue, key string, raw any) ([]map[string]any, error) 
 				continue
 			}
 		}
+		if identity != "" && hasID {
+			normalized[identity] = rawID
+		}
 		result = append(result, normalized)
 	}
+	failures = append(failures, normalizeCollectionIdentities(c.CollectionIdentities[key], result))
 	return result, errors.Join(failures...)
 }
 
