@@ -145,6 +145,8 @@ type settingsSession struct {
 	deleted            bool
 	dirty              bool
 	completion         inlineCompletion
+	bindingCommand     *command
+	capturing          bool
 }
 
 type settingsSaveRequest struct {
@@ -216,6 +218,9 @@ func (v *view) startSettingsWidget(group string) {
 	}
 }
 func (v *view) settingText(key string) string {
+	if s := v.settingsWidget(); s != nil && s.bindingCommand != nil {
+		return v.shortcutSettingText(s, key)
+	}
 	c := settings.CatalogueDefault
 	d, _ := c.Definition(key)
 	value := v.widgetValues().Get(c, key)
@@ -327,6 +332,10 @@ func (v *view) beginSettingEdit(gtx layout.Context) {
 		return
 	}
 	field := s.fields[s.selected]
+	if field.Control == "shortcut" {
+		v.beginShortcutCapture(gtx)
+		return
+	}
 	if field.Control == "toggle" {
 		v.adjustSetting(field.Key, 0)
 		return
@@ -381,6 +390,16 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 	if s == nil || s.pending {
 		return
 	}
+	if save && s.capturing {
+		s.errorText = "Finish shortcut capture"
+		return
+	}
+	if save && s.bindingCommand != nil {
+		if conflict := findBindingConflict(s.draft); conflict != nil {
+			s.errorText = shortcutConflictText(conflict, s.bindingCommand.id, s.selected)
+			return
+		}
+	}
 	if save && !s.deleted && s.editing && !v.applySettingDraft(gtx) {
 		return
 	}
@@ -408,7 +427,11 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		v.settingsValues.SetCollection(s.collection, rows)
 	}
 	if save && v.prepareSettingsSave != nil {
-		request := &settingsSaveRequest{session: s, run: v.prepareSettingsSave(v.settingsValues.Clone())}
+		values := v.settingsValues
+		if s.bindingCommand != nil {
+			values = s.draft
+		}
+		request := &settingsSaveRequest{session: s, run: v.prepareSettingsSave(values.Clone())}
 		s.pending = true
 		s.selecting = false
 		if v.loader != nil {
@@ -422,14 +445,15 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		return
 	}
 	if !save {
+		v.setShortcutCapture(s, false)
 		v.settingsValues = s.before
+		v.applySettings()
+	} else if s.bindingCommand != nil {
+		v.settingsValues = s.draft.Clone()
 		v.applySettings()
 	}
 	v.interaction.finish(s)
-	if !save && s.palette != nil {
-		v.active = s.palette.panel
-		v.interaction.begin(s.palette)
-	}
+	v.restoreWidgetPalette(s, save)
 	if save && v.sounds != nil {
 		v.playSound(sound.Settings)
 	}
@@ -451,7 +475,12 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 		}
 		return
 	}
+	if s.bindingCommand != nil {
+		v.settingsValues = s.draft.Clone()
+		v.applySettings()
+	}
 	v.interaction.finish(s)
+	v.restoreWidgetPalette(s, true)
 	if message != "" {
 		v.showFeedback(s.panel, feedback.Info, message)
 	} else if v.sounds != nil {
@@ -521,6 +550,10 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	if s.selecting {
 		return
 	}
+	if s.capturing {
+		v.updateShortcutCapture(gtx)
+		return
+	}
 
 	focus := any(&v.focus)
 	if s.editing {
@@ -533,6 +566,9 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	}
 	if !s.editing {
 		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow}, key.Filter{Focus: focus, Name: key.NameLeftArrow}, key.Filter{Focus: focus, Name: key.NameRightArrow}, key.Filter{Focus: focus, Name: key.NameSpace})
+		if s.fields[s.selected].Control == "shortcut" {
+			filters = append(filters, key.Filter{Focus: focus, Name: key.NameDeleteForward})
+		}
 	} else if s.fields[s.selected].Key == settingFontFamily {
 		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow})
 	}
@@ -565,6 +601,12 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		s.completion.update(&s.editor)
 	}
 	for _, ke := range keys {
+		if ke.Name == key.NameDeleteForward && !s.actionsFocused && s.fields[s.selected].Control == "shortcut" {
+			if v.setShortcutDraft("none") {
+				v.playNavigationSound()
+			}
+			continue
+		}
 		if s.editing && s.fields[s.selected].Key == settingFontFamily {
 			if ke.Name == key.NameTab && ke.Modifiers == 0 && s.completion.accept(&s.editor) {
 				s.dirty = true
@@ -711,11 +753,13 @@ func (v *view) activateSettingsAction(gtx layout.Context, action int) {
 		v.finishSettingsWidget(gtx, true)
 	case 1:
 		s := v.settingsInteraction()
+		v.setShortcutCapture(s, false)
 		s.selecting, s.editing = false, false
 		s.dirty = false // Cancel explicitly discards the whole transaction.
 		v.escape(gtx)
 	case 2:
 		s := v.settingsInteraction()
+		v.setShortcutCapture(s, false)
 		if s.collection != "" {
 			if s.item < 0 {
 				return
@@ -730,10 +774,15 @@ func (v *view) activateSettingsAction(gtx layout.Context, action int) {
 		s.editing, s.selecting = false, false
 		s.errorText = ""
 		for _, field := range s.fields {
-			if v.settingsValues.Overridden(field.Key) {
+			if v.widgetValues().Overridden(field.Key) {
 				s.dirty = true
 			}
-			v.settingsValues.Reset(field.Key)
+			v.widgetValues().Reset(field.Key)
+		}
+		if s.bindingCommand != nil {
+			if conflict := findBindingConflict(s.draft); conflict != nil {
+				s.errorText = shortcutConflictText(conflict, s.bindingCommand.id, s.selected)
+			}
 		}
 		v.applySettings()
 		v.focusInteraction(gtx)
@@ -765,7 +814,7 @@ func (v *view) startCollectionWidget(collection string, index int, label string)
 	}
 }
 func (v *view) widgetValues() *settings.Values {
-	if s := v.settingsWidget(); s != nil && s.collection != "" {
+	if s := v.settingsWidget(); s != nil && (s.collection != "" || s.bindingCommand != nil) {
 		return &s.draft
 	}
 	return &v.settingsValues
@@ -785,6 +834,9 @@ func (s *settingsSession) actionLabels() []string {
 func (v *view) setWidgetValue(key string, value settings.Value) error {
 	values := v.widgetValues()
 	c := settings.CatalogueDefault
+	if s := v.settingsInteraction(); s != nil && s.bindingCommand != nil {
+		c = bindingSettingsCatalogue()
+	}
 	before, explicit := values.Get(c, key), values.Overridden(key)
 	if err := values.Set(c, key, value); err != nil {
 		return err

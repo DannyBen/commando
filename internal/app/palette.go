@@ -169,6 +169,7 @@ func (v *view) updatePalette(gtx layout.Context) {
 			key.Filter{Focus: &v.commandSearch, Name: key.NameReturn},
 			key.Filter{Focus: &v.commandSearch, Name: key.NameEnter},
 			key.Filter{Focus: &v.commandSearch, Name: "P", Required: key.ModCtrl | key.ModShift},
+			key.Filter{Focus: &v.commandSearch, Name: "E", Required: key.ModCtrl},
 		)
 		if !ok {
 			break
@@ -184,6 +185,9 @@ func (v *view) updatePalette(gtx layout.Context) {
 	for _, ke := range navigation {
 		previous := s.selected
 		switch ke.Name {
+		case "E":
+			v.startShortcutWidget(gtx)
+			return
 		case key.NameEscape:
 			v.escape(gtx)
 			return

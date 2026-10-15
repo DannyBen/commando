@@ -148,7 +148,7 @@ func (v *view) escape(gtx layout.Context) {
 		if s.pending {
 			return
 		}
-		if s.dirty && !s.editing && !s.selecting {
+		if s.dirty && !s.editing && !s.selecting && !s.capturing {
 			s.actionsFocused, s.action = true, 1
 			v.focusInteraction(gtx)
 			if v.sounds != nil {
@@ -162,7 +162,11 @@ func (v *view) escape(gtx layout.Context) {
 	}
 	v.dismissFeedback()
 	if s := v.settingsInteraction(); s != nil {
-		if s.editing {
+		if s.capturing {
+			v.setShortcutCapture(s, false)
+			s.errorText = ""
+			v.focusInteraction(gtx)
+		} else if s.editing {
 			s.editing = false
 			s.errorText = ""
 			s.actionsFocused = false
@@ -199,6 +203,10 @@ func (v *view) escape(gtx layout.Context) {
 // Return true when a foreground session owns this key, even when the session
 // ignores it. Browsing shortcuts must not leak through an editor or choice.
 func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
+	if s := v.settingsInteraction(); s != nil && s.capturing {
+		v.captureShortcutKey(gtx, ke)
+		return true
+	}
 	if v.settingsSelecting() {
 		return false
 	}

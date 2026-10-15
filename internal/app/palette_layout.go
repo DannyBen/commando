@@ -117,6 +117,9 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 					if len(s.results) > 0 && !s.results[s.selected].command.allowed(v) {
 						hint = "Unavailable here   Esc Close"
 					}
+					if len(s.results) > 0 && v.canEditShortcuts(s.results[s.selected].command) {
+						hint += "   Ctrl+E Shortcuts"
+					}
 					return v.label(gtx, hint, v.appearance.SmallTextSize, v.appearance.Colors.Foreground, text.Start)
 				}, false)
 			}),

@@ -2,7 +2,6 @@ package app
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"strconv"
 
@@ -83,15 +82,35 @@ func (v *view) resolveCommandBindings(c command) command {
 // recovery cannot create a second conflict by reverting only one side of a swap.
 // The existing settings recovery flow backs up the original document first.
 func validateBindingOverrides(values *settings.Values) error {
-	v := view{settingsValues: *values}
-	used := map[shortcut]bool{}
+	if conflict := findBindingConflict(*values); conflict != nil {
+		values.Reset("keybindings")
+		return conflict
+	}
+	return nil
+}
+
+type bindingOwner struct {
+	id, name string
+	slot     int
+}
+
+type bindingConflict struct {
+	first, second bindingOwner
+}
+
+func (*bindingConflict) Error() string { return "conflicting key bindings" }
+func (*bindingConflict) Unwrap() error { return settings.ErrValue }
+
+func findBindingConflict(values settings.Values) *bindingConflict {
+	v := view{settingsValues: values}
+	used := map[shortcut]bindingOwner{}
 	for _, name := range []key.Name{key.NameUpArrow, key.NameDownArrow} {
-		used[shortcut{Name: name}] = true
-		used[shortcut{Name: name, Modifiers: key.ModShift}] = true
+		used[shortcut{Name: name}] = bindingOwner{name: "Row navigation"}
+		used[shortcut{Name: name, Modifiers: key.ModShift}] = bindingOwner{name: "Range selection"}
 	}
 	// Numbered panel shortcuts retain their identities even in a smaller workspace.
 	for number := 1; number <= 9; number++ {
-		used[shortcut{Name: key.Name(strconv.Itoa(number)), Modifiers: key.ModAlt}] = true
+		used[shortcut{Name: key.Name(strconv.Itoa(number)), Modifiers: key.ModAlt}] = bindingOwner{name: "Focus " + strconv.Itoa(number)}
 	}
 	for _, c := range commands {
 		c = v.resolveCommandBindings(c)
@@ -100,11 +119,11 @@ func validateBindingOverrides(values *settings.Values) error {
 			if s.Name == "" {
 				continue
 			}
-			if used[s] {
-				values.Reset("keybindings")
-				return fmt.Errorf("%w: conflicting key bindings", settings.ErrValue)
+			owner := bindingOwner{id: c.id, name: c.name, slot: slot}
+			if previous, exists := used[s]; exists {
+				return &bindingConflict{first: previous, second: owner}
 			}
-			used[s] = true
+			used[s] = owner
 		}
 	}
 	return nil

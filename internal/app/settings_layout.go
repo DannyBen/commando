@@ -40,6 +40,10 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, rowHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
 					control := func(gtx layout.Context) layout.Dimensions {
+						if s.capturing && s.selected == i {
+							paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, textHeight)}.Op())
+							return v.label(gtx, "Press shortcut…", v.appearance.TextSize, v.appearance.Colors.SelectedName, text.Start)
+						}
 						if s.editing && s.selected == i {
 							hint := "Value"
 							if path {
@@ -94,7 +98,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 		}
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			selected := -1
-			if s.actionsFocused && !s.selecting && !s.editing && v.settingsInteraction() == s {
+			if s.actionsFocused && !s.selecting && !s.editing && !s.capturing && v.settingsInteraction() == s {
 				selected = s.action
 			}
 			if v.settingsInteraction() != s || s.pending {
@@ -121,6 +125,15 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				if field.Control == "file" {
 					hint = "←/→ Choose file · Enter Type · Ctrl+Enter Save"
 				}
+				if field.Control == "shortcut" {
+					hint = "Enter Capture · Del Clear · Ctrl+Enter Save"
+					if !shortcutFieldEditable(s, s.selected) {
+						hint = "Protected shortcut · Ctrl+Enter Save"
+					}
+					if s.capturing {
+						hint = "Press shortcut · Esc Cancel"
+					}
+				}
 				if field.Key == settings.EditorCollection+".ext" {
 					hint = "Space-separated extensions · * Fallback"
 				}
@@ -141,7 +154,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				} else if s.fields[s.selected].Key == settingFontFamily {
 					hint = "←/→ Font · Enter Type · Ctrl+Enter Save"
 				}
-				if s.actionsFocused && !s.selecting && !s.editing {
+				if s.actionsFocused && !s.selecting && !s.editing && !s.capturing {
 					hint = "Enter Save changes"
 					if s.action == 1 {
 						hint = "Enter Cancel changes"

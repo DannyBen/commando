@@ -18,6 +18,16 @@ type nativeKeyInput struct {
 	invalidate func()
 	interacted bool
 	altText    map[rune]bool
+	capturing  bool
+}
+
+func (q *nativeKeyInput) setShortcutCapture(capturing bool) {
+	if q == nil {
+		return
+	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.capturing = capturing
 }
 
 func (q *nativeKeyInput) setAltText(names []rune) {
@@ -37,7 +47,7 @@ func (q *nativeKeyInput) suppressesAltText(name rune) bool {
 	}
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	return q.altText[unicode.ToLower(name)]
+	return q.capturing || q.altText[unicode.ToLower(name)]
 }
 
 func (q *nativeKeyInput) noticeInteraction() {
