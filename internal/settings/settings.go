@@ -45,6 +45,7 @@ type Definition struct {
 type Group struct{ Key, Parent, Label string }
 type Widget struct {
 	Key, Parent, Label, Title string
+	Preview                   string
 	Visible                   bool
 }
 type Field struct {

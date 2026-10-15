@@ -201,6 +201,7 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.secondary_text]
+preview = "secondary"
 category = "Text"
 label = "Secondary"
 title = "Secondary"
@@ -231,6 +232,7 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.edge]
+preview = "edge"
 category = "Accents"
 label = "Edge"
 title = "Edge"
@@ -257,9 +259,10 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.marked]
+preview = "mark"
 category = "Accents"
-label = "Marks"
-title = "Marks"
+label = "File marks"
+title = "File marks"
 
 [appearance.theme.marked.lightness]
 label = "Lightness"
@@ -309,6 +312,7 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.selected_text]
+preview = "selected_text"
 category = "Selection"
 label = "Text"
 title = "Text"
@@ -335,6 +339,7 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.text_selection]
+preview = "text_selection"
 category = "Text"
 label = "Selected background"
 title = "Selected background"
@@ -361,6 +366,7 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.cut_text]
+preview = "cut"
 category = "Cut items"
 label = "Normal"
 title = "Normal"
@@ -390,37 +396,8 @@ min = 0.0
 max = 360.0
 step = 1.0
 
-[appearance.theme.selected_cut_text]
-category = "Cut items"
-label = "Selected"
-title = "Selected"
-
-[appearance.theme.selected_cut_text.linked]
-label = "Link to Selection › Text"
-control = "toggle"
-
-[appearance.theme.selected_cut_text.lightness]
-label = "Lightness"
-control = "stepper-progress"
-min = 0.0
-max = 1.0
-step = 0.01
-
-[appearance.theme.selected_cut_text.chroma]
-label = "Chroma"
-control = "stepper-progress"
-min = 0.0
-max = 0.5
-step = 0.01
-
-[appearance.theme.selected_cut_text.hue]
-label = "Hue"
-control = "stepper-progress"
-min = 0.0
-max = 360.0
-step = 1.0
-
 [appearance.theme.notification]
+preview = "notifications"
 category = "Notifications"
 label = "Root"
 title = "Root"
@@ -447,6 +424,7 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.info]
+preview = "info"
 category = "Notifications"
 label = "Info"
 title = "Info"
@@ -477,6 +455,7 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.success]
+preview = "success"
 category = "Notifications"
 label = "Success"
 title = "Success"
@@ -507,6 +486,7 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.warning]
+preview = "warning"
 category = "Notifications"
 label = "Warning"
 title = "Warning"
@@ -537,6 +517,7 @@ max = 360.0
 step = 1.0
 
 [appearance.theme.error]
+preview = "error"
 category = "Notifications"
 label = "Error"
 title = "Error"

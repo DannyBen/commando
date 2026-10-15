@@ -114,6 +114,41 @@ func TestOKLCHConversionAndGamut(t *testing.T) {
 	}
 }
 
+func TestSemanticColorRoundTrip(t *testing.T) {
+	for _, value := range []uint32{0, 0xffffff, 0xff0000, 0x00ff00, 0x0000ff, 0x336699, 0x888888, 0xff8800} {
+		original := rgb(value)
+		converted := oklchFromRGB(original).rgb()
+		for _, pair := range [][2]uint8{{original.R, converted.R}, {original.G, converted.G}, {original.B, converted.B}} {
+			if delta := int(pair[0]) - int(pair[1]); delta < -1 || delta > 1 {
+				t.Fatalf("semantic color %06x changed during conversion: %v", value, converted)
+			}
+		}
+	}
+}
+
+func TestSelectedCutSwapsColorsAndUsesSelectionAdjustment(t *testing.T) {
+	theme := defaultTheme
+	theme.Colors.CutFilename = rgb(0x336699)
+	s := defaultFilenameColors
+	theme.FilenameColors = &s
+	file := browser.Entry{Name: "notes.txt"}
+	base := oklchFromRGB(theme.Colors.CutFilename)
+	for _, offset := range []float64{-0.1, 0, 0.1} {
+		s.activeBackgroundLightnessOffset = offset
+		background, name, metadata := theme.entryColors(file, true, true)
+		if name != theme.Colors.Surface || metadata != name {
+			t.Fatal("selected cut filename and metadata did not use panel background")
+		}
+		if got := oklchFromRGB(background).l; math.Abs(got-(base.l+offset)) > 0.005 {
+			t.Fatalf("selected cut background ignored lightness adjustment: %g", got)
+		}
+		other, _, _ := theme.entryColors(browser.Entry{Name: "image.png"}, true, true)
+		if other != background {
+			t.Fatal("selected cut background used extension color instead of cut color")
+		}
+	}
+}
+
 func TestEntryColorPrecedence(t *testing.T) {
 	s, theme := defaultFilenameColors, defaultTheme
 	file := browser.Entry{Name: ".example.json", Hidden: true}
@@ -136,10 +171,10 @@ func TestEntryColorPrecedence(t *testing.T) {
 		cutBG, cutName, cutMetadata := theme.entryColors(file, active, true)
 		wantBG, wantName := bg, theme.Colors.CutFilename
 		if active {
-			wantBG, wantName = activeBG, theme.Colors.SelectedCutFilename
+			wantBG, wantName = s.activeBackground(oklchFromRGB(theme.Colors.CutFilename)).rgb(), theme.Colors.Surface
 		}
 		if cutBG != wantBG || cutName != wantName || cutMetadata != cutName {
-			t.Fatal("cut precedence changed the type background or mismatched filename/metadata")
+			t.Fatal("cut color did not follow ordinary selection styling")
 		}
 		parentBG, parentName, parentMetadata := theme.entryColors(browser.Entry{Name: "..", Parent: true}, active, false)
 		folderBG, folderName, folderMetadata := theme.entryColors(browser.Entry{Name: "folder", Directory: true}, active, false)
@@ -234,11 +269,8 @@ func TestDisabledAutoColorUsesSemanticThemeColors(t *testing.T) {
 				if active {
 					wantBG, wantName, wantMetadata = theme.Colors.Selected, theme.Colors.SelectedName, theme.Colors.SelectedMetadata
 				}
-				if cut {
+				if cut && !active {
 					wantName = theme.Colors.CutFilename
-					if active {
-						wantName = theme.Colors.SelectedCutFilename
-					}
 					wantMetadata = wantName
 				}
 				if bg != wantBG || name != wantName || metadata != wantMetadata {

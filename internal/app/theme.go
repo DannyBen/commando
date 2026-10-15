@@ -47,7 +47,7 @@ type ThemeColors struct {
 	Edge, ActiveLocation                               color.NRGBA
 	Marked                                             color.NRGBA // Left-edge bar for marked files and folders.
 	Filename, Metadata                                 color.NRGBA
-	CutFilename, SelectedCutFilename                   color.NRGBA
+	CutFilename                                        color.NRGBA
 	Selected, SelectedName, SelectedMetadata           color.NRGBA
 	TextSelection, Error                               color.NRGBA
 	Info, Success, Warning                             color.NRGBA

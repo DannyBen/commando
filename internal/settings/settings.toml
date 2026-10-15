@@ -58,12 +58,6 @@ lightness = 0.55
 chroma = 0.01
 hue = 255.0
 
-[appearance.theme.selected_cut_text]
-linked = true
-lightness = 0.9
-chroma = 0.03
-hue = 255.0
-
 [appearance.theme.notification]
 lightness = 0.55
 chroma = 0.16

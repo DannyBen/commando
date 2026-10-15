@@ -29,6 +29,7 @@ func embeddedCatalogue() Catalogue {
 type nodeMetadata struct {
 	Label, Palette, Description, Control string
 	Category                             string
+	Preview                              string
 	Identity                             string
 	Title                                *string
 	Visible                              *bool
@@ -258,7 +259,7 @@ func readMetadata(md *toml.MetaData, ui map[string]toml.Primitive, path []string
 
 func allowMetadata(known map[string]bool, key string, leaf bool) {
 	known[key] = true
-	for _, property := range []string{"label", "palette", "title", "visible", "description", "identity", "category"} {
+	for _, property := range []string{"label", "palette", "title", "visible", "description", "identity", "category", "preview"} {
 		known[key+"."+property] = true
 	}
 	if leaf {
@@ -270,6 +271,9 @@ func allowMetadata(known map[string]bool, key string, leaf bool) {
 
 func (c *Catalogue) addWidget(key, parent, owner string, m nodeMetadata, visible, leaf bool) (string, error) {
 	if m.Title == nil {
+		if m.Preview != "" {
+			return "", fmt.Errorf("preview without widget title: %s", key)
+		}
 		if m.Category != "" {
 			return "", fmt.Errorf("category without widget title: %s", key)
 		}
@@ -298,7 +302,7 @@ func (c *Catalogue) addWidget(key, parent, owner string, m nodeMetadata, visible
 		}
 		parent = categoryKey
 	}
-	c.UI.Widgets = append(c.UI.Widgets, Widget{Key: key, Parent: parent, Label: label, Title: *m.Title, Visible: visible})
+	c.UI.Widgets = append(c.UI.Widgets, Widget{Key: key, Parent: parent, Label: label, Title: *m.Title, Preview: m.Preview, Visible: visible})
 	return key, nil
 }
 

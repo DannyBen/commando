@@ -94,26 +94,24 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 						active := storedRow == p.selected && index == v.active && transient < 0 && !p.navigating
 						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, v.cutEntry(index, storedRow))
 					}
-					paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
+					edge := color.NRGBA{}
 					if naming && v.nameInteraction().draft() {
-						paint.FillShape(gtx.Ops, v.appearance.Colors.InlineEdge, clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
+						edge = v.appearance.Colors.InlineEdge
 					} else if p.marks[storedRow] {
-						paint.FillShape(gtx.Ops, v.appearance.Colors.Marked,
-							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
+						edge = v.appearance.Colors.Marked
 					} else if storedRow == p.selected && index != v.active {
-						// Keep the last selection visible without an active-row fill.
-						paint.FillShape(gtx.Ops, v.appearance.Colors.Edge,
-							clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
+						edge = v.appearance.Colors.Edge
 					}
-					gtx.Constraints = layout.Exact(size)
-					if naming {
-						metadata := ""
-						if storedRow >= 0 {
-							metadata = p.metadata.value(p.items[storedRow])
+					return v.fileRowSurface(gtx, size, bg, edge, func(gtx layout.Context) layout.Dimensions {
+						if naming {
+							metadata := ""
+							if storedRow >= 0 {
+								metadata = p.metadata.value(p.items[storedRow])
+							}
+							return v.nameContents(gtx, metadata, sizeColor)
 						}
-						return v.nameContents(gtx, metadata, sizeColor)
-					}
-					return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata)
+						return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata)
+					})
 				}
 				if naming {
 					return contents(gtx)
@@ -146,6 +144,17 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 }
 
 func (p *panel) positionLabel() string { return fmt.Sprintf("%d / %d", p.selected+1, len(p.items)) }
+
+// Shared by real listings and passive theme previews, including mark and
+// inactive-selection bars. Input handling belongs to the surrounding file row.
+func (v *view) fileRowSurface(gtx layout.Context, size image.Point, background, edge color.NRGBA, content layout.Widget) layout.Dimensions {
+	paint.FillShape(gtx.Ops, background, clip.Rect{Max: size}.Op())
+	if edge.A != 0 {
+		paint.FillShape(gtx.Ops, edge, clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
+	}
+	gtx.Constraints = layout.Exact(size)
+	return content(gtx)
+}
 
 func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn) layout.Dimensions {
 	return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {

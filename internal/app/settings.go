@@ -138,6 +138,7 @@ type settingsSession struct {
 	editing, selecting bool
 	errorText          string
 	surface            dockedSurface
+	preview            string
 	palette            *paletteSession
 	actions            actionBar
 	actionsFocused     bool
@@ -194,6 +195,7 @@ func (v *view) startSettingsWidget(group string) {
 		title = parent + " › " + title
 	}
 	s := &settingsSession{panel: v.active, title: title, before: v.settingsValues.Clone(), editor: widget.Editor{SingleLine: true, Submit: true}}
+	s.preview = spec.Preview
 	for _, field := range settings.CatalogueDefault.UI.Fields {
 		if field.Widget == group && field.Visible {
 			s.fields = append(s.fields, field)

@@ -48,15 +48,6 @@ source = "secondary_text"
 scale = [0.0, 1.0]
 offset = [0.0, 0.0]
 
-[selected_cut_text.lightness]
-source = "selected_text"
-scale = [1.0, 1.0]
-offset = [-0.15, 0.15]
-[selected_cut_text.chroma]
-source = "selected_text"
-scale = [1.0, 1.0]
-offset = [0.0, 0.05]
-
 [info.lightness]
 source = "notification"
 scale = [1.0, 1.0]

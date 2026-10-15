@@ -26,6 +26,31 @@ func filenameColorKey(file browser.Entry) string {
 
 type oklchColor struct{ l, c, h float64 }
 
+// Inverse of linearRGB's matrices and rgb's transfer function. This lets a
+// semantic filename color use the same selection transform as generated colors.
+func oklchFromRGB(value color.NRGBA) oklchColor {
+	decode := func(n uint8) float64 {
+		v := float64(n) / 255
+		if v <= 0.04045 {
+			return v / 12.92
+		}
+		return math.Pow((v+0.055)/1.055, 2.4)
+	}
+	r, g, b := decode(value.R), decode(value.G), decode(value.B)
+	l := math.Cbrt(0.4122214708*r + 0.5363325363*g + 0.0514459929*b)
+	m := math.Cbrt(0.2119034982*r + 0.6806995451*g + 0.1073969566*b)
+	s := math.Cbrt(0.0883024619*r + 0.2817188376*g + 0.6299787005*b)
+	lightness := 0.2104542553*l + 0.7936177850*m - 0.0040720468*s
+	a := 1.9779984951*l - 2.4285922050*m + 0.4505937099*s
+	b = 0.0259040371*l + 0.7827717662*m - 0.8086757660*s
+	chroma := math.Hypot(a, b)
+	hue := 0.0
+	if chroma > 1e-7 {
+		hue = wrapHue(math.Atan2(b, a) * 180 / math.Pi)
+	}
+	return oklchColor{lightness, chroma, hue}
+}
+
 func (s filenameColorSettings) filename(file browser.Entry) oklchColor {
 	// Seed a local PCG from the extension hash plus salt, then take one hue.
 	// Without shared random state, colors stay independent of listing,
@@ -123,30 +148,28 @@ func (t Theme) entryColors(file browser.Entry, active, cut bool) (background, fi
 		colors = *t.FilenameColors
 	}
 	generated := colors.enabled && file.Path == ""
+	value := oklchColor{}
 	if generated {
-		filename = colors.filename(file).rgb()
-	}
-	if active {
-		background = t.Colors.Selected
-		if generated {
-			background = colors.activeBackground(colors.filename(file)).rgb()
-			filename = t.Colors.Surface
-		} else {
-			filename = t.Colors.SelectedName
-		}
+		value = colors.filename(file)
+		filename = value.rgb()
 	}
 	if cut {
 		filename = t.Colors.CutFilename
-		if active {
-			filename = t.Colors.SelectedCutFilename
+		if generated && active {
+			value = oklchFromRGB(filename)
 		}
 	}
 	metadata = t.Colors.Metadata
-	if active {
-		metadata = t.Colors.SelectedMetadata
-	}
 	if generated || cut {
 		metadata = filename
+	}
+	if active {
+		if generated {
+			background = colors.activeBackground(value).rgb()
+			filename, metadata = t.Colors.Surface, t.Colors.Surface
+		} else {
+			background, filename, metadata = t.Colors.Selected, t.Colors.SelectedName, t.Colors.SelectedMetadata
+		}
 	}
 	return
 }

@@ -19,13 +19,21 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	headerHeight := rowHeight + gtx.Dp(2)
 	footerHeight := smallHeight + gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))
 	rows := len(s.fields)
+	samples := v.settingsPreviewItems(s.preview)
+	if len(samples) > 0 {
+		rows++
+	}
 	labelGap := v.textWidth(gtx, " ", v.appearance.TextSize)
 	labelWidth := 0
 	for _, field := range s.fields {
 		labelWidth = max(labelWidth, v.textWidth(gtx, field.Label, v.appearance.TextSize))
 	}
+	if len(samples) > 0 {
+		labelWidth = max(labelWidth, v.textWidth(gtx, "Preview", v.appearance.TextSize))
+	}
 
-	return s.surface.layout(gtx, footerHeight, gtx.Dp(v.appearance.SettingsWidth), headerHeight+(rows+1)*rowHeight+footerHeight, v.appearance.Colors, func(gtx layout.Context) layout.Dimensions {
+	editorHeight := headerHeight + (rows+1)*rowHeight + footerHeight
+	return s.surface.layout(gtx, footerHeight, gtx.Dp(v.appearance.SettingsWidth), editorHeight, v.appearance.Colors, func(gtx layout.Context) layout.Dimensions {
 		children := make([]layout.FlexChild, 0, rows+3)
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.headerBand(gtx, headerHeight, v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
@@ -96,6 +104,18 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 						}
 						return dims
 					})
+				}, false)
+			}))
+		}
+
+		if len(samples) > 0 {
+			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return v.band(gtx, rowHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
+					available := gtx.Constraints.Max.X
+					leftWidth := min(labelWidth+labelGap, max(0, available-gtx.Dp(8))*2/3)
+					return v.columnLayout(gtx, max(0, available-leftWidth), func(gtx layout.Context) layout.Dimensions {
+						return v.label(gtx, "Preview", v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
+					}, func(gtx layout.Context) layout.Dimensions { return samples.layout(v, gtx, rowHeight) })
 				}, false)
 			}))
 		}
