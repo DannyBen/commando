@@ -194,7 +194,8 @@ func (v *view) acceptLoad(result loadResult) {
 				p.selected = i
 			}
 		}
-		if file.Directory && (file.Name == result.request.selectName ||
+		if (file.Directory || result.request.explicitPath) && (file.Name == result.request.selectName ||
+			result.request.explicitPath && samePath(file.Name, result.request.selectName) ||
 			file.Path != "" && strings.EqualFold(file.Path, result.request.selectName)) {
 			p.selected = i
 		}
@@ -206,6 +207,9 @@ func (v *view) acceptLoad(result loadResult) {
 	} else {
 		p.list = widget.List{List: layout.List{Axis: layout.Vertical}}
 		p.reveal = p.selected >= 0
+	}
+	if result.pathMissing {
+		v.showFeedback(result.request.panel, feedback.Warning, "Path not found")
 	}
 }
 

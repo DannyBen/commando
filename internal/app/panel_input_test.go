@@ -284,14 +284,13 @@ func TestLocationEditing(t *testing.T) {
 	if v.panels[0].path != filepath.Join(root, "other") {
 		t.Fatal("absolute path submission failed")
 	}
-	before := v.panels[0].path
 	send(altD)
 	replace(filepath.Join(root, "missing"))
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	send()
-	if v.panels[0].path != before || !errors.Is(v.panels[0].err, os.ErrNotExist) || v.panels[1].path != root {
-		t.Fatal("invalid typed path did not retain the current folder and report an error")
+	if v.panels[0].path != root || v.panels[0].err != nil || v.panels[1].path != root {
+		t.Fatal("missing typed path did not open its existing parent")
 	}
 	send(altD)
 	replace("")
@@ -364,8 +363,8 @@ func TestLocationEnvironmentSubmission(t *testing.T) {
 			send()
 			p := &v.panels[0]
 			if filepath.Base(path) == "missing" {
-				if p.path != root || !errors.Is(p.err, os.ErrNotExist) || p.feedback.Current() == nil || p.feedback.Current().Text != "Folder not found" {
-					t.Fatal("missing expanded folder did not retain the listing and report its error")
+				if p.path != root || p.err != nil || p.feedback.Current() == nil || p.feedback.Current().Text != "Path not found" {
+					t.Fatal("missing expanded folder did not warn at its existing parent")
 				}
 			} else if p.path != child || p.err != nil {
 				t.Fatalf("expanded path did not navigate: path=%q err=%v", p.path, p.err)
@@ -530,7 +529,7 @@ func TestBackspaceGoesUpWithActivePrefix(t *testing.T) {
 	}
 }
 
-func TestLocationEditorMissingPathReportsErrorAndKeepsListing(t *testing.T) {
+func TestLocationEditorMissingPathOpensNearestAncestorAndWarns(t *testing.T) {
 	for _, relative := range []bool{false, true} {
 		t.Run(fmt.Sprintf("relative=%v", relative), func(t *testing.T) {
 			root := t.TempDir()
@@ -551,7 +550,6 @@ func TestLocationEditorMissingPathReportsErrorAndKeepsListing(t *testing.T) {
 			selectName(t, p, "keep.txt")
 			p.toggleMark(p.selected)
 			send()
-			selected, position, count := p.selected, p.list.Position, len(p.items)
 			path := filepath.Join(root, "missing", "nested")
 			if relative {
 				path = filepath.Join("..", "missing", "nested")
@@ -561,11 +559,11 @@ func TestLocationEditorMissingPathReportsErrorAndKeepsListing(t *testing.T) {
 			send(pressed(key.NameReturn))
 			waitLoaded(t, v, 0)
 			send()
-			if !errors.Is(p.err, os.ErrNotExist) || p.path != current || len(p.items) != count || p.selected != selected || !p.marks[selected] || len(p.marks) != 1 || p.list.Position.First != position.First || p.list.Position.Offset != position.Offset {
-				t.Fatalf("invalid typed path changed the listing or swallowed its error: path=%q error=%v", p.path, p.err)
+			if p.err != nil || p.path != root || len(p.marks) != 0 || p.filter != "" || p.prefix != "" {
+				t.Fatalf("missing typed path did not navigate cleanly to its nearest ancestor: path=%q error=%v", p.path, p.err)
 			}
 			message := p.feedback.Current()
-			if message == nil || message.Text != "Folder not found" || v.locationEditing() || v.active != 0 || v.panels[1].path != root {
+			if message == nil || message.Text != "Path not found" || v.locationEditing() || v.active != 0 || v.panels[1].path != root {
 				t.Fatal("missing-path feedback/focus was lost or another panel changed")
 			}
 		})

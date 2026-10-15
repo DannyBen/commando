@@ -120,7 +120,11 @@ func (v *view) updateLocation(gtx layout.Context) {
 		}
 		if submit, ok := e.(widget.SubmitEvent); ok {
 			v.dismissFeedback()
-			path := expandLocationEnvironment(submit.Text)
+			path := strings.TrimSpace(submit.Text)
+			if len(path) >= 2 && path[0] == '"' && path[len(path)-1] == '"' {
+				path = path[1 : len(path)-1]
+			}
+			path = expandLocationEnvironment(path)
 			if path == "" || v.panels[v.active].loading {
 				return
 			}

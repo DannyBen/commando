@@ -215,8 +215,10 @@ module/executable and `Commando` for the window title and data-folder name.
   ordinary browsing available during automatic reads, retain failed listings,
   and release notification handles on navigation and shutdown. Ctrl+R remains
   the fallback for unsupported locations; previews bypass directory monitors.
-- Explicit paths entered through Alt+D report missing-folder errors and retain
-  the current listing, selection, marks and viewport. They do not recover to a parent.
+- Alt+D accepts quoted folder or file paths. Files open their containing folder
+  and select the file; missing paths open their nearest existing ancestor with
+  Path not found warning. Permission/read failures and unavailable ancestry
+  retain the current listing, selection, marks and viewport.
 - Missing open/restored folders recover through existing parents, then fall back to `C:\`
   (filesystem root on Linux). Use the existing directory worker and notification
   refresh flow; the Windows watcher also checks existence once per second.

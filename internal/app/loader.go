@@ -1,6 +1,7 @@
 package app
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -15,7 +16,7 @@ type loadRequest struct {
 	refresh          bool
 	autoRefresh      bool
 	shortcut         bool // Resolve a .lnk before deciding between folder navigation and native opening.
-	explicitPath     bool // Typed locations report missing-path errors instead of recovering.
+	explicitPath     bool // Resolve pasted files and missing paths within their own ancestry.
 	tracked          bool
 	action           actionClass
 	locations        []string // Captured panel paths for create/rename alias reconciliation.
@@ -50,6 +51,7 @@ type loadResult struct {
 	editorsStarted    int
 	externalOpen      bool
 	fontFamilies      []string
+	pathMissing       bool
 }
 
 type directoryLoader struct {
@@ -194,7 +196,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 						directory, err = l.readExistingParent(target)
 					}
 				} else if request.explicitPath {
-					directory, err = l.readDirectory(request.path)
+					directory, result.request.selectName, result.pathMissing, err = l.readExplicitPath(request.path)
 				} else {
 					directory, err = l.readExistingParent(request.path)
 				}
@@ -232,4 +234,36 @@ func (l *directoryLoader) readExistingParent(path string) (browser.Directory, er
 		}
 		path = parent
 	}
+}
+
+// Explicit locations may name files or incomplete paths. Stay within the given
+// ancestry, stopping at permission errors or an unavailable root. All reads and
+// file probing stay on the worker, independently of UI input and rendering.
+func (l *directoryLoader) readExplicitPath(path string) (browser.Directory, string, bool, error) {
+	directory, err := l.readDirectory(path)
+	if !browser.IsMissingDirectory(err) {
+		return directory, "", false, err
+	}
+	info, statErr := os.Stat(path)
+	if statErr != nil && !browser.IsMissingDirectory(statErr) {
+		return browser.Directory{}, "", false, statErr
+	}
+	selected := ""
+	if statErr == nil && !info.IsDir() {
+		selected = filepath.Base(path)
+	}
+	missing := selected == ""
+	for browser.IsMissingDirectory(err) {
+		parent := filepath.Dir(path)
+		if parent == path {
+			return browser.Directory{}, "", false, err
+		}
+		path = parent
+		directory, err = l.readDirectory(path)
+		if err == nil {
+			return directory, selected, missing, nil
+		}
+		selected, missing = "", true
+	}
+	return browser.Directory{}, "", false, err
 }
