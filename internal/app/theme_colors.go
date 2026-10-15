@@ -2,6 +2,7 @@ package app
 
 import (
 	"image/color"
+	"strings"
 
 	"github.com/dannyben/commando/internal/settings"
 )
@@ -9,12 +10,7 @@ import (
 func themeColorsFromSettings(values settings.Values) ThemeColors {
 	values = values.Clone()
 	settings.ClampThemeColors(&values, settings.CatalogueDefault)
-	get := func(role string) color.NRGBA {
-		n := func(component string) float64 {
-			return values.Get(settings.CatalogueDefault, "appearance.theme."+role+"."+component).Number
-		}
-		return oklchColor{n("lightness"), n("chroma"), n("hue")}.rgb()
-	}
+	get := func(role string) color.NRGBA { return themeColorValue(values, "appearance.theme."+role) }
 	c := ThemeColors{
 		Surface: get("background"), Header: get("alt_background"), Border: get("border"),
 		Foreground: get("text"), Muted: get("secondary_text"), Edge: get("edge"), Marked: get("marked"),
@@ -31,4 +27,19 @@ func themeColorsFromSettings(values settings.Values) ThemeColors {
 	c.InlineInactiveSelected = c.Header
 	c.Scrollbar, c.ScrollbarHover = c.Border, c.Edge
 	return c
+}
+
+func themeColorValue(values settings.Values, prefix string) color.NRGBA {
+	n := func(component string) float64 {
+		return values.Get(settings.CatalogueDefault, prefix+"."+component).Number
+	}
+	return oklchColor{n("lightness"), n("chroma"), n("hue")}.rgb()
+}
+
+func (v *view) settingSwatch(key string) (color.NRGBA, bool) {
+	prefix, hue := strings.CutSuffix(key, ".hue")
+	if !hue || !strings.HasPrefix(prefix, "appearance.theme.") {
+		return color.NRGBA{}, false
+	}
+	return themeColorValue(v.settingsValues, prefix), true
 }

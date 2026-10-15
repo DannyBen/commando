@@ -91,18 +91,24 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 					return v.columnLayout(gtx, valueWidth, func(gtx layout.Context) layout.Dimensions {
 						return v.label(gtx, field.Label, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 					}, func(gtx layout.Context) layout.Dimensions {
-						dims := control(gtx)
-						if field.Control == "stepper-progress" {
-							ratio := (v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number - d.Minimum) / (*d.Maximum - d.Minimum)
-							if bounds, ok := settings.ThemeColorRange(v.settingsValues, settings.CatalogueDefault, field.Key); ok {
-								ratio = bounds.Progress(v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number)
+						valueControl := func(gtx layout.Context) layout.Dimensions {
+							dims := control(gtx)
+							if field.Control == "stepper-progress" {
+								ratio := (v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number - d.Minimum) / (*d.Maximum - d.Minimum)
+								if bounds, ok := settings.ThemeColorRange(v.settingsValues, settings.CatalogueDefault, field.Key); ok {
+									ratio = bounds.Progress(v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number)
+								}
+								y := textHeight - gtx.Dp(1)
+								width := gtx.Constraints.Max.X
+								paint.FillShape(gtx.Ops, v.appearance.Colors.Border, clip.Rect{Min: image.Pt(0, y), Max: image.Pt(width, y+gtx.Dp(1))}.Op())
+								paint.FillShape(gtx.Ops, v.appearance.Colors.Filename, clip.Rect{Min: image.Pt(0, y), Max: image.Pt(int(float64(width)*ratio), y+gtx.Dp(1))}.Op())
 							}
-							y := textHeight - gtx.Dp(1)
-							width := gtx.Constraints.Max.X
-							paint.FillShape(gtx.Ops, v.appearance.Colors.Border, clip.Rect{Min: image.Pt(0, y), Max: image.Pt(width, y+gtx.Dp(1))}.Op())
-							paint.FillShape(gtx.Ops, v.appearance.Colors.Filename, clip.Rect{Min: image.Pt(0, y), Max: image.Pt(int(float64(width)*ratio), y+gtx.Dp(1))}.Op())
+							return dims
 						}
-						return dims
+						if color, ok := v.settingSwatch(field.Key); ok {
+							return colorValueControl(gtx, textHeight, color, v.appearance.Colors.Border, valueControl)
+						}
+						return valueControl(gtx)
 					})
 				}, false)
 			}))
