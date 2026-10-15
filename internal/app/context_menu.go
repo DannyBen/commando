@@ -26,7 +26,7 @@ func (v *view) startContextMenu(gtx layout.Context, index, row int, mouse bool) 
 	if !mouse {
 		s.request.options.ClientPoint = new(image.Point)
 	}
-	if !v.interaction.begin(s) {
+	if !v.startInteraction(s) {
 		return
 	}
 	v.dismissFeedback()

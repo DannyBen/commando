@@ -73,7 +73,7 @@ func (v *view) selectPrefix(fresh bool) {
 }
 
 func (v *view) startLocation(gtx layout.Context) {
-	if !v.interaction.begin(&locationSession{panel: v.active}) {
+	if !v.startInteraction(&locationSession{panel: v.active}) {
 		return
 	}
 	p := &v.panels[v.active]

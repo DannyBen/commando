@@ -8,7 +8,6 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/settings"
-	"github.com/dannyben/commando/internal/sound"
 )
 
 func (v *view) canEditShortcuts(c command) bool {
@@ -46,8 +45,7 @@ func (v *view) startShortcutWidget(gtx layout.Context) {
 		s.selected = 1
 	}
 	v.interaction.finish(p)
-	v.interaction.begin(s)
-	v.playSound(sound.Settings)
+	v.startInteraction(s)
 	v.focusInteraction(gtx)
 }
 
@@ -85,10 +83,7 @@ func (v *view) beginShortcutCapture(gtx layout.Context) {
 		s.errorText = "Shortcut is protected"
 		return
 	}
-	s.errorText = ""
-	v.setShortcutCapture(s, true)
-	v.playSound(sound.Settings)
-	v.focusInteraction(gtx)
+	v.beginWidgetEdit(gtx, true)
 }
 
 func (v *view) updateShortcutCapture(gtx layout.Context) {
@@ -139,9 +134,7 @@ func (v *view) captureShortcutKey(gtx layout.Context, ke key.Event) {
 }
 
 func (v *view) finishShortcutCapture(gtx layout.Context) {
-	v.setShortcutCapture(v.settingsInteraction(), false)
-	v.playSound(sound.Settings)
-	v.focusInteraction(gtx)
+	v.confirmWidgetEdit(gtx)
 }
 
 func (v *view) setShortcutDraft(text string) bool {

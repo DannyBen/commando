@@ -40,7 +40,7 @@ func (v *view) startInlineActions(panel, row int, title, detail string, options 
 		return
 	}
 	p := &v.panels[panel]
-	v.interaction.begin(&inlineActionSession{panel: panel, row: max(0, min(row, len(p.items))), subjectRow: -1, headers: headers,
+	v.startInteraction(&inlineActionSession{panel: panel, row: max(0, min(row, len(p.items))), subjectRow: -1, headers: headers,
 		options: options, choose: choose, cancel: cancel, previousPosition: p.list.Position, previousReveal: p.reveal})
 	p.rows = make(map[int]*fileRow)
 	p.prefix, p.reveal = "", true
@@ -118,7 +118,7 @@ func (v *view) inlineActionKey(gtx layout.Context, ke key.Event) {
 		return
 	}
 	if a.selected != previous {
-		v.playNavigationSound()
+		v.announceInteraction(eventSelectionChanged)
 	}
 }
 
@@ -127,7 +127,7 @@ func (v *view) navigateInlineActions(direction int, cycle bool) {
 		previous := v.active
 		navigate(direction, cycle)
 		if v.active != previous {
-			v.playNavigationSound()
+			v.announceInteraction(eventSelectionChanged)
 		}
 	} else {
 		v.switchPanelTo(v.panelNeighbor(direction, cycle, -1))

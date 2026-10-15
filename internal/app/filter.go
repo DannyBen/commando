@@ -44,7 +44,7 @@ func (p *panel) setFilter(query string) {
 }
 
 func (v *view) startFilter(gtx layout.Context) {
-	if !folderReady(v) || !v.interaction.begin(&filterSession{panel: v.active}) {
+	if !folderReady(v) || !v.startInteraction(&filterSession{panel: v.active}) {
 		return
 	}
 	p := &v.panels[v.active]
@@ -130,7 +130,7 @@ func (v *view) updateFilter(gtx layout.Context) {
 			return
 		case key.NameReturn, key.NameEnter:
 			v.stopFilter(gtx)
-			v.playNavigationSound()
+			v.announceInteraction(eventSelectionChanged)
 			return
 		case key.NameUpArrow, key.NameDownArrow:
 			delta := 1

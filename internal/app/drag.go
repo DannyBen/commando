@@ -22,7 +22,7 @@ func (v *view) startDrag(gtx layout.Context, index, row int, armed bool) {
 		paths = []string{filepath.Join(p.path, p.items[row].file.Name)}
 	}
 	s := &nativeSession{panel: index, request: shellRequest{action: shellDrag, armed: armed, paths: paths, queued: time.Now()}}
-	if !v.interaction.begin(s) {
+	if !v.startInteraction(s) {
 		return
 	}
 	v.dismissFeedback()

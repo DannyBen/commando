@@ -68,7 +68,7 @@ func (v *view) startName(gtx layout.Context, kind nameOperation) {
 }
 
 func (v *view) beginName(gtx layout.Context, r *nameSession, name string, folder bool) {
-	if !v.interaction.begin(r) {
+	if !v.startInteraction(r) {
 		return
 	}
 	p := &v.panels[r.panel]

@@ -44,7 +44,7 @@ func (v *view) insertPanel(index int, p panel, cutPath, cutLocation string) {
 	v.cutPanelPaths = slices.Insert(v.cutPanelPaths, index, cutPath)
 	v.cutLocations = slices.Insert(v.cutLocations, index, cutLocation)
 	v.active = index
-	v.playNavigationSound()
+	v.announceInteraction(eventSelectionChanged)
 }
 
 func (v *view) addPanel(direction int) bool {
@@ -86,7 +86,7 @@ func (v *view) closePanel() {
 	v.closedPanels = append(v.closedPanels, closed)
 	v.panels = slices.Delete(v.panels, index, index+1)
 	v.active = min(index, len(v.panels)-1)
-	v.playNavigationSound()
+	v.announceInteraction(eventSelectionChanged)
 }
 
 func (v *view) reopenPanel() {

@@ -164,7 +164,7 @@ func (v *view) selectBrowsingRow(next int, extendMarks, navigationSound bool) {
 	}
 	next = max(0, min(next, len(p.items)-1))
 	if next != p.selected && navigationSound {
-		v.playNavigationSound()
+		v.announceInteraction(eventSelectionChanged)
 	}
 	if extendMarks {
 		p.markTo(next)

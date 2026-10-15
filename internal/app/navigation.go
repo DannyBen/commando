@@ -11,7 +11,6 @@ import (
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
-	"github.com/dannyben/commando/internal/sound"
 )
 
 func newLocationView(locations []panelState, active int, invalidate func()) *view {
@@ -74,7 +73,7 @@ func (v *view) queueLoad(request loadRequest) {
 	}
 	p.feedback.ProgressAt(progress, time.Now().Add(v.appearance.FeedbackProgressDelay))
 	if !request.refresh && !request.shortcut && v.sounds != nil {
-		v.playSound(sound.DirectoryNavigation)
+		v.announceInteraction(eventDirectoryNavigation)
 	}
 }
 
@@ -137,7 +136,7 @@ func (v *view) acceptLoad(result loadResult) {
 			v.openPath(result.request.path)
 			return
 		}
-		v.playSound(sound.DirectoryNavigation)
+		v.announceInteraction(eventDirectoryNavigation)
 	}
 	p.loading, p.err = false, result.err
 	p.navigating = false

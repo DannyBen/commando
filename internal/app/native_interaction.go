@@ -7,7 +7,6 @@ import (
 
 	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/feedback"
-	"github.com/dannyben/commando/internal/sound"
 	"github.com/dannyben/commando/internal/windowshell"
 )
 
@@ -93,7 +92,7 @@ func (v *view) completeNative(completion shellCompletion) bool {
 		case completion.result.Cancelled:
 			v.showFeedback(panel, feedback.Info, "Drag cancelled")
 			if v.sounds != nil {
-				v.playSound(sound.Cancel)
+				v.announceInteraction(eventCancelled)
 			}
 			v.panels[panel].feedback.Acknowledge()
 		case completion.result.Effect&1 != 0:

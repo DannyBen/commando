@@ -4,7 +4,6 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
-	"github.com/dannyben/commando/internal/sound"
 )
 
 // Foreground interaction has one owner. Background work and panel loading are
@@ -44,6 +43,18 @@ func (c *interactionController) begin(session interactionSession) bool {
 		c.suspended = c.current
 	}
 	c.current = session
+	return true
+}
+
+// startInteraction announces a fresh session only after it is accepted.
+// Restoring an existing session uses the controller directly and stays quiet.
+func (v *view) startInteraction(session interactionSession) bool {
+	if !v.interaction.begin(session) {
+		return false
+	}
+	if owner, ok := session.(interface{ openingEvent() interactionEvent }); ok {
+		v.announceInteraction(owner.openingEvent())
+	}
 	return true
 }
 
@@ -152,7 +163,7 @@ func (v *view) escape(gtx layout.Context) {
 			s.actionsFocused, s.action = true, 1
 			v.focusInteraction(gtx)
 			if v.sounds != nil {
-				v.playSound(sound.MessageWarning)
+				v.announceInteraction(eventUnsavedChanges)
 			}
 			return
 		}
@@ -193,7 +204,7 @@ func (v *view) escape(gtx layout.Context) {
 		return
 	}
 	if v.sounds != nil {
-		v.playSound(sound.Cancel)
+		v.announceInteraction(eventCancelled)
 	}
 	// Cancellation may produce a footer result, such as Copy cancelled. Its
 	// animation stays intact; the Escape cue already announces the result.

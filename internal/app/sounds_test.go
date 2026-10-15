@@ -122,7 +122,7 @@ func TestSoundsSaveStartupCancelAndReset(t *testing.T) {
 	recorder := &recordedSounds{}
 	restored.sounds = recorder
 	restored.restoreSettings(saved, nil)
-	restored.playNavigationSound()
+	restored.announceInteraction(eventSelectionChanged)
 	if len(recorder.played) != 0 {
 		t.Fatal("startup ignored disabled sounds")
 	}
@@ -130,7 +130,7 @@ func TestSoundsSaveStartupCancelAndReset(t *testing.T) {
 	restored.adjustSetting(settingSoundsEnabled, 0)
 	restored.finishSettingsWidget(layout.Context{}, false)
 	baseline := len(recorder.played)
-	restored.playNavigationSound()
+	restored.announceInteraction(eventSelectionChanged)
 	if len(recorder.played) != baseline {
 		t.Fatal("Cancel did not restore disabled sounds")
 	}
@@ -140,7 +140,7 @@ func TestSoundsSaveStartupCancelAndReset(t *testing.T) {
 		t.Fatal("Reset did not inherit enabled sounds")
 	}
 	restored.finishSettingsWidget(layout.Context{}, true)
-	restored.playNavigationSound()
+	restored.announceInteraction(eventSelectionChanged)
 	if recorder.played[len(recorder.played)-1] != sound.Navigation {
 		t.Fatal("Reset did not restore sound playback")
 	}

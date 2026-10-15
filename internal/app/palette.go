@@ -10,7 +10,6 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/fuzzy"
-	"github.com/dannyben/commando/internal/sound"
 )
 
 type commandMatch struct {
@@ -37,6 +36,8 @@ type paletteSession struct {
 
 func (*paletteSession) blocksPanels() bool { return true }
 
+func (*paletteSession) openingEvent() interactionEvent { return eventPaletteOpened }
+
 func (s *paletteSession) interactionPanel() int { return s.panel }
 
 func (v *view) paletteInteraction() *paletteSession {
@@ -46,11 +47,8 @@ func (v *view) paletteInteraction() *paletteSession {
 
 func (v *view) startPalette(gtx layout.Context) {
 	s := &paletteSession{panel: v.active, rows: make(map[int]*widget.Clickable), commands: v.commandCatalogue(), settingsCommands: v.settingsCatalogue()}
-	if !v.interaction.begin(s) {
+	if !v.startInteraction(s) {
 		return
-	}
-	if v.sounds != nil {
-		v.playSound(sound.Palette)
 	}
 	s.list.Axis = layout.Vertical
 	v.commandSearch.SetText("")
@@ -221,7 +219,7 @@ func (v *view) updatePalette(gtx layout.Context) {
 		}
 		s.selected = max(0, min(s.selected, len(s.results)-1))
 		if s.selected != previous {
-			v.playNavigationSound()
+			v.announceInteraction(eventSelectionChanged)
 		}
 		s.reveal = true
 	}

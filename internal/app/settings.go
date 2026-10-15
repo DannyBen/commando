@@ -18,7 +18,6 @@ import (
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
-	"github.com/dannyben/commando/internal/sound"
 )
 
 func (v *view) restoreSettings(values settings.Values, err error) {
@@ -159,6 +158,8 @@ type settingsSaveRequest struct {
 	run     func() (string, error)
 }
 
+func (*settingsSession) openingEvent() interactionEvent { return eventWidgetOpened }
+
 func (s *settingsSession) interactionPanel() int { return s.panel }
 func (*settingsSession) blocksMutations() bool   { return true }
 func (s *settingsSession) protectsListing() bool { return !s.selecting }
@@ -217,9 +218,7 @@ func (v *view) startSettingsWidget(group string) {
 				v.requestFontFamilies()
 			}
 		}
-		if v.interaction.begin(s) && v.sounds != nil {
-			v.playSound(sound.Settings)
-		}
+		v.startInteraction(s)
 	}
 }
 func (v *view) settingText(key string) string {
@@ -283,7 +282,7 @@ func (v *view) adjustSetting(key string, direction int) {
 	if v.setWidgetValue(key, value) == nil {
 		v.applySettings()
 		if value != before {
-			v.playNavigationSound()
+			v.announceInteraction(eventValueChanged)
 		}
 	}
 }
@@ -345,12 +344,10 @@ func (v *view) beginSettingEdit(gtx layout.Context) {
 		v.adjustSetting(field.Key, 0)
 		return
 	}
-	s.editing = true
-	s.errorText = ""
 	s.editor.SetText(v.settingText(field.Key))
 	s.editor.SetCaret(0, utf8.RuneCountInString(s.editor.Text()))
 	s.completion.update(&s.editor)
-	v.focusInteraction(gtx)
+	v.beginWidgetEdit(gtx, false)
 }
 func (v *view) applySettingDraft(gtx layout.Context) bool {
 	s := v.settingsInteraction()
@@ -464,8 +461,8 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 	}
 	v.interaction.finish(s)
 	v.restoreWidgetPalette(s, save)
-	if save && v.sounds != nil {
-		v.playSound(sound.Settings)
+	if save {
+		v.announceInteraction(eventSettingsSaved)
 	}
 	v.focusInteraction(gtx)
 }
@@ -493,8 +490,8 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 	v.restoreWidgetPalette(s, true)
 	if message != "" {
 		v.showFeedback(s.panel, feedback.Info, message)
-	} else if v.sounds != nil {
-		v.playSound(sound.Settings)
+	} else {
+		v.announceInteraction(eventSettingsSaved)
 	}
 }
 func (v *view) updateSettingsSelection() {
@@ -536,8 +533,7 @@ func (v *view) chooseSettingsFile(gtx layout.Context) bool {
 		return false
 	}
 	s.selecting = false
-	s.errorText = ""
-	v.focusInteraction(gtx)
+	v.confirmWidgetEdit(gtx)
 	return true
 }
 
@@ -612,8 +608,9 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	}
 	for _, ke := range keys {
 		if ke.Name == key.NameDeleteForward && !s.actionsFocused && s.fields[s.selected].Control == "shortcut" {
-			if v.setShortcutDraft("none") {
-				v.playNavigationSound()
+			before := v.shortcutSettingText(s, s.fields[s.selected].Key)
+			if v.setShortcutDraft("none") && v.shortcutSettingText(s, s.fields[s.selected].Key) != before {
+				v.announceInteraction(eventValueChanged)
 			}
 			continue
 		}
@@ -629,7 +626,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 					direction = -1
 				}
 				if s.completion.cycle(direction) {
-					v.playNavigationSound()
+					v.announceInteraction(eventSelectionChanged)
 				}
 				continue
 			}
@@ -644,7 +641,9 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			} else if s.actionsFocused {
 				v.activateSettingsAction(gtx, s.action)
 			} else if s.editing {
-				v.applySettingDraft(gtx)
+				if v.applySettingDraft(gtx) {
+					v.confirmWidgetEdit(gtx)
+				}
 			} else {
 				v.beginSettingEdit(gtx)
 			}
@@ -658,7 +657,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 				}
 				s.actionsFocused = true
 				s.action = (s.action + direction + len(s.actionLabels())) % len(s.actionLabels())
-				v.playNavigationSound()
+				v.announceInteraction(eventSelectionChanged)
 				continue
 			}
 			if s.editing && !v.applySettingDraft(gtx) {
@@ -680,7 +679,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 				s.selected = next
 			}
 			s.errorText = ""
-			v.playNavigationSound()
+			v.announceInteraction(eventSelectionChanged)
 			continue
 		}
 		if s.actionsFocused {
@@ -695,13 +694,13 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 					continue
 				}
 				s.actionsFocused = false
-				v.playNavigationSound()
+				v.announceInteraction(eventSelectionChanged)
 			case key.NameSpace:
 				v.activateSettingsAction(gtx, s.action)
 				return
 			}
 			if s.action != previous {
-				v.playNavigationSound()
+				v.announceInteraction(eventSelectionChanged)
 			}
 			continue
 		}
@@ -726,7 +725,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			if s.selected == len(s.fields)-1 {
 				s.actionsFocused = true
 				s.action = 0
-				v.playNavigationSound()
+				v.announceInteraction(eventSelectionChanged)
 			} else {
 				s.selected++
 			}
@@ -741,7 +740,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		}
 		if old != s.selected {
 			s.errorText = ""
-			v.playNavigationSound()
+			v.announceInteraction(eventSelectionChanged)
 		}
 	}
 }
@@ -778,6 +777,7 @@ func (v *view) activateSettingsAction(gtx layout.Context, action int) {
 			s.editing, s.selecting = false, false
 			s.errorText = ""
 			s.action, s.actionsFocused = 0, true
+			v.announceInteraction(eventDeleteStaged)
 			v.focusInteraction(gtx)
 			return
 		}
@@ -795,7 +795,7 @@ func (v *view) activateSettingsAction(gtx layout.Context, action int) {
 			}
 		}
 		v.applySettings()
-		v.playSound(sound.Settings)
+		v.announceInteraction(eventWidgetReset)
 		v.focusInteraction(gtx)
 	}
 }

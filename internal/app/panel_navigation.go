@@ -1,13 +1,5 @@
 package app
 
-import "github.com/dannyben/commando/internal/sound"
-
-func (v *view) playNavigationSound() {
-	if v.sounds != nil {
-		v.playSound(sound.Navigation)
-	}
-}
-
 // Browsing and inline interactions share direction, edge and exclusion rules.
 // Tab cycles; spatial arrows stop at the edge. Transfers exclude their source.
 func (v *view) panelNeighbor(direction int, cycle bool, excluded int) int {
@@ -38,7 +30,7 @@ func (v *view) switchPanelTo(target int) {
 	v.panels[v.active].prefix = ""
 	v.active = target
 	if changed {
-		v.playNavigationSound()
+		v.announceInteraction(eventSelectionChanged)
 	}
 }
 
@@ -67,5 +59,5 @@ func (v *view) swapPanel(direction int) {
 		}
 	}
 	v.active = target
-	v.playNavigationSound()
+	v.announceInteraction(eventSelectionChanged)
 }

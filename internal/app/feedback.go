@@ -11,7 +11,6 @@ import (
 	"gioui.org/op"
 	"gioui.org/text"
 	"github.com/dannyben/commando/internal/feedback"
-	"github.com/dannyben/commando/internal/sound"
 )
 
 func (v *view) showFeedback(index int, kind feedback.Kind, text string) {
@@ -94,16 +93,16 @@ func (v *view) playFeedbackSound(frame feedback.Frame) {
 	if v.sounds == nil || !frame.Started {
 		return
 	}
-	cue := sound.MessageInfo
+	event := eventMessageInfo
 	switch frame.Kind {
 	case feedback.Success:
-		cue = sound.MessageSuccess
+		event = eventMessageSuccess
 	case feedback.Warning:
-		cue = sound.MessageWarning
+		event = eventMessageWarning
 	case feedback.Error:
-		cue = sound.MessageError
+		event = eventMessageError
 	}
-	v.playSound(cue)
+	v.announceInteraction(event)
 }
 
 func readError(err error) string {

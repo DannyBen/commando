@@ -82,6 +82,6 @@ func (v *view) cycleFontFamily(direction int) {
 	}
 	if v.setWidgetValue(settingFontFamily, settings.Value{Text: names[index]}) == nil {
 		v.applySettings()
-		v.playNavigationSound()
+		v.announceInteraction(eventValueChanged)
 	}
 }
