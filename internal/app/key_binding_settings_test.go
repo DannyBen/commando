@@ -153,7 +153,7 @@ func TestInvalidBindingsUseSettingsRecovery(t *testing.T) {
 		t.Run(invalid, func(t *testing.T) {
 			dir := t.TempDir()
 			path := filepath.Join(dir, "settings.toml")
-			original := "appearance.autocolor.lightness = 0.42\n" + invalid + "\n"
+			original := "appearance.autocolor.lsh.lightness = 0.42\n" + invalid + "\n"
 			if err := os.WriteFile(path, []byte(original), 0600); err != nil {
 				t.Fatal(err)
 			}

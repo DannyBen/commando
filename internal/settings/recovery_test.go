@@ -12,9 +12,9 @@ func TestRecoveryBacksUpOriginalAndKeepsValidSettings(t *testing.T) {
 	path := filepath.Join(dir, "settings.toml")
 	original := `# Preserve this original document in the backup.
 appearance.autocolor.hue = 20
-appearance.autocolor.chroma = 0.2
+appearance.autocolor.lsh.saturation = 20
 appearance.font.weight = "bold"
-appearance.autocolor.lightness = 1.5
+appearance.autocolor.lsh.lightness = 150
 view.show_protected_system_files = true
 [[programs.editors]]
 ext = ["txt"]
@@ -39,9 +39,9 @@ path = 'C:\markdown.exe'
 	if err != nil || string(backup) != original {
 		t.Fatal("backup did not retain the exact original document", err)
 	}
-	if values.Get(CatalogueDefault, "appearance.autocolor.chroma").Number != 0.2 ||
+	if values.Get(CatalogueDefault, "appearance.autocolor.lsh.saturation").Number != 20 ||
 		!values.Get(CatalogueDefault, "view.show_protected_system_files").Bool ||
-		values.Overridden("appearance.font.weight") || values.Overridden("appearance.autocolor.lightness") {
+		values.Overridden("appearance.font.weight") || values.Overridden("appearance.autocolor.lsh.lightness") {
 		t.Fatal("recovery lost valid settings or retained invalid ones")
 	}
 	editors := values.Collection(EditorCollection)
@@ -52,7 +52,7 @@ path = 'C:\markdown.exe'
 		t.Fatal("unknown editor field survived")
 	}
 	loaded, err := Load(dir, CatalogueDefault)
-	if err != nil || loaded.Get(CatalogueDefault, "appearance.autocolor.chroma").Number != 0.2 || len(loaded.Collection(EditorCollection)) != 2 {
+	if err != nil || loaded.Get(CatalogueDefault, "appearance.autocolor.lsh.saturation").Number != 20 || len(loaded.Collection(EditorCollection)) != 2 {
 		t.Fatal("rewritten file did not load correctly", err)
 	}
 	if _, err := LoadAndRepair(dir, CatalogueDefault); err != nil {
@@ -71,9 +71,9 @@ func TestRecoveryDoesNotRewriteWithoutBackupOrValidSyntax(t *testing.T) {
 	for _, malformed := range []bool{false, true} {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "settings.toml")
-		original := "appearance.autocolor.chroma = 0.2\nunknown = true\n"
+		original := "appearance.autocolor.lsh.saturation = 20\nunknown = true\n"
 		if malformed {
-			original = "appearance.autocolor.chroma = 0.2\nbad = ["
+			original = "appearance.autocolor.lsh.saturation = 20\nbad = ["
 		} else if err := os.Mkdir(path+".bak", 0700); err != nil {
 			t.Fatal(err)
 		}
@@ -99,7 +99,7 @@ func TestRecoveryDoesNotRewriteWithoutBackupOrValidSyntax(t *testing.T) {
 			if !errors.Is(err, ErrRepairFailed) {
 				t.Fatal("backup failure was not identified as a repair failure", err)
 			}
-			if values.Get(CatalogueDefault, "appearance.autocolor.chroma").Number != 0.2 {
+			if values.Get(CatalogueDefault, "appearance.autocolor.lsh.saturation").Number != 20 {
 				t.Fatal("backup failure prevented valid settings from loading")
 			}
 		}
@@ -113,5 +113,23 @@ func TestRecoveryMissingSettingsDoesNotCreateFiles(t *testing.T) {
 	}
 	if _, err := os.Stat(dir); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("loading missing settings created the data folder", err)
+	}
+}
+
+func TestObsoleteRawColorEntriesResetWithoutReinterpretingUnits(t *testing.T) {
+	dir := t.TempDir()
+	source := "[appearance.theme.background]\nlightness = 0.3\nchroma = 0.1\nhue = 200\n[appearance.autocolor]\nlightness = 0.4\nchroma = 0.2\nsalt = 42\n[appearance.font]\ntext_size = 18\n"
+	if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	values, err := LoadAndRepair(dir, CatalogueDefault)
+	if !errors.Is(err, ErrRepaired) {
+		t.Fatal("obsolete color format was accepted", err)
+	}
+	if values.Get(CatalogueDefault, "appearance.theme.colors.background.lightness").Number != 100 || values.Get(CatalogueDefault, "appearance.autocolor.lsh.lightness").Number != 36 || values.Get(CatalogueDefault, "appearance.autocolor.lsh.saturation").Number != 100 {
+		t.Fatal("old units were interpreted as LSH")
+	}
+	if values.Get(CatalogueDefault, "appearance.font.text_size").Number != 18 || values.Get(CatalogueDefault, "appearance.autocolor.salt").Number != 42 {
+		t.Fatal("reset lost independent preferences")
 	}
 }

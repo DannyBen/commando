@@ -8,34 +8,34 @@ import (
 func TestOverridesAndValidation(t *testing.T) {
 	c := CatalogueDefault
 	var v Values
-	if got := v.Get(c, "appearance.autocolor.lightness").Number; got != 0.36 {
+	if got := v.Get(c, "appearance.autocolor.lsh.lightness").Number; got != 36 {
 		t.Fatalf("default = %v", got)
 	}
-	if err := v.Set(c, "appearance.autocolor.lightness", Value{Number: 0.36}); err != nil {
+	if err := v.Set(c, "appearance.autocolor.lsh.lightness", Value{Number: 36}); err != nil {
 		t.Fatal(err)
 	}
-	if !v.Overridden("appearance.autocolor.lightness") {
+	if !v.Overridden("appearance.autocolor.lsh.lightness") {
 		t.Fatal("explicit default was not retained")
 	}
-	for _, n := range []float64{-0.01, 1.01, math.NaN(), math.Inf(1)} {
-		if err := v.Set(c, "appearance.autocolor.lightness", Value{Number: n}); err == nil {
+	for _, n := range []float64{-1, 101, math.NaN(), math.Inf(1)} {
+		if err := v.Set(c, "appearance.autocolor.lsh.lightness", Value{Number: n}); err == nil {
 			t.Fatalf("accepted invalid value %v", n)
 		}
 	}
-	if got := v.Get(c, "appearance.autocolor.lightness").Number; got != 0.36 {
+	if got := v.Get(c, "appearance.autocolor.lsh.lightness").Number; got != 36 {
 		t.Fatal("invalid edit changed value")
 	}
 	if err := v.Set(c, "missing", Value{}); err == nil {
 		t.Fatal("accepted unknown key")
 	}
-	v.Reset("appearance.autocolor.lightness")
-	if v.Overridden("appearance.autocolor.lightness") || v.Get(c, "appearance.autocolor.lightness").Number != 0.36 {
+	v.Reset("appearance.autocolor.lsh.lightness")
+	if v.Overridden("appearance.autocolor.lsh.lightness") || v.Get(c, "appearance.autocolor.lsh.lightness").Number != 36 {
 		t.Fatal("reset did not restore inheritance")
 	}
-	if err := v.Set(c, "appearance.autocolor.chroma", Value{Number: 0.5}); err != nil {
+	if err := v.Set(c, "appearance.autocolor.lsh.saturation", Value{Number: 100}); err != nil {
 		t.Fatal("chroma upper boundary rejected", err)
 	}
-	if err := v.Set(c, "appearance.autocolor.chroma", Value{Number: 0.51}); err == nil {
+	if err := v.Set(c, "appearance.autocolor.lsh.saturation", Value{Number: 101}); err == nil {
 		t.Fatal("chroma above upper boundary accepted")
 	}
 }

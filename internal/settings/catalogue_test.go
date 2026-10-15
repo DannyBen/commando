@@ -16,13 +16,15 @@ label = "Appearance"
 label = "Color tools"
 palette = "Auto color"
 title = "Generated file colors"
-[appearance.autocolor.lightness]
+[appearance.autocolor.lsh]
+label = "LSH"
+[appearance.autocolor.lsh.lightness]
 label = "Lightness"
 `
-	for _, defaults := range []string{"appearance.autocolor.lightness = 0.36", "appearance.autocolor.lightness = 0.36\nappearance.autocolor.chroma = 0.35"} {
+	for _, defaults := range []string{"appearance.autocolor.lsh.lightness = 36", "appearance.autocolor.lsh.lightness = 36\nappearance.autocolor.lsh.saturation = 100"} {
 		metadata := ui
-		if strings.Contains(defaults, "chroma") {
-			metadata += "\n[appearance.autocolor.chroma]\nlabel = 'Chroma'\n"
+		if strings.Contains(defaults, "saturation") {
+			metadata += "\n[appearance.autocolor.lsh.saturation]\nlabel = 'Saturation'\n"
 		}
 		c, err := ParseCatalogue(defaults, metadata)
 		if err != nil {
@@ -51,7 +53,7 @@ label = "Appearance"
 label = "Initial hue"
 palette = "Hue"
 title = "Color rotation"
-min = 0.0
+min = 0
 max = 360.0
 visible = false
 [keymap]
@@ -96,7 +98,7 @@ visible = false
 }
 
 func TestWidgetAndFieldOrderUsesMetadata(t *testing.T) {
-	c, err := ParseCatalogue("first.a = 1.0\nfirst.b = 2.0\nsecond.c = true", `
+	c, err := ParseCatalogue("first.a = 100\nfirst.b = 2.0\nsecond.c = true", `
 [second]
 label = "Second"
 title = "Second widget"
@@ -120,7 +122,7 @@ label = "A"
 
 func TestCatalogueDerivesGroupsFromParents(t *testing.T) {
 	c, err := ParseCatalogue(`
-audio.volume = 0.5
+audio.volume = 50
 audio.notifications.enabled = true
 `, `
 [audio]
@@ -147,8 +149,8 @@ label = "Enabled"
 
 func TestNestedWidgetsOwnTheirNearestFields(t *testing.T) {
 	c, err := ParseCatalogue(`tools.basic = true
-tools.detail.value = 0.5
-tools.detail.extra.value = 0.2
+tools.detail.value = 50
+tools.detail.extra.value = 20
 tools.other = true`, `
 [tools]
 label = "Tools"
@@ -186,8 +188,8 @@ func TestCatalogueControlsIndependentOfValues(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		d, _ := c.Definition("appearance.autocolor.lightness")
-		if d.Kind != Number || d.Default.Number != 0.36 || c.UI.Fields[1].Control != control {
+		d, _ := c.Definition("appearance.autocolor.lsh.lightness")
+		if d.Kind != Number || d.Default.Number != 36 || c.UI.Fields[1].Control != control {
 			t.Fatal("control choice changed value type or default")
 		}
 	}
@@ -209,11 +211,11 @@ func TestCatalogueRejectsInvalidDefinitions(t *testing.T) {
 		{"unknown leaf", defaultTOML, uiTOML + "\n[files.extra]\nlabel = 'Extra'\n"},
 		{"wrong control type", defaultTOML, strings.Replace(uiTOML, `control = "toggle"`, `control = "folder"`, 1)},
 		{"unknown control", defaultTOML, strings.Replace(uiTOML, `control = "toggle"`, `control = "toggel"`, 1)},
-		{"invalid default", strings.Replace(defaultTOML, "lightness = 0.36", "lightness = 2.0", 1), uiTOML},
-		{"reversed range", defaultTOML, strings.Replace(uiTOML, "min = 0.0", "min = 2.0", 1)},
-		{"zero step", defaultTOML, strings.Replace(uiTOML, "step = 0.01", "step = 0.0", 1)},
-		{"infinite range", defaultTOML, strings.Replace(uiTOML, "max = 1.0", "max = inf", 1)},
-		{"progress without range", defaultTOML, strings.Replace(uiTOML, "max = 1.0\n", "", 1)},
+		{"invalid default", strings.Replace(defaultTOML, "lightness = 36", "lightness = 200", 1), uiTOML},
+		{"reversed range", defaultTOML, strings.Replace(uiTOML, "min = 0.0", "min = 200.0", 1)},
+		{"zero step", defaultTOML, strings.Replace(uiTOML, "step = 1", "step = 0", 1)},
+		{"infinite range", defaultTOML, strings.Replace(uiTOML, "max = 100.0", "max = inf", 1)},
+		{"progress without range", defaultTOML, strings.Replace(uiTOML, "max = 100.0\n", "", 1)},
 		{"missing group label", defaultTOML, strings.Replace(uiTOML, "label = \"Appearance\"\n", "", 1)},
 		{"explicit parent", defaultTOML, strings.Replace(uiTOML, "label = \"Appearance\"", "label = \"Appearance\"\nparent = \"appearance.autocolor\"", 1)},
 		{"missing widget", defaultTOML, strings.Replace(uiTOML, "title = \"Auto color\"\n", "", 1)},
@@ -232,20 +234,20 @@ func TestCatalogueRejectsInvalidDefinitions(t *testing.T) {
 
 func TestNestedOverridesCloneAndReset(t *testing.T) {
 	var values Values
-	for key, number := range map[string]float64{"appearance.autocolor.lightness": 0.5, "appearance.autocolor.chroma": 0.2} {
+	for key, number := range map[string]float64{"appearance.autocolor.lsh.lightness": 50, "appearance.autocolor.lsh.saturation": 20} {
 		if err := values.Set(CatalogueDefault, key, Value{Number: number}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	before := values.Clone()
-	values.Reset("appearance.autocolor.lightness")
-	if err := values.Set(CatalogueDefault, "appearance.autocolor.chroma", Value{Number: 0.3}); err != nil {
+	values.Reset("appearance.autocolor.lsh.lightness")
+	if err := values.Set(CatalogueDefault, "appearance.autocolor.lsh.saturation", Value{Number: 30}); err != nil {
 		t.Fatal(err)
 	}
-	if before.Get(CatalogueDefault, "appearance.autocolor.lightness").Number != 0.5 || before.Get(CatalogueDefault, "appearance.autocolor.chroma").Number != 0.2 {
+	if before.Get(CatalogueDefault, "appearance.autocolor.lsh.lightness").Number != 50 || before.Get(CatalogueDefault, "appearance.autocolor.lsh.saturation").Number != 20 {
 		t.Fatal("editing nested overrides changed the snapshot")
 	}
-	values.Reset("appearance.autocolor.chroma")
+	values.Reset("appearance.autocolor.lsh.saturation")
 	if len(values.overrides) != 0 {
 		t.Fatal("reset left empty tables")
 	}
@@ -276,5 +278,25 @@ func TestStringChoiceValidation(t *testing.T) {
 	}
 	if _, err := ParseCatalogue(strings.Replace(defaults, "Dark", "Other", 1), ui); err == nil {
 		t.Fatal("accepted default outside choices")
+	}
+}
+
+func TestCyclicNumbersNormalizeDefaultsEditsAndLoadedValues(t *testing.T) {
+	c, err := ParseCatalogue("[color]\nhue = 360", "[color]\nlabel = 'Color'\ntitle = 'Color'\n[color.hue]\nlabel = 'Hue'\ncontrol = 'stepper'\nmin = 0\nmax = 360\nstep = 1\ncycle = 360\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var values Values
+	if values.Get(c, "color.hue").Number != 0 {
+		t.Fatal("default hue was not normalized")
+	}
+	for input, want := range map[float64]float64{360: 0, 361: 1, -1: 359, 720: 0} {
+		if err := values.Set(c, "color.hue", Value{Number: input}); err != nil || values.Get(c, "color.hue").Number != want {
+			t.Fatalf("hue %g did not wrap to %g", input, want)
+		}
+	}
+	loaded, err := loadDocument([]byte("color.hue = 721"), c)
+	if err != nil || loaded.Get(c, "color.hue").Number != 1 {
+		t.Fatal("loaded hue was not normalized", err)
 	}
 }

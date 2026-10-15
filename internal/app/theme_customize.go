@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	themeSettingPrefix    = "appearance.theme."
-	settingThemeCustomize = themeSettingPrefix + "customize"
+	themeSettingPrefix    = "appearance.theme.colors."
+	settingThemeCustomize = "appearance.theme.customize"
 	settingThemeElement   = themeSettingPrefix + "element"
 )
 
@@ -100,20 +100,20 @@ func (v *view) themeClipboardText(s *settingsSession) string {
 	n := func(component string) float64 {
 		return v.settingsValues.Get(settings.CatalogueDefault, prefix+"."+component).Number
 	}
-	return fmt.Sprintf("%g %g %g", n("lightness"), n("chroma"), n("hue"))
+	return fmt.Sprintf("%g %g %g", n("lightness"), n("saturation"), n("hue"))
 }
 
 func (v *view) pasteThemeColor(s *settingsSession, text string) {
 	parts := strings.Fields(text)
 	if len(parts) != 3 {
-		s.errorText = "Copy three LCH values"
+		s.errorText = "Copy three LSH values"
 		return
 	}
 	values := v.settingsValues.Clone()
-	for i, component := range []string{"lightness", "chroma", "hue"} {
+	for i, component := range []string{"lightness", "saturation", "hue"} {
 		n, err := strconv.ParseFloat(parts[i], 64)
 		if err != nil || values.Set(settings.CatalogueDefault, themeElementKey(s)+"."+component, settings.Value{Number: n}) != nil {
-			s.errorText = "Invalid LCH values"
+			s.errorText = "Invalid LSH values"
 			return
 		}
 	}

@@ -14,10 +14,10 @@ import (
 	"github.com/dannyben/commando/internal/settings"
 )
 
-const colorPrefix = "appearance.theme."
+const colorPrefix = "appearance.theme.colors."
 
 func TestThemeElementNamesAndCycleOrder(t *testing.T) {
-	want := []string{"Background", "Background alternate", "Border", "Accent", "Text", "Text secondary", "Text selection", "Selection background", "Selection text", "Error text", "Info text", "Success text", "Warning text"}
+	want := []string{"Background", "Background alternate", "Border", "Accent", "Text", "Text secondary", "Text selection", "Selection background", "Error text", "Info text", "Success text", "Warning text"}
 	v := newPreviewView()
 	v.startSettingsWidget(settingThemeCustomize)
 	if !reflect.DeepEqual(v.settingsInteraction().completion.candidates, want) {
@@ -45,11 +45,11 @@ func TestThemeColorsAreIndependent(t *testing.T) {
 	if s := v.settingsInteraction(); s == nil || len(s.fields) != 4 {
 		t.Fatal("Customize needs Element and three color controls")
 	}
-	if err := v.setWidgetValue(colorPrefix+"background.lightness", settings.Value{Number: 0.4}); err != nil {
+	if err := v.setWidgetValue(colorPrefix+"background.lightness", settings.Value{Number: 40}); err != nil {
 		t.Fatal(err)
 	}
 	v.applySettings()
-	if v.settingText(colorPrefix+"alt_background.lightness") != "0.9" {
+	if v.settingText(colorPrefix+"alt_background.lightness") != "90" {
 		t.Fatal("editing one color changed another")
 	}
 	if v.appearance.Colors == before || *v.appearance.FilenameColors != files {
@@ -72,7 +72,7 @@ func TestThemeElementSwitchSavesAndStartsClean(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(pressed(key.NameDownArrow), pressed(key.NameRightArrow), pressed(key.NameLeftArrow))
 	// Leave a real edit on Main, then switch using Element.
-	_ = v.setWidgetValue(colorPrefix+"background.lightness", settings.Value{Number: 0.4})
+	_ = v.setWidgetValue(colorPrefix+"background.lightness", settings.Value{Number: 40})
 	send(pressed(key.NameUpArrow))
 	send(pressed(key.NameRightArrow))
 	s := v.settingsInteraction()
@@ -80,7 +80,7 @@ func TestThemeElementSwitchSavesAndStartsClean(t *testing.T) {
 		t.Fatal("switch did not open a clean next color")
 	}
 	loaded, err := settings.Load(dir, settings.CatalogueDefault)
-	if err != nil || loaded.Get(settings.CatalogueDefault, colorPrefix+"background.lightness").Number != 0.4 {
+	if err != nil || loaded.Get(settings.CatalogueDefault, colorPrefix+"background.lightness").Number != 40 {
 		t.Fatal("switch did not persist previous color", err)
 	}
 	send(pressed(key.NameDownArrow), pressed(key.NameRightArrow))
@@ -92,7 +92,7 @@ func TestThemeElementSwitchSavesAndStartsClean(t *testing.T) {
 		t.Fatal("Escape discarded dirty color")
 	}
 	v.activateSettingsAction(layout.Context{}, 1)
-	if v.settingText(colorPrefix+"background.lightness") != "0.4" || v.settingText(colorPrefix+"alt_background.lightness") != "0.9" {
+	if v.settingText(colorPrefix+"background.lightness") != "40" || v.settingText(colorPrefix+"alt_background.lightness") != "90" {
 		t.Fatal("Cancel discarded saved work or retained draft")
 	}
 }
@@ -101,7 +101,7 @@ func TestThemeSwitchWaitsForSaveAndRetainsFailedDraft(t *testing.T) {
 	v := newPreviewView()
 	v.startSettingsWidget(settingThemeCustomize)
 	s := v.settingsInteraction()
-	_ = v.setWidgetValue(colorPrefix+"background.lightness", settings.Value{Number: 0.4})
+	_ = v.setWidgetValue(colorPrefix+"background.lightness", settings.Value{Number: 40})
 	v.loader = &directoryLoader{requests: make(chan loadRequest, 1)}
 	v.prepareSettingsSave = func(settings.Values) func() (string, error) { return func() (string, error) { return "", nil } }
 	v.cycleThemeElement(layout.Context{}, 1)
@@ -164,14 +164,14 @@ func TestThemeClipboardPasteIsAtomicAndIndependent(t *testing.T) {
 		t.Fatal("paste did not copy whole triplet")
 	}
 	before := v.settingsValues.Clone()
-	for _, invalid := range []string{"", "0.1 0.2", "0.1 0.2 4 extra", "0.1 0.2 NaN", "0.1 0.2 Inf", "0.1 0.8 42", "0.1 0.2 361"} {
+	for _, invalid := range []string{"", "10 20", "10 20 4 extra", "10 20 NaN", "10 20 Inf", "10 101 42"} {
 		v.pasteThemeColor(s, invalid)
 		if !reflect.DeepEqual(v.settingsValues, before) || s.errorText == "" {
 			t.Fatalf("invalid paste changed values: %q", invalid)
 		}
 	}
-	v.pasteThemeColor(s, "0.6 0.1 42")
-	if v.settingText(colorPrefix+"background.lightness") != "1" || !strings.HasPrefix(v.themeClipboardText(s), "0.6 ") {
+	v.pasteThemeColor(s, "60 10 42")
+	if v.settingText(colorPrefix+"background.lightness") != "100" || !strings.HasPrefix(v.themeClipboardText(s), "60 ") {
 		t.Fatal("paste changed another color or retained error")
 	}
 }
@@ -186,8 +186,8 @@ func TestThemeClipboardKeyboardAndTextEditing(t *testing.T) {
 		t.Fatal("Copy did not write color clipboard")
 	}
 	data := content
-	if string(data) != "1 0 0" {
-		t.Fatal("Copy did not write LCH triplet", string(data))
+	if string(data) != "100 0 0" {
+		t.Fatal("Copy did not write LSH triplet", string(data))
 	}
 	send(pressed(key.NameRightArrow))
 	send(modified("V", key.ModCtrl))
@@ -205,12 +205,12 @@ func TestThemeClipboardKeyboardAndTextEditing(t *testing.T) {
 	if !router.ClipboardRequested() {
 		t.Fatal("text paste did not request clipboard")
 	}
-	send(clipboardData("0.25"))
-	if s.editor.Text() != "0.25" || v.themeClipboardText(s) != string(data) {
+	send(clipboardData("25"))
+	if s.editor.Text() != "25" || v.themeClipboardText(s) != string(data) {
 		t.Fatal("text paste was interpreted as a color")
 	}
 	send(pressed(key.NameReturn))
-	if v.settingText(colorPrefix+"alt_background.lightness") != "0.25" {
+	if v.settingText(colorPrefix+"alt_background.lightness") != "25" {
 		t.Fatal("pasted component did not apply")
 	}
 }
@@ -226,7 +226,7 @@ func TestThemeLateClipboardCannotChangeNextElement(t *testing.T) {
 	send(pressed(key.NameRightArrow))
 	s := v.settingsInteraction()
 	before := v.themeClipboardText(s)
-	send(clipboardData("0.1 0.2 42"))
+	send(clipboardData("10 20 42"))
 	if v.themeClipboardText(s) != before || s.dirty {
 		t.Fatal("late paste changed next element")
 	}
@@ -250,9 +250,9 @@ func TestThemeColorKeyboardUsesFixedRanges(t *testing.T) {
 	}
 	send(pressed(key.NameUpArrow), pressed(key.NameUpArrow), pressed(key.NameReturn))
 	s := v.settingsInteraction()
-	send(key.EditEvent{Range: key.Range{Start: 0, End: len([]rune(s.editor.Text()))}, Text: "0.1"})
+	send(key.EditEvent{Range: key.Range{Start: 0, End: len([]rune(s.editor.Text()))}, Text: "10"})
 	send(pressed(key.NameReturn))
-	if s.editing || v.settingText(colorPrefix+"alt_background.lightness") != "0.1" {
+	if s.editing || v.settingText(colorPrefix+"alt_background.lightness") != "10" {
 		t.Fatal("typed value did not use absolute range")
 	}
 }

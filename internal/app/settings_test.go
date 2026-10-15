@@ -22,7 +22,7 @@ import (
 
 func TestStartupSettingsApplyBeforeDirectoryResults(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte("appearance.autocolor.lightness = 0.5\nview.show_protected_system_files = true\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte("appearance.autocolor.lsh.lightness = 50\nview.show_protected_system_files = true\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	values, err := settings.Load(dir, settings.CatalogueDefault)
@@ -40,7 +40,7 @@ func TestStartupSettingsApplyBeforeDirectoryResults(t *testing.T) {
 	openSettingsGroup(t, v, "appearance.autocolor")
 	v.adjustSetting(settingLightness, 1)
 	v.finishSettingsWidget(layout.Context{}, false)
-	if v.settingText(settingLightness) != "0.5" {
+	if v.settingText(settingLightness) != "50" {
 		t.Fatal("cancel did not restore the loaded override")
 	}
 }
@@ -68,7 +68,7 @@ func TestStartupSettingsErrorsSurviveInitialRead(t *testing.T) {
 		if message == nil || message.Kind != feedback.Error || message.Text != tc.message || v.active != 1 {
 			t.Fatalf("startup failure lost its contextual feedback: %#v", message)
 		}
-		if v.panels[0].feedback.Current() != nil || v.settingText(settingLightness) != "0.36" {
+		if v.panels[0].feedback.Current() != nil || v.settingText(settingLightness) != "36" {
 			t.Fatal("startup failure affected another pane or changed defaults")
 		}
 	}
@@ -105,7 +105,7 @@ func TestSettingsSaveFailureRetryAndCancel(t *testing.T) {
 			v.adjustSetting(settingLightness, 1)
 			s := v.settingsInteraction()
 			v.finishSettingsWidget(layout.Context{}, true)
-			if v.settingsInteraction() != s || s.errorText != "Settings save: access denied" || v.settingText(settingLightness) != "0.37" {
+			if v.settingsInteraction() != s || s.errorText != "Settings save: access denied" || v.settingText(settingLightness) != "37" {
 				t.Fatal("failed save lost the editable preview or error")
 			}
 			if got, err := os.ReadFile(path); err != nil || string(got) != "" {
@@ -119,14 +119,16 @@ func TestSettingsSaveFailureRetryAndCancel(t *testing.T) {
 				if calls != 2 {
 					t.Fatal("retry did not save")
 				}
-			} else if calls != 1 || v.settingsValues.Overridden(settingLightness) || v.settingText(settingLightness) != "0.36" {
+			} else if calls != 1 || v.settingsValues.Overridden(settingLightness) || v.settingText(settingLightness) != "36" {
 				t.Fatal("cancel saved or retained failed preview")
 			}
 			var saved struct {
-				Appearance struct{ Autocolor struct{ Lightness float64 } }
+				Appearance struct {
+					Autocolor struct{ Lsh struct{ Lightness float64 } }
+				}
 			}
 			md, err := toml.DecodeFile(path, &saved)
-			if err != nil || md.IsDefined("appearance", "autocolor", "lightness") != retry || retry && saved.Appearance.Autocolor.Lightness != 0.37 {
+			if err != nil || md.IsDefined("appearance", "autocolor", "lsh", "lightness") != retry || retry && saved.Appearance.Autocolor.Lsh.Lightness != 37 {
 				t.Fatalf("saved settings = %#v, %v", saved, err)
 			}
 
@@ -190,13 +192,13 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 		t.Fatal("adjustment did not preview live")
 	}
 	send(pressed(key.NameTab))
-	send(pressed(key.NameRightArrow))
-	if v.appearance.FilenameColors.filenameChroma != 0.36 {
+	send(pressed(key.NameLeftArrow))
+	if v.appearance.FilenameColors.filenameSaturation != 0.99 {
 		t.Fatal("Tab did not navigate controls")
 	}
 	v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
 	send(pressed(key.NameReturn))
-	if v.paletteInteraction() == nil || v.settingsValues.Overridden(settingLightness) || v.settingsValues.Overridden(settingChroma) || v.appearance.FilenameColors.filenameLightness != 0.36 {
+	if v.paletteInteraction() == nil || v.settingsValues.Overridden(settingLightness) || v.settingsValues.Overridden(settingSaturation) || v.appearance.FilenameColors.filenameLightness != 0.36 {
 		t.Fatal("Cancel did not restore inherited original values")
 	}
 	send(pressed(key.NameEscape))
@@ -205,7 +207,7 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	send(pressed(key.NameTab))
 	send(pressed(key.NameRightArrow))
 	send(modified(key.NameReturn, key.ModCtrl))
-	if !v.interaction.idle() || v.settingText(settingLightness) != "0.37" {
+	if !v.interaction.idle() || v.settingText(settingLightness) != "37" {
 		t.Fatal("Ctrl+Enter did not commit and close")
 	}
 	send(key.EditEvent{Text: "@"})
@@ -214,7 +216,7 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	send(pressed(key.NameRightArrow))
 	v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
 	send(pressed(key.NameReturn))
-	if v.settingText(settingLightness) != "0.37" || !v.settingsValues.Overridden(settingLightness) {
+	if v.settingText(settingLightness) != "37" || !v.settingsValues.Overridden(settingLightness) {
 		t.Fatal("revert lost prior committed override")
 	}
 }
@@ -258,13 +260,13 @@ func TestSettingsWidgetDirectValueInput(t *testing.T) {
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
-	send(key.EditEvent{Range: key.Range{Start: 0, End: 4}, Text: "2"})
+	send(key.EditEvent{Range: key.Range{Start: 0, End: 4}, Text: "200"})
 	send(modified(key.NameReturn, key.ModCtrl))
 	s := v.settingsInteraction()
 	if s == nil || !s.editing || s.errorText == "" || v.settingsValues.Overridden(settingLightness) {
 		t.Fatal("invalid number committed")
 	}
-	send(key.EditEvent{Range: key.Range{Start: 0, End: 1}, Text: "0.5"})
+	send(key.EditEvent{Range: key.Range{Start: 0, End: 3}, Text: "50"})
 	send(modified(key.NameReturn, key.ModCtrl))
 	if !v.interaction.idle() || v.appearance.FilenameColors.filenameLightness != 0.5 {
 		t.Fatal("typed number did not save and close")
@@ -273,9 +275,9 @@ func TestSettingsWidgetDirectValueInput(t *testing.T) {
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
-	send(key.EditEvent{Range: key.Range{Start: 0, End: 3}, Text: "0.2"})
+	send(key.EditEvent{Range: key.Range{Start: 0, End: 3}, Text: "20"})
 	send(pressed(key.NameEscape))
-	if v.settingsInteraction() == nil || v.settingsInteraction().editing || v.paletteInteraction() != nil || v.settingText(settingLightness) != "0.5" {
+	if v.settingsInteraction() == nil || v.settingsInteraction().editing || v.paletteInteraction() != nil || v.settingText(settingLightness) != "50" {
 		t.Fatal("Escape did not leave the input and discard unfinished text")
 	}
 	send(pressed(key.NameEscape))
@@ -478,7 +480,7 @@ func TestSettingsAdjustmentsTickOnlyWhenValueChanges(t *testing.T) {
 		initial            settings.Value
 		keys               []key.Event
 	}{
-		{"slider", "@autocolor", settingLightness, settings.Value{Number: 1}, []key.Event{
+		{"slider", "@autocolor", settingLightness, settings.Value{Number: 100}, []key.Event{
 			pressed(key.NameRightArrow), pressed(key.NameLeftArrow), pressed(key.NameRightArrow), pressed(key.NameRightArrow),
 		}},
 		{"boolean", "@system", settingProtectedSystem, settings.Value{Bool: false}, []key.Event{
@@ -657,15 +659,15 @@ func TestSettingsSaveClickKeepsInvalidDraftEditable(t *testing.T) {
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
-	send(key.EditEvent{Range: key.Range{Start: 0, End: 4}, Text: "2"})
+	send(key.EditEvent{Range: key.Range{Start: 0, End: 4}, Text: "200"})
 	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(240, 405)}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(240, 405)})
 	s := v.settingsInteraction()
 	if s == nil || !s.editing || s.actionsFocused || s.errorText == "" {
 		t.Fatal("failed Save did not return focus to invalid input")
 	}
-	send(key.EditEvent{Range: key.Range{Start: 0, End: 1}, Text: "0.5"})
+	send(key.EditEvent{Range: key.Range{Start: 0, End: 3}, Text: "50"})
 	send(pressed(key.NameReturn))
-	if v.settingsInteraction() != s || s.editing || v.settingText(settingLightness) != "0.5" {
+	if v.settingsInteraction() != s || s.editing || v.settingText(settingLightness) != "50" {
 		t.Fatal("correcting input did not preview within widget")
 	}
 }
@@ -734,9 +736,9 @@ func TestSettingsCancelActionClosesWhileEditing(t *testing.T) {
 	v.startSettingsWidget("appearance.autocolor")
 	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
-	send(key.EditEvent{Range: key.Range{End: 4}, Text: "0.8"})
+	send(key.EditEvent{Range: key.Range{End: 4}, Text: "80"})
 	v.activateSettingsAction(layout.Context{}, 1)
-	if !v.interaction.idle() || v.settingText(settingLightness) != "0.36" {
+	if !v.interaction.idle() || v.settingText(settingLightness) != "36" {
 		t.Fatal("Cancel only left editing instead of cancelling widget")
 	}
 }
@@ -821,7 +823,7 @@ func TestDirtySettingsFailedSaveStillNeedsExplicitCancel(t *testing.T) {
 		t.Fatal("Escape discarded failed save or its error")
 	}
 	v.activateSettingsAction(layout.Context{}, 1)
-	if !v.interaction.idle() || v.settingText(settingLightness) != "0.36" {
+	if !v.interaction.idle() || v.settingText(settingLightness) != "36" {
 		t.Fatal("Cancel failed after save error")
 	}
 }
@@ -829,7 +831,7 @@ func TestDirtySettingsFailedSaveStillNeedsExplicitCancel(t *testing.T) {
 func TestAutoColorEnabledLiveCancelAndPersistence(t *testing.T) {
 	v := newPreviewView()
 	dir := t.TempDir()
-	_ = v.settingsValues.Set(settings.CatalogueDefault, settingLightness, settings.Value{Number: 0.5})
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingLightness, settings.Value{Number: 50})
 	v.applySettings()
 	p := &v.panels[v.active]
 	selected, marked, position := p.selected, len(p.marks), p.list.Position
@@ -859,7 +861,7 @@ func TestAutoColorEnabledLiveCancelAndPersistence(t *testing.T) {
 	}
 	v.finishSettingsWidget(layout.Context{}, true)
 	loaded, err := settings.Load(dir, settings.CatalogueDefault)
-	if err != nil || loaded.Get(settings.CatalogueDefault, settingAutoColorEnabled).Bool || loaded.Get(settings.CatalogueDefault, settingLightness).Number != 0.5 {
+	if err != nil || loaded.Get(settings.CatalogueDefault, settingAutoColorEnabled).Bool || loaded.Get(settings.CatalogueDefault, settingLightness).Number != 50 {
 		t.Fatalf("saved toggle/color preferences = %#v, %v", loaded, err)
 	}
 	restored := newPreviewView()
@@ -910,7 +912,7 @@ func TestCutLightnessSettingsPreviewCancelAndPersistence(t *testing.T) {
 	}
 	_ = v.setWidgetValue(settingAutoColorEnabled, settings.Value{Bool: false})
 	v.startSettingsWidget("appearance.autocolor.selection")
-	_ = v.setWidgetValue(settingCutLightness, settings.Value{Number: -0.10})
+	_ = v.setWidgetValue(settingCutLightness, settings.Value{Number: -10})
 	v.applySettings()
 	dir := t.TempDir()
 	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
@@ -939,10 +941,10 @@ func TestSettingsCtrlArrowsUseLargerNumericSteps(t *testing.T) {
 		row                  int
 		initial, right, left float64
 	}{
-		{"fractional", "appearance.autocolor", settingLightness, 1, 0.36, 0.46, 0.36},
+		{"points", "appearance.autocolor", settingLightness, 1, 36, 46, 36},
 		{"unbounded", "appearance.autocolor", settingSalt, 3, 0, 10, 0},
 		{"font size", "appearance.font", settingFontTextSize, 1, 15, 25, 15},
-		{"upper limit", colorPrefix + "background", colorPrefix + "background.lightness", 1, 0.98, 1, 0.9},
+		{"upper limit", colorPrefix + "background", colorPrefix + "background.lightness", 1, 98, 100, 90},
 		{"hue wrap", colorPrefix + "background", colorPrefix + "background.hue", 3, 355, 5, 355},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

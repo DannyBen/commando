@@ -66,7 +66,7 @@ var defaultFeedbackAnimation = feedback.Animation{
 	CursorBlinks:        -1, // Keep blinking until the message is dismissed.
 }
 
-// Appearance defaults. Theme colors come from the LCH settings;
+// Appearance defaults. Theme colors come from the LSH settings;
 // user preferences are applied through the shared settings snapshot.
 var defaultTheme = Theme{
 	SettingsWidth:               480,

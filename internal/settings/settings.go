@@ -39,6 +39,7 @@ type Definition struct {
 	Minimum  float64
 	Maximum  *float64 // nil means unbounded.
 	Step     float64
+	Cycle    float64
 	Integer  bool
 	Choices  []string
 	Validate func(Value) error
@@ -115,6 +116,9 @@ func (v *Values) Set(c Catalogue, key string, value Value) error {
 	d, ok := c.Definition(key)
 	if !ok {
 		return fmt.Errorf("%w: %s", ErrUnknownKey, key)
+	}
+	if d.Kind == Number && d.Cycle > 0 && !math.IsNaN(value.Number) && !math.IsInf(value.Number, 0) {
+		value.Number = math.Mod(math.Mod(value.Number, d.Cycle)+d.Cycle, d.Cycle)
 	}
 	if d.Kind == Number && (math.IsNaN(value.Number) || math.IsInf(value.Number, 0) || value.Number < d.Minimum || d.Maximum != nil && value.Number > *d.Maximum) {
 		return fmt.Errorf("%w: %s", ErrRange, key)
@@ -226,6 +230,8 @@ func valueFromScalar(scalar any) Value {
 		return Value{Bool: value}
 	case float64:
 		return Value{Number: value}
+	case int64:
+		return Value{Number: float64(value)}
 	case string:
 		return Value{Text: value}
 	case []string:

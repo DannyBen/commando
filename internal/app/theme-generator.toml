@@ -1,47 +1,48 @@
-# OKLCH recipe. Edit this file and rebuild to change the generator.
+# LSH recipe (OKLCH internally). Edit this file and rebuild to change the generator.
 # Each variation advances several sine waves at different periods (in steps).
+# L/S/H values use lightness points, percentage of usable chroma, and degrees.
 # Their amplitude grows from minimum_strength to 1 over growth_period steps,
 # then returns to tame. hue_period controls the slower shared hue rotation.
 [scale]
 growth_period = 720.0
 minimum_strength = 0.45
 hue_period = 180.0
-# Colorfulness scales chroma; surfaces respond more gently than foregrounds.
+# Colorfulness scales saturation; surfaces respond more gently than foregrounds.
 background_colorfulness_exponent = 0.4
 # A curved response leaves useful room for both restrained and vivid palettes.
 colorfulness_exponent = 1.5
 
 [files]
 # Selection moves toward text; cut/hidden/dotfile offsets move toward background.
-selection_offset = 0.08
-chroma = 0.20
-cut_offset = 0.20
-hidden_offset = 0.06
-dotfile_offset = 0.03
+selection_offset = 8
+saturation = 80
+cut_offset = 20
+hidden_offset = 6
+dotfile_offset = 3
 
 # Offsets point toward the text: positive in Dark/Midtone, negative in Light.
 # Filename lightness also follows the mode; Auto color's enabled choice stays.
 [modes.Dark]
 lightness_wave_multiplier = 1.0
-background = 0.30
-text = 0.94
+background = 30
+text = 94
 direction = 1.0
-filename = 0.80
+filename = 80
 
 [modes.Midtone]
 # Keep middle surfaces close enough to share readable text colors.
 lightness_wave_multiplier = 0.25
-background = 0.42
-text = 0.98
+background = 42
+text = 98
 direction = 1.0
-filename = 0.90
+filename = 90
 
 [modes.Light]
 lightness_wave_multiplier = 1.0
-background = 0.85
-text = 0.22
+background = 85
+text = 22
 direction = -1.0
-filename = 0.30
+filename = 30
 
 # Colors use a previously defined base (or mode_background / mode_text).
 # Background controls the main and alternate surfaces.
@@ -50,26 +51,27 @@ filename = 0.30
 # input selects the Background or Foreground variation control.
 # wave = sin(2π × (input + phase) / period) × growing strength.
 # Lightness offsets/waves follow the mode direction; hue is always degrees.
-# Omitted offsets/waves are zero; omitted chroma inherits the base's chroma.
+# Omitted offsets/waves are zero; omitted saturation inherits the base's saturation.
+# L/S and their offsets use 0–100 points; H uses degrees.
 # Text is adjusted afterward for contrast against its actual backgrounds.
 [[colors]]
 name = "background"
 base = "mode_background"
 input = "background"
-chroma = 0.018
-chroma_wave = 0.035
+saturation = 7.2
+saturation_wave = 10.5
 hue_offset = 250.0
 hue_wave = 35.0
-lightness_wave = 0.10
+lightness_wave = 10
 period = 31.0
 
 [[colors]]
 name = "alt_background"
 base = "background"
 input = "background"
-lightness_offset = 0.035
-lightness_wave = 0.025
-chroma_wave = 0.025
+lightness_offset = 3.5
+lightness_wave = 2.5
+saturation_wave = 7.5
 hue_wave = 100.0
 period = 17.0
 phase = 7.0
@@ -78,135 +80,126 @@ phase = 7.0
 name = "border"
 base = "background"
 input = "foreground"
-lightness_offset = 0.25
-lightness_wave = 0.16
-chroma = 0.13
+lightness_offset = 25
+lightness_wave = 16
+saturation = 52
 hue_wave = 150.0
 period = 29.0
 phase = 11.0
-chroma_wave = 0.1
+saturation_wave = 30
 
 [[colors]]
 name = "edge"
 base = "background"
 input = "foreground"
-lightness_offset = 0.35
-lightness_wave = 0.16
-chroma = 0.22
+lightness_offset = 35
+lightness_wave = 16
+saturation = 88
 hue_offset = 25.0
 hue_wave = 160.0
 period = 19.0
 phase = 5.0
-chroma_wave = 0.12
+saturation_wave = 36
 
 [[colors]]
 name = "selection"
 base = "background"
 input = "foreground"
-lightness_offset = 0.19
-lightness_wave = 0.12
-chroma = 0.16
+lightness_offset = 19
+lightness_wave = 12
+saturation = 64
 hue_offset = 35.0
 hue_wave = 110.0
 period = 23.0
 phase = 13.0
-chroma_wave = 0.1
+saturation_wave = 30
 
 [[colors]]
 name = "text_selection"
 base = "background"
 input = "foreground"
-lightness_offset = 0.08
-lightness_wave = 0.03
-chroma = 0.1
+lightness_offset = 8
+lightness_wave = 3
+saturation = 40
 hue_offset = 20.0
 hue_wave = 90.0
 period = 13.0
-chroma_wave = 0.07
+saturation_wave = 21
 
 [[colors]]
 name = "text"
 base = "mode_text"
 input = "foreground"
-chroma = 0.1
+saturation = 40
 hue_offset = 250.0
 hue_wave = 60.0
 period = 31.0
-chroma_wave = 0.08
-lightness_offset = -0.14
-lightness_wave = 0.1
+saturation_wave = 24
+lightness_offset = -14
+lightness_wave = 10
 
 [[colors]]
 name = "secondary_text"
 base = "text"
 input = "foreground"
-lightness_offset = -0.08
-lightness_wave = 0.08
+lightness_offset = -8
+lightness_wave = 8
 period = 17.0
 phase = 17.0
-chroma = 0.08
-chroma_wave = 0.07
-
-[[colors]]
-name = "selected_text"
-base = "text"
-input = "foreground"
-chroma = 0.04
-period = 17.0
+saturation = 32
+saturation_wave = 21
 
 # Feedback hues stay in their semantic families, independent of hue rotation.
-chroma_wave = 0.03
-lightness_wave = 0.08
 
 [[colors]]
 name = "error"
 base = "mode_text"
 input = "foreground"
-lightness_offset = -0.18
-chroma = 0.22
+lightness_offset = -18
+saturation = 88
 hue_offset = 25.0
 hue_wave = 8.0
 period = 13.0
-chroma_wave = 0.12
-lightness_wave = 0.15
+saturation_wave = 36
+lightness_wave = 15
 phase = 3.0
 
 [[colors]]
 name = "info"
 base = "mode_text"
 input = "foreground"
-lightness_offset = -0.18
-chroma = 0.2
+lightness_offset = -18
+saturation = 80
 hue_offset = 255.0
 hue_wave = 15.0
 period = 17.0
-chroma_wave = 0.12
-lightness_wave = 0.15
+saturation_wave = 36
+lightness_wave = 15
 phase = 5.0
 
 [[colors]]
 name = "success"
 base = "mode_text"
 input = "foreground"
-lightness_offset = -0.18
-chroma = 0.2
+lightness_offset = -18
+saturation = 80
 hue_offset = 145.0
 hue_wave = 12.0
 period = 19.0
-chroma_wave = 0.12
-lightness_wave = 0.15
+saturation_wave = 36
+lightness_wave = 15
 phase = 7.0
 
 [[colors]]
 name = "warning"
 base = "mode_text"
 input = "foreground"
-lightness_offset = -0.18
-chroma = 0.2
+lightness_offset = -18
+saturation = 80
 hue_offset = 80.0
 hue_wave = 10.0
 period = 23.0
-chroma_wave = 0.12
-lightness_wave = 0.15
+saturation_wave = 36
+lightness_wave = 15
 phase = 11.0
 

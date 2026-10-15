@@ -13,10 +13,10 @@ func TestSaveOverrides(t *testing.T) {
 	c.Settings = append(append([]Definition(nil), c.Settings...), Definition{Key: "files.editor", Kind: String})
 	var v Values
 	for key, value := range map[string]Value{
-		"view.show_protected_system_files": {Bool: false}, // Explicit defaults are omitted on Save.
-		"appearance.autocolor.lightness":   {Number: 0.5},
-		"application.data_folder.path":     {Text: "C:\\folder: #1\\\"quoted\"\nnext\tline"},
-		"files.editor":                     {Text: "null"},
+		"view.show_protected_system_files":   {Bool: false}, // Explicit defaults are omitted on Save.
+		"appearance.autocolor.lsh.lightness": {Number: 50},
+		"application.data_folder.path":       {Text: "C:\\folder: #1\\\"quoted\"\nnext\tline"},
+		"files.editor":                       {Text: "null"},
 	} {
 		if err := v.Set(c, key, value); err != nil {
 			t.Fatal(err)
@@ -27,14 +27,14 @@ func TestSaveOverrides(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]any{
-		"appearance":  map[string]any{"autocolor": map[string]any{"lightness": 0.5}},
+		"appearance":  map[string]any{"autocolor": map[string]any{"lsh": map[string]any{"lightness": int64(50)}}},
 		"files":       map[string]any{"editor": "null"},
 		"application": map[string]any{"data_folder": map[string]any{"path": "C:\\folder: #1\\\"quoted\"\nnext\tline"}},
 	}
 	assertSavedTOML(t, dir, want)
 	// Reset drops an override; saving replaces the previous document rather
 	// than retaining stale keys or expanding inherited defaults.
-	v.Reset("appearance.autocolor.lightness")
+	v.Reset("appearance.autocolor.lsh.lightness")
 	if err := Save(dir, v); err != nil {
 		t.Fatal(err)
 	}
@@ -88,10 +88,10 @@ func TestSaveReturningToDefaultsRemovesKeysAndEmptyTables(t *testing.T) {
 	var values Values
 	dir := t.TempDir()
 	for key, value := range map[string]Value{
-		"feedback.notifications.animation": {Bool: false},
-		"appearance.autocolor.lightness":   {Number: 0.5},
-		"application.data_folder.path":     {Text: "chosen folder"},
-		"appearance.autocolor.chroma":      {Number: 0.2},
+		"feedback.notifications.animation":    {Bool: false},
+		"appearance.autocolor.lsh.lightness":  {Number: 50},
+		"application.data_folder.path":        {Text: "chosen folder"},
+		"appearance.autocolor.lsh.saturation": {Number: 20},
 	} {
 		if err := values.Set(CatalogueDefault, key, value); err != nil {
 			t.Fatal(err)
@@ -101,9 +101,9 @@ func TestSaveReturningToDefaultsRemovesKeysAndEmptyTables(t *testing.T) {
 		t.Fatal(err)
 	}
 	for key, value := range map[string]Value{
-		"feedback.notifications.animation": {Bool: true},
-		"appearance.autocolor.lightness":   {Number: 0.36},
-		"application.data_folder.path":     {Text: ""},
+		"feedback.notifications.animation":   {Bool: true},
+		"appearance.autocolor.lsh.lightness": {Number: 36},
+		"application.data_folder.path":       {Text: ""},
 	} {
 		if err := values.Set(CatalogueDefault, key, value); err != nil {
 			t.Fatal(err)
@@ -113,12 +113,12 @@ func TestSaveReturningToDefaultsRemovesKeysAndEmptyTables(t *testing.T) {
 	if err := Save(dir, values); err != nil {
 		t.Fatal(err)
 	}
-	assertSavedTOML(t, dir, map[string]any{"appearance": map[string]any{"autocolor": map[string]any{"chroma": 0.2}}})
+	assertSavedTOML(t, dir, map[string]any{"appearance": map[string]any{"autocolor": map[string]any{"lsh": map[string]any{"saturation": int64(20)}}}})
 	if !reflect.DeepEqual(values, before) {
 		t.Fatal("Save changed the caller's transaction")
 	}
 	restored, err := Load(dir, CatalogueDefault)
-	if err != nil || !restored.Get(CatalogueDefault, "feedback.notifications.animation").Bool || restored.Get(CatalogueDefault, "appearance.autocolor.lightness").Number != 0.36 || restored.Get(CatalogueDefault, "appearance.autocolor.chroma").Number != 0.2 {
+	if err != nil || !restored.Get(CatalogueDefault, "feedback.notifications.animation").Bool || restored.Get(CatalogueDefault, "appearance.autocolor.lsh.lightness").Number != 36 || restored.Get(CatalogueDefault, "appearance.autocolor.lsh.saturation").Number != 20 {
 		t.Fatal("filtered settings did not reload correctly", err)
 	}
 }
@@ -127,7 +127,7 @@ func TestSaveCleansExistingExplicitDefaultsOnUnrelatedEdit(t *testing.T) {
 	dir := t.TempDir()
 	source := `feedback.notifications.animation = true
 feedback.sounds.enabled = true
-appearance.autocolor.lightness = 0.36
+appearance.autocolor.lsh.lightness = 36
 appearance.autocolor.salt = 0
 `
 	if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte(source), 0600); err != nil {
@@ -181,7 +181,7 @@ func TestSaveCollectionDefaultsRecursivelyPreservesItems(t *testing.T) {
 		t.Fatalf("collection lost empty items or order: %#v", document)
 	}
 	options := items[1]["options"].(map[string]any)
-	if len(options) != 1 || options["count"] != float64(5) {
+	if len(options) != 1 || options["count"] != int64(5) {
 		t.Fatalf("nested table defaults remain: %#v", options)
 	}
 	rules := items[1]["rules"].([]map[string]any)

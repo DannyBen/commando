@@ -19,7 +19,7 @@ func TestHueSwatchTracksAllColorComponents(t *testing.T) {
 	before := v.appearance.Colors.Edge
 	send, _ := panelInputFrames(v)
 	send(pressed(key.NameDownArrow)) // Element -> Lightness.
-	for i, component := range []string{"lightness", "chroma", "hue"} {
+	for i, component := range []string{"lightness", "saturation", "hue"} {
 		previous := v.appearance.Colors.Edge
 		send(pressed(key.NameRightArrow))
 		swatch, ok := v.settingSwatch(colorPrefix + "edge.hue")

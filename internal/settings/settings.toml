@@ -5,86 +5,84 @@ background = 1.0
 foreground = 1.0
 colorfulness = 50.0
 
-[appearance.theme.background]
-lightness = 1.0
-chroma = 0.0
+[appearance.theme.colors.background]
+lightness = 100
+saturation = 0
 hue = 0.0
 
-[appearance.theme.alt_background]
-lightness = 0.9
-chroma = 0.0
+[appearance.theme.colors.alt_background]
+lightness = 90
+saturation = 0
 hue = 0.0
 
-[appearance.theme.border]
-lightness = 0.65
-chroma = 0.06
+[appearance.theme.colors.border]
+lightness = 65
+saturation = 32
 hue = 265.0
 
-[appearance.theme.edge]
-lightness = 0.5
-chroma = 0.2
+[appearance.theme.colors.edge]
+lightness = 50
+saturation = 71
 hue = 265.0
 
-[appearance.theme.text]
-lightness = 0.2
-chroma = 0.01
+[appearance.theme.colors.text]
+lightness = 20
+saturation = 15
 hue = 255.0
 
-[appearance.theme.secondary_text]
-lightness = 0.4
-chroma = 0.01
+[appearance.theme.colors.secondary_text]
+lightness = 40
+saturation = 8
 hue = 255.0
 
-[appearance.theme.text_selection]
-lightness = 0.85
-chroma = 0.08
+[appearance.theme.colors.text_selection]
+lightness = 85
+saturation = 100
 hue = 265.0
 
-[appearance.theme.selection]
-lightness = 0.55
-chroma = 0.2
+[appearance.theme.colors.selection]
+lightness = 55
+saturation = 89
 hue = 260.0
 
-[appearance.theme.selected_text]
-lightness = 0.98
-chroma = 0.0
-hue = 0.0
 
-[appearance.theme.error]
-lightness = 0.55
-chroma = 0.16
+[appearance.theme.colors.error]
+lightness = 55
+saturation = 72
 hue = 25.0
 
-[appearance.theme.info]
-lightness = 0.55
-chroma = 0.16
+[appearance.theme.colors.info]
+lightness = 55
+saturation = 88
 hue = 255.0
 
-[appearance.theme.success]
-lightness = 0.55
-chroma = 0.16
+[appearance.theme.colors.success]
+lightness = 55
+saturation = 92
 hue = 145.0
 
-[appearance.theme.warning]
-lightness = 0.55
-chroma = 0.16
+[appearance.theme.colors.warning]
+lightness = 55
+saturation = 100
 hue = 75.0
 
 [appearance.autocolor]
 enabled = true
-lightness = 0.36
-chroma = 0.35
-salt = 0.0
+salt = 0
+
+[appearance.autocolor.lsh]
+lightness = 36
+saturation = 100
 
 [appearance.autocolor.selection]
-lightness_offset = 0.10
-cut_lightness_offset = 0.20
+lightness_points = 10
+cut_lightness_points = 20
 
 [appearance.autocolor.special_files]
-hidden_lightness_offset = 0.06
-hidden_chroma_multiplier = 0.65
-dotfile_lightness_offset = 0.03
-dotfile_chroma_multiplier = 0.80
+hidden_lightness_points = 6
+hidden_saturation_multiplier = 0.65
+dotfile_lightness_points = 3
+dotfile_saturation_multiplier = 0.80
 
 [appearance.font]
 family = "Victor Mono"

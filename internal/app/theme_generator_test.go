@@ -80,7 +80,7 @@ func TestThemeGeneratorSaveCustomizeReopenAndReset(t *testing.T) {
 		t.Fatal("saved generated colors or inputs did not survive restart")
 	}
 	v.startSettingsWidget(settingThemeCustomize)
-	_ = v.setWidgetValue(themeSettingPrefix+"background.lightness", settings.Value{Number: 0.3})
+	_ = v.setWidgetValue(themeSettingPrefix+"background.lightness", settings.Value{Number: 30})
 	v.applySettings()
 	v.finishSettingsWidget(layout.Context{}, true)
 	custom := v.appearance.Colors
@@ -136,8 +136,8 @@ func TestThemeRecipeRepeatableVariedAndReadable(t *testing.T) {
 			pairs := map[string][]string{
 				"text":           {"background", "alt_background", "text_selection"},
 				"secondary_text": {"background", "alt_background"},
-				"selected_text":  {"selection"},
-				"error":          {"alt_background"}, "info": {"alt_background"},
+
+				"error": {"alt_background"}, "info": {"alt_background"},
 				"success": {"alt_background"}, "warning": {"alt_background"},
 			}
 			for text, backgrounds := range pairs {
@@ -160,8 +160,8 @@ func TestThemeRecipeRepeatableVariedAndReadable(t *testing.T) {
 		next := r.generate(mode, 2, 2, 50)
 		for _, role := range []string{"background", "alt_background", "edge", "selection"} {
 			a, b := tame[role], next[role]
-			if math.Abs(a.l-b.l) > 0.02 || math.Abs(a.c-b.c) > 0.02 || math.Min(wrapHue(a.h-b.h), wrapHue(b.h-a.h)) > 30 {
-				t.Fatalf("early %s step jumped in %s", role, mode)
+			if math.Abs(a.l-b.l) > 0.02 || math.Abs(lshFromOKLCH(a).s-lshFromOKLCH(b).s) > 15 || math.Min(wrapHue(a.h-b.h), wrapHue(b.h-a.h)) > 30 {
+				t.Fatalf("early %s step jumped in %s: %+v to %+v", role, mode, a, b)
 			}
 		}
 	}
@@ -172,7 +172,7 @@ func TestThemeRecipeRejectsBrokenDefinitions(t *testing.T) {
 		strings.Replace(themeGeneratorTOML, "growth_period = 720.0", "growth_period = 0.0", 1),
 		strings.Replace(themeGeneratorTOML, "period = 31.0", "period = 0.0", 1),
 		strings.Replace(themeGeneratorTOML, "base = \"background\"", "base = \"unknown\"", 1),
-		strings.Replace(themeGeneratorTOML, "chroma_wave = 0.035", "chroma_wav = 0.035", 1),
+		strings.Replace(themeGeneratorTOML, "saturation_wave = 10.5", "saturation_wav = 10.5", 1),
 		strings.Replace(themeGeneratorTOML, "name = \"warning\"", "name = \"info\"", 1),
 	} {
 		if _, err := parseThemeRecipe(source); err == nil {

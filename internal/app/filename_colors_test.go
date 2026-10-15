@@ -56,8 +56,8 @@ func TestFilenameHueSaltShufflesRatherThanRotates(t *testing.T) {
 		math.Abs(wrapHue(nextTXT.h-txt.h)-wrapHue(nextPNG.h-png.h)) < 1e-9 {
 		t.Fatal("salt did not change extension color relationships")
 	}
-	if nextTXT.l != txt.l || nextTXT.c != txt.c || nextPNG.l != png.l || nextPNG.c != png.c {
-		t.Fatal("salt changed lightness or chroma")
+	if nextTXT.l != txt.l || math.Abs(lshFromOKLCH(nextTXT).s-lshFromOKLCH(txt).s) > 1e-6 || nextPNG.l != png.l || math.Abs(lshFromOKLCH(nextPNG).s-lshFromOKLCH(png).s) > 1e-6 {
+		t.Fatal("salt changed lightness or saturation")
 	}
 	s.salt = 0
 	if s.filename(browser.Entry{Name: "another.PNG"}) != png {
@@ -74,15 +74,15 @@ func TestFilenameColorModifiers(t *testing.T) {
 	base := s.filename(browser.Entry{Name: "plain.json"})
 	both := s.filename(browser.Entry{Name: ".hidden.json", Hidden: true})
 	if both.h != base.h || math.Abs(both.l-(base.l+s.hiddenLightnessOffset+s.dotfileLightnessOffset)) > 1e-9 ||
-		math.Abs(both.c-base.c*s.hiddenChromaMultiplier*s.dotfileChromaMultiplier) > 1e-9 {
+		math.Abs(lshFromOKLCH(both).s-lshFromOKLCH(base).s*s.hiddenSaturationMultiplier*s.dotfileSaturationMultiplier) > 1e-9 {
 		t.Fatalf("overlapping modifiers lost hue or composed incorrectly: %+v", both)
 	}
 	s.hiddenLightnessOffset, s.dotfileLightnessOffset = 0, 0
-	s.hiddenChromaMultiplier, s.dotfileChromaMultiplier = 1, 1
+	s.hiddenSaturationMultiplier, s.dotfileSaturationMultiplier = 1, 1
 	if got := s.filename(browser.Entry{Name: ".hidden.json", Hidden: true}); got != base {
 		t.Fatalf("neutral modifiers changed the color: %+v", got)
 	}
-	s.hiddenLightnessOffset, s.hiddenChromaMultiplier = 2, -1
+	s.hiddenLightnessOffset, s.hiddenSaturationMultiplier = 2, -1
 	if got := s.filename(browser.Entry{Name: "hidden.json", Hidden: true}); got.l != 1 || got.c != 0 {
 		t.Fatalf("invalid lightness/chroma escaped clamping: %+v", got)
 	}

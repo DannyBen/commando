@@ -10,7 +10,7 @@ import (
 	"github.com/dannyben/commando/internal/settings"
 )
 
-const settingThemeGenerator = themeSettingPrefix + "generator"
+const settingThemeGenerator = "appearance.theme.generator"
 
 //go:embed theme-generator.toml
 var themeGeneratorTOML string
@@ -31,17 +31,17 @@ type themeRecipe struct {
 	}
 	Files struct {
 		SelectionOffset float64 `toml:"selection_offset"`
-		Chroma          float64
+		Saturation      float64
 		CutOffset       float64 `toml:"cut_offset"`
 		HiddenOffset    float64 `toml:"hidden_offset"`
 		DotfileOffset   float64 `toml:"dotfile_offset"`
 	}
 	Colors []struct {
 		Name, Base, Input string
-		Chroma            *float64
+		Saturation        *float64
 		LightnessOffset   float64 `toml:"lightness_offset"`
 		LightnessWave     float64 `toml:"lightness_wave"`
-		ChromaWave        float64 `toml:"chroma_wave"`
+		SaturationWave    float64 `toml:"saturation_wave"`
 		HueOffset         float64 `toml:"hue_offset"`
 		HueWave           float64 `toml:"hue_wave"`
 		Period, Phase     float64
@@ -71,12 +71,12 @@ func parseThemeRecipe(source string) (themeRecipe, error) {
 	}
 	for _, name := range []string{"Dark", "Midtone", "Light"} {
 		m, ok := r.Modes[name]
-		if !ok || !finite(m.Background) || m.Background < 0 || m.Background > 1 || !finite(m.Text) || m.Text < 0 || m.Text > 1 || !finite(m.Filename) || m.Filename < 0 || m.Filename > 1 || m.Direction != 1 && m.Direction != -1 || !finite(m.LightnessWaveMultiplier) || m.LightnessWaveMultiplier <= 0 || m.LightnessWaveMultiplier > 1 {
+		if !ok || !finite(m.Background) || m.Background < 0 || m.Background > 100 || !finite(m.Text) || m.Text < 0 || m.Text > 100 || !finite(m.Filename) || m.Filename < 0 || m.Filename > 100 || m.Direction != 1 && m.Direction != -1 || !finite(m.LightnessWaveMultiplier) || m.LightnessWaveMultiplier <= 0 || m.LightnessWaveMultiplier > 1 {
 			return r, fmt.Errorf("invalid mode: %s", name)
 		}
 	}
-	for _, offset := range []float64{r.Files.Chroma, r.Files.SelectionOffset, r.Files.CutOffset, r.Files.HiddenOffset, r.Files.DotfileOffset} {
-		if !finite(offset) || offset < 0 || offset > 1 {
+	for _, offset := range []float64{r.Files.Saturation, r.Files.SelectionOffset, r.Files.CutOffset, r.Files.HiddenOffset, r.Files.DotfileOffset} {
+		if !finite(offset) || offset < 0 || offset > 100 {
 			return r, fmt.Errorf("invalid file lightness offset")
 		}
 	}
@@ -86,13 +86,13 @@ func parseThemeRecipe(source string) (themeRecipe, error) {
 		if !known || c.Name == "generator" || seen[c.Name] || !seen[c.Base] || c.Input != "background" && c.Input != "foreground" {
 			return r, fmt.Errorf("invalid color or base: %s", c.Name)
 		}
-		for _, n := range []float64{c.Period, c.Phase, c.LightnessOffset, c.LightnessWave, c.ChromaWave, c.HueOffset, c.HueWave} {
+		for _, n := range []float64{c.Period, c.Phase, c.LightnessOffset, c.LightnessWave, c.SaturationWave, c.HueOffset, c.HueWave} {
 			if !finite(n) {
 				return r, fmt.Errorf("non-finite color parameter: %s", c.Name)
 			}
 		}
-		if c.Period <= 0 || c.Chroma != nil && (!finite(*c.Chroma) || *c.Chroma < 0 || *c.Chroma > 0.5) {
-			return r, fmt.Errorf("invalid period or chroma: %s", c.Name)
+		if c.Period <= 0 || c.Saturation != nil && (!finite(*c.Saturation) || *c.Saturation < 0 || *c.Saturation > 100) {
+			return r, fmt.Errorf("invalid period or saturation: %s", c.Name)
 		}
 		seen[c.Name] = true
 	}
@@ -110,7 +110,7 @@ func (r themeRecipe) strength(n float64) float64 {
 
 func (r themeRecipe) generate(mode string, background, foreground, colorfulness float64) map[string]oklchColor {
 	m := r.Modes[mode]
-	colors := map[string]oklchColor{
+	colors := map[string]lshColor{
 		"mode_background": {l: m.Background, h: wrapHue(360 * math.Mod(background-1, r.Scale.HuePeriod) / r.Scale.HuePeriod)},
 		"mode_text":       {l: m.Text},
 	}
@@ -125,52 +125,39 @@ func (r themeRecipe) generate(mode string, background, foreground, colorfulness 
 		if c.Input == "background" {
 			lightnessScale = m.LightnessWaveMultiplier
 		}
-		value.l = clampLightness(value.l + m.Direction*(c.LightnessOffset+c.LightnessWave*wave*lightnessScale))
-		if c.Chroma != nil {
-			value.c = *c.Chroma
+		value.l = max(0, min(100, value.l+m.Direction*(c.LightnessOffset+c.LightnessWave*wave*lightnessScale)))
+		if c.Saturation != nil {
+			value.s = *c.Saturation
 		}
-		value.c = max(0, min(0.5, value.c+c.ChromaWave*wave))
+		value.s = max(0, min(100, value.s+c.SaturationWave*wave))
 		value.h = wrapHue(value.h + c.HueOffset + c.HueWave*wave)
 		colors[c.Name] = value
 	}
-	// Apply chroma scaling after resolving bases so inherited colors scale once.
+	// Apply saturation scaling after resolving bases so inherited colors scale once.
 	for _, c := range r.Colors {
 		value := colors[c.Name]
 		multiplier := math.Pow(colorfulness/50, r.Scale.ColorfulnessExponent)
 		if c.Input == "background" {
 			multiplier = math.Pow(multiplier, r.Scale.BackgroundColorfulnessExponent)
 		}
-		value.c = min(0.5, value.c*multiplier)
+		value.s = min(100, value.s*multiplier)
 		colors[c.Name] = value
+	}
+	resolved := make(map[string]oklchColor, len(colors))
+	for name, value := range colors {
+		resolved[name] = value.oklch()
 	}
 	// Measure the displayed sRGB colors, including gamut mapping and rounding.
 	// Main text also appears in the location bar and native text selection.
-	backgrounds := []color.NRGBA{colors["background"].rgb(), colors["alt_background"].rgb(), colors["text_selection"].rgb()}
-	colors["text"] = readableThemeColor(colors["text"], backgrounds, 4.5)
-	colors["secondary_text"] = readableThemeColor(colors["secondary_text"], backgrounds[:2], 4.5)
-	colors["selected_text"] = readableThemeColor(colors["selected_text"], []color.NRGBA{colors["selection"].rgb()}, 4.5)
+	backgrounds := []color.NRGBA{resolved["background"].rgb(), resolved["alt_background"].rgb(), resolved["text_selection"].rgb()}
+	resolved["text"] = readableThemeColor(resolved["text"], backgrounds, 4.5)
+	resolved["secondary_text"] = readableThemeColor(resolved["secondary_text"], backgrounds[:2], 4.5)
 	for _, role := range []string{"error", "info", "success", "warning"} {
-		colors[role] = readableThemeColor(colors[role], backgrounds[:2], 4.5)
+		resolved[role] = readableThemeColor(resolved[role], backgrounds[:2], 4.5)
 	}
-	delete(colors, "mode_background")
-	delete(colors, "mode_text")
-	return colors
-}
-
-func themeLuminance(c color.NRGBA) float64 {
-	linear := func(n uint8) float64 {
-		x := float64(n) / 255
-		if x <= 0.04045 {
-			return x / 12.92
-		}
-		return math.Pow((x+0.055)/1.055, 2.4)
-	}
-	return 0.2126*linear(c.R) + 0.7152*linear(c.G) + 0.0722*linear(c.B)
-}
-
-func themeContrast(a, b color.NRGBA) float64 {
-	x, y := themeLuminance(a), themeLuminance(b)
-	return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+	delete(resolved, "mode_background")
+	delete(resolved, "mode_text")
+	return resolved
 }
 
 // Keep the intended color when readable; otherwise move its lightness toward
@@ -219,14 +206,16 @@ func (v *view) generateTheme() {
 	mode := get("mode").Text
 	colors := defaultThemeRecipe.generate(mode, get("background").Number, get("foreground").Number, get("colorfulness").Number)
 	for name, value := range colors {
-		for component, n := range map[string]float64{"lightness": value.l, "chroma": value.c, "hue": value.h} {
-			_ = v.settingsValues.Set(c, themeSettingPrefix+name+"."+component, settings.Value{Number: n})
+		lsh := lshFromOKLCH(value)
+		for component, n := range map[string]float64{"lightness": lsh.l, "saturation": lsh.s, "hue": lsh.h} {
+			_ = v.settingsValues.Set(c, themeSettingPrefix+name+"."+component, settings.Value{Number: colorSettingNumber(n)})
 		}
 	}
+
 	m := defaultThemeRecipe.Modes[mode]
 	for key, n := range map[string]float64{
 		settingLightness:          m.Filename,
-		settingChroma:             min(0.5, defaultThemeRecipe.Files.Chroma*math.Pow(get("colorfulness").Number/50, defaultThemeRecipe.Scale.ColorfulnessExponent)),
+		settingSaturation:         min(100, defaultThemeRecipe.Files.Saturation*math.Pow(get("colorfulness").Number/50, defaultThemeRecipe.Scale.ColorfulnessExponent)),
 		settingSelectionLightness: m.Direction * defaultThemeRecipe.Files.SelectionOffset,
 		settingCutLightness:       -m.Direction * defaultThemeRecipe.Files.CutOffset,
 		settingHiddenLightness:    -m.Direction * defaultThemeRecipe.Files.HiddenOffset,

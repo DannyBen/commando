@@ -36,6 +36,7 @@ type nodeMetadata struct {
 	Minimum                              *float64 `toml:"min"`
 	Maximum                              *float64 `toml:"max"`
 	Step                                 float64
+	Cycle                                float64
 	Integer                              bool
 	Choices                              []string
 }
@@ -81,7 +82,7 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 		switch scalar.(type) {
 		case bool:
 			d.Kind = Boolean
-		case float64:
+		case float64, int64:
 			d.Kind = Number
 		case string:
 			d.Kind = String
@@ -100,7 +101,7 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 			if err != nil {
 				return c, err
 			}
-			if m.Control != "" || m.Minimum != nil || m.Maximum != nil || m.Step != 0 {
+			if m.Control != "" || m.Minimum != nil || m.Maximum != nil || m.Step != 0 || m.Cycle != 0 {
 				return c, fmt.Errorf("control on group: %s", key)
 			}
 			if m.Identity != "" {
@@ -156,7 +157,7 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 		if m.Minimum != nil {
 			d.Minimum = *m.Minimum
 		}
-		d.Maximum, d.Step = m.Maximum, m.Step
+		d.Maximum, d.Step, d.Cycle = m.Maximum, m.Step, m.Cycle
 		d.Integer = m.Integer
 		d.Choices = m.Choices
 		compatible := m.Control == "input" ||
@@ -177,10 +178,13 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 			}
 			seenChoices[choice] = true
 		}
-		if d.Kind != Number && (m.Minimum != nil || m.Maximum != nil || m.Step != 0 || m.Integer) {
+		if d.Kind != Number && (m.Minimum != nil || m.Maximum != nil || m.Step != 0 || m.Cycle != 0 || m.Integer) {
 			return c, fmt.Errorf("numeric constraints on non-number: %s", d.Key)
 		}
 		if d.Kind == Number {
+			if !finite(m.Cycle) || m.Cycle < 0 {
+				return c, fmt.Errorf("invalid numeric cycle: %s", d.Key)
+			}
 			if m.Minimum != nil && !finite(*m.Minimum) || m.Maximum != nil && (!finite(*m.Maximum) || *m.Maximum < d.Minimum) || !finite(m.Step) || m.Step < 0 {
 				return c, fmt.Errorf("invalid numeric constraints: %s", d.Key)
 			}
@@ -195,6 +199,7 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 		if err := check.Set(Catalogue{Settings: []Definition{d}}, d.Key, d.Default); err != nil {
 			return c, err
 		}
+		d.Default = check.Get(Catalogue{Settings: []Definition{d}}, d.Key)
 		c.Settings = append(c.Settings, d)
 		c.UI.Fields = append(c.UI.Fields, Field{Key: d.Key, Widget: owner, Label: m.Label, Description: m.Description, Control: m.Control, Visible: fieldVisible})
 		allowMetadata(knownMetadata, d.Key, true)
@@ -276,7 +281,7 @@ func allowMetadata(known map[string]bool, key string, leaf bool) {
 		known[key+"."+property] = true
 	}
 	if leaf {
-		for _, property := range []string{"control", "min", "max", "step", "integer", "choices"} {
+		for _, property := range []string{"control", "min", "max", "step", "cycle", "integer", "choices"} {
 			known[key+"."+property] = true
 		}
 	}

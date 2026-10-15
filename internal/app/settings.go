@@ -54,15 +54,15 @@ const (
 	settingNotificationAnimation = "feedback.notifications.animation"
 	settingSoundsEnabled         = "feedback.sounds.enabled"
 	settingAutoColorEnabled      = "appearance.autocolor.enabled"
-	settingLightness             = "appearance.autocolor.lightness"
-	settingChroma                = "appearance.autocolor.chroma"
+	settingLightness             = "appearance.autocolor.lsh.lightness"
+	settingSaturation            = "appearance.autocolor.lsh.saturation"
 	settingSalt                  = "appearance.autocolor.salt"
-	settingSelectionLightness    = "appearance.autocolor.selection.lightness_offset"
-	settingCutLightness          = "appearance.autocolor.selection.cut_lightness_offset"
-	settingHiddenLightness       = "appearance.autocolor.special_files.hidden_lightness_offset"
-	settingHiddenChroma          = "appearance.autocolor.special_files.hidden_chroma_multiplier"
-	settingDotfileLightness      = "appearance.autocolor.special_files.dotfile_lightness_offset"
-	settingDotfileChroma         = "appearance.autocolor.special_files.dotfile_chroma_multiplier"
+	settingSelectionLightness    = "appearance.autocolor.selection.lightness_points"
+	settingCutLightness          = "appearance.autocolor.selection.cut_lightness_points"
+	settingHiddenLightness       = "appearance.autocolor.special_files.hidden_lightness_points"
+	settingHiddenSaturation      = "appearance.autocolor.special_files.hidden_saturation_multiplier"
+	settingDotfileLightness      = "appearance.autocolor.special_files.dotfile_lightness_points"
+	settingDotfileSaturation     = "appearance.autocolor.special_files.dotfile_saturation_multiplier"
 	settingDataFolder            = "application.data_folder.path"
 	settingFontFamily            = "appearance.font.family"
 	settingFontTextSize          = "appearance.font.text_size"
@@ -317,8 +317,8 @@ func (v *view) adjustSetting(key string, direction int) {
 	case settings.Number:
 		scale := 1 / d.Step
 		value.Number = math.Round(value.Number*scale+float64(direction)) / scale
-		if strings.HasPrefix(key, themeSettingPrefix) && strings.HasSuffix(key, ".hue") {
-			value.Number = math.Mod(value.Number+360, 360)
+		if d.Cycle > 0 {
+			value.Number = math.Mod(value.Number+d.Cycle, d.Cycle)
 		} else {
 			value.Number = max(d.Minimum, value.Number)
 			if d.Maximum != nil {
@@ -358,15 +358,15 @@ func (v *view) applySettings() {
 	}
 	colors := defaultFilenameColors
 	colors.enabled = v.settingsValues.Get(c, settingAutoColorEnabled).Bool
-	colors.filenameLightness = v.settingsValues.Get(c, settingLightness).Number
-	colors.filenameChroma = v.settingsValues.Get(c, settingChroma).Number
+	colors.filenameLightness = v.settingsValues.Get(c, settingLightness).Number / 100
+	colors.filenameSaturation = v.settingsValues.Get(c, settingSaturation).Number / 100
 	colors.salt = v.settingsValues.Get(c, settingSalt).Number
-	colors.activeBackgroundLightnessOffset = v.settingsValues.Get(c, settingSelectionLightness).Number
-	colors.cutLightnessOffset = v.settingsValues.Get(c, settingCutLightness).Number
-	colors.hiddenLightnessOffset = v.settingsValues.Get(c, settingHiddenLightness).Number
-	colors.hiddenChromaMultiplier = v.settingsValues.Get(c, settingHiddenChroma).Number
-	colors.dotfileLightnessOffset = v.settingsValues.Get(c, settingDotfileLightness).Number
-	colors.dotfileChromaMultiplier = v.settingsValues.Get(c, settingDotfileChroma).Number
+	colors.activeBackgroundLightnessOffset = v.settingsValues.Get(c, settingSelectionLightness).Number / 100
+	colors.cutLightnessOffset = v.settingsValues.Get(c, settingCutLightness).Number / 100
+	colors.hiddenLightnessOffset = v.settingsValues.Get(c, settingHiddenLightness).Number / 100
+	colors.hiddenSaturationMultiplier = v.settingsValues.Get(c, settingHiddenSaturation).Number
+	colors.dotfileLightnessOffset = v.settingsValues.Get(c, settingDotfileLightness).Number / 100
+	colors.dotfileSaturationMultiplier = v.settingsValues.Get(c, settingDotfileSaturation).Number
 	v.appearance.FilenameColors = &colors
 	show := v.settingsValues.Get(c, settingProtectedSystem).Bool
 	apply := func(p *panel) {

@@ -16,7 +16,7 @@ func TestAutoColorChildWidgetsLiveCancelResetAndSave(t *testing.T) {
 		keys          []string
 	}{
 		{"appearance.autocolor.selection", "Selection", []string{settingSelectionLightness, settingCutLightness}},
-		{"appearance.autocolor.special_files", "Special files", []string{settingHiddenLightness, settingHiddenChroma, settingDotfileLightness, settingDotfileChroma}},
+		{"appearance.autocolor.special_files", "Special files", []string{settingHiddenLightness, settingHiddenSaturation, settingDotfileLightness, settingDotfileSaturation}},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
 			v := newPreviewView()
@@ -30,9 +30,9 @@ func TestAutoColorChildWidgetsLiveCancelResetAndSave(t *testing.T) {
 				s := *v.appearance.FilenameColors
 				file := browser.Entry{Name: "file.json"}
 				switch key {
-				case settingHiddenLightness, settingHiddenChroma:
+				case settingHiddenLightness, settingHiddenSaturation:
 					file.Hidden = true
-				case settingDotfileLightness, settingDotfileChroma:
+				case settingDotfileLightness, settingDotfileSaturation:
 					file.Name = ".file.json"
 				}
 				value := s.filename(file)

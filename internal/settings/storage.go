@@ -3,6 +3,7 @@ package settings
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 
@@ -35,7 +36,9 @@ func save(dataDir string, v Values, c Catalogue) error {
 	var data bytes.Buffer
 	encoder := toml.NewEncoder(&data)
 	encoder.Indent = ""
-	if err := encoder.Encode(v.withoutDefaults(c).overrides); err != nil {
+	document := v.withoutDefaults(c).overrides
+	wholeNumbers(document)
+	if err := encoder.Encode(document); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(dataDir, 0700); err != nil {
@@ -58,4 +61,23 @@ func save(dataDir string, v Values, c Catalogue) error {
 		return err
 	}
 	return os.Rename(f.Name(), filepath.Join(dataDir, "settings.toml"))
+}
+
+// Integer literals make human-edited values compact. Fractional values retain
+// their precision; the transaction itself remains a floating-point value store.
+func wholeNumbers(tree map[string]any) {
+	for key, value := range tree {
+		switch value := value.(type) {
+		case map[string]any:
+			wholeNumbers(value)
+		case []map[string]any:
+			for _, row := range value {
+				wholeNumbers(row)
+			}
+		case float64:
+			if math.Trunc(value) == value && math.Abs(value) <= 1<<53-1 {
+				tree[key] = int64(value)
+			}
+		}
+	}
 }

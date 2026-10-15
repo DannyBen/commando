@@ -9,14 +9,15 @@ import (
 
 func TestLoadDottedAndSectionOverrides(t *testing.T) {
 	for _, document := range []string{
-		`appearance.autocolor.lightness = 0.5
+		`appearance.autocolor.lsh.lightness = 50
 appearance.autocolor.salt = 0
 view.show_protected_system_files = false
 application.data_folder.path = 'C:\user folder\#data'
 `,
 		`[appearance.autocolor]
-lightness = 0.5
 salt = 0
+[appearance.autocolor.lsh]
+lightness = 50
 [view]
 show_protected_system_files = false
 [application.data_folder]
@@ -32,16 +33,16 @@ path = 'C:\user folder\#data'
 			t.Fatal(err)
 		}
 		for key, want := range map[string]Value{
-			"appearance.autocolor.lightness":   {Number: 0.5},
-			"appearance.autocolor.salt":        {Number: 0},
-			"view.show_protected_system_files": {Bool: false},
-			"application.data_folder.path":     {Text: `C:\user folder\#data`},
+			"appearance.autocolor.lsh.lightness": {Number: 50},
+			"appearance.autocolor.salt":          {Number: 0},
+			"view.show_protected_system_files":   {Bool: false},
+			"application.data_folder.path":       {Text: `C:\user folder\#data`},
 		} {
 			if !values.Overridden(key) || values.Get(CatalogueDefault, key) != want {
 				t.Fatalf("override %s not restored", key)
 			}
 		}
-		if values.Overridden("appearance.autocolor.chroma") || values.Get(CatalogueDefault, "appearance.autocolor.chroma").Number != 0.35 {
+		if values.Overridden("appearance.autocolor.lsh.saturation") || values.Get(CatalogueDefault, "appearance.autocolor.lsh.saturation").Number != 100 {
 			t.Fatal("missing setting did not inherit its default")
 		}
 		if err := Save(dir, values); err != nil {
@@ -51,7 +52,7 @@ path = 'C:\user folder\#data'
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, key := range []string{"appearance.autocolor.lightness", "appearance.autocolor.salt", "view.show_protected_system_files", "application.data_folder.path"} {
+		for _, key := range []string{"appearance.autocolor.lsh.lightness", "appearance.autocolor.salt", "view.show_protected_system_files", "application.data_folder.path"} {
 			if reloaded.Get(CatalogueDefault, key) != values.Get(CatalogueDefault, key) {
 				t.Fatalf("save/load changed effective value %s", key)
 			}
@@ -78,8 +79,8 @@ func TestLoadRejectsEntireInvalidFile(t *testing.T) {
 		{"array as path", "application.data_folder.path = []", ErrType},
 		{"table as value", "[application.data_folder.path]", ErrType},
 		{"value as group", "application = 1", ErrType},
-		{"upper bound", "appearance.autocolor.lightness = 1.1", ErrRange},
-		{"lower bound", "appearance.autocolor.chroma = -0.1", ErrRange},
+		{"upper bound", "appearance.autocolor.lsh.lightness = 110", ErrRange},
+		{"lower bound", "appearance.autocolor.lsh.saturation = -10", ErrRange},
 		{"nan", "appearance.autocolor.salt = nan", ErrRange},
 		{"infinity", "appearance.autocolor.salt = inf", ErrRange},
 		{"fractional salt", "appearance.autocolor.salt = 0.5", ErrValue},
@@ -89,7 +90,7 @@ func TestLoadRejectsEntireInvalidFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
 			path := filepath.Join(dir, "settings.toml")
-			document := "appearance.autocolor.chroma = 0.2\n" + tc.document
+			document := "appearance.autocolor.lsh.saturation = 20\n" + tc.document
 			// Avoid defining chroma twice in the lower-bound case.
 			if tc.name == "lower bound" {
 				document = "view.show_protected_system_files = true\n" + tc.document
@@ -101,7 +102,7 @@ func TestLoadRejectsEntireInvalidFile(t *testing.T) {
 			if !errors.Is(err, tc.reason) {
 				t.Fatalf("error = %v; want %v", err, tc.reason)
 			}
-			if len(values.overrides) != 0 || values.Get(CatalogueDefault, "appearance.autocolor.chroma").Number != 0.35 {
+			if len(values.overrides) != 0 || values.Get(CatalogueDefault, "appearance.autocolor.lsh.saturation").Number != 100 {
 				t.Fatal("invalid file partially applied")
 			}
 			if got, err := os.ReadFile(path); err != nil || string(got) != document {

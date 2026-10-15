@@ -13,21 +13,24 @@ label = "Enabled"
 description = "Use generated file and selection colors."
 control = "toggle"
 
-[appearance.autocolor.lightness]
+[appearance.autocolor.lsh]
+label = "LSH"
+
+[appearance.autocolor.lsh.lightness]
 label = "Lightness"
 description = "Adjust the lightness of generated file colors."
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.autocolor.chroma]
-label = "Chroma"
-description = "Adjust the color intensity of generated file colors."
+[appearance.autocolor.lsh.saturation]
+label = "Saturation"
+description = "Adjust the percentage of usable chroma of generated file colors."
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
 [appearance.autocolor.salt]
 label = "Salt"
@@ -41,53 +44,53 @@ integer = true
 label = "Selection"
 title = "Selection"
 
-[appearance.autocolor.selection.lightness_offset]
+[appearance.autocolor.selection.lightness_points]
 label = "Background lightness offset"
 description = "Adjust selection background lightness relative to its file color."
 control = "stepper-progress"
-min = -1.0
-max = 1.0
-step = 0.01
+min = -100.0
+max = 100.0
+step = 1.0
 
-[appearance.autocolor.selection.cut_lightness_offset]
+[appearance.autocolor.selection.cut_lightness_points]
 label = "Cut entries lightness offset"
 description = "Adjust cut entries relative to their normal color, including when Auto color is disabled."
 control = "stepper-progress"
-min = -1.0
-max = 1.0
-step = 0.01
+min = -100.0
+max = 100.0
+step = 1.0
 
 [appearance.autocolor.special_files]
 label = "Special files"
 title = "Special files"
 
-[appearance.autocolor.special_files.hidden_lightness_offset]
+[appearance.autocolor.special_files.hidden_lightness_points]
 label = "Hidden lightness offset"
 description = "Add to generated lightness for entries with the hidden attribute."
 control = "stepper-progress"
-min = -1.0
-max = 1.0
-step = 0.01
+min = -100.0
+max = 100.0
+step = 1.0
 
-[appearance.autocolor.special_files.hidden_chroma_multiplier]
-label = "Hidden chroma multiplier"
-description = "Multiply generated chroma for entries with the hidden attribute."
+[appearance.autocolor.special_files.hidden_saturation_multiplier]
+label = "Hidden saturation multiplier"
+description = "Multiply generated saturation for entries with the hidden attribute."
 control = "stepper-progress"
 min = 0.0
 max = 1.0
 step = 0.01
 
-[appearance.autocolor.special_files.dotfile_lightness_offset]
+[appearance.autocolor.special_files.dotfile_lightness_points]
 label = "Dotfile lightness offset"
 description = "Add to generated lightness for entries whose names start with a dot."
 control = "stepper-progress"
-min = -1.0
-max = 1.0
-step = 0.01
+min = -100.0
+max = 100.0
+step = 1.0
 
-[appearance.autocolor.special_files.dotfile_chroma_multiplier]
-label = "Dotfile chroma multiplier"
-description = "Multiply generated chroma for entries whose names start with a dot."
+[appearance.autocolor.special_files.dotfile_saturation_multiplier]
+label = "Dotfile saturation multiplier"
+description = "Multiply generated saturation for entries whose names start with a dot."
 control = "stepper-progress"
 min = 0.0
 max = 1.0
@@ -95,6 +98,9 @@ step = 0.01
 
 [appearance.theme]
 label = "Theme"
+
+[appearance.theme.colors]
+label = "Colors"
 
 [appearance.theme.generator]
 label = "Generator"
@@ -128,338 +134,328 @@ max = 100.0
 step = 1.0
 integer = true
 
-[appearance.theme.background]
+[appearance.theme.colors.background]
 label = "Background"
 title = "Background"
 
-[appearance.theme.background.lightness]
+[appearance.theme.colors.background.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.background.chroma]
-label = "Chroma"
+[appearance.theme.colors.background.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.background.hue]
+[appearance.theme.colors.background.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.alt_background]
+[appearance.theme.colors.alt_background]
 label = "Background alternate"
 title = "Background alternate"
 
-[appearance.theme.alt_background.lightness]
+[appearance.theme.colors.alt_background.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.alt_background.chroma]
-label = "Chroma"
+[appearance.theme.colors.alt_background.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.alt_background.hue]
+[appearance.theme.colors.alt_background.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.border]
+[appearance.theme.colors.border]
 label = "Border"
 title = "Border"
 
-[appearance.theme.border.lightness]
+[appearance.theme.colors.border.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.border.chroma]
-label = "Chroma"
+[appearance.theme.colors.border.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.border.hue]
+[appearance.theme.colors.border.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.edge]
+[appearance.theme.colors.edge]
 preview = "edge"
 label = "Accent"
 title = "Accent"
 
-[appearance.theme.edge.lightness]
+[appearance.theme.colors.edge.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.edge.chroma]
-label = "Chroma"
+[appearance.theme.colors.edge.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.edge.hue]
+[appearance.theme.colors.edge.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.text]
+[appearance.theme.colors.text]
 label = "Text"
 title = "Text"
 
-[appearance.theme.text.lightness]
+[appearance.theme.colors.text.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.text.chroma]
-label = "Chroma"
+[appearance.theme.colors.text.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.text.hue]
+[appearance.theme.colors.text.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.secondary_text]
+[appearance.theme.colors.secondary_text]
 preview = "secondary"
 label = "Text secondary"
 title = "Text secondary"
 
-[appearance.theme.secondary_text.lightness]
+[appearance.theme.colors.secondary_text.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.secondary_text.chroma]
-label = "Chroma"
+[appearance.theme.colors.secondary_text.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.secondary_text.hue]
+[appearance.theme.colors.secondary_text.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.text_selection]
+[appearance.theme.colors.text_selection]
 preview = "text_selection"
 label = "Text selection"
 title = "Text selection"
 
-[appearance.theme.text_selection.lightness]
+[appearance.theme.colors.text_selection.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.text_selection.chroma]
-label = "Chroma"
+[appearance.theme.colors.text_selection.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.text_selection.hue]
+[appearance.theme.colors.text_selection.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.selection]
+[appearance.theme.colors.selection]
 label = "Selection background"
 title = "Selection background"
 
-[appearance.theme.selection.lightness]
+[appearance.theme.colors.selection.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.selection.chroma]
-label = "Chroma"
+[appearance.theme.colors.selection.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.selection.hue]
+[appearance.theme.colors.selection.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.selected_text]
-preview = "selected_text"
-label = "Selection text"
-title = "Selection text"
 
-[appearance.theme.selected_text.lightness]
-label = "Lightness"
-control = "stepper-progress"
-min = 0.0
-max = 1.0
-step = 0.01
 
-[appearance.theme.selected_text.chroma]
-label = "Chroma"
-control = "stepper-progress"
-min = 0.0
-max = 0.5
-step = 0.01
 
-[appearance.theme.selected_text.hue]
-label = "Hue"
-control = "stepper-progress"
-min = 0.0
-max = 360.0
-step = 1.0
 
-[appearance.theme.error]
+[appearance.theme.colors.error]
 preview = "error"
 label = "Error text"
 title = "Error text"
 
-[appearance.theme.error.lightness]
+[appearance.theme.colors.error.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.error.chroma]
-label = "Chroma"
+[appearance.theme.colors.error.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.error.hue]
+[appearance.theme.colors.error.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.info]
+[appearance.theme.colors.info]
 preview = "info"
 label = "Info text"
 title = "Info text"
 
-[appearance.theme.info.lightness]
+[appearance.theme.colors.info.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.info.chroma]
-label = "Chroma"
+[appearance.theme.colors.info.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.info.hue]
+[appearance.theme.colors.info.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.success]
+[appearance.theme.colors.success]
 preview = "success"
 label = "Success text"
 title = "Success text"
 
-[appearance.theme.success.lightness]
+[appearance.theme.colors.success.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.success.chroma]
-label = "Chroma"
+[appearance.theme.colors.success.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.success.hue]
+[appearance.theme.colors.success.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
-[appearance.theme.warning]
+[appearance.theme.colors.warning]
 preview = "warning"
 label = "Warning text"
 title = "Warning text"
 
-[appearance.theme.warning.lightness]
+[appearance.theme.colors.warning.lightness]
 label = "Lightness"
 control = "stepper-progress"
 min = 0.0
-max = 1.0
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.warning.chroma]
-label = "Chroma"
+[appearance.theme.colors.warning.saturation]
+label = "Saturation"
 control = "stepper-progress"
 min = 0.0
-max = 0.5
-step = 0.01
+max = 100.0
+step = 1.0
 
-[appearance.theme.warning.hue]
+[appearance.theme.colors.warning.hue]
 label = "Hue"
 control = "stepper-progress"
 min = 0.0
 max = 360.0
 step = 1.0
+cycle = 360.0
 
 [appearance.font]
 label = "Font"

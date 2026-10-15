@@ -226,7 +226,7 @@ func TestSettingsSaveWorkerKeepsSessionUntilCompletion(t *testing.T) {
 			v.finishSettingsWidget(layout.Context{}, true)
 			select {
 			case values := <-entered:
-				if values.Get(settings.CatalogueDefault, settingLightness).Number != 0.37 {
+				if values.Get(settings.CatalogueDefault, settingLightness).Number != 37 {
 					t.Fatal("save lost snapshot")
 				}
 			case <-time.After(3 * time.Second):
@@ -234,7 +234,7 @@ func TestSettingsSaveWorkerKeepsSessionUntilCompletion(t *testing.T) {
 			}
 			v.activateSettingsAction(layout.Context{}, 2)
 			v.escape(layout.Context{})
-			if !s.pending || v.settingsInteraction() != s || v.settingText(settingLightness) != "0.37" || v.requestClose() || !v.interaction.panelsBlocked() {
+			if !s.pending || v.settingsInteraction() != s || v.settingText(settingLightness) != "37" || v.requestClose() || !v.interaction.panelsBlocked() {
 				t.Fatal("pending save released or changed interaction")
 			}
 			close(release)

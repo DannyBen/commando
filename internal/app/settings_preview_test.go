@@ -118,7 +118,7 @@ func TestSettingsPreviewRowsRender(t *testing.T) {
 	if dir == "" {
 		t.Skip("optional compact preview rows")
 	}
-	for _, role := range []string{"background", "edge", "background", "error", "text_selection", "selected_text"} {
+	for _, role := range []string{"background", "edge", "background", "error", "text_selection"} {
 		v := newPreviewView()
 		v.applySettings()
 		v.startSettingsWidget(colorPrefix + role)

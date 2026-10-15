@@ -320,6 +320,14 @@ module/executable and `Commando` for the window title and data-folder name.
   Saved rules replace Reset with Delete, staged until Save and reversible through
   Cancel; New has no Reset/Delete. Separate launches per file remain future work.
 
+- Editable colors use LSH: lightness and saturation are 0–100; hue is a
+  360-degree wheel. Saturation is the percentage of usable sRGB OKLCH chroma
+  at the chosen lightness and hue. UI, clipboard and saved values share units.
+  Color offsets use points; multipliers remain dimensionless. Non-file
+  selections retain normal text when readable on their background, otherwise
+  use the better-contrasting black or white through shared theme resolution.
+  File-color selections retain their existing inversion behavior.
+
 ## Changes and Documentation
 
 - Do not edit any README file unless the user explicitly requests a README update.
