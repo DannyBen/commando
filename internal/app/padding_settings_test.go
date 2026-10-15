@@ -139,13 +139,14 @@ func TestPaddingKeyboardInputAndMinimum(t *testing.T) {
 	v := newPreviewView()
 	p := &v.panels[0]
 	selected, marks := p.selected, maps.Clone(p.marks)
+	originalPadding := v.appearance.RowPaddingVertical
 	v.startSettingsWidget("appearance.padding.vertical")
 	send, _ := panelInputFrames(v)
 	originalLength := p.list.Position.Length
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 1}, Text: "-1"})
 	send(pressed(key.NameReturn))
-	if !v.settingsInteraction().editing || v.appearance.RowPaddingVertical != 4 {
+	if !v.settingsInteraction().editing || v.appearance.RowPaddingVertical != originalPadding {
 		t.Fatal("negative padding changed the layout")
 	}
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 2}, Text: "1.5"})

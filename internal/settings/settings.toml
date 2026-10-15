@@ -21,10 +21,10 @@ small_text_size = 12.0
 weight = 600.0
 
 [appearance.padding.vertical]
-rows = 4.0
+rows = 2.0
 headers_footers = 6.0
-location = 5.0
-search = 6.0
+location = 6.0
+search = 8.0
 
 [appearance.padding.horizontal]
 content = 14.0

@@ -108,10 +108,10 @@ var defaultTheme = Theme{
 	FontWeight:                  font.SemiBold,
 	TextSize:                    15, // File rows and panel paths.
 	SmallTextSize:               12, // Column headings and panel footers.
-	RowPaddingVertical:          4,  // dp per side; row height grows with the font.
+	RowPaddingVertical:          2,  // dp per side; row height grows with the font.
 	HeaderFooterPaddingVertical: 6,
-	LocationPaddingVertical:     5,
-	SearchPaddingVertical:       6,
+	LocationPaddingVertical:     6,
+	SearchPaddingVertical:       8,
 	ContentPaddingHorizontal:    14,
 	OverlayMinWidth:             480,
 	OverlayMaxWidth:             720,
