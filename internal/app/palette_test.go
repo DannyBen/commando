@@ -18,6 +18,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/dannyben/commando/internal/settings"
 )
 
 func paletteFrames(v *view, size image.Point, metric unit.Metric) (func(...event.Event), *input.Router) {
@@ -35,6 +36,32 @@ func paletteFrames(v *view, size image.Point, metric unit.Metric) (func(...event
 
 func replacePalette(v *view, text string) key.EditEvent {
 	return key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.commandSearch.Text())}, Text: text}
+}
+
+func TestPaletteOpensActiveDataFolderInOriginatingPanel(t *testing.T) {
+	left, right, data := t.TempDir(), t.TempDir(), t.TempDir()
+	v := newBrowserView([]string{left, right}, nil)
+	defer v.loader.close()
+	waitLoaded(t, v, 0)
+	waitLoaded(t, v, 1)
+	v.active = 1
+	v.activeDataFolder = data
+	// A saved folder change must not redirect this command before restart.
+	if err := v.settingsValues.Set(settings.CatalogueDefault, settingDataFolder, settings.Value{Text: t.TempDir()}); err != nil {
+		t.Fatal(err)
+	}
+	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+	send(pressed("`"))
+	send(key.EditEvent{Text: "Open data folder"})
+	s := v.paletteInteraction()
+	if len(s.results) == 0 || s.results[0].command.label() != "Application › Open data folder" || s.results[0].command.shortcut() != "" {
+		t.Fatal("data-folder command is missing or has a shortcut")
+	}
+	send(pressed(key.NameReturn))
+	waitLoaded(t, v, 1)
+	if v.panels[1].path != data || v.panels[0].path != left || v.active != 1 || !v.interaction.idle() || !router.Source().Focused(&v.focus) {
+		t.Fatal("data-folder command lost its active folder, panel context or browsing focus")
+	}
 }
 
 func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {

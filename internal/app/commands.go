@@ -101,6 +101,11 @@ var commands = []command{
 	cmd("Selection", "Clear filter or marks", key.NameEscape, 0, nil),
 
 	cmd("Application", "Command palette", "`", 0, nil),
+	{group: "Application", name: "Open data folder",
+		available: func(v *view) bool {
+			return v.activeDataFolder != "" && v.loader != nil && v.canOfferInteraction(v.active, actionBrowse)
+		},
+		execute: func(v *view) { v.load(v.active, v.activeDataFolder, "") }},
 	{group: "Application", name: "Settings", binding: key.Event{Name: "@", State: key.Press}, paletteQuery: "@"},
 }
 

@@ -95,6 +95,7 @@ func Run() error {
 		w.Option(native.options()...)
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate)
 		v.defaultDataFolder = baseDir
+		v.activeDataFolder = dataDir
 		store.restoreLocation(&settingsValues)
 		v.restoreSettings(settingsValues, settingsErr)
 		if folderErr != nil {
