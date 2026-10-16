@@ -227,6 +227,30 @@ func TestPaletteOpeningDoesNotInsertBacktick(t *testing.T) {
 	}
 }
 
+func TestPaletteOpeningBacktickNeverReachesRenderedFrame(t *testing.T) {
+	v := newPreviewView()
+	var router input.Router
+	var ops op.Ops
+	frame := func() {
+		ops.Reset()
+		v.layout(layout.Context{Ops: &ops, Source: router.Source(), Now: time.Now(),
+			Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(800, 480))})
+		router.Frame(&ops)
+	}
+	frame()
+	frame()
+	router.Queue(pressed("`"), key.EditEvent{Text: "`"})
+	frame()
+	if v.paletteInteraction() == nil || v.commandSearch.Text() != "" {
+		t.Fatalf("opening frame displayed %q", v.commandSearch.Text())
+	}
+	router.Queue(key.EditEvent{Text: "rename"})
+	frame()
+	if v.commandSearch.Text() != "rename" || v.paletteInteraction().query != "rename" {
+		t.Fatal("search text and results were not ready in the rendered frame")
+	}
+}
+
 func TestPaletteRenameHandsOffToExistingEditor(t *testing.T) {
 	v := newPreviewView()
 	v.active = 2

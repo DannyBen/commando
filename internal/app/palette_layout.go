@@ -12,6 +12,8 @@ import (
 )
 
 func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
+	// Reconcile opening text before Editor.Layout can paint it in this frame.
+	v.updatePaletteSearch(gtx)
 	s := v.paletteInteraction()
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
 	list := material.List(v.theme, &s.list)

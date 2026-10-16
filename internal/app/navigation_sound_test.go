@@ -115,6 +115,20 @@ func TestPaletteOpeningCueForBothModes(t *testing.T) {
 	}
 }
 
+func TestPaletteTextOpeningDoesNotStopItsOwnCue(t *testing.T) {
+	v := newPreviewView()
+	recorded := &recordedSounds{}
+	v.sounds = recorded
+	send, _ := panelInputFrames(v)
+	// The physical key remains available to deferred feedback handling after
+	// its text event opens settings search.
+	send(modified("2", key.ModShift), key.EditEvent{Text: "@"})
+	if v.paletteInteraction() == nil || v.commandSearch.Text() != "@" ||
+		len(recorded.played) != 1 || recorded.played[0] != sound.Palette || recorded.stops != 0 {
+		t.Fatalf("settings opening played %v with %d stops", recorded.played, recorded.stops)
+	}
+}
+
 func TestInlineNavigationPlaysOnceWithoutChangingFileSelection(t *testing.T) {
 	v := newPreviewView()
 	recorded := &recordedSounds{}

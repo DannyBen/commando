@@ -18,10 +18,13 @@ func (v *view) showFeedback(index int, kind feedback.Kind, text string) {
 }
 
 func (v *view) dismissFeedback() {
+	dismissed := false
 	for i := range v.panels {
+		dismissed = dismissed || v.panels[i].feedback.Current() != nil
 		v.panels[i].feedback.Dismiss()
 	}
-	if v.sounds != nil {
+	// Repeated handling of one input must not stop the action's new cue.
+	if dismissed && v.sounds != nil {
 		v.sounds.Stop()
 	}
 }
