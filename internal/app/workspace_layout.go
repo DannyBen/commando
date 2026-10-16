@@ -52,6 +52,10 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layout.Widget, active bool) layout.Dimensions {
+	return v.bandWithInset(gtx, height, bg, v.contentInset(), content, active)
+}
+
+func (v *view) bandWithInset(gtx layout.Context, height int, bg color.NRGBA, inset layout.Inset, content layout.Widget, active bool) layout.Dimensions {
 	size := image.Pt(gtx.Constraints.Max.X, height)
 	paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 	paint.FillShape(gtx.Ops, v.appearance.Colors.Border,
@@ -63,7 +67,7 @@ func (v *view) band(gtx layout.Context, height int, bg color.NRGBA, content layo
 	// Content can fill its row, but must not paint over the separating border
 	// or outside the band. Keep layout metrics unchanged for text alignment.
 	contentArea := clip.Rect{Max: image.Pt(size.X, max(0, size.Y-gtx.Dp(1)))}.Push(gtx.Ops)
-	v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
 			return content(gtx)

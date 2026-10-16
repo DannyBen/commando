@@ -105,7 +105,6 @@ label = "Colors"
 [appearance.theme.generator]
 label = "Generator"
 title = "Generator"
-preview = "notifications"
 
 [appearance.theme.generator.seed]
 label = "Seed"

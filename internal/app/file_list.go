@@ -14,6 +14,7 @@ import (
 
 func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 	p := &v.panels[index]
+	preview := v.themePreview(index)
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
 	smallTextHeight := v.textHeight(gtx, v.appearance.SmallTextSize)
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
@@ -32,6 +33,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
+				if preview.selection {
+					return v.themePreviewSelection(gtx)
+				}
 				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
 					return v.filterContents(gtx, index)
 				}
@@ -97,7 +101,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					edge := color.NRGBA{}
 					if naming && v.nameInteraction().draft() {
 						edge = v.appearance.Colors.InlineEdge
-					} else if p.marks[storedRow] || (storedRow == p.selected && index != v.active) {
+					} else if preview.marked(p, storedRow) || p.marks[storedRow] || (storedRow == p.selected && index != v.active) {
 						edge = v.appearance.Colors.Edge
 					}
 					return v.fileRowSurface(gtx, size, bg, edge, func(gtx layout.Context) layout.Dimensions {
@@ -130,6 +134,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			return dims
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if len(preview.messages) > 0 {
+				return preview.footer(v, gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
+			}
 			dims := v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
 				return v.footerContents(gtx, index)
 			}, false)
