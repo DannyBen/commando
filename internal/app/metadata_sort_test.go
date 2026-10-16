@@ -66,6 +66,28 @@ func TestMetadataSortOrders(t *testing.T) {
 	}
 }
 
+func TestCreatedSortUsesCreationTimeForFilesAndFolders(t *testing.T) {
+	old, recent := time.Unix(1000, 0), time.Unix(2000, 0)
+	files := []browser.Entry{
+		{Name: "..", Parent: true, Directory: true},
+		{Name: "folder-old", Directory: true, Created: old},
+		{Name: "folder10", Directory: true, Created: recent},
+		{Name: "folder2", Directory: true, Created: recent},
+		{Name: "unknown-folder", Directory: true},
+		{Name: "older.txt", Created: old, Modified: recent},
+		{Name: "new10.txt", Created: recent, Modified: old},
+		{Name: "new2.txt", Created: recent, Modified: old},
+		{Name: "unknown.txt", Modified: recent},
+	}
+	p := panel{path: "/sample", metadata: metadataCreated, sortByMetadata: true, selected: -1}
+	slices.SortFunc(files, browser.CompareEntries)
+	p.reconcileDirectoryListing(browser.Directory{Path: p.path, Entries: files})
+	want := []string{"..", "folder2", "folder10", "folder-old", "unknown-folder", "new2.txt", "new10.txt", "older.txt", "unknown.txt"}
+	if got := visibleNames(&p); !slices.Equal(got, want) {
+		t.Fatalf("creation order = %v; want %v", got, want)
+	}
+}
+
 func TestMetadataSortPreservesBrowsingAndFilters(t *testing.T) {
 	v := newView([]panel{sortedMetadataPanel(metadataSize, false), sortedMetadataPanel(metadataSize, false)})
 	p := &v.panels[0]

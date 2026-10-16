@@ -257,6 +257,7 @@ func TestRestoreMetadataDefaultsAndDrives(t *testing.T) {
 		{"extension", metadataExtension},
 		{"size", metadataSize},
 		{"modified", metadataModified},
+		{"created", metadataCreated},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dataDir := t.TempDir()

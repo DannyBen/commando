@@ -29,10 +29,11 @@ func (p *panel) compareEntries(a, b browser.Entry) int {
 				order = cmp.Compare(b.Bytes, a.Bytes)
 			}
 		}
-	case metadataModified:
-		order = compareKnown(!a.Modified.IsZero(), !b.Modified.IsZero())
+	case metadataModified, metadataCreated:
+		first, second := p.metadata.date(a), p.metadata.date(b)
+		order = compareKnown(!first.IsZero(), !second.IsZero())
 		if order == 0 {
-			order = b.Modified.Compare(a.Modified)
+			order = second.Compare(first)
 		}
 	}
 	if order != 0 {

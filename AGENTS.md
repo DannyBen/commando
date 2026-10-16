@@ -137,7 +137,11 @@ module/executable and `Commando` for the window title and data-folder name.
   equivalent numeric names by fewer leading zeros, then exact names for case
   ties. Preserve current-item identity and marks when entries reorder.
 - Ctrl+M/Ctrl+Shift+M cycles the optional metadata column forward/backward:
-  None, Extension, Size, Modified. Save and restore each panel's choice in the
+  None, Extension, Size, Modified, Created, skipping disabled columns.
+  View › Metadata columns controls the four actual columns; None is
+  always available. Created defaults to off, the others to on. Disabling a
+  current column advances affected live and closed panels to the next enabled
+  choice; Cancel restores their original columns. Save each panel's choice in the
   shared state store, independently of startup paths. Missing or unknown choices
   default to Size. Keep the header synchronized
   with the column. None reserves no metadata width. Preserve listing order,
@@ -145,10 +149,12 @@ module/executable and `Commando` for the window title and data-folder name.
 - Ctrl+F3 toggles Sort by metadata independently for each panel; the command
   palette uses the same browsing handler. Persist the choice independently of
   startup paths, defaulting to off. None uses name order without clearing the
-  choice. Extension sorts ascending; Size and Modified sort descending, with
-  unknown values last and natural-name ties. Keep parents first, then folders,
+  choice. Extension sorts ascending; Size, Modified and Created sort descending,
+  with unknown values last and natural-name ties. Keep parents first, then folders,
   then files. Folders use name order for Extension/Size and date then name for
-  Modified. Reorder cached projections without reads, retaining current items,
+  Modified/Created. Creation time is unknown when the platform does not provide
+  it; do not substitute modification or inode-change time. Reorder cached
+  projections without reads, retaining current items,
   marks and viewport anchors. Apply the same comparator after reads, filtering,
   renames, creation and transfers. Editors, inline interactions, busy panels
   and drive lists ignore the toggle; choices follow swapped panes.

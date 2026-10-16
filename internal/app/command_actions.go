@@ -68,7 +68,7 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		if id == "view.previous_metadata_column" {
 			direction = -1
 		}
-		p.metadata = p.metadata.cycle(direction)
+		p.metadata = v.nextMetadataColumn(p.metadata, direction)
 		if p.sortByMetadata && !p.loading && v.interaction.idle() {
 			p.resort()
 		}

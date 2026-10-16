@@ -562,6 +562,26 @@ integer = true
 [view]
 label = "View"
 
+[view.metadata_columns]
+label = "Metadata columns"
+title = "Metadata columns"
+
+[view.metadata_columns.extension]
+label = "Extension"
+control = "toggle"
+
+[view.metadata_columns.size]
+label = "Size"
+control = "toggle"
+
+[view.metadata_columns.modified]
+label = "Modified"
+control = "toggle"
+
+[view.metadata_columns.created]
+label = "Created"
+control = "toggle"
+
 [view.show_protected_system_files]
 palette = "System files"
 title = "System files"

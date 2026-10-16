@@ -4,9 +4,54 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"golang.org/x/sys/windows"
 )
+
+func TestWindowsCreationTimeSurvivesReadsCreationAndTransferMetadata(t *testing.T) {
+	root := t.TempDir()
+	item, err := CreateFile(root, "dates.txt")
+	if err != nil || item.Created.IsZero() {
+		t.Fatal("new file lost creation time", err)
+	}
+	folder, err := CreateFolder(root, "folder")
+	if err != nil || folder.Created.IsZero() {
+		t.Fatal("new folder lost creation time", err)
+	}
+	path := filepath.Join(root, item.Name)
+	file, err := os.OpenFile(path, os.O_RDWR, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := time.Date(2020, time.May, 6, 12, 0, 0, 0, time.UTC)
+	stamp := windows.NsecToFiletime(created.UnixNano())
+	err = windows.SetFileTime(windows.Handle(file.Fd()), &stamp, nil, nil)
+	file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	directory, err := ReadDirectory(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, entry := range directory.Entries {
+		if entry.Name == item.Name {
+			found = true
+			if !entry.Created.Equal(created) || entry.Modified.Equal(created) {
+				t.Fatal("directory listing confused creation and modification time")
+			}
+		}
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found || !entryFromInfo(path, info).Created.Equal(created) {
+		t.Fatal("creation time missing from listing or transfer metadata")
+	}
+}
 
 func TestWindowsDirectoryReadsHiddenAndSystemAttributes(t *testing.T) {
 	root := t.TempDir()

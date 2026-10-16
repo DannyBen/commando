@@ -119,7 +119,7 @@ func prepareTransfer(request TransferRequest) (TransferRequest, error) {
 }
 
 func entryFromInfo(path string, info fs.FileInfo) Entry {
-	item := Entry{Name: filepath.Base(path), Directory: info.IsDir(), Bytes: info.Size(), SizeKnown: info.Mode().IsRegular(), Modified: info.ModTime()}
+	item := Entry{Name: filepath.Base(path), Directory: info.IsDir(), Bytes: info.Size(), SizeKnown: info.Mode().IsRegular(), Modified: info.ModTime(), Created: creationTime(info)}
 	setEntryAttributes(&item, info)
 	return item
 }

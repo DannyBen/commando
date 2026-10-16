@@ -3,6 +3,9 @@ package app
 import (
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/dannyben/commando/internal/browser"
 )
 
 type metadataColumn uint8
@@ -12,6 +15,7 @@ const (
 	metadataExtension
 	metadataSize
 	metadataModified
+	metadataCreated
 	metadataColumnCount
 )
 
@@ -23,6 +27,8 @@ func (m metadataColumn) stateName() string {
 		return "extension"
 	case metadataModified:
 		return "modified"
+	case metadataCreated:
+		return "created"
 	default:
 		return "size"
 	}
@@ -36,6 +42,8 @@ func metadataFromState(name string) metadataColumn {
 		return metadataExtension
 	case "modified":
 		return metadataModified
+	case "created":
+		return metadataCreated
 	default:
 		// Missing or unknown choices retain the first-run Size default.
 		return metadataSize
@@ -54,6 +62,8 @@ func (m metadataColumn) heading() string {
 		return "SIZE"
 	case metadataModified:
 		return "MODIFIED"
+	case metadataCreated:
+		return "CREATED"
 	default:
 		return ""
 	}
@@ -91,12 +101,20 @@ func (m metadataColumn) value(item entry) string {
 		return strings.TrimPrefix(ext, ".")
 	case metadataSize:
 		return item.size
-	case metadataModified:
-		if item.file.Modified.IsZero() {
+	case metadataModified, metadataCreated:
+		date := m.date(item.file)
+		if date.IsZero() {
 			return "?"
 		}
-		return item.file.Modified.Local().Format("2006-01-02")
+		return date.Local().Format("2006-01-02")
 	default:
 		return ""
 	}
+}
+
+func (m metadataColumn) date(file browser.Entry) time.Time {
+	if m == metadataCreated {
+		return file.Created
+	}
+	return file.Modified
 }

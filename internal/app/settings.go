@@ -167,6 +167,7 @@ type settingsSession struct {
 	actionsFocused     bool
 	action             int
 	afterSave          func() // Optional navigation after a successful save.
+	afterCancel        func() // Restore transient state changed by a live preview.
 	pending            bool
 	collection         string
 	item               int
@@ -212,6 +213,9 @@ func (v *view) startSettingsWidget(group string) {
 		return
 	}
 	if s := v.newSettingsWidget(group); s != nil {
+		if group == settingMetadataColumns {
+			v.previewMetadataColumns(s)
+		}
 		if v.startInteraction(s) && group == settingThemeSelect {
 			v.loadThemeLibrary(s)
 		}
@@ -412,6 +416,12 @@ func (v *view) applySettings() {
 	v.appearance.FilenameColors = &colors
 	show := v.settingsValues.Get(c, settingProtectedSystem).Bool
 	apply := func(p *panel) {
+		if !v.metadataColumnEnabled(p.metadata) {
+			p.metadata = v.nextMetadataColumn(p.metadata, 1)
+			if p.sortByMetadata {
+				p.resort()
+			}
+		}
 		if geometryChanged {
 			p.reveal = true
 		}
@@ -570,6 +580,9 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		v.setShortcutCapture(s, false)
 		v.settingsValues = s.before
 		v.applySettings()
+		if s.afterCancel != nil {
+			s.afterCancel()
+		}
 	} else if s.bindingCommand != nil {
 		v.settingsValues = s.draft.Clone()
 		v.applySettings()

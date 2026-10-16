@@ -50,7 +50,9 @@ type previewFileRow struct {
 }
 
 func previewFile(name string) browser.Entry {
-	return browser.Entry{Name: name, Bytes: 1024, SizeKnown: true, Modified: time.Date(2026, time.October, 1, 12, 0, 0, 0, time.UTC)}
+	return browser.Entry{Name: name, Bytes: 1024, SizeKnown: true,
+		Modified: time.Date(2026, time.October, 1, 12, 0, 0, 0, time.UTC),
+		Created:  time.Date(2026, time.September, 15, 12, 0, 0, 0, time.UTC)}
 }
 
 func themePreviewRows() []previewFileRow {

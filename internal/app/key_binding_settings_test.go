@@ -48,7 +48,7 @@ func TestBindingOverridesPersistDispatchAndReset(t *testing.T) {
 		t.Fatal("replacement shortcut was not delivered or executed")
 	}
 	send(modified("Y", key.ModCtrl|key.ModShift))
-	if v.panels[0].metadata != before.cycle(1).cycle(1) {
+	if v.panels[0].metadata != metadataNone { // Created is disabled by default.
 		t.Fatal("second shortcut was not delivered or executed")
 	}
 	send(pressed("`"))

@@ -106,6 +106,12 @@ content = 14.0
 [view]
 show_protected_system_files = false
 
+[view.metadata_columns]
+extension = true
+size = true
+modified = true
+created = false
+
 [application.data_folder]
 path = ""
 

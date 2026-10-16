@@ -17,6 +17,7 @@ type Entry struct {
 	Bytes             int64
 	SizeKnown         bool
 	Modified          time.Time // Zero when metadata is unavailable.
+	Created           time.Time // Zero when the filesystem/platform does not supply creation time.
 }
 
 type Directory struct {
@@ -51,6 +52,7 @@ func ReadDirectory(path string) (Directory, error) {
 			item.Directory = info.IsDir()
 			item.Bytes, item.SizeKnown = info.Size(), info.Mode().IsRegular()
 			item.Modified = info.ModTime()
+			item.Created = creationTime(info)
 		}
 		items = append(items, item)
 	}

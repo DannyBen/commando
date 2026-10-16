@@ -75,6 +75,7 @@ func samplePanels() []panel {
 			}
 			if !item.file.Parent {
 				item.file.Modified = time.Date(2026, time.October, 1+row%10, 12, 0, 0, 0, time.UTC)
+				item.file.Created = time.Date(2026, time.September, 1+row%10, 12, 0, 0, 0, time.UTC)
 			}
 		}
 	}

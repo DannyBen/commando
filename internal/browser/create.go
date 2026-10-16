@@ -51,6 +51,7 @@ func createEntry(directory, name string, folder bool, data []byte) (Entry, error
 	item := Entry{Name: name, Directory: folder, SizeKnown: !folder}
 	if info, err := os.Stat(path); err == nil {
 		item.Modified = info.ModTime()
+		item.Created = creationTime(info)
 		item.Bytes = info.Size()
 		setEntryAttributes(&item, info)
 	}

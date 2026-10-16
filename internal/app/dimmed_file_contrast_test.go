@@ -75,7 +75,7 @@ func TestDimmedFileGuardAllowsSofterTextAndStillEnforcesItsFloor(t *testing.T) {
 }
 
 func TestDimmedFileRendererUsesSameRoleForNameAndMetadata(t *testing.T) {
-	for _, mode := range []metadataColumn{metadataNone, metadataExtension, metadataSize, metadataModified} {
+	for _, mode := range []metadataColumn{metadataNone, metadataExtension, metadataSize, metadataModified, metadataCreated} {
 		v := newPreviewView()
 		v.settingsValues = builtInThemes[0].values.Clone()
 		_ = v.settingsValues.Set(settings.CatalogueDefault, settingHiddenLightness, settings.Value{Number: 100})

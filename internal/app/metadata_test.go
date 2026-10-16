@@ -93,6 +93,8 @@ func TestMetadataValues(t *testing.T) {
 		{"size", metadataSize, entry{name: "notes.txt", size: "128 B"}, "128 B"},
 		{"unknown size", metadataSize, entry{name: "notes.txt", size: "?"}, "?"},
 		{"modified", metadataModified, entry{file: browser.Entry{Modified: modifiedAt}}, "2026-10-11"},
+		{"created", metadataCreated, entry{file: browser.Entry{Created: modifiedAt}}, "2026-10-11"},
+		{"unknown creation date", metadataCreated, entry{file: browser.Entry{Modified: modifiedAt}}, "?"},
 		{"unknown date", metadataModified, entry{name: "notes.txt"}, "?"},
 		{"parent", metadataModified, entry{name: "..", file: browser.Entry{Parent: true}}, ""},
 		{"drive", metadataSize, entry{name: `C:\`, size: "—", file: browser.Entry{Path: `C:\`}}, ""},
@@ -126,7 +128,7 @@ func TestExtensionDisplayNames(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			item := entry{name: tc.name, file: tc.file}
 			item.file.Name = tc.name
-			for _, mode := range []metadataColumn{metadataNone, metadataExtension, metadataSize, metadataModified} {
+			for _, mode := range []metadataColumn{metadataNone, metadataExtension, metadataSize, metadataModified, metadataCreated} {
 				want := tc.name
 				if mode == metadataExtension {
 					want = tc.want
