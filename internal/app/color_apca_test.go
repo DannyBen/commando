@@ -51,19 +51,22 @@ func TestAPCASelectionPreview(t *testing.T) {
 		t.Skip("optional perceptual selection previews")
 	}
 	for _, tc := range []struct {
-		name                 string
-		bg, fg, colorfulness float64
-		want                 uint32
+		name       string
+		background uint32
+		want       uint32
 	}{
-		{"purple", 6, 36, 50, 0xffffff},
-		{"yellow", 306, 329, 99, 0},
+		{"purple", 0x442277, 0xffffff},
+		{"yellow", 0xffee33, 0},
 	} {
 		v := newPreviewView()
 		v.applySettings()
 		v.startSettingsWidget(settingThemeGenerator)
-		for key, value := range map[string]settings.Value{"mode": {Text: "Light"}, "background": {Number: tc.bg}, "foreground": {Number: tc.fg}, "colorfulness": {Number: tc.colorfulness}} {
-			if err := v.setWidgetValue(settingThemeGenerator+"."+key, value); err != nil {
-				t.Fatal(err)
+		for role, value := range map[string]uint32{"text": 0x888888, "selection": tc.background} {
+			c := lshFromOKLCH(oklchFromRGB(rgb(value)))
+			for component, n := range map[string]float64{"lightness": c.l, "saturation": c.s, "hue": c.h} {
+				if err := v.settingsValues.Set(settings.CatalogueDefault, themeSettingPrefix+role+"."+component, settings.Value{Number: n}); err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 		v.applySettings()

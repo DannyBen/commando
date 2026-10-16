@@ -118,7 +118,7 @@ func TestLSHContrastPreview(t *testing.T) {
 	v := newPreviewView()
 	v.applySettings()
 	v.startSettingsWidget(settingThemeGenerator)
-	for key, value := range map[string]settings.Value{"mode": {Text: "Light"}, "background": {Number: 24}, "foreground": {Number: 39}, "colorfulness": {Number: 50}} {
+	for key, value := range map[string]settings.Value{"mode": {Text: "Light"}, "seed": {Number: 24}, "dynamics": {Number: 39}, "vibrance": {Number: 50}} {
 		if err := v.setWidgetValue(settingThemeGenerator+"."+key, value); err != nil {
 			t.Fatal(err)
 		}
@@ -135,11 +135,13 @@ func TestLSHContrastPreview(t *testing.T) {
 }
 
 func TestSelectionUsesPerceptualContrastForYellowAndDarkBackgrounds(t *testing.T) {
-	// The second reported example: a Light generator palette at 306 / 329 / 99.
+	// A bright yellow selection must choose black even with gray normal text.
 	v := newPreviewView()
-	for key, value := range map[string]settings.Value{"mode": {Text: "Light"}, "background": {Number: 306}, "foreground": {Number: 329}, "colorfulness": {Number: 99}} {
-		if err := v.setWidgetValue(settingThemeGenerator+"."+key, value); err != nil {
-			t.Fatal(err)
+	for role, c := range map[string]lshColor{"text": {55, 0, 0}, "selection": {92, 99, 100}} {
+		for component, n := range map[string]float64{"lightness": c.l, "saturation": c.s, "hue": c.h} {
+			if err := v.settingsValues.Set(settings.CatalogueDefault, themeSettingPrefix+role+"."+component, settings.Value{Number: n}); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	v.applySettings()

@@ -1,7 +1,9 @@
 package app
 
 import (
+	"crypto/sha256"
 	_ "embed"
+	"encoding/binary"
 	"fmt"
 	"image/color"
 	"maps"
@@ -20,16 +22,12 @@ var themeGeneratorTOML string
 var defaultThemeRecipe = mustThemeRecipe()
 
 type themeRecipe struct {
-	Scale struct {
-		GrowthPeriod                   float64 `toml:"growth_period"`
-		MinimumStrength                float64 `toml:"minimum_strength"`
-		HuePeriod                      float64 `toml:"hue_period"`
-		BackgroundColorfulnessExponent float64 `toml:"background_colorfulness_exponent"`
-		ColorfulnessExponent           float64 `toml:"colorfulness_exponent"`
+	Response struct {
+		DynamicsExponent float64 `toml:"dynamics_exponent"`
+		VibranceExponent float64 `toml:"vibrance_exponent"`
 	}
 	Modes map[string]struct {
 		Background, Text, Direction, Filename float64
-		LightnessWaveMultiplier               float64 `toml:"lightness_wave_multiplier"`
 	}
 	Files struct {
 		SelectionOffset float64 `toml:"selection_offset"`
@@ -43,14 +41,41 @@ type themeRecipe struct {
 }
 
 type themeRecipeColor struct {
-	Base, Input     string
-	Saturation      *float64
-	LightnessOffset float64 `toml:"lightness_offset"`
-	LightnessWave   float64 `toml:"lightness_wave"`
-	SaturationWave  float64 `toml:"saturation_wave"`
-	HueOffset       float64 `toml:"hue_offset"`
-	HueWave         float64 `toml:"hue_wave"`
-	Period, Phase   float64
+	Base                       string
+	Lightness, Saturation, Hue themeRecipeComponent
+}
+
+type themeRecipeComponent struct {
+	Center *float64
+	Offset float64
+	Range  []float64
+}
+
+type themeGeneration struct {
+	Mode                           string
+	Seed                           uint64
+	Vibrance, Dynamics, ColorShift float64
+}
+
+// A separate keyed draw for every coordinate keeps unrelated rules stable.
+// Hashing explicit bytes also makes themes reproducible across platforms.
+func themeRandom(seed uint64, key string) float64 {
+	var encoded [8]byte
+	binary.LittleEndian.PutUint64(encoded[:], seed)
+	sum := sha256.Sum256(append(encoded[:], key...))
+	return float64(binary.LittleEndian.Uint64(sum[:8])>>11) / (1 << 53)
+}
+
+func (c themeRecipeComponent) value(base, random, dynamics, direction float64) float64 {
+	center := base
+	if c.Center != nil {
+		center = *c.Center
+	}
+	adjustment := 0.0
+	if len(c.Range) == 2 {
+		adjustment = (c.Range[0] + (c.Range[1]-c.Range[0])*random) * dynamics
+	}
+	return center + direction*(c.Offset+adjustment)
 }
 
 func mustThemeRecipe() themeRecipe {
@@ -71,12 +96,14 @@ func parseThemeRecipe(source string) (themeRecipe, error) {
 		return r, fmt.Errorf("unknown recipe keys: %v", md.Undecoded())
 	}
 	finite := func(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0) }
-	if !finite(r.Scale.GrowthPeriod) || r.Scale.GrowthPeriod < 2 || !finite(r.Scale.HuePeriod) || r.Scale.HuePeriod <= 0 || !finite(r.Scale.MinimumStrength) || r.Scale.MinimumStrength < 0 || r.Scale.MinimumStrength > 1 || !finite(r.Scale.BackgroundColorfulnessExponent) || r.Scale.BackgroundColorfulnessExponent <= 0 || r.Scale.BackgroundColorfulnessExponent > 1 || !finite(r.Scale.ColorfulnessExponent) || r.Scale.ColorfulnessExponent <= 0 || r.Scale.ColorfulnessExponent > 4 {
-		return r, fmt.Errorf("invalid variation scale")
+	for _, exponent := range []float64{r.Response.DynamicsExponent, r.Response.VibranceExponent} {
+		if !finite(exponent) || exponent <= 0 || exponent > 4 {
+			return r, fmt.Errorf("invalid response exponent")
+		}
 	}
 	for _, name := range []string{"Dark", "Midtone", "Light"} {
 		m, ok := r.Modes[name]
-		if !ok || !finite(m.Background) || m.Background < 0 || m.Background > 100 || !finite(m.Text) || m.Text < 0 || m.Text > 100 || !finite(m.Filename) || m.Filename < 0 || m.Filename > 100 || m.Direction != 1 && m.Direction != -1 || !finite(m.LightnessWaveMultiplier) || m.LightnessWaveMultiplier <= 0 || m.LightnessWaveMultiplier > 1 {
+		if !ok || !finite(m.Background) || m.Background < 0 || m.Background > 100 || !finite(m.Text) || m.Text < 0 || m.Text > 100 || !finite(m.Filename) || m.Filename < 0 || m.Filename > 100 || m.Direction != 1 && m.Direction != -1 {
 			return r, fmt.Errorf("invalid mode: %s", name)
 		}
 	}
@@ -90,16 +117,24 @@ func parseThemeRecipe(source string) (themeRecipe, error) {
 		known[spec.Key[len(themeSettingPrefix):]] = true
 	}
 	for name, c := range r.Colors {
-		if !known[name] || name == "mode_background" || name == "mode_text" || !known[c.Base] || c.Input != "background" && c.Input != "foreground" {
+		if !known[name] || name == "mode_background" || name == "mode_text" || !known[c.Base] {
 			return r, fmt.Errorf("invalid color or base: %s", name)
 		}
-		for _, n := range []float64{c.Period, c.Phase, c.LightnessOffset, c.LightnessWave, c.SaturationWave, c.HueOffset, c.HueWave} {
-			if !finite(n) {
-				return r, fmt.Errorf("non-finite color parameter: %s", name)
+		for component, w := range map[string]themeRecipeComponent{"lightness": c.Lightness, "saturation": c.Saturation, "hue": c.Hue} {
+			limit := 100.0
+			if component == "hue" {
+				limit = 360
 			}
-		}
-		if c.Period <= 0 || c.Saturation != nil && (!finite(*c.Saturation) || *c.Saturation < 0 || *c.Saturation > 100) {
-			return r, fmt.Errorf("invalid period or saturation: %s", name)
+			valid := finite(w.Offset) && (len(w.Range) == 0 || len(w.Range) == 2)
+			if len(w.Range) == 2 {
+				valid = valid && finite(w.Range[0]) && finite(w.Range[1]) && w.Range[0] <= w.Range[1]
+			}
+			if w.Center != nil {
+				valid = valid && finite(*w.Center) && *w.Center >= 0 && *w.Center <= limit
+			}
+			if !valid {
+				return r, fmt.Errorf("invalid %s component: %s", component, name)
+			}
 		}
 	}
 	// Only defined bases are dependencies. Omitted bases come from the palette.
@@ -133,47 +168,29 @@ func parseThemeRecipe(source string) (themeRecipe, error) {
 	return r, nil
 }
 
-func (r themeRecipe) strength(n float64) float64 {
-	return r.Scale.MinimumStrength + (1-r.Scale.MinimumStrength)*math.Mod(n-1, r.Scale.GrowthPeriod)/(r.Scale.GrowthPeriod-1)
-}
-
-func (r themeRecipe) generate(mode string, background, foreground, colorfulness float64, retained map[string]lshColor) map[string]oklchColor {
-	m := r.Modes[mode]
+func (r themeRecipe) generate(options themeGeneration, retained map[string]lshColor) map[string]oklchColor {
+	m := r.Modes[options.Mode]
 	if retained == nil {
 		retained = themePalette(settings.Values{})
 	}
 	colors := maps.Clone(retained)
-	colors["mode_background"] = lshColor{l: m.Background, h: wrapHue(360 * math.Mod(background-1, r.Scale.HuePeriod) / r.Scale.HuePeriod)}
-	colors["mode_text"] = lshColor{l: m.Text}
-
+	hue := 360 * themeRandom(options.Seed, "hue")
+	colors["mode_background"] = lshColor{l: m.Background, h: hue}
+	colors["mode_text"] = lshColor{l: m.Text, h: hue}
+	dynamics := math.Pow((options.Dynamics-1)/99, r.Response.DynamicsExponent)
 	for _, name := range r.order {
 		c := r.Colors[name]
-		n := background
-		if c.Input == "foreground" {
-			n = foreground
-		}
-		wave := math.Sin(2*math.Pi*(math.Mod(n-1, c.Period)+math.Mod(c.Phase, c.Period))/c.Period) * r.strength(n)
 		value := colors[c.Base]
-		lightnessScale := 1.0
-		if c.Input == "background" {
-			lightnessScale = m.LightnessWaveMultiplier
-		}
-		value.l = max(0, min(100, value.l+m.Direction*(c.LightnessOffset+c.LightnessWave*wave*lightnessScale)))
-		if c.Saturation != nil {
-			value.s = *c.Saturation
-		}
-		value.s = max(0, min(100, value.s+c.SaturationWave*wave))
-		value.h = wrapHue(value.h + c.HueOffset + c.HueWave*wave)
+		value.l = max(0, min(100, c.Lightness.value(value.l, themeRandom(options.Seed, name+".lightness"), dynamics, m.Direction)))
+		value.s = max(0, min(100, c.Saturation.value(value.s, themeRandom(options.Seed, name+".saturation"), dynamics, 1)))
+		value.h = wrapHue(c.Hue.value(value.h, themeRandom(options.Seed, name+".hue"), dynamics, 1))
 		colors[name] = value
 	}
-	// Apply saturation scaling after resolving bases so inherited colors scale once.
-	for name, c := range r.Colors {
+	// Global adjustments apply once, after all base dependencies resolve.
+	for name := range r.Colors {
 		value := colors[name]
-		multiplier := math.Pow(colorfulness/50, r.Scale.ColorfulnessExponent)
-		if c.Input == "background" {
-			multiplier = math.Pow(multiplier, r.Scale.BackgroundColorfulnessExponent)
-		}
-		value.s = min(100, value.s*multiplier)
+		value.s = min(100, value.s*math.Pow(options.Vibrance/50, r.Response.VibranceExponent))
+		value.h = wrapHue(value.h + options.ColorShift)
 		colors[name] = value
 	}
 	resolved := make(map[string]oklchColor, len(colors))
@@ -183,6 +200,28 @@ func (r themeRecipe) generate(mode string, background, foreground, colorfulness 
 	// Measure the displayed sRGB colors, including gamut mapping and rounding.
 	// Main text also appears in the location bar and native text selection.
 	backgrounds := []color.NRGBA{resolved["background"].rgb(), resolved["alt_background"].rgb(), resolved["text_selection"].rgb()}
+	// Widely separated surfaces can make a shared text color impossible. In
+	// that case, bring generated surfaces back into the mode's readable range
+	// before correcting text. Omitted colors remain untouched.
+	if _, included := r.Colors["text"]; included {
+		candidate := readableThemeColor(resolved["text"], backgrounds, 4.5)
+		for _, bg := range backgrounds {
+			if themeContrast(candidate.rgb(), bg) >= 4.5 {
+				continue
+			}
+			endpoint := color.NRGBA{A: 255}
+			if m.Text > m.Background {
+				endpoint = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+			}
+			for i, name := range []string{"background", "alt_background", "text_selection"} {
+				if _, generated := r.Colors[name]; generated {
+					resolved[name] = readableThemeColor(resolved[name], []color.NRGBA{endpoint}, 4.5)
+					backgrounds[i] = resolved[name].rgb()
+				}
+			}
+			break
+		}
+	}
 	// Contrast correction may only update colors included in this recipe.
 	for _, name := range []string{"text", "secondary_text", "error", "info", "success", "warning"} {
 		if _, included := r.Colors[name]; !included {
@@ -247,7 +286,10 @@ func (v *view) generateTheme() {
 	c := settings.CatalogueDefault
 	get := func(key string) settings.Value { return v.settingsValues.Get(c, settingThemeGenerator+"."+key) }
 	mode := get("mode").Text
-	colors := defaultThemeRecipe.generate(mode, get("background").Number, get("foreground").Number, get("colorfulness").Number, themePalette(v.settingsValues))
+	colors := defaultThemeRecipe.generate(themeGeneration{
+		Mode: mode, Seed: uint64(get("seed").Number), Vibrance: get("vibrance").Number,
+		Dynamics: get("dynamics").Number, ColorShift: get("color_shift").Number,
+	}, themePalette(v.settingsValues))
 	for name, value := range colors {
 		lsh := lshFromOKLCH(value)
 		for component, n := range map[string]float64{"lightness": lsh.l, "saturation": lsh.s, "hue": lsh.h} {
@@ -258,7 +300,7 @@ func (v *view) generateTheme() {
 	m := defaultThemeRecipe.Modes[mode]
 	for key, n := range map[string]float64{
 		settingLightness:          m.Filename,
-		settingSaturation:         min(100, defaultThemeRecipe.Files.Saturation*math.Pow(get("colorfulness").Number/50, defaultThemeRecipe.Scale.ColorfulnessExponent)),
+		settingSaturation:         min(100, defaultThemeRecipe.Files.Saturation*math.Pow(get("vibrance").Number/50, defaultThemeRecipe.Response.VibranceExponent)),
 		settingSelectionLightness: m.Direction * defaultThemeRecipe.Files.SelectionOffset,
 		settingCutLightness:       -m.Direction * defaultThemeRecipe.Files.CutOffset,
 		settingHiddenLightness:    -m.Direction * defaultThemeRecipe.Files.HiddenOffset,

@@ -107,30 +107,39 @@ label = "Generator"
 title = "Generator"
 preview = "notifications"
 
+[appearance.theme.generator.seed]
+label = "Seed"
+control = "stepper"
+min = 1.0
+step = 1.0
+integer = true
+
 [appearance.theme.generator.mode]
 label = "Mode"
 control = "choice"
 choices = ["Dark", "Midtone", "Light"]
 
-[appearance.theme.generator.background]
-label = "Background variation"
-control = "stepper"
-min = 1.0
-step = 1.0
-integer = true
-
-[appearance.theme.generator.foreground]
-label = "Foreground variation"
-control = "stepper"
-min = 1.0
-step = 1.0
-integer = true
-
-[appearance.theme.generator.colorfulness]
-label = "Colorfulness"
+[appearance.theme.generator.vibrance]
+label = "Vibrance"
 control = "stepper-progress"
 min = 0.0
 max = 100.0
+step = 1.0
+integer = true
+
+[appearance.theme.generator.dynamics]
+label = "Dynamics"
+control = "stepper-progress"
+min = 1.0
+max = 100.0
+step = 1.0
+integer = true
+
+[appearance.theme.generator.color_shift]
+label = "Color Shift"
+control = "stepper-progress"
+min = 0.0
+max = 359.0
 step = 1.0
 integer = true
 

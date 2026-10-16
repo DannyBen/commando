@@ -1,196 +1,175 @@
-# LSH recipe (OKLCH internally). Edit this file and rebuild to change the generator.
-# Each variation advances several sine waves at different periods (in steps).
-# L/S/H values use lightness points, percentage of usable chroma, and degrees.
-# Their amplitude grows from minimum_strength to 1 over growth_period steps,
-# then returns to tame. hue_period controls the slower shared hue rotation.
-[scale]
-growth_period = 720.0
-minimum_strength = 0.45
-hue_period = 180.0
-# Colorfulness scales saturation; surfaces respond more gently than foregrounds.
-background_colorfulness_exponent = 0.4
-# A curved response leaves useful room for both restrained and vivid palettes.
-colorfulness_exponent = 1.5
+# LSH theme recipe (OKLCH internally). Edit and rebuild to change the generator.
+# Each color inherits a baseline and receives stable seeded random adjustments.
+# L/S use 0–100 points; H uses degrees.
+#
+# User controls (saved in normal settings, not configured here):
+#   Seed: positive integer; chooses the base hue and each property's random value.
+#   Mode: Dark / Midtone / Light.
+# Mode filename values preserve the separate auto-colored filename lightness.
+#   Vibrance: 0–100; 50 uses the recipe's saturation, 0 is grayscale.
+#   Dynamics: 1–100; opens each property's random range from zero to full width.
+#   Color Shift: 0–359 degrees; rotates the whole generated palette afterward.
+#
+# Each property has an independent, uniform random value keyed by seed,
+# color name and component. Adding/reordering colors does not reshuffle others.
+# Adjusting other controls keeps those random choices fixed.
+# There are no periods, phases or seed-dependent tame/wild cycles.
 
+[response]
+# Normalized Dynamics: (value - 1) / 99, raised to this power.
+# 1 gives a linear response. Larger values open ranges more slowly at first.
+dynamics_exponent = 1.0
+# Saturation multiplier: (Vibrance / 50) raised to this power.
+vibrance_exponent = 1.5
+
+[modes.Dark]
+background = 25
+text = 94
+direction = 1
+filename = 80
+
+[modes.Midtone]
+background = 42
+text = 98
+direction = 1
+filename = 90
+
+[modes.Light]
+background = 88
+text = 18
+direction = -1
+filename = 30
+
+# Color rules:
+#   base: another color, mode_background, or mode_text.
+#   mode_background has the mode's lightness, zero saturation and seeded hue.
+#   mode_text has the mode's text lightness, zero saturation and the SAME hue.
+#   Omitted colors retain their current palette values and can serve as bases.
+#   Dependencies resolve independently of table order; cycles are invalid.
+#
+# Each component supports:
+#   center: absolute baseline; omitted means inherit the base's coordinate.
+#   offset: fixed adjustment to that baseline; omitted means zero.
+#   range: [minimum, maximum] random adjustment AT MAXIMUM Dynamics.
+#          Omitted means [0, 0]. Both endpoints scale with Dynamics.
+#
+# Example: center=7, range=[-5, 15] gives saturation 7 at minimum Dynamics,
+#          and a seeded value between 2 and 22 at maximum Dynamics.
+#
+# For lightness, mode direction multiplies BOTH offset and random adjustment.
+# Positive adjustments therefore point toward text in every mode.
+# Explicit centers remain absolute. Saturation/hue have no mode direction.
+# L/S are clamped to 0–100 and hue wraps around the wheel.
+# Resolve all bases before applying Vibrance and Color Shift, so neither
+# modifier compounds down an inheritance chain.
+# Readability correction follows these adjustments for generated text colors.
+# If surfaces are too far apart for any shared readable text color, generated
+# surfaces also move toward the mode's readable lightness range. Omitted colors
+# remain untouched. These corrections can limit the requested random ranges.
+# Dynamics controls permitted differences; it does not force large differences.
+
+[colors.background]
+base = "mode_background"
+lightness.range = [-8, 10]
+saturation.center = 7
+saturation.range = [-5, 15]
+# The shared seeded hue already chooses the color family.
+# No extra hue randomness is needed for this anchor color.
+
+[colors.alt_background]
+base = "background"
+lightness.offset = 4
+lightness.range = [-10, 16]
+saturation.range = [-5, 10]
+hue.range = [-80, 80]
+
+[colors.border]
+base = "background"
+lightness.offset = 20
+lightness.range = [-8, 15]
+saturation.center = 25
+saturation.range = [-10, 25]
+hue.range = [-60, 60]
+
+[colors.edge]
+base = "background"
+lightness.offset = 32
+lightness.range = [-10, 15]
+saturation.center = 65
+saturation.range = [-20, 30]
+hue.range = [-120, 120]
+
+[colors.selection]
+base = "background"
+lightness.offset = 16
+lightness.range = [-6, 16]
+saturation.center = 35
+saturation.range = [-15, 35]
+hue.range = [-120, 120]
+
+[colors.text_selection]
+base = "selection"
+lightness.offset = 4
+lightness.range = [-4, 8]
+saturation.range = [-10, 10]
+hue.range = [-30, 30]
+
+[colors.text]
+base = "mode_text"
+lightness.range = [-8, 0]
+saturation.center = 5
+saturation.range = [-5, 15]
+hue.range = [-30, 30]
+
+[colors.secondary_text]
+base = "text"
+lightness.offset = -12
+lightness.range = [-8, 4]
+saturation.range = [-5, 5]
+hue.range = [-15, 15]
+
+# Semantic colors start from conventional absolute hues rather than seeded hue.
+# Color Shift rotates these too, keeping its whole-palette behavior consistent.
+[colors.error]
+base = "mode_text"
+lightness.offset = -12
+lightness.range = [-8, 4]
+saturation.center = 75
+saturation.range = [-15, 20]
+hue.center = 25
+hue.range = [-10, 10]
+
+[colors.info]
+base = "mode_text"
+lightness.offset = -12
+lightness.range = [-8, 4]
+saturation.center = 65
+saturation.range = [-15, 25]
+hue.center = 255
+hue.range = [-15, 15]
+
+[colors.success]
+base = "mode_text"
+lightness.offset = -12
+lightness.range = [-8, 4]
+saturation.center = 65
+saturation.range = [-15, 25]
+hue.center = 145
+hue.range = [-15, 15]
+
+[colors.warning]
+base = "mode_text"
+lightness.offset = -12
+lightness.range = [-8, 4]
+saturation.center = 75
+saturation.range = [-15, 20]
+hue.center = 80
+hue.range = [-10, 10]
+
+# Filename appearance uses the existing shared controls, without randomization.
 [files]
-# Selection moves toward text; cut/hidden/dotfile offsets move toward background.
 selection_offset = 8
 saturation = 80
 cut_offset = 20
 hidden_offset = 6
 dotfile_offset = 3
-
-# Offsets point toward the text: positive in Dark/Midtone, negative in Light.
-# Filename lightness also follows the mode; Auto color's enabled choice stays.
-[modes.Dark]
-lightness_wave_multiplier = 1.0
-background = 30
-text = 94
-direction = 1.0
-filename = 80
-
-[modes.Midtone]
-# Keep middle surfaces close enough to share readable text colors.
-lightness_wave_multiplier = 0.25
-background = 42
-text = 98
-direction = 1.0
-filename = 90
-
-[modes.Light]
-lightness_wave_multiplier = 1.0
-background = 85
-text = 22
-direction = -1.0
-filename = 30
-
-# Omitted colors keep their current palette values and remain usable as bases.
-# Comment out an entire [colors.name] block to hold that color fixed.
-# Tables may appear in any order; base dependencies are resolved automatically.
-# Colors use a named base (or mode_background / mode_text).
-# Background controls the main and alternate surfaces.
-# Foreground controls border, accents, selections, text and feedback colors.
-# Inherited base colors and contrast corrections can link the two families.
-# input selects the Background or Foreground variation control.
-# wave = sin(2π × (input + phase) / period) × growing strength.
-# Lightness offsets/waves follow the mode direction; hue is always degrees.
-# Omitted offsets/waves are zero; omitted saturation inherits the base's saturation.
-# L/S and their offsets use 0–100 points; H uses degrees.
-# Text is adjusted afterward for contrast against its actual backgrounds.
-[colors.background]
-base = "mode_background"
-input = "background"
-saturation = 7.2
-saturation_wave = 10.5
-hue_offset = 250.0
-hue_wave = 35.0
-lightness_wave = 10
-period = 31.0
-
-[colors.alt_background]
-base = "background"
-input = "background"
-lightness_offset = 3.5
-lightness_wave = 2.5
-saturation_wave = 7.5
-hue_wave = 100.0
-period = 17.0
-phase = 7.0
-
-[colors.border]
-base = "background"
-input = "foreground"
-lightness_offset = 25
-lightness_wave = 16
-saturation = 52
-hue_wave = 150.0
-period = 29.0
-phase = 11.0
-saturation_wave = 30
-
-[colors.edge]
-base = "background"
-input = "foreground"
-lightness_offset = 35
-lightness_wave = 16
-saturation = 88
-hue_offset = 25.0
-hue_wave = 160.0
-period = 19.0
-phase = 5.0
-saturation_wave = 36
-
-[colors.selection]
-base = "background"
-input = "foreground"
-lightness_offset = 19
-lightness_wave = 12
-saturation = 64
-hue_offset = 35.0
-hue_wave = 110.0
-period = 23.0
-phase = 13.0
-saturation_wave = 30
-
-[colors.text_selection]
-base = "background"
-input = "foreground"
-lightness_offset = 8
-lightness_wave = 3
-saturation = 40
-hue_offset = 20.0
-hue_wave = 90.0
-period = 13.0
-saturation_wave = 21
-
-[colors.text]
-base = "mode_text"
-input = "foreground"
-saturation = 40
-hue_offset = 250.0
-hue_wave = 60.0
-period = 31.0
-saturation_wave = 24
-lightness_offset = -14
-lightness_wave = 10
-
-[colors.secondary_text]
-base = "text"
-input = "foreground"
-lightness_offset = -8
-lightness_wave = 8
-period = 17.0
-phase = 17.0
-saturation = 32
-saturation_wave = 21
-
-# Feedback hues stay in their semantic families, independent of hue rotation.
-
-[colors.error]
-base = "mode_text"
-input = "foreground"
-lightness_offset = -18
-saturation = 88
-hue_offset = 25.0
-hue_wave = 8.0
-period = 13.0
-saturation_wave = 36
-lightness_wave = 15
-phase = 3.0
-
-[colors.info]
-base = "mode_text"
-input = "foreground"
-lightness_offset = -18
-saturation = 80
-hue_offset = 255.0
-hue_wave = 15.0
-period = 17.0
-saturation_wave = 36
-lightness_wave = 15
-phase = 5.0
-
-[colors.success]
-base = "mode_text"
-input = "foreground"
-lightness_offset = -18
-saturation = 80
-hue_offset = 145.0
-hue_wave = 12.0
-period = 19.0
-saturation_wave = 36
-lightness_wave = 15
-phase = 7.0
-
-[colors.warning]
-base = "mode_text"
-input = "foreground"
-lightness_offset = -18
-saturation = 80
-hue_offset = 80.0
-hue_wave = 10.0
-period = 23.0
-saturation_wave = 36
-lightness_wave = 15
-phase = 11.0
-
