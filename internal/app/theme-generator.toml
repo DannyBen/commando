@@ -121,10 +121,10 @@ hue.range = [-120, 120]
 
 [colors.secondary_text]
 base = "text"
-lightness.offset = -12
-lightness.range = [-30, 35]
+# lightness.offset = -12
+lightness.range = [-20, 20]
 saturation.range = [-35, 65]
-hue.range = [-180, 180]
+hue.range = [-280, 280]
 
 # Semantic colors start from conventional absolute hues rather than seeded hue.
 # Color Shift rotates these too, keeping its whole-palette behavior consistent.

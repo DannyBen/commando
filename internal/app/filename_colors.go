@@ -89,3 +89,16 @@ func (t Theme) entryColors(file browser.Entry, active, cut bool) (background, fi
 	}
 	return
 }
+
+// Auto-colored, cut and selected metadata follows the filename's contrast rule.
+// Ordinary metadata uses the secondary-text policy regardless of RGB equality.
+func (t Theme) metadataContrastRole(file browser.Entry, active, cut bool) contrastRole {
+	colors := defaultFilenameColors
+	if t.FilenameColors != nil {
+		colors = *t.FilenameColors
+	}
+	if active || cut || colors.enabled && file.Path == "" {
+		return contrastPrimary
+	}
+	return contrastSecondary
+}

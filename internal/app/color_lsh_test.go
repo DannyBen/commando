@@ -58,7 +58,7 @@ func TestSelectionTextRetainsReadableNormalOrAdjustsColor(t *testing.T) {
 		{"fallback white", rgb(0x222222), rgb(0x223366), rgb(0xffffff)},
 		{"fallback black", rgb(0xeeeeee), rgb(0xffbbdd), rgb(0)},
 	} {
-		if got := readableTextColor(tc.normal, tc.bg); math.Abs(perceptualContrast(got, tc.bg)) < min(textContrastMinimumLc, math.Abs(perceptualContrast(tc.want, tc.bg))) || math.Abs(perceptualContrast(got, tc.bg)) < math.Abs(perceptualContrast(tc.normal, tc.bg)) {
+		if got := contrastColor(tc.normal, tc.bg, themeContrastRules[contrastPrimary]); math.Abs(perceptualContrast(got, tc.bg)) < min(themeContrastRules[contrastPrimary].targetLc, math.Abs(perceptualContrast(tc.want, tc.bg))) || math.Abs(perceptualContrast(got, tc.bg)) < math.Abs(perceptualContrast(tc.normal, tc.bg)) {
 			t.Fatalf("%s: got %v", tc.name, got)
 		}
 	}
@@ -74,8 +74,8 @@ func TestSelectionTextRetainsReadableNormalOrAdjustsColor(t *testing.T) {
 	}
 	c := themeColorsFromSettings(values)
 	var cache textContrastCache
-	selected := cache.resolve(c.SelectedName, c.Selected)
-	if c.SelectedName != c.Foreground || selected != readableTextColor(c.Foreground, c.Selected) || math.Abs(perceptualContrast(selected, c.Selected)) < math.Abs(perceptualContrast(c.Foreground, c.Selected)) {
+	selected := cache.resolve(c.SelectedName, c.Selected, contrastPrimary)
+	if c.SelectedName != c.Foreground || selected != contrastColor(c.Foreground, c.Selected, themeContrastRules[contrastPrimary]) || math.Abs(perceptualContrast(selected, c.Selected)) < math.Abs(perceptualContrast(c.Foreground, c.Selected)) {
 		t.Fatal("theme resolution missed selection contrast")
 	}
 	if _, exists := settings.CatalogueDefault.Widget(themeSettingPrefix + "selected_text"); exists {
@@ -129,7 +129,7 @@ func TestLSHContrastPreview(t *testing.T) {
 	v.settingsInteraction().selected = 2
 	c := v.appearance.Colors
 	selected := v.resolvedTextOn(c.SelectedName, c.Selected)
-	if selected != readableTextColor(c.Foreground, c.Selected) || math.Abs(perceptualContrast(selected, c.Selected)) < math.Abs(perceptualContrast(c.Foreground, c.Selected)) {
+	if selected != contrastColor(c.Foreground, c.Selected, themeContrastRules[contrastPrimary]) || math.Abs(perceptualContrast(selected, c.Selected)) < math.Abs(perceptualContrast(c.Foreground, c.Selected)) {
 		t.Fatal("reported selection remains unreadable")
 	}
 	if err := renderViewPNG(filepath.Join(dir, "contrast-lsh.png"), v); err != nil {
@@ -150,7 +150,7 @@ func TestSelectionUsesPerceptualContrastForYellowAndDarkBackgrounds(t *testing.T
 	v.applySettings()
 	c := v.appearance.Colors
 	selected := v.resolvedTextOn(c.SelectedName, c.Selected)
-	if math.Abs(perceptualContrast(selected, c.Selected)) < min(textContrastMinimumLc, math.Abs(perceptualContrast(rgb(0), c.Selected))) {
+	if math.Abs(perceptualContrast(selected, c.Selected)) < min(themeContrastRules[contrastPrimary].targetLc, math.Abs(perceptualContrast(rgb(0), c.Selected))) {
 		t.Fatalf("yellow selection retained colored text: normal %v selected %v background %v", c.Foreground, selected, c.Selected)
 	}
 	if math.Abs(perceptualContrast(selected, c.Selected)) <= math.Abs(perceptualContrast(c.Foreground, c.Selected)) {
@@ -162,7 +162,7 @@ func TestSelectionUsesPerceptualContrastForYellowAndDarkBackgrounds(t *testing.T
 		t.Fatal("fixture already has strong contrast")
 	}
 
-	if selected := readableTextColor(normal, bg); math.Abs(perceptualContrast(selected, bg)) < textContrastMinimumLc {
+	if selected := contrastColor(normal, bg, themeContrastRules[contrastPrimary]); math.Abs(perceptualContrast(selected, bg)) < themeContrastRules[contrastPrimary].targetLc {
 		t.Fatal("dark selection did not get readable text")
 	}
 }

@@ -7,18 +7,22 @@ import (
 	"gioui.org/layout"
 )
 
-type textContrastPair struct{ foreground, background color.NRGBA }
+type textContrastPair struct {
+	foreground, background color.NRGBA
+	rule                   contrastRule
+}
 
 // Resolved display colors are disposable and never enter the saved palette.
 // Theme changes clear this cache; dynamic file-row pairs are resolved on demand.
 type textContrastCache map[textContrastPair]color.NRGBA
 
-func (c *textContrastCache) resolve(foreground, background color.NRGBA) color.NRGBA {
-	pair := textContrastPair{foreground, background}
+func (c *textContrastCache) resolve(foreground, background color.NRGBA, role contrastRole) color.NRGBA {
+	rule := themeContrastRules[role]
+	pair := textContrastPair{foreground, background, rule}
 	if resolved, ok := (*c)[pair]; ok {
 		return resolved
 	}
-	resolved := readableTextColor(foreground, background)
+	resolved := contrastColor(foreground, background, rule)
 	if *c == nil {
 		*c = make(textContrastCache)
 	}
@@ -53,7 +57,20 @@ func compositeText(foreground, background color.NRGBA) color.NRGBA {
 }
 
 func (v *view) resolvedTextOn(foreground, background color.NRGBA) color.NRGBA {
-	return v.textContrast.resolve(foreground, background)
+	return v.resolvedTextFor(v.textRole, foreground, background)
+}
+
+func (v *view) resolvedTextFor(role contrastRole, foreground, background color.NRGBA) color.NRGBA {
+	return v.textContrast.resolve(foreground, background, role)
+}
+
+func (v *view) textAs(role contrastRole, content layout.Widget) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		previous := v.textRole
+		v.textRole = role
+		defer func() { v.textRole = previous }()
+		return content(gtx)
+	}
 }
 
 func (v *view) currentTextBackground() color.NRGBA {

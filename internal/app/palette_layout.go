@@ -86,15 +86,17 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 					return s.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						size := image.Pt(gtx.Constraints.Max.X, rowHeight)
 						bg, fg := v.appearance.Colors.Surface, v.appearance.Colors.Foreground
+						role := contrastPrimary
 						if row == s.selected {
 							bg, fg = v.appearance.Colors.Selected, v.appearance.Colors.SelectedName
 						}
 						if row != s.selected && !s.results[row].command.allowed(v) {
 							fg = v.appearance.Colors.Muted
+							role = contrastSecondary
 						}
 						paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 						gtx.Constraints = layout.Exact(size)
-						return v.contentInset().Layout(gtx, v.textOn(bg, func(gtx layout.Context) layout.Dimensions {
+						return v.contentInset().Layout(gtx, v.textAs(role, v.textOn(bg, func(gtx layout.Context) layout.Dimensions {
 							return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 								gtx.Constraints.Min.Y = 0
 								result := s.results[row]
@@ -104,7 +106,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 									return v.label(gtx, result.command.shortcut(), v.appearance.SmallTextSize, fg, text.End)
 								})
 							})
-						}))
+						})))
 					})
 				})
 			}),

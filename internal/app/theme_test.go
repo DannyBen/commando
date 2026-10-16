@@ -40,7 +40,7 @@ func TestThemeRowSizingAndNavigation(t *testing.T) {
 			padding := gtx.Dp(tc.padding)
 			height := line.Size.Y + 2*padding
 			gtx.Constraints = layout.Exact(image.Pt(600, height))
-			row := v.rowContents(gtx, item, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, metadataSize)
+			row := v.rowContents(gtx, item, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, metadataSize, contrastSecondary)
 			if row.Size.Y != height || row.Baseline != line.Baseline+padding {
 				t.Fatalf("text not centered in row: row=%+v, natural text=%+v, padding=%d", row, line, padding)
 			}

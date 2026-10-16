@@ -102,11 +102,11 @@ func (v *view) headerBand(gtx layout.Context, height int, bg color.NRGBA, conten
 	return layout.Dimensions{Size: size}
 }
 
-func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp) layout.Dimensions {
+func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, metadataRole contrastRole) layout.Dimensions {
 	var metadata layout.Widget
 	if item.size != "" {
 		metadata = func(gtx layout.Context) layout.Dimensions {
-			return v.label(gtx, item.size, size, secondary, text.End)
+			return v.labelFor(metadataRole, gtx, item.size, size, secondary, text.End)
 		}
 	}
 	return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -143,6 +143,10 @@ func (v *view) trailingLayout(gtx layout.Context, name, metadata layout.Widget) 
 
 func (v *view) label(gtx layout.Context, value string, size unit.Sp, fg color.NRGBA, alignment text.Alignment) layout.Dimensions {
 	return v.rawLabel(gtx, value, size, v.resolvedText(fg), alignment)
+}
+
+func (v *view) labelFor(role contrastRole, gtx layout.Context, value string, size unit.Sp, fg color.NRGBA, alignment text.Alignment) layout.Dimensions {
+	return v.rawLabel(gtx, value, size, v.resolvedTextFor(role, fg, v.currentTextBackground()), alignment)
 }
 
 // Raw labels are used for measurement and the unguarded text-selection sample.

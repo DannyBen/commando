@@ -286,7 +286,7 @@ func (v *view) nameContents(gtx layout.Context, metadata string, metaColor color
 			var trailing layout.Widget
 			if metadata != "" {
 				trailing = func(gtx layout.Context) layout.Dimensions {
-					return v.label(gtx, metadata, v.appearance.TextSize, metaColor, text.End)
+					return v.labelFor(contrastSecondary, gtx, metadata, v.appearance.TextSize, metaColor, text.End)
 				}
 			}
 			return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {

@@ -55,6 +55,7 @@ type view struct {
 	fontFamiliesLoading bool
 
 	textBackground    color.NRGBA
+	textRole          contrastRole
 	textContrast      textContrastCache
 	appearance        Theme
 	theme             *material.Theme

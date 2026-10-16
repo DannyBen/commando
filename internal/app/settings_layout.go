@@ -248,12 +248,14 @@ func (v *view) settingsChoices(gtx layout.Context, choices []string, value strin
 func (v *view) settingsChoice(gtx layout.Context, label string, selected, focused bool, height int) layout.Dimensions {
 	width := v.textWidth(gtx, label, v.appearance.TextSize)
 	fg := v.appearance.Colors.Filename
+	role := contrastPrimary
 	if focused {
 		if selected {
 			paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: image.Pt(width, height)}.Op())
 			fg = v.appearance.Colors.SelectedName
 		}
 	} else if !selected {
+		role = contrastSecondary
 		fg = v.appearance.Colors.Muted
 		fg.A = uint8(uint16(fg.A) * 4 / 5)
 	}
@@ -261,7 +263,7 @@ func (v *view) settingsChoice(gtx layout.Context, label string, selected, focuse
 	if focused && selected {
 		background = v.appearance.Colors.Selected
 	}
-	fg = v.resolvedTextOn(fg, background)
+	fg = v.resolvedTextFor(role, fg, background)
 	dims := v.rawLabel(gtx, label, v.appearance.TextSize, fg, text.Start)
 	if selected && !focused {
 		padding := v.textWidth(gtx, " ", v.appearance.TextSize)

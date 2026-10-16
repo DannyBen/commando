@@ -34,13 +34,13 @@ func TestAPCAReferenceScores(t *testing.T) {
 func TestAPCASelectionMatchesReportedPreferences(t *testing.T) {
 	normal := rgb(0x334455)
 	for _, tc := range []struct{ bg, want uint32 }{{0xbe47a8, 0xffffff}, {0xe9b200, 0}} {
-		if got := readableTextColor(normal, rgb(tc.bg)); math.Abs(perceptualContrast(got, rgb(tc.bg))) < min(textContrastMinimumLc, math.Abs(perceptualContrast(rgb(tc.want), rgb(tc.bg)))) {
+		if got := contrastColor(normal, rgb(tc.bg), themeContrastRules[contrastPrimary]); math.Abs(perceptualContrast(got, rgb(tc.bg))) < min(themeContrastRules[contrastPrimary].targetLc, math.Abs(perceptualContrast(rgb(tc.want), rgb(tc.bg)))) {
 			t.Fatalf("background %06x: got %v; want %06x", tc.bg, got, tc.want)
 		}
 	}
 	// Keep an already clear, colored normal text rather than forcing a neutral.
 	normal = rgb(0x003366)
-	if readableTextColor(normal, rgb(0xffffff)) != normal {
+	if contrastColor(normal, rgb(0xffffff), themeContrastRules[contrastPrimary]) != normal {
 		t.Fatal("clear normal text was discarded")
 	}
 }
@@ -71,7 +71,7 @@ func TestAPCASelectionPreview(t *testing.T) {
 		}
 		v.applySettings()
 		v.settingsInteraction().selected = 2
-		if selected := v.resolvedTextOn(v.appearance.Colors.SelectedName, v.appearance.Colors.Selected); math.Abs(perceptualContrast(selected, v.appearance.Colors.Selected)) < min(textContrastMinimumLc, math.Abs(perceptualContrast(rgb(tc.want), v.appearance.Colors.Selected))) {
+		if selected := v.resolvedTextOn(v.appearance.Colors.SelectedName, v.appearance.Colors.Selected); math.Abs(perceptualContrast(selected, v.appearance.Colors.Selected)) < min(themeContrastRules[contrastPrimary].targetLc, math.Abs(perceptualContrast(rgb(tc.want), v.appearance.Colors.Selected))) {
 			t.Fatalf("%s selection got %v", tc.name, selected)
 		}
 		if err := renderViewPNG(filepath.Join(dir, "contrast-apca-"+tc.name+".png"), v); err != nil {

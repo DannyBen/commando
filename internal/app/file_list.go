@@ -39,7 +39,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
 					return v.filterContents(gtx, index)
 				}
-				return v.columns(gtx, entry{name: "NAME", size: p.metadata.heading()}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize)
+				return v.columns(gtx, entry{name: "NAME", size: p.metadata.heading()}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize, contrastSecondary)
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -93,14 +93,16 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					bg := v.appearance.Colors.Surface
 					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Metadata
 					current := preview.currentRow(p)
+					active, cut := false, false
 					if naming {
 						bg = v.appearance.Colors.NameRow
 					} else {
-						active := storedRow == p.selected && index == v.active && transient < 0 && !p.navigating
+						active = storedRow == p.selected && index == v.active && transient < 0 && !p.navigating
 						if preview.selection {
 							active = storedRow == current
 						}
-						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, v.cutEntry(index, storedRow))
+						cut = v.cutEntry(index, storedRow)
+						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, cut)
 					}
 					edge := color.NRGBA{}
 					if naming && v.nameInteraction().draft() {
@@ -116,7 +118,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							}
 							return v.nameContents(gtx, metadata, sizeColor)
 						}
-						return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata)
+						return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata, v.appearance.metadataContrastRole(p.items[storedRow].file, active, cut))
 					})
 				}
 				if naming {
@@ -165,11 +167,11 @@ func (v *view) fileRowSurface(gtx layout.Context, size image.Point, background, 
 	return v.textOn(background, content)(gtx)
 }
 
-func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn) layout.Dimensions {
+func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn, metadataRole contrastRole) layout.Dimensions {
 	return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
-			return v.columns(gtx, entry{name: mode.displayName(item), size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize)
+			return v.columns(gtx, entry{name: mode.displayName(item), size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize, metadataRole)
 		})
 	})
 }

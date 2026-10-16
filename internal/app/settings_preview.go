@@ -16,6 +16,7 @@ type previewSample struct {
 	label                        string
 	foreground, background, edge color.NRGBA
 	textSelection                bool
+	role                         contrastRole
 }
 type previewSamples []previewSample
 
@@ -27,15 +28,15 @@ func (v *view) settingsPreviewItems(kind string) previewSamples {
 	switch kind {
 	case "notifications":
 		return previewSamples{
-			{"Info", c.Info, c.Footer, color.NRGBA{}, false},
-			{"Success", c.Success, c.Footer, color.NRGBA{}, false},
-			{"Warning", c.Warning, c.Footer, color.NRGBA{}, false},
-			{"Error", c.Error, c.Footer, color.NRGBA{}, false},
+			{"Info", c.Info, c.Footer, color.NRGBA{}, false, contrastPrimary},
+			{"Success", c.Success, c.Footer, color.NRGBA{}, false, contrastPrimary},
+			{"Warning", c.Warning, c.Footer, color.NRGBA{}, false, contrastPrimary},
+			{"Error", c.Error, c.Footer, color.NRGBA{}, false, contrastPrimary},
 		}
 	case "edge":
-		return previewSamples{{"Accent mark", c.Foreground, c.Surface, c.Edge, false}}
+		return previewSamples{{"Accent mark", c.Foreground, c.Surface, c.Edge, false, contrastPrimary}}
 	case "secondary":
-		return sample("Secondary text", c.Muted, c.Surface)
+		return previewSamples{{label: "Secondary text", foreground: c.Muted, background: c.Surface, role: contrastSecondary}}
 	case "selected_text":
 		return sample("Selected text", c.SelectedName, c.Selected)
 	case "text_selection":
@@ -67,7 +68,7 @@ func (samples previewSamples) layout(v *view, gtx layout.Context, height int) la
 						if sample.textSelection {
 							return v.rawLabel(gtx, sample.label, v.appearance.TextSize, sample.foreground, text.Start)
 						}
-						return v.label(gtx, sample.label, v.appearance.TextSize, sample.foreground, text.Start)
+						return v.labelFor(sample.role, gtx, sample.label, v.appearance.TextSize, sample.foreground, text.Start)
 					})
 				})
 			})

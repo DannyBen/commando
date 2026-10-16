@@ -99,7 +99,7 @@ func (v *view) completionEditor(gtx layout.Context, editor *widget.Editor, c *in
 		macro := op.Record(gtx.Ops)
 		labelGTX := gtx
 		labelGTX.Constraints.Min = image.Point{}
-		label := v.label(labelGTX, suffix, v.appearance.TextSize, fg, text.Start)
+		label := v.labelFor(contrastSecondary, labelGTX, suffix, v.appearance.TextSize, fg, text.Start)
 		call := macro.Stop()
 		caret := editor.CaretCoords()
 		at := image.Pt(int(math.Round(float64(caret.X))), int(math.Round(float64(caret.Y)))-label.Size.Y+label.Baseline)

@@ -19,6 +19,32 @@ var themeFontFiles embed.FS
 
 var themeFont = bundledFonts(themeFontFiles)
 
+type contrastRole uint8
+
+const (
+	contrastPrimary contrastRole = iota
+	contrastSecondary
+)
+
+type contrastAdjustment uint8
+
+const (
+	adjustForeground contrastAdjustment = iota
+	adjustBackground
+)
+
+type contrastRule struct {
+	targetLc float64
+	adjust   contrastAdjustment
+}
+
+// Display policy for generated and customized palettes alike. Selection text
+// has no rule yet; a future selection rule can adjust its background instead.
+var themeContrastRules = map[contrastRole]contrastRule{
+	contrastPrimary:   {targetLc: 75, adjust: adjustForeground},
+	contrastSecondary: {targetLc: 60, adjust: adjustForeground},
+}
+
 // Theme holds the appearance choices independently of Gio's widget theme.
 // A future configuration loader can supply these values before creating a view.
 type Theme struct {

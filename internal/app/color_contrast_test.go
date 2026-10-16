@@ -16,14 +16,14 @@ func TestAPCAAdjustsColorBeforeUsingNeutral(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			original, background := rgb(tc.text), rgb(tc.background)
-			if math.Abs(perceptualContrast(original, background)) >= textContrastMinimumLc {
+			if math.Abs(perceptualContrast(original, background)) >= themeContrastRules[contrastPrimary].targetLc {
 				t.Fatal("fixture already passes")
 			}
-			adjusted := readableTextColor(original, background)
+			adjusted := contrastColor(original, background, themeContrastRules[contrastPrimary])
 			if adjusted == rgb(0) || adjusted == rgb(0xffffff) {
 				t.Fatal("color was discarded despite a reachable target")
 			}
-			if score := math.Abs(perceptualContrast(adjusted, background)); score < textContrastMinimumLc {
+			if score := math.Abs(perceptualContrast(adjusted, background)); score < themeContrastRules[contrastPrimary].targetLc {
 				t.Fatalf("adjusted color failed APCA: %.3f", score)
 			}
 			before, after := oklchFromRGB(original), oklchFromRGB(adjusted)
@@ -33,10 +33,10 @@ func TestAPCAAdjustsColorBeforeUsingNeutral(t *testing.T) {
 			// A visibly smaller change must not already satisfy the target.
 			closer := before
 			closer.l = after.l + (before.l-after.l)*0.1
-			if math.Abs(perceptualContrast(closer.rgb(), background)) >= textContrastMinimumLc {
+			if math.Abs(perceptualContrast(closer.rgb(), background)) >= themeContrastRules[contrastPrimary].targetLc {
 				t.Fatal("adjustment overshot a closer passing color")
 			}
-			if readableTextColor(adjusted, background) != adjusted {
+			if contrastColor(adjusted, background, themeContrastRules[contrastPrimary]) != adjusted {
 				t.Fatal("a passing result was adjusted again")
 			}
 		})
@@ -50,10 +50,10 @@ func TestAPCAUsesStrongestFallbackWhenTargetIsUnreachable(t *testing.T) {
 	} {
 		background := rgb(tc.background)
 		black, white := math.Abs(perceptualContrast(rgb(0), background)), math.Abs(perceptualContrast(rgb(0xffffff), background))
-		if max(black, white) >= textContrastMinimumLc {
+		if max(black, white) >= themeContrastRules[contrastPrimary].targetLc {
 			t.Fatal("fixture has a reachable target")
 		}
-		got := readableTextColor(rgb(0x334455), background)
+		got := contrastColor(rgb(0x334455), background, themeContrastRules[contrastPrimary])
 		if got != rgb(tc.want) || math.Abs(perceptualContrast(got, background)) != max(black, white) {
 			t.Fatalf("background %06x did not get the strongest available contrast: %v", tc.background, got)
 		}

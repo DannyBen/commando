@@ -85,7 +85,7 @@ func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 	return v.columnLayout(gtx, gtx.Dp(84), func(gtx layout.Context) layout.Dimensions {
 		return v.label(gtx, status, v.appearance.SmallTextSize, v.appearance.Colors.Foreground, text.Start)
 	}, func(gtx layout.Context) layout.Dimensions {
-		return v.label(gtx, p.positionLabel(), v.appearance.SmallTextSize, v.appearance.Colors.Muted, text.End)
+		return v.labelFor(contrastSecondary, gtx, p.positionLabel(), v.appearance.SmallTextSize, v.appearance.Colors.Muted, text.End)
 	})
 }
 
