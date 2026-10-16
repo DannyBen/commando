@@ -14,12 +14,16 @@ import (
 )
 
 type recordedSounds struct {
-	played []sound.Name
-	stops  int
+	played  []sound.Name
+	volumes []float64
+	stops   int
 }
 
-func (s *recordedSounds) Play(name sound.Name) { s.played = append(s.played, name) }
-func (s *recordedSounds) Stop()                { s.stops++ }
+func (s *recordedSounds) Play(name sound.Name, volume float64) {
+	s.played = append(s.played, name)
+	s.volumes = append(s.volumes, volume)
+}
+func (s *recordedSounds) Stop() { s.stops++ }
 
 func TestMessageSoundsStartImmediatelyAndDoNotRepeat(t *testing.T) {
 	for _, tc := range []struct {

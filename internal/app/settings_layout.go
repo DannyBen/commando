@@ -196,6 +196,9 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 					}
 				} else if s.completesField() {
 					hint = "←/→ Font · Enter Type · Ctrl+Enter Save"
+					if field.Control == "autocomplete-stepper" {
+						hint = "←/→ Choose · Enter Type · Ctrl+Enter Save"
+					}
 					if field.Key == settingThemeSelect {
 						hint = "←/→ Theme · Enter Type · Ctrl+Enter Save"
 					}

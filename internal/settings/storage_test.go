@@ -128,7 +128,8 @@ func TestSaveReturningToDefaultsRemovesKeysAndEmptyTables(t *testing.T) {
 func TestSaveCleansExistingExplicitDefaultsOnUnrelatedEdit(t *testing.T) {
 	dir := t.TempDir()
 	source := `feedback.notifications.animation = true
-feedback.sounds.enabled = true
+feedback.sounds.profile = -1
+feedback.sounds.master_volume = 50
 appearance.autocolor.lsh.lightness = 36
 appearance.autocolor.salt = 0
 `

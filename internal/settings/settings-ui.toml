@@ -631,10 +631,21 @@ label = "Feedback"
 label = "Sounds"
 title = "Sounds"
 
-[feedback.sounds.enabled]
-label = "Enabled"
-description = "Play application sounds."
-control = "toggle"
+[feedback.sounds.profile]
+label = "Profile"
+description = "Choose how much sound to play. Each profile includes the levels below it."
+control = "autocomplete-stepper"
+integer = true
+choices = ["Off", "Errors only", "Warnings and errors", "Notifications only", "All except navigation", "All sounds"]
+choice_values = [0, 1, 2, 3, 4, -1]
+
+[feedback.sounds.master_volume]
+label = "Master volume"
+description = "Scale the existing sound levels, as a percentage."
+control = "stepper-progress"
+min = 0
+max = 100
+step = 1
 
 [feedback.notifications]
 label = "Notifications"

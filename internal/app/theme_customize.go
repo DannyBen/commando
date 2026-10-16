@@ -58,7 +58,8 @@ func themeElementName(s *settingsSession) string {
 }
 
 func (s *settingsSession) completesField() bool {
-	return s.fields[s.selected].Key == settingFontFamily || s.fields[s.selected].Key == settingThemeElement || s.fields[s.selected].Key == settingThemeSelect
+	field := s.fields[s.selected]
+	return field.Control == "autocomplete-stepper" || field.Key == settingFontFamily || field.Key == settingThemeElement || field.Key == settingThemeSelect
 }
 
 func (v *view) cycleThemeElement(gtx layout.Context, direction int) {

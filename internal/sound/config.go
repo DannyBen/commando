@@ -1,7 +1,13 @@
 // Package sound synthesizes semantic application cues from simple oscillators.
 package sound
 
-import "time"
+import (
+	_ "embed"
+	"fmt"
+	"time"
+
+	"github.com/BurntSushi/toml"
+)
 
 type Name string
 
@@ -17,16 +23,59 @@ const (
 	MessageError        Name = "messageError"
 )
 
-// Edit this table to tune sounds, then rebuild. Notes are frequencies in Hz;
-// volume is a percentage. Spacing is measured between note starts.
-var cues = map[Name]Cue{
-	Navigation:          {Notes: []float64{220}, Length: 12 * time.Millisecond, Waveform: Square, Volume: 10},
-	Cancel:              {Notes: []float64{330}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
-	Palette:             {Notes: []float64{392}, Length: 45 * time.Millisecond, Waveform: Triangle, Volume: 12},
-	Settings:            {Notes: []float64{392, 523.25}, Length: 35 * time.Millisecond, Spacing: 30 * time.Millisecond, Waveform: Triangle, Volume: 12},
-	DirectoryNavigation: {Notes: []float64{523.25}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
-	MessageInfo:         {Notes: []float64{440}, Length: 75 * time.Millisecond, Waveform: Triangle, Volume: 16},
-	MessageSuccess:      {Notes: []float64{660, 880}, Length: 60 * time.Millisecond, Spacing: 50 * time.Millisecond, Waveform: Triangle, Volume: 20},
-	MessageWarning:      {Notes: []float64{330, 247}, Length: 90 * time.Millisecond, Spacing: 80 * time.Millisecond, Waveform: Triangle, Volume: 18},
-	MessageError:        {Notes: []float64{165, 110}, Length: 100 * time.Millisecond, Spacing: 85 * time.Millisecond, Waveform: Square, Volume: 12},
+// All is independent of cue levels, including levels added in the future.
+const All = -1
+
+type definition struct {
+	Level     int
+	Notes     []float64
+	LengthMS  int `toml:"length_ms"`
+	SpacingMS int `toml:"spacing_ms"`
+	Waveform  Waveform
+	Volume    float64
+}
+
+func (d definition) cue() Cue {
+	return Cue{Notes: d.Notes, Length: time.Duration(d.LengthMS) * time.Millisecond,
+		Spacing: time.Duration(d.SpacingMS) * time.Millisecond, Waveform: d.Waveform, Volume: d.Volume}
+}
+
+//go:embed sounds.toml
+var soundConfig string
+
+var cues = mustDefinitions(soundConfig)
+
+func mustDefinitions(data string) map[Name]definition {
+	definitions, err := parseDefinitions(data)
+	if err != nil {
+		panic(err)
+	}
+	return definitions
+}
+
+func parseDefinitions(data string) (map[Name]definition, error) {
+	var config struct{ Sounds map[Name]definition }
+	metadata, err := toml.Decode(data, &config)
+	if err != nil {
+		return nil, err
+	}
+	if len(metadata.Undecoded()) != 0 || len(config.Sounds) == 0 {
+		return nil, fmt.Errorf("unknown or missing sound configuration")
+	}
+	for name, d := range config.Sounds {
+		if name == "" || d.Level <= 0 {
+			return nil, fmt.Errorf("sound %q needs a positive level", name)
+		}
+		if _, err := synthesize(d.cue()); err != nil {
+			return nil, fmt.Errorf("sound %q: %w", name, err)
+		}
+	}
+	return config.Sounds, nil
+}
+
+// Allows keeps the cumulative threshold rule independent of display names.
+// Unknown cues stay silent even when All is selected.
+func Allows(name Name, profile int) bool {
+	d, ok := cues[name]
+	return ok && (profile == All || profile > 0 && d.Level <= profile)
 }

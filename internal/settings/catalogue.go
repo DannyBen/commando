@@ -45,6 +45,7 @@ type nodeMetadata struct {
 	Cycle                                float64
 	Integer                              bool
 	Choices                              []string
+	ChoiceValues                         []float64 `toml:"choice_values"`
 }
 
 // ParseCatalogue builds widgets from titled metadata nodes, independently of
@@ -166,16 +167,30 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 		d.Maximum, d.Step, d.Cycle = m.Maximum, m.Step, m.Cycle
 		d.Integer = m.Integer
 		d.Choices = m.Choices
+		d.ChoiceValues = m.ChoiceValues
 		compatible := m.Control == "input" ||
 			d.Kind == String && m.Control == "choice" && len(m.Choices) > 0 ||
+			d.Kind == Number && m.Control == "autocomplete-stepper" && len(m.Choices) > 0 && len(m.ChoiceValues) == len(m.Choices) ||
 			d.Kind == Boolean && m.Control == "toggle" ||
 			d.Kind == String && (m.Control == "folder" || m.Control == "file") ||
 			d.Kind == Number && (m.Control == "stepper" || m.Control == "stepper-progress")
 		if !compatible {
 			return c, fmt.Errorf("incompatible control: %s", d.Key)
 		}
-		if len(m.Choices) > 0 && (d.Kind != String || m.Control != "choice") {
-			return c, fmt.Errorf("choices need a string choice control: %s", d.Key)
+		if len(m.Choices) > 0 && !(d.Kind == String && m.Control == "choice" || d.Kind == Number && m.Control == "autocomplete-stepper") {
+			return c, fmt.Errorf("choices need a choice control: %s", d.Key)
+		}
+		if len(m.ChoiceValues) > 0 {
+			if d.Kind != Number || m.Control != "autocomplete-stepper" || len(m.ChoiceValues) != len(m.Choices) {
+				return c, fmt.Errorf("choice values need matching numeric choices: %s", d.Key)
+			}
+			seen := map[float64]bool{}
+			for _, number := range m.ChoiceValues {
+				if !finite(number) || seen[number] || m.Integer && math.Trunc(number) != number {
+					return c, fmt.Errorf("invalid or duplicate choice value: %s", d.Key)
+				}
+				seen[number] = true
+			}
 		}
 		seenChoices := map[string]bool{}
 		for _, choice := range m.Choices {
@@ -206,6 +221,11 @@ func ParseCatalogue(defaults, presentation string) (Catalogue, error) {
 			return c, err
 		}
 		d.Default = check.Get(Catalogue{Settings: []Definition{d}}, d.Key)
+		for _, number := range d.ChoiceValues {
+			if err := check.Set(Catalogue{Settings: []Definition{d}}, d.Key, Value{Number: number}); err != nil {
+				return c, err
+			}
+		}
 		c.Settings = append(c.Settings, d)
 		c.UI.Fields = append(c.UI.Fields, Field{Key: d.Key, Widget: owner, Label: m.Label, Description: m.Description, Control: m.Control, Visible: fieldVisible})
 		allowMetadata(knownMetadata, d.Key, true)
@@ -287,7 +307,7 @@ func allowMetadata(known map[string]bool, key string, leaf bool) {
 		known[key+"."+property] = true
 	}
 	if leaf {
-		for _, property := range []string{"control", "min", "max", "step", "cycle", "integer", "choices"} {
+		for _, property := range []string{"control", "min", "max", "step", "cycle", "integer", "choices", "choice_values"} {
 			known[key+"."+property] = true
 		}
 	}

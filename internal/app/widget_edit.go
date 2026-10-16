@@ -17,6 +17,8 @@ func (v *view) confirmWidgetEdit(gtx layout.Context) {
 	s := v.settingsInteraction()
 	s.editing, s.errorText = false, ""
 	v.setShortcutCapture(s, false)
-	v.announceInteraction(eventEditConfirmed)
+	if !v.previewSoundSetting(s.fields[s.selected].Key) {
+		v.announceInteraction(eventEditConfirmed)
+	}
 	v.focusInteraction(gtx)
 }

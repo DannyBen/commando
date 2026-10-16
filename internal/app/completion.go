@@ -135,7 +135,14 @@ func (v *view) cycleCompletedSetting(key string, direction int) {
 	} else {
 		index = (index + direction + len(names)) % len(names)
 	}
-	if v.setWidgetValue(key, settings.Value{Text: names[index]}) == nil {
+	value := settings.Value{Text: names[index]}
+	d, _ := settings.CatalogueDefault.Definition(key)
+	if len(d.ChoiceValues) > 0 {
+		value = settings.Value{Number: d.ChoiceValues[index]}
+		v.previewSettingValue(key, value)
+		return
+	}
+	if v.setWidgetValue(key, value) == nil {
 		v.applySettings()
 		v.announceInteraction(eventValueChanged)
 	}

@@ -88,7 +88,7 @@ func TestNotificationAnimationSaveStartupAndReset(t *testing.T) {
 	}
 	restored := newPreviewView()
 	restored.restoreSettings(values, nil)
-	if restored.appearance.Feedback.Enabled || !values.Get(settings.CatalogueDefault, settingSoundsEnabled).Bool {
+	if restored.appearance.Feedback.Enabled || values.Get(settings.CatalogueDefault, settingSoundProfile).Number != sound.All {
 		t.Fatal("startup did not retain Animation Off independently of sounds")
 	}
 	// Progress retains its delay, then becomes complete steady text.

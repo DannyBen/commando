@@ -58,6 +58,9 @@ func synthesize(cue Cue) ([]int16, error) {
 	}
 	pcm := make([]int16, total)
 	for i, value := range mixed {
+		if !finite(value) || math.Abs(value) > 1 {
+			return nil, fmt.Errorf("sound clips at full master volume")
+		}
 		pcm[i] = int16(math.Round(max(-1.0, min(1.0, value)) * 32767))
 	}
 	return pcm, nil

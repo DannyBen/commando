@@ -54,7 +54,8 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 const (
 	settingProtectedSystem       = "view.show_protected_system_files"
 	settingNotificationAnimation = "feedback.notifications.animation"
-	settingSoundsEnabled         = "feedback.sounds.enabled"
+	settingSoundProfile          = "feedback.sounds.profile"
+	settingSoundVolume           = "feedback.sounds.master_volume"
 	settingContrastGuard         = "appearance.contrast_guard.enabled"
 	settingAutoColorEnabled      = "appearance.autocolor.enabled"
 	settingLightness             = "appearance.autocolor.lsh.lightness"
@@ -273,6 +274,10 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 	})
 	if len(s.fields) > 0 {
 		for _, field := range s.fields {
+			if field.Control == "autocomplete-stepper" {
+				d, _ := settings.CatalogueDefault.Definition(field.Key)
+				s.completion.candidates = slices.Clone(d.Choices)
+			}
 			if field.Key == settingFontFamily {
 				s.completion.candidates = v.fontFamilyChoices()
 				v.requestFontFamilies()
@@ -305,6 +310,9 @@ func (v *view) settingText(key string) string {
 		}
 		return "false"
 	case settings.Number:
+		if i := slices.Index(d.ChoiceValues, value.Number); i >= 0 {
+			return d.Choices[i]
+		}
 		if strings.HasPrefix(key, "appearance.theme.") {
 			return strconv.FormatFloat(math.Round(value.Number*10000)/10000, 'f', -1, 64)
 		}
@@ -317,12 +325,13 @@ func (v *view) settingText(key string) string {
 	}
 }
 func (v *view) adjustSetting(key string, direction int) {
-	if key == settingFontFamily || key == settingThemeSelect {
+	d, _ := settings.CatalogueDefault.Definition(key)
+	if key == settingFontFamily || key == settingThemeSelect || len(d.ChoiceValues) > 0 {
 		v.cycleCompletedSetting(key, direction)
 		return
 	}
 	c := settings.CatalogueDefault
-	d, _ := c.Definition(key)
+	d, _ = c.Definition(key)
 	control := ""
 	for _, field := range c.UI.Fields {
 		if field.Key == key {
@@ -379,6 +388,9 @@ func (v *view) previewSettingValue(key string, value settings.Value) {
 	if v.setWidgetValue(key, value) == nil {
 		v.applySettings()
 		if v.widgetValues().Get(c, key) != before {
+			if v.previewSoundSetting(key) {
+				return
+			}
 			v.announceInteraction(eventValueChanged)
 		}
 	}
@@ -399,9 +411,7 @@ func (v *view) applySettings() {
 	v.appearance.ContentPaddingHorizontal = unit.Dp(v.settingsValues.Get(c, settingPaddingContent).Number)
 	geometryChanged := rows != v.appearance.RowPaddingVertical || bands != v.appearance.HeaderFooterPaddingVertical || location != v.appearance.LocationPaddingVertical
 	v.appearance.Feedback.Enabled = v.settingsValues.Get(c, settingNotificationAnimation).Bool
-	if v.sounds != nil && !v.settingsValues.Get(c, settingSoundsEnabled).Bool {
-		v.sounds.Stop()
-	}
+	v.applySoundSettings()
 	colors := defaultFilenameColors
 	colors.enabled = v.settingsValues.Get(c, settingAutoColorEnabled).Bool
 	colors.filenameLightness = v.settingsValues.Get(c, settingLightness).Number / 100
@@ -477,7 +487,20 @@ func (v *view) applySettingDraft(gtx layout.Context) bool {
 		d.Kind = settings.String
 	}
 	value := settings.Value{Text: s.editor.Text()}
-	if d.Kind == settings.Number {
+	if len(d.ChoiceValues) > 0 {
+		matched := false
+		for i, label := range d.Choices {
+			if strings.EqualFold(strings.TrimSpace(value.Text), label) {
+				value = settings.Value{Number: d.ChoiceValues[i]}
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			s.errorText = "Choose an available option"
+			return false
+		}
+	} else if d.Kind == settings.Number {
 		n, err := strconv.ParseFloat(strings.TrimSpace(s.editor.Text()), 64)
 		if err != nil {
 			s.errorText = "Enter a valid number"

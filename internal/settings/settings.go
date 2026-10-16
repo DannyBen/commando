@@ -43,6 +43,7 @@ type Definition struct {
 	Cycle         float64
 	Integer       bool
 	Choices       []string
+	ChoiceValues  []float64 // Optional numeric values paired with display labels.
 	Validate      func(Value) error
 }
 
@@ -148,7 +149,7 @@ func (v *Values) Set(c Catalogue, key string, value Value) error {
 			return fmt.Errorf("%w: %s: %v", ErrValue, key, err)
 		}
 	}
-	if len(d.Choices) > 0 && !slices.Contains(d.Choices, value.Text) {
+	if len(d.ChoiceValues) > 0 && !slices.Contains(d.ChoiceValues, value.Number) || len(d.Choices) > 0 && len(d.ChoiceValues) == 0 && !slices.Contains(d.Choices, value.Text) {
 		return fmt.Errorf("%w: %s", ErrValue, key)
 	}
 	if v.overrides == nil {

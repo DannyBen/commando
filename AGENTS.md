@@ -112,7 +112,17 @@ module/executable and `Commando` for the window title and data-folder name.
   sizing, clamping, snap/maximize/restore and DPI changes do not. Leave snapped or
   maximized geometry under OS control. Keep base width separate from pane models
   so future fixed width presets can build on it.
-- Keyboard navigation plays the quiet semantic Navigation cue when the current
+- Feedback › Sounds contains Profile and Master volume. Profiles ascend through
+  Off, Errors only, Warnings and errors, Notifications only, All except navigation,
+  and All sounds. Defaults preserve all cues at 50% master volume. Each cue in
+  `internal/sound/sounds.toml` declares a positive numeric level and synthesis
+  parameters; profiles use cumulative numeric thresholds, with 0 silent and -1
+  including every configured level. Keep profile labels and order in settings
+  metadata, independently of the semantic event-to-cue map. Preview sound setting
+  changes through the same gate and master volume, with one cue; Off and zero
+  volume remain silent. Stop active audio when profile or volume changes.
+- Keyboard navigation plays the quiet semantic Navigation cue, when allowed by
+  the sound profile, when the current
   row or active panel changes, including palette results and inline choices.
   Keep navigation at an edge, key releases and native text editing silent.
 - Escape uses the shared cancellation helper and plays one single-note Cancel

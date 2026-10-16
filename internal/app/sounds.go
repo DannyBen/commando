@@ -5,9 +5,43 @@ import (
 	"github.com/dannyben/commando/internal/sound"
 )
 
-// Every semantic cue shares this gate; individual cue volumes stay unchanged.
-func (v *view) playSound(cue sound.Name) {
-	if v.sounds != nil && v.settingsValues.Get(settings.CatalogueDefault, settingSoundsEnabled).Bool {
-		v.sounds.Play(cue)
+type soundSettings struct {
+	profile int
+	volume  float64
+}
+
+func (v *view) currentSoundSettings() soundSettings {
+	c := settings.CatalogueDefault
+	return soundSettings{int(v.settingsValues.Get(c, settingSoundProfile).Number), v.settingsValues.Get(c, settingSoundVolume).Number}
+}
+
+func (v *view) applySoundSettings() {
+	current := v.currentSoundSettings()
+	if current != v.soundSettings {
+		v.soundSettings = current
+		if v.sounds != nil {
+			v.sounds.Stop()
+		}
 	}
+}
+
+// Every semantic event shares this gate; profile names belong to settings UI.
+func (v *view) playSound(cue sound.Name) {
+	options := v.currentSoundSettings()
+	if v.sounds != nil && options.volume > 0 && sound.Allows(cue, options.profile) {
+		v.sounds.Play(cue, options.volume)
+	}
+}
+
+func (v *view) previewSoundSetting(key string) bool {
+	if key != settingSoundProfile && key != settingSoundVolume {
+		return false
+	}
+	for _, cue := range []sound.Name{sound.MessageInfo, sound.MessageWarning, sound.MessageError} {
+		if sound.Allows(cue, v.currentSoundSettings().profile) {
+			v.playSound(cue)
+			return true
+		}
+	}
+	return true
 }

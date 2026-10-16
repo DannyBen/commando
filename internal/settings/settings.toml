@@ -123,7 +123,8 @@ path = ""
 args = "%SelectedFiles%"
 
 [feedback.sounds]
-enabled = true
+profile = -1
+master_volume = 50
 
 [feedback.notifications]
 animation = true

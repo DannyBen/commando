@@ -7,7 +7,8 @@ import (
 )
 
 func TestConfiguredCuesHaveFiniteBoundedAudioAndSilentEdges(t *testing.T) {
-	for name, cue := range cues {
+	for name, definition := range cues {
+		cue := definition.cue()
 		t.Run(string(name), func(t *testing.T) {
 			pcm, err := synthesize(cue)
 			if err != nil {
@@ -70,6 +71,7 @@ func TestInvalidCueConfiguration(t *testing.T) {
 		{Notes: []float64{440}, Length: time.Second, Waveform: "unknown"},
 		{Notes: []float64{440}, Length: time.Second, Waveform: Sine, Volume: 101},
 		{Notes: []float64{440}, Length: time.Second, Waveform: Sine, Spacing: -time.Second},
+		{Notes: []float64{440, 440, 440, 440}, Length: 50 * time.Millisecond, Waveform: Square, Volume: 100},
 	} {
 		if _, err := synthesize(cue); err == nil {
 			t.Fatalf("accepted invalid cue: %+v", cue)

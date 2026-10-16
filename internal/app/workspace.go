@@ -87,9 +87,10 @@ type view struct {
 	shellResults      chan shellCompletion
 	shellTrace        func(shellCompletion)
 	sounds            interface {
-		Play(sound.Name)
+		Play(sound.Name, float64)
 		Stop()
 	}
+	soundSettings soundSettings
 }
 
 func newPreviewView() *view {

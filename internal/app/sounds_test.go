@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"testing"
 
 	"gioui.org/io/key"
@@ -13,40 +14,62 @@ import (
 	"github.com/dannyben/commando/internal/sound"
 )
 
-func TestSoundsEnabledStopsAudioAndGatesAllCues(t *testing.T) {
+func TestSoundProfilesGateAllSemanticCues(t *testing.T) {
+	all := []sound.Name{sound.MessageError, sound.MessageWarning, sound.MessageInfo, sound.MessageSuccess, sound.Palette, sound.Settings, sound.Cancel, sound.Navigation, sound.DirectoryNavigation}
+	for _, tc := range []struct {
+		profile float64
+		count   int
+	}{{0, 0}, {1, 1}, {2, 2}, {3, 4}, {4, 7}, {sound.All, 9}} {
+		v := newPreviewView()
+		recorder := &recordedSounds{}
+		v.sounds = recorder
+		_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: tc.profile})
+		for _, cue := range all {
+			v.playSound(cue)
+		}
+		if !slices.Equal(recorder.played, all[:tc.count]) {
+			t.Fatalf("profile %g played %v", tc.profile, recorder.played)
+		}
+		for _, volume := range recorder.volumes {
+			if volume != 50 {
+				t.Fatal("default master volume changed")
+			}
+		}
+	}
+}
+
+func TestSoundSettingsStopsAudioAndPreviewsAtMasterVolume(t *testing.T) {
 	v := newPreviewView()
 	recorder := &recordedSounds{}
 	v.sounds = recorder
-	cues := []sound.Name{sound.Navigation, sound.Cancel, sound.Palette, sound.Settings, sound.DirectoryNavigation, sound.MessageInfo, sound.MessageSuccess, sound.MessageWarning, sound.MessageError}
-	for _, cue := range cues {
-		v.playSound(cue)
-	}
-	if !slices.Equal(recorder.played, cues) {
-		t.Fatal("sounds did not default to enabled")
-	}
+	v.applySettings()
 	v.startSettingsWidget("feedback.sounds")
 	s := v.settingsInteraction()
-	if s.title != "Feedback › Sounds" || len(s.fields) != 1 || s.fields[0].Label != "Enabled" {
-		t.Fatal("Sounds did not offer only Enabled")
+	if s.title != "Feedback › Sounds" || len(s.fields) != 2 || s.fields[0].Label != "Profile" || s.fields[1].Label != "Master volume" {
+		t.Fatal("Sounds must offer Profile and Master volume")
 	}
 	stops, played := recorder.stops, len(recorder.played)
-	v.adjustSetting(settingSoundsEnabled, 0)
-	if !s.dirty || recorder.stops != stops+1 {
-		t.Fatal("disabling sounds did not stop audio immediately")
+	v.previewSettingValue(settingSoundProfile, settings.Value{Number: 0})
+	if recorder.stops != stops+1 || len(recorder.played) != played {
+		t.Fatal("Off did not stop audio silently")
 	}
-	for _, cue := range cues {
-		v.playSound(cue)
+	v.previewSettingValue(settingSoundProfile, settings.Value{Number: 1})
+	if recorder.played[len(recorder.played)-1] != sound.MessageError {
+		t.Fatal("profile preview bypassed profile policy")
 	}
+	v.previewSettingValue(settingSoundVolume, settings.Value{Number: 35})
+	if recorder.played[len(recorder.played)-1] != sound.MessageError || recorder.volumes[len(recorder.volumes)-1] != 35 {
+		t.Fatal("volume preview ignored current profile or volume")
+	}
+	v.previewSettingValue(settingSoundVolume, settings.Value{Number: 0})
+	played = len(recorder.played)
+	v.playSound(sound.MessageError)
 	if len(recorder.played) != played {
-		t.Fatal("muted cue escaped the shared gate")
+		t.Fatal("master volume zero was audible")
 	}
-	v.adjustSetting(settingSoundsEnabled, 0)
-	baseline := len(recorder.played)
-	for _, cue := range cues {
-		v.playSound(cue)
-	}
-	if !slices.Equal(recorder.played[baseline:], cues) {
-		t.Fatal("re-enabling sounds did not restore all cues")
+	v.finishSettingsWidget(layout.Context{}, false)
+	if v.currentSoundSettings().profile != sound.All || v.currentSoundSettings().volume != 50 {
+		t.Fatal("Cancel did not restore sound settings")
 	}
 }
 
@@ -54,7 +77,7 @@ func TestMutedInputAndFeedbackStillWork(t *testing.T) {
 	for _, context := range []string{"navigation", "cancel", "palette", "settings", "messages", "directory"} {
 		t.Run(context, func(t *testing.T) {
 			v := newPreviewView()
-			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundsEnabled, settings.Value{Bool: false})
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: 0})
 			recorder := &recordedSounds{}
 			v.sounds = recorder
 			v.applySettings()
@@ -109,40 +132,69 @@ func TestSoundsSaveStartupCancelAndReset(t *testing.T) {
 	dir := t.TempDir()
 	v := newPreviewView()
 	v.startSettingsWidget("feedback.sounds")
-	v.adjustSetting(settingSoundsEnabled, 0)
+	v.previewSettingValue(settingSoundProfile, settings.Value{Number: 2})
+	v.previewSettingValue(settingSoundVolume, settings.Value{Number: 35})
 	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
 		return func() (string, error) { return "", settings.Save(dir, values) }
 	}
 	v.finishSettingsWidget(layout.Context{}, true)
 	saved, err := settings.Load(dir, settings.CatalogueDefault)
-	if err != nil || saved.Get(settings.CatalogueDefault, settingSoundsEnabled).Bool {
-		t.Fatal("disabled sounds did not persist", err)
+	if err != nil {
+		t.Fatal(err)
 	}
 	restored := newPreviewView()
 	recorder := &recordedSounds{}
 	restored.sounds = recorder
 	restored.restoreSettings(saved, nil)
 	restored.announceInteraction(eventSelectionChanged)
-	if len(recorder.played) != 0 {
-		t.Fatal("startup ignored disabled sounds")
-	}
-	restored.startSettingsWidget("feedback.sounds")
-	restored.adjustSetting(settingSoundsEnabled, 0)
-	restored.finishSettingsWidget(layout.Context{}, false)
-	baseline := len(recorder.played)
-	restored.announceInteraction(eventSelectionChanged)
-	if len(recorder.played) != baseline {
-		t.Fatal("Cancel did not restore disabled sounds")
+	restored.announceInteraction(eventMessageInfo)
+	restored.announceInteraction(eventMessageWarning)
+	if !slices.Equal(recorder.played, []sound.Name{sound.MessageWarning}) || recorder.volumes[0] != 35 {
+		t.Fatal("startup ignored profile or volume")
 	}
 	restored.startSettingsWidget("feedback.sounds")
 	restored.activateSettingsAction(layout.Context{}, 2)
-	if restored.settingsValues.Overridden(settingSoundsEnabled) || !restored.settingsValues.Get(settings.CatalogueDefault, settingSoundsEnabled).Bool {
-		t.Fatal("Reset did not inherit enabled sounds")
+	if restored.currentSoundSettings().profile != sound.All || restored.currentSoundSettings().volume != 50 {
+		t.Fatal("Reset did not restore All sounds and 50%")
 	}
+	restored.finishSettingsWidget(layout.Context{}, false)
+	if restored.currentSoundSettings().profile != 2 || restored.currentSoundSettings().volume != 35 {
+		t.Fatal("Cancel did not undo Reset")
+	}
+	restored.startSettingsWidget("feedback.sounds")
+	restored.activateSettingsAction(layout.Context{}, 2)
 	restored.finishSettingsWidget(layout.Context{}, true)
 	restored.announceInteraction(eventSelectionChanged)
 	if recorder.played[len(recorder.played)-1] != sound.Navigation {
-		t.Fatal("Reset did not restore sound playback")
+		t.Fatal("Reset did not restore playback")
+	}
+}
+
+func TestSoundProfileCyclingAndAutocomplete(t *testing.T) {
+	v := newPreviewView()
+	v.startSettingsWidget("feedback.sounds")
+	send, _ := panelInputFrames(v)
+	for _, label := range []string{"Off", "Errors only", "Warnings and errors", "Notifications only", "All except navigation", "All sounds"} {
+		send(pressed(key.NameRightArrow))
+		if v.settingText(settingSoundProfile) != label {
+			t.Fatal("profile did not cycle", label, v.settingText(settingSoundProfile))
+		}
+	}
+	send(pressed(key.NameReturn))
+	s := v.settingsInteraction()
+	send(key.EditEvent{Range: key.Range{End: len(s.editor.Text())}, Text: "Warnings"}, key.SelectionEvent{Start: 8, End: 8})
+	if s.completion.suffix() != " and errors" {
+		t.Fatal("profile label did not autocomplete", s.editor.Text(), s.completion.suffix())
+	}
+	send(pressed(key.NameTab), pressed(key.NameReturn))
+	if s.editing || v.currentSoundSettings().profile != 2 {
+		t.Fatal("completed profile did not apply")
+	}
+	send(pressed(key.NameReturn))
+	send(key.EditEvent{Range: key.Range{End: len(s.editor.Text())}, Text: "invalid"}, key.SelectionEvent{Start: 7, End: 7})
+	send(pressed(key.NameReturn))
+	if !s.editing || s.errorText != "Choose an available option" || v.currentSoundSettings().profile != 2 {
+		t.Fatal("invalid profile changed sound policy")
 	}
 }
 
@@ -151,9 +203,14 @@ func TestSoundsSettingsPreview(t *testing.T) {
 	if dir == "" {
 		t.Skip("optional sound settings preview")
 	}
-	v := newPreviewView()
-	v.startSettingsWidget("feedback.sounds")
-	if err := renderViewPNG(filepath.Join(dir, "settings-sounds.png"), v); err != nil {
-		t.Fatal(err)
+	for _, profile := range []float64{0, 1, 2, 3, 4, sound.All} {
+		v := newPreviewView()
+		_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: profile})
+		v.applySettings()
+		v.startSettingsWidget("feedback.sounds")
+		name := "settings-sounds-" + strconv.Itoa(int(profile)) + ".png"
+		if err := renderViewPNG(filepath.Join(dir, name), v); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

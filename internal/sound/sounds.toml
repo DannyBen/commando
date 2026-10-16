@@ -1,0 +1,71 @@
+# Numeric levels are cumulative: 1 errors, 2 warnings, 3 notifications,
+# 4 interactions, 5 navigation. Off is 0; All bypasses the level comparison.
+# Notes are Hz; timings are milliseconds; volume is a percentage before master
+# volume. Spacing is measured between note starts. Edit and rebuild to tune.
+
+[sounds.navigation]
+level = 5
+notes = [220]
+length_ms = 12
+waveform = "square"
+volume = 20
+
+[sounds.cancel]
+level = 4
+notes = [330]
+length_ms = 75
+waveform = "triangle"
+volume = 32
+
+[sounds.palette]
+level = 4
+notes = [392]
+length_ms = 45
+waveform = "triangle"
+volume = 24
+
+[sounds.settings]
+level = 4
+notes = [392, 523.25]
+length_ms = 35
+spacing_ms = 30
+waveform = "triangle"
+volume = 24
+
+[sounds.directoryNavigation]
+level = 5
+notes = [523.25]
+length_ms = 75
+waveform = "triangle"
+volume = 32
+
+[sounds.messageInfo]
+level = 3
+notes = [440]
+length_ms = 75
+waveform = "triangle"
+volume = 32
+
+[sounds.messageSuccess]
+level = 3
+notes = [660, 880]
+length_ms = 60
+spacing_ms = 50
+waveform = "triangle"
+volume = 40
+
+[sounds.messageWarning]
+level = 2
+notes = [330, 247]
+length_ms = 90
+spacing_ms = 80
+waveform = "triangle"
+volume = 36
+
+[sounds.messageError]
+level = 1
+notes = [165, 110]
+length_ms = 100
+spacing_ms = 85
+waveform = "square"
+volume = 24

@@ -10,6 +10,14 @@ import (
 	"github.com/dannyben/commando/internal/sound"
 )
 
+func TestInteractionSoundMapUsesConfiguredCues(t *testing.T) {
+	for event, cue := range interactionSounds {
+		if cue != "" && !sound.Allows(cue, sound.All) {
+			t.Fatalf("event %s maps to an unconfigured cue %s", event, cue)
+		}
+	}
+}
+
 func TestSoundMapControlsSharedTextAndShortcutEditing(t *testing.T) {
 	beforeStart, beforeConfirm := interactionSounds[eventEditStarted], interactionSounds[eventEditConfirmed]
 	interactionSounds[eventEditStarted], interactionSounds[eventEditConfirmed] = sound.Palette, sound.Cancel
@@ -66,7 +74,7 @@ func TestSilentOrMutedInteractionEventsDoNotPlay(t *testing.T) {
 	if len(recorder.played) != 0 {
 		t.Fatal("silent events reached audio player", recorder.played)
 	}
-	if err := v.settingsValues.Set(settings.CatalogueDefault, settingSoundsEnabled, settings.Value{Bool: false}); err != nil {
+	if err := v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: 0}); err != nil {
 		t.Fatal(err)
 	}
 	v.announceInteraction(eventEditStarted)
