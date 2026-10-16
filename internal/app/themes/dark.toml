@@ -70,7 +70,7 @@ saturation = 65
 
 [appearance.autocolor.selection]
 lightness_points = -16
-cut_lightness_points = -20
+cut_lightness_points = -30
 
 [appearance.autocolor.special_files]
 hidden_lightness_points = -6

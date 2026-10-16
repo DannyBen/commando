@@ -70,10 +70,10 @@ saturation = 93
 
 [appearance.autocolor.selection]
 lightness_points = 20
-cut_lightness_points = 20
+cut_lightness_points = 30
 
 [appearance.autocolor.special_files]
-hidden_lightness_points = 6
+hidden_lightness_points = 30
 hidden_saturation_multiplier = 0.65
-dotfile_lightness_points = 3
-dotfile_saturation_multiplier = 0.8
+dotfile_lightness_points = 25
+dotfile_saturation_multiplier = 0.2

@@ -137,8 +137,8 @@ func TestAutoColorPreviewComparesNormalAndSelectedExtensions(t *testing.T) {
 
 func TestAutoColorSelectionPreviewSeparatesSelectionAndCutOffsets(t *testing.T) {
 	rows := selectionPreviewRows()
-	if len(rows) != 6 {
-		t.Fatal("expected four selection samples and two cut samples")
+	if len(rows) != 8 {
+		t.Fatal("expected four selection samples, two cut samples and two ordinary samples")
 	}
 	extensions := map[string]bool{}
 	for i, row := range rows {
@@ -150,12 +150,19 @@ func TestAutoColorSelectionPreviewSeparatesSelectionAndCutOffsets(t *testing.T) 
 				t.Fatal("first four rows must show ordinary selection backgrounds")
 			}
 			extensions[filepath.Ext(row.file.Name)] = true
-		} else {
+		} else if i < 6 {
 			if row.selected || !row.cut {
-				t.Fatal("last two rows must show cut filename colors without backgrounds")
+				t.Fatal("next two rows must show cut filename colors without backgrounds")
 			}
 			if !extensions[filepath.Ext(row.file.Name)] {
 				t.Fatal("cut sample lacks a matching selection extension")
+			}
+		} else {
+			if row.selected || row.cut {
+				t.Fatal("last two rows must show ordinary filename colors without backgrounds")
+			}
+			if filepath.Ext(row.file.Name) != filepath.Ext(rows[i-2].file.Name) {
+				t.Fatal("ordinary sample lacks a matching cut extension")
 			}
 		}
 	}

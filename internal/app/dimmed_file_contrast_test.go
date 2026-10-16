@@ -68,7 +68,7 @@ func TestDimmedFileGuardAllowsSofterTextAndStillEnforcesItsFloor(t *testing.T) {
 		normal := v.resolvedTextFor(contrastPrimary, surface, surface)
 		dimScore := math.Abs(perceptualContrast(dim, surface))
 		normalScore := math.Abs(perceptualContrast(normal, surface))
-		if dimScore < 45 || dimScore > 47 || normalScore < 75 || normalScore-dimScore < 25 {
+		if dimScore < 30 || dimScore > 32 || normalScore < 75 || normalScore-dimScore < 40 {
 			t.Fatalf("%s: dimming not distinct while guarded: dim=%g normal=%g", theme.name, dimScore, normalScore)
 		}
 	}

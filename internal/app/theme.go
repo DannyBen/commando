@@ -46,7 +46,7 @@ type contrastRule struct {
 // keeps the editor's resolved foreground and adjusts only its own background.
 var themeContrastRules = map[contrastRole]contrastRule{
 	contrastPrimary:       {targetLc: 75, adjust: adjustForeground},
-	contrastDimmedFile:    {targetLc: 45, adjust: adjustForeground},
+	contrastDimmedFile:    {targetLc: 30, adjust: adjustForeground},
 	contrastSecondary:     {targetLc: 60, adjust: adjustForeground},
 	contrastTextSelection: {targetLc: 60, adjust: adjustBackground, minLightnessGap: 8},
 }

@@ -84,6 +84,8 @@ func selectionPreviewRows() []previewFileRow {
 		{file: previewFile("source.go"), selected: true},
 		{file: previewFile("cut-notes.txt"), cut: true},
 		{file: previewFile("cut-photo.jpg"), cut: true},
+		{file: previewFile("uncut-notes.txt")},
+		{file: previewFile("uncut-photo.jpg")},
 	}
 }
 
