@@ -197,6 +197,19 @@ func (r themeRecipe) generate(options themeGeneration, retained map[string]lshCo
 	for name, value := range colors {
 		resolved[name] = value.oklch()
 	}
+	r.correctContrast(resolved, options.Mode)
+
+	for name := range resolved {
+		if _, included := r.Colors[name]; !included {
+			delete(resolved, name)
+		}
+	}
+
+	return resolved
+}
+
+func (r themeRecipe) correctContrast(resolved map[string]oklchColor, mode string) {
+	m := r.Modes[mode]
 	// Measure the displayed sRGB colors, including gamut mapping and rounding.
 	// Main text also appears in the location bar and native text selection.
 	backgrounds := []color.NRGBA{resolved["background"].rgb(), resolved["alt_background"].rgb(), resolved["text_selection"].rgb()}
@@ -233,13 +246,6 @@ func (r themeRecipe) generate(options themeGeneration, retained map[string]lshCo
 		}
 		resolved[name] = readableThemeColor(resolved[name], against, 4.5)
 	}
-	for name := range resolved {
-		if _, included := r.Colors[name]; !included {
-			delete(resolved, name)
-		}
-	}
-
-	return resolved
 }
 
 // Keep the intended color when readable; otherwise move its lightness toward

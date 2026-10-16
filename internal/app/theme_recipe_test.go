@@ -1,6 +1,7 @@
 package app
 
 import (
+	"image/color"
 	"math"
 	"reflect"
 	"strings"
@@ -280,5 +281,25 @@ func TestThemeGeneratorDeterministicReadableAndGray(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestThemeContrastWithColorfulTextAndSelectionSurface(t *testing.T) {
+	text := (lshColor{54.5225, 100, 333.2329}).oklch()
+	backgrounds := []color.NRGBA{
+		(lshColor{90.0936, 61.0815, 242.8279}).oklch().rgb(),
+		(lshColor{94.161, 74.864, 304.7657}).oklch().rgb(),
+		(lshColor{63.2168, 100, 161.222}).oklch().rgb(),
+	}
+	corrected := readableThemeColor(text, backgrounds, 4.5)
+	t.Logf("raw RGB=%v corrected RGB=%v; lightness %.4f -> %.4f", text.rgb(), corrected.rgb(), text.l*100, corrected.l*100)
+	for i, bg := range backgrounds {
+		t.Logf("surface %d contrast %.3f -> %.3f", i, themeContrast(text.rgb(), bg), themeContrast(corrected.rgb(), bg))
+		if themeContrast(corrected.rgb(), bg) < 4.5 {
+			t.Fatal("corrected text does not satisfy shared surface contrast")
+		}
+	}
+	if corrected.l >= text.l {
+		t.Fatal("guard did not darken the supplied text example")
 	}
 }
