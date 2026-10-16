@@ -152,6 +152,9 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				hint := "Enter Type · Ctrl+Enter Save"
 				if field.Control == "stepper" || field.Control == "stepper-progress" {
 					hint = "←/→ Adjust · Enter Type · Ctrl+Enter Save"
+					if field.Key == settingThemeGenerator+".seed" {
+						hint = "←/→ Adjust · End Random seed · Enter Type · Ctrl+Enter Save"
+					}
 				}
 				if field.Control == "toggle" {
 					hint = "←/→ Choose · Enter Toggle · Ctrl+Enter Save"

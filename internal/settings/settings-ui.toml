@@ -140,6 +140,7 @@ control = "stepper-progress"
 min = 0.0
 max = 359.0
 step = 1.0
+cycle = 360.0
 integer = true
 
 [appearance.theme.colors.background]

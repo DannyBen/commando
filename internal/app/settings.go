@@ -295,7 +295,6 @@ func (v *view) adjustSetting(key string, direction int) {
 	}
 
 	value := v.widgetValues().Get(c, key)
-	before := value
 	switch d.Kind {
 	case settings.String:
 		if len(d.Choices) == 0 {
@@ -328,6 +327,12 @@ func (v *view) adjustSetting(key string, direction int) {
 	default:
 		return
 	}
+	v.previewSettingValue(key, value)
+}
+
+func (v *view) previewSettingValue(key string, value settings.Value) {
+	c := settings.CatalogueDefault
+	before := v.widgetValues().Get(c, key)
 	if strings.HasPrefix(key, settingThemeGenerator+".") && value == before {
 		return
 	}
@@ -653,6 +658,10 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	}
 	if !s.editing {
 		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow}, key.Filter{Focus: focus, Name: key.NameLeftArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameRightArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameSpace})
+		field := s.fields[s.selected]
+		if !s.actionsFocused && (field.Control == "stepper" || field.Control == "stepper-progress") {
+			filters = append(filters, key.Filter{Focus: focus, Name: key.NameHome}, key.Filter{Focus: focus, Name: key.NameEnd}, key.Filter{Focus: focus, Name: key.NamePageUp}, key.Filter{Focus: focus, Name: key.NamePageDown})
+		}
 		if s.fields[s.selected].Control == "shortcut" {
 			filters = append(filters, key.Filter{Focus: focus, Name: key.NameDeleteForward})
 		}
@@ -688,15 +697,10 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		s.completion.update(&s.editor)
 	}
 	for _, ke := range keys {
+		if !s.editing && !s.actionsFocused && v.settingsStepperKey(s.fields[s.selected], ke) {
+			continue
+		}
 		if ke.Modifiers == key.ModCtrl && (ke.Name == key.NameLeftArrow || ke.Name == key.NameRightArrow) {
-			field := s.fields[s.selected]
-			if !s.editing && !s.actionsFocused && (field.Control == "stepper" || field.Control == "stepper-progress") {
-				direction := 10
-				if ke.Name == key.NameLeftArrow {
-					direction = -10
-				}
-				v.adjustSetting(field.Key, direction)
-			}
 			continue
 		}
 		if ke.Name == key.NameDeleteForward && !s.actionsFocused && s.fields[s.selected].Control == "shortcut" {
