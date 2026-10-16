@@ -155,7 +155,7 @@ func TestThemeGeneratorCommitsRoundedAutoColors(t *testing.T) {
 		t.Fatal(err)
 	}
 	v.applySettings()
-	if v.settingText(settingSaturation) != "70.5946" {
+	if v.settingText(settingSaturation) != "65.3" {
 		t.Fatal("generator saturation has excess decimals", v.settingText(settingSaturation))
 	}
 	for _, theme := range builtInThemes {

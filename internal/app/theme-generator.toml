@@ -5,7 +5,9 @@
 # User controls (saved in normal settings, not configured here):
 #   Seed: positive integer; chooses the base hue and each property's random value.
 #   Mode: Black / Dark / Midtone / Light / White.
-# Mode filename values preserve the separate auto-colored filename lightness.
+# Mode filename values set Auto Colors separately from semantic text colors.
+# filename_selection_offset is signed, in lightness points; it moves the
+# selected-row background toward the surface from the filename color.
 #   Vibrance: 0–100; 50 uses the recipe's saturation, 0 is grayscale.
 #   Dynamics: 1–100; opens each property's random range from zero to full width.
 #   Color Shift: 0–359 degrees; rotates the whole generated palette afterward.
@@ -28,7 +30,8 @@ vibrance_exponent = 1.5
 background = 8
 text = 96
 direction = 1
-filename = 90
+filename = 55
+filename_selection_offset = -16
 lightness_spread = 0.35
 # Anchor accents independently of the near-black surface; their random ranges
 # still use lightness_spread. Omit to inherit their normal color rules.
@@ -39,28 +42,32 @@ edge_lightness = 70
 background = 25
 text = 94
 direction = 1
-filename = 80
+filename = 65
+filename_selection_offset = -16
 lightness_spread = 1.0
 
 [modes.Midtone]
 background = 42
 text = 98
 direction = 1
-filename = 90
+filename = 80
+filename_selection_offset = -16
 lightness_spread = 1.0
 
 [modes.Light]
 background = 88
 text = 18
 direction = -1
-filename = 30
+filename = 36
+filename_selection_offset = 16
 lightness_spread = 1.0
 
 [modes.White]
 background = 98
 text = 10
 direction = -1
-filename = 20
+filename = 31
+filename_selection_offset = 20
 lightness_spread = 0.35
 
 # Color rules:
@@ -193,8 +200,10 @@ hue.range = [-180, 180]
 
 # Filename appearance uses the existing shared controls, without randomization.
 [files]
-selection_offset = 8
-saturation = 80
+# Vibrance scales saturation from this midpoint, with a separate upper limit
+# to keep filenames below full gamut even at high Vibrance.
+saturation = 74
+saturation_max = 93
 cut_offset = 20
 hidden_offset = 6
 dotfile_offset = 3

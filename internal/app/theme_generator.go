@@ -27,16 +27,17 @@ type themeRecipe struct {
 	}
 	Modes map[string]struct {
 		Background, Text, Direction, Filename float64
+		FilenameSelectionOffset               float64  `toml:"filename_selection_offset"`
 		LightnessSpread                       float64  `toml:"lightness_spread"`
 		SelectionLightness                    *float64 `toml:"selection_lightness"`
 		EdgeLightness                         *float64 `toml:"edge_lightness"`
 	}
 	Files struct {
-		SelectionOffset float64 `toml:"selection_offset"`
-		Saturation      float64
-		CutOffset       float64 `toml:"cut_offset"`
-		HiddenOffset    float64 `toml:"hidden_offset"`
-		DotfileOffset   float64 `toml:"dotfile_offset"`
+		Saturation    float64
+		SaturationMax float64 `toml:"saturation_max"`
+		CutOffset     float64 `toml:"cut_offset"`
+		HiddenOffset  float64 `toml:"hidden_offset"`
+		DotfileOffset float64 `toml:"dotfile_offset"`
 	}
 	Colors map[string]themeRecipeColor
 	order  []string // Dependency order, independent of TOML table order.
@@ -108,13 +109,16 @@ func parseThemeRecipe(source string) (themeRecipe, error) {
 		if !ok || !finite(m.Background) || m.Background < 0 || m.Background > 100 || !finite(m.Text) || m.Text < 0 || m.Text > 100 || !finite(m.Filename) || m.Filename < 0 || m.Filename > 100 || (m.Direction != 1 && m.Direction != -1) || !finite(m.LightnessSpread) || m.LightnessSpread <= 0 || m.LightnessSpread > 1 {
 			return r, fmt.Errorf("invalid mode: %s", name)
 		}
+		if !finite(m.FilenameSelectionOffset) || math.Abs(m.FilenameSelectionOffset) > 100 {
+			return r, fmt.Errorf("invalid filename selection offset: %s", name)
+		}
 		for _, n := range []*float64{m.SelectionLightness, m.EdgeLightness} {
 			if n != nil && (!finite(*n) || *n < 0 || *n > 100) {
 				return r, fmt.Errorf("invalid accent lightness: %s", name)
 			}
 		}
 	}
-	for _, offset := range []float64{r.Files.Saturation, r.Files.SelectionOffset, r.Files.CutOffset, r.Files.HiddenOffset, r.Files.DotfileOffset} {
+	for _, offset := range []float64{r.Files.Saturation, r.Files.SaturationMax, r.Files.CutOffset, r.Files.HiddenOffset, r.Files.DotfileOffset} {
 		if !finite(offset) || offset < 0 || offset > 100 {
 			return r, fmt.Errorf("invalid file lightness offset")
 		}
@@ -244,8 +248,8 @@ func (v *view) generateTheme() {
 	m := defaultThemeRecipe.Modes[mode]
 	for key, n := range map[string]float64{
 		settingLightness:          m.Filename,
-		settingSaturation:         min(100, defaultThemeRecipe.Files.Saturation*math.Pow(get("vibrance").Number/50, defaultThemeRecipe.Response.VibranceExponent)),
-		settingSelectionLightness: m.Direction * defaultThemeRecipe.Files.SelectionOffset,
+		settingSaturation:         min(defaultThemeRecipe.Files.SaturationMax, defaultThemeRecipe.Files.Saturation*math.Pow(get("vibrance").Number/50, defaultThemeRecipe.Response.VibranceExponent)),
+		settingSelectionLightness: m.FilenameSelectionOffset,
 		settingCutLightness:       -m.Direction * defaultThemeRecipe.Files.CutOffset,
 		settingHiddenLightness:    -m.Direction * defaultThemeRecipe.Files.HiddenOffset,
 		settingDotfileLightness:   -m.Direction * defaultThemeRecipe.Files.DotfileOffset,
