@@ -4,6 +4,15 @@
 [appearance]
 label = "Appearance"
 
+[appearance.contrast_guard]
+label = "Contrast guard"
+title = "Contrast guard"
+
+[appearance.contrast_guard.enabled]
+label = "Enabled"
+description = "Adjust display colors to maintain contrast."
+control = "toggle"
+
 [appearance.autocolor]
 label = "Auto color"
 title = "Auto color"

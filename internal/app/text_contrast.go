@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"gioui.org/layout"
+	"github.com/dannyben/commando/internal/settings"
 )
 
 type textContrastPair struct {
@@ -38,6 +39,9 @@ func (c *textContrastCache) resolveOn(foreground, background, surface color.NRGB
 // Gio uses one foreground for both selected and unselected editor text.
 // Resolve it against the ordinary surface first, then adjust selection alone.
 func (v *view) resolvedTextSelection(text, surface color.NRGBA) color.NRGBA {
+	if !v.settingsValues.Get(settings.CatalogueDefault, settingContrastGuard).Bool {
+		return v.appearance.Colors.TextSelection
+	}
 	return v.textContrast.resolveOn(text, v.appearance.Colors.TextSelection, surface, contrastTextSelection)
 }
 
@@ -72,6 +76,9 @@ func (v *view) resolvedTextOn(foreground, background color.NRGBA) color.NRGBA {
 }
 
 func (v *view) resolvedTextFor(role contrastRole, foreground, background color.NRGBA) color.NRGBA {
+	if !v.settingsValues.Get(settings.CatalogueDefault, settingContrastGuard).Bool {
+		return foreground
+	}
 	return v.textContrast.resolve(foreground, background, role)
 }
 

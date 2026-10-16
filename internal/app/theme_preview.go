@@ -28,7 +28,7 @@ func (v *view) settingsPanelPreview(index int) panelPreview {
 		return panelPreview{}
 	}
 	group := s.fields[0].Widget
-	if group == settingThemeGenerator || group == settingThemeSelect || isThemeWidget(s) {
+	if group == settingThemeGenerator || group == settingThemeSelect || group == "appearance.contrast_guard" || isThemeWidget(s) {
 		return panelPreview{textSelection: true, rows: themePreviewRows(), messages: []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}}
 	}
 	switch group {

@@ -183,13 +183,23 @@ label = "Other"
 }
 
 func TestCatalogueControlsIndependentOfValues(t *testing.T) {
+	controlFor := func(c Catalogue, key string) string {
+		t.Helper()
+		for _, field := range c.UI.Fields {
+			if field.Key == key {
+				return field.Control
+			}
+		}
+		t.Fatalf("missing field %s", key)
+		return ""
+	}
 	for _, control := range []string{"input", "stepper", "stepper-progress"} {
 		c, err := ParseCatalogue(defaultTOML, strings.Replace(uiTOML, `control = "stepper-progress"`, `control = "`+control+`"`, 1))
 		if err != nil {
 			t.Fatal(err)
 		}
 		d, _ := c.Definition("appearance.autocolor.lsh.lightness")
-		if d.Kind != Number || d.Default.Number != 36 || c.UI.Fields[1].Control != control {
+		if d.Kind != Number || d.Default.Number != 36 || controlFor(c, "appearance.autocolor.lsh.lightness") != control {
 			t.Fatal("control choice changed value type or default")
 		}
 	}
@@ -198,7 +208,7 @@ func TestCatalogueControlsIndependentOfValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.UI.Fields[1].Control != "input" || c.UI.Fields[0].Control != "toggle" {
+	if controlFor(c, "appearance.autocolor.lsh.lightness") != "input" || controlFor(c, "appearance.autocolor.enabled") != "toggle" {
 		t.Fatal("incorrect inferred controls")
 	}
 }

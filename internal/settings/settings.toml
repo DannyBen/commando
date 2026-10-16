@@ -1,4 +1,7 @@
 # Embedded defaults. User settings.toml contains explicit value overrides only.
+[appearance.contrast_guard]
+enabled = true
+
 [appearance.theme.generator]
 mode = "Light"
 seed = 1.0

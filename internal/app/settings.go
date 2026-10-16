@@ -55,6 +55,7 @@ const (
 	settingProtectedSystem       = "view.show_protected_system_files"
 	settingNotificationAnimation = "feedback.notifications.animation"
 	settingSoundsEnabled         = "feedback.sounds.enabled"
+	settingContrastGuard         = "appearance.contrast_guard.enabled"
 	settingAutoColorEnabled      = "appearance.autocolor.enabled"
 	settingLightness             = "appearance.autocolor.lsh.lightness"
 	settingSaturation            = "appearance.autocolor.lsh.saturation"

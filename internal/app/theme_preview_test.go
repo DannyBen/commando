@@ -20,7 +20,7 @@ import (
 )
 
 func TestSettingsPanelPreviewProfilesAndIsolation(t *testing.T) {
-	for _, group := range []string{settingThemeGenerator, settingThemeSelect, settingThemeCustomize, "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
+	for _, group := range []string{settingThemeGenerator, settingThemeSelect, settingThemeCustomize, "appearance.contrast_guard", "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
 		for count := 1; count <= 3; count++ {
 			v := newView(samplePanels()[:count])
 			v.startSettingsWidget(group)
@@ -28,7 +28,7 @@ func TestSettingsPanelPreviewProfilesAndIsolation(t *testing.T) {
 			if len(preview.rows) == 0 {
 				t.Fatal("missing synthetic preview", group)
 			}
-			theme := group == settingThemeGenerator || group == settingThemeSelect || group == settingThemeCustomize
+			theme := group == settingThemeGenerator || group == settingThemeSelect || group == settingThemeCustomize || group == "appearance.contrast_guard"
 			if theme {
 				if !preview.textSelection || !reflect.DeepEqual(preview.messages, []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}) {
 					t.Fatal("theme preview lost full samples", group)
