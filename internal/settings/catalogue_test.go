@@ -295,7 +295,7 @@ func TestCyclicNumbersNormalizeDefaultsEditsAndLoadedValues(t *testing.T) {
 			t.Fatalf("hue %g did not wrap to %g", input, want)
 		}
 	}
-	loaded, err := loadDocument([]byte("color.hue = 721"), c)
+	loaded, err := Parse([]byte("color.hue = 721"), c)
 	if err != nil || loaded.Get(c, "color.hue").Number != 1 {
 		t.Fatal("loaded hue was not normalized", err)
 	}

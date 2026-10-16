@@ -12,6 +12,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/text"
 	"gioui.org/widget"
+	"github.com/dannyben/commando/internal/settings"
 )
 
 // inlineCompletion owns suggestions, independently of their source and editor.
@@ -107,4 +108,35 @@ func (v *view) completionEditor(gtx layout.Context, editor *widget.Editor, c *in
 		call.Add(gtx.Ops)
 	}
 	return dims
+}
+
+func (v *view) cycleCompletedSetting(key string, direction int) {
+	s := v.settingsInteraction()
+	if s == nil || s.editing || s.pending {
+		return
+	}
+	names := s.completion.candidates
+	if len(names) < 2 {
+		return
+	}
+	current := strings.TrimSpace(v.settingText(key))
+	index := -1
+	for i, name := range names {
+		if strings.EqualFold(name, current) {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		index = 0
+		if direction < 0 {
+			index = len(names) - 1
+		}
+	} else {
+		index = (index + direction + len(names)) % len(names)
+	}
+	if v.setWidgetValue(key, settings.Value{Text: names[index]}) == nil {
+		v.applySettings()
+		v.announceInteraction(eventValueChanged)
+	}
 }

@@ -141,10 +141,10 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	s := v.paletteInteraction()
-	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 13 {
+	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 14 {
 		t.Fatal("@ did not open settings-only palette")
 	}
-	for i, label := range []string{"Appearance › Auto color", "Appearance › Auto color › Selection", "Appearance › Auto color › Special files", "Appearance › Font", "Appearance › Padding › Horizontal", "Appearance › Padding › Vertical", "Appearance › Theme › Customize", "Appearance › Theme › Generator", "Application › Data folder", "Feedback › Notifications", "Feedback › Sounds", "Programs › Editors › New", "View › System files"} {
+	for i, label := range []string{"Appearance › Auto color", "Appearance › Auto color › Selection", "Appearance › Auto color › Special files", "Appearance › Font", "Appearance › Padding › Horizontal", "Appearance › Padding › Vertical", "Appearance › Theme › Customize", "Appearance › Theme › Generator", "Appearance › Theme › Select", "Application › Data folder", "Feedback › Notifications", "Feedback › Sounds", "Programs › Editors › New", "View › System files"} {
 		if got := s.results[i].command.label(); got != label {
 			t.Fatalf("settings result %d = %q; want %q", i, got, label)
 		}

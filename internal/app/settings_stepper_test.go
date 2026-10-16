@@ -87,6 +87,7 @@ func TestSeedEndRandomizesReproduciblyAndCancelRestores(t *testing.T) {
 	v.startSettingsWidget(settingThemeGenerator)
 	s := v.settingsInteraction()
 	send, _ := panelInputFrames(v)
+	s.selected = 1 // Seed follows Mode.
 	previous := v.settingsValues.Get(settings.CatalogueDefault, settingThemeGenerator+".seed").Number
 	for range 5 {
 		send(pressed(key.NameEnd))
@@ -128,6 +129,7 @@ func TestStepperKeysKeepNativeEditingChoicesAndActions(t *testing.T) {
 	s := v.settingsInteraction()
 	send, _ := panelInputFrames(v)
 	before := v.settingsValues.Clone()
+	s.selected = 1 // Seed follows Mode.
 	send(pressed(key.NameReturn))
 	s.editor.SetCaret(0, 0)
 	send()
@@ -144,10 +146,10 @@ func TestStepperKeysKeepNativeEditingChoicesAndActions(t *testing.T) {
 		t.Fatal("stepper keys changed a setting while typing")
 	}
 	send(pressed(key.NameEscape))
-	s.selected = 1 // Mode is a choice, not a stepper.
+	s.selected = 0 // Mode is a choice, not a stepper.
 	send()
 	send(pressed(key.NameHome), pressed(key.NameEnd), pressed(key.NamePageUp), pressed(key.NamePageDown))
-	if s.selected != 1 || s.dirty || !reflect.DeepEqual(v.settingsValues.Clone(), before) {
+	if s.selected != 0 || s.dirty || !reflect.DeepEqual(v.settingsValues.Clone(), before) {
 		t.Fatal("stepper keys affected a choice")
 	}
 	s.selected, s.actionsFocused = 0, true

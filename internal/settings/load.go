@@ -24,14 +24,15 @@ func Load(dataDir string, c Catalogue) (Values, error) {
 	if err != nil {
 		return Values{}, err
 	}
-	values, err := loadDocument(data, c)
+	values, err := Parse(data, c)
 	if err != nil {
 		return Values{}, err
 	}
 	return values, nil
 }
 
-func loadDocument(data []byte, c Catalogue) (Values, error) {
+// Parse validates a settings document without accessing the filesystem.
+func Parse(data []byte, c Catalogue) (Values, error) {
 	var tree map[string]any
 	if _, err := toml.Decode(string(data), &tree); err != nil {
 		return Values{}, fmt.Errorf("%w: %w", ErrSyntax, err)

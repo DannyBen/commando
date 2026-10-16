@@ -20,7 +20,7 @@ type themePanelPreview struct {
 
 func (v *view) themePreview(index int) themePanelPreview {
 	s := v.settingsWidget()
-	if s == nil || len(s.fields) == 0 || s.fields[0].Widget != settingThemeGenerator {
+	if s == nil || len(s.fields) == 0 || (s.fields[0].Widget != settingThemeGenerator && s.fields[0].Widget != settingThemeSelect) {
 		return themePanelPreview{}
 	}
 	if index == 0 {

@@ -19,20 +19,20 @@ func TestThemeGeneratorLiveControlsAndCancel(t *testing.T) {
 	selected := v.panels[0].selected
 	v.startSettingsWidget(settingThemeGenerator)
 	s := v.settingsInteraction()
-	if s == nil || s.title != "Appearance › Theme › Generator" || len(s.fields) != 5 || isThemeWidget(s) {
+	if s == nil || s.fields[0].Key != settingThemeGenerator+".mode" || s.fields[1].Key != settingThemeGenerator+".seed" || s.title != "Appearance › Theme › Generator" || len(s.fields) != 5 || isThemeWidget(s) {
 		t.Fatal("Generator did not open its own five-field widget")
 	}
 	if !reflect.DeepEqual(v.settingsValues.Clone(), before) || s.dirty {
 		t.Fatal("opening Generator overwrote the active palette")
 	}
 	send, _ := panelInputFrames(v)
-	send(pressed(key.NameDownArrow), pressed(key.NameLeftArrow)) // Light -> Midtone.
-	send(pressed(key.NameLeftArrow))                             // Midtone -> Dark.
+	send(pressed(key.NameLeftArrow)) // Light -> Midtone.
+	send(pressed(key.NameLeftArrow)) // Midtone -> Dark.
 	if v.settingText(settingThemeGenerator+".mode") != "Dark" || v.appearance.Colors == palette || !s.dirty {
 		t.Fatal("mode did not preview live")
 	}
 	dark := v.appearance.Colors
-	send(pressed(key.NameUpArrow), pressed(key.NameRightArrow))
+	send(pressed(key.NameDownArrow), pressed(key.NameRightArrow))
 	if v.settingText(settingThemeGenerator+".seed") != "2" || v.appearance.Colors == dark || v.panels[0].selected != selected {
 		t.Fatal("Seed step failed to preview or disturbed browsing")
 	}
@@ -41,7 +41,7 @@ func TestThemeGeneratorLiveControlsAndCancel(t *testing.T) {
 	if s.editing || v.settingText(settingThemeGenerator+".seed") != "600" {
 		t.Fatal("typed Seed did not apply")
 	}
-	send(pressed(key.NameDownArrow), pressed(key.NameDownArrow), pressed(key.NameRightArrow))
+	send(pressed(key.NameDownArrow), pressed(key.NameRightArrow))
 	if v.settingText(settingThemeGenerator+".vibrance") != "51" {
 		t.Fatal("Vibrance did not adjust live")
 	}
@@ -109,16 +109,21 @@ func TestThemeGeneratorChoiceEdgesAndCycle(t *testing.T) {
 	v.startSettingsWidget(settingThemeGenerator)
 	before := v.settingsValues.Clone()
 	send, _ := panelInputFrames(v)
-	send(pressed(key.NameDownArrow), pressed(key.NameRightArrow)) // Light is already the final choice.
-	if v.settingsInteraction().dirty || !reflect.DeepEqual(v.settingsValues.Clone(), before) {
+	send(pressed(key.NameRightArrow)) // Light -> White.
+	if v.settingText(settingThemeGenerator+".mode") != "White" || !v.settingsInteraction().dirty {
+		t.Fatal("White did not preview live")
+	}
+	before = v.settingsValues.Clone()
+	send(pressed(key.NameRightArrow)) // White is already the final choice.
+	if !reflect.DeepEqual(v.settingsValues.Clone(), before) {
 		t.Fatal("choice at an edge regenerated the palette")
 	}
-	send(pressed(key.NameReturn)) // Enter cycles to Dark, without a text editor.
-	if v.settingText(settingThemeGenerator+".mode") != "Dark" || v.settingsInteraction().editing {
+	send(pressed(key.NameReturn)) // Enter cycles to Black, without a text editor.
+	if v.settingText(settingThemeGenerator+".mode") != "Black" || v.settingsInteraction().editing {
 		t.Fatal("Enter did not cycle the mode")
 	}
 	send(pressed(key.NameSpace))
-	if v.settingText(settingThemeGenerator+".mode") != "Midtone" {
+	if v.settingText(settingThemeGenerator+".mode") != "Dark" {
 		t.Fatal("Space did not cycle the mode")
 	}
 }
@@ -128,7 +133,7 @@ func TestThemeGeneratorPreview(t *testing.T) {
 	if dir == "" {
 		t.Skip("optional generator previews")
 	}
-	for _, mode := range []string{"Dark", "Midtone", "Light"} {
+	for _, mode := range []string{"Black", "Dark", "Midtone", "Light", "White"} {
 		v := newPreviewView()
 		v.applySettings()
 		v.startSettingsWidget(settingThemeGenerator)

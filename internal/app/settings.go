@@ -89,7 +89,8 @@ func settingsGroupLabel(key string) string {
 func (v *view) settingsCatalogue() []command {
 	var catalogue []command
 	themeAdded := false
-	for _, widget := range settings.CatalogueDefault.UI.Widgets {
+	widgets := append(slices.Clone(settings.CatalogueDefault.UI.Widgets), themeSelectWidget)
+	for _, widget := range widgets {
 		if !widget.Visible {
 			continue
 		}
@@ -161,6 +162,7 @@ type settingsSession struct {
 	deleted            bool
 	dirty              bool
 	completion         inlineCompletion
+	themeName          string // Selected snapshot name, confined to this transaction.
 	bindingCommand     *command
 	capturing          bool
 }
@@ -205,6 +207,9 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 		group = themeSettingPrefix + "background"
 	}
 	spec, ok := settings.CatalogueDefault.Widget(group)
+	if group == settingThemeSelect {
+		spec, ok = themeSelectWidget, true
+	}
 	if !ok || !spec.Visible {
 		return nil
 	}
@@ -218,6 +223,15 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 	for _, field := range settings.CatalogueDefault.UI.Fields {
 		if field.Widget == group && field.Visible {
 			s.fields = append(s.fields, field)
+		}
+	}
+	if group == settingThemeSelect {
+		s.fields = []settings.Field{{Key: settingThemeSelect, Widget: settingThemeSelect, Label: "Theme", Control: "input"}}
+		for _, theme := range builtInThemes {
+			s.completion.candidates = append(s.completion.candidates, theme.name)
+			if theme.matches(v.settingsValues) {
+				s.themeName = theme.name
+			}
 		}
 	}
 	if isThemeColorWidget(group) {
@@ -249,6 +263,12 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 	return nil
 }
 func (v *view) settingText(key string) string {
+	if key == settingThemeSelect {
+		if s := v.settingsInteraction(); s != nil && s.themeName != "" {
+			return s.themeName
+		}
+		return "Current theme"
+	}
 	if key == settingThemeElement {
 		return themeElementName(v.settingsWidget())
 	}
@@ -277,8 +297,8 @@ func (v *view) settingText(key string) string {
 	}
 }
 func (v *view) adjustSetting(key string, direction int) {
-	if key == settingFontFamily {
-		v.cycleFontFamily(direction)
+	if key == settingFontFamily || key == settingThemeSelect {
+		v.cycleCompletedSetting(key, direction)
 		return
 	}
 	c := settings.CatalogueDefault
@@ -427,6 +447,9 @@ func (v *view) applySettingDraft(gtx layout.Context) bool {
 		return false
 	}
 	d, _ := c.Definition(field.Key)
+	if field.Key == settingThemeSelect {
+		d.Kind = settings.String
+	}
 	value := settings.Value{Text: s.editor.Text()}
 	if d.Kind == settings.Number {
 		n, err := strconv.ParseFloat(strings.TrimSpace(s.editor.Text()), 64)
@@ -449,6 +472,9 @@ func (v *view) applySettingDraft(gtx layout.Context) bool {
 	}
 	if err := v.setWidgetValue(field.Key, value); err != nil {
 		s.errorText = "Value outside allowed range"
+		if field.Key == settingThemeSelect {
+			s.errorText = "Choose an available theme"
+		}
 		if d.Maximum != nil {
 			s.errorText = fmt.Sprintf("Use %g to %g", d.Minimum, *d.Maximum)
 		}
@@ -944,6 +970,9 @@ func (v *view) widgetValues() *settings.Values {
 	return &v.settingsValues
 }
 func (s *settingsSession) actionLabels() []string {
+	if len(s.fields) > 0 && s.fields[0].Key == settingThemeSelect {
+		return []string{"Save", "Cancel"}
+	}
 	if s.collection == "" {
 		return []string{"Save", "Cancel", "Reset"}
 	}
@@ -956,6 +985,9 @@ func (s *settingsSession) actionLabels() []string {
 // Dirty is sticky for this transaction: even a subsequently reverted edit
 // requires an explicit Save or Cancel before the widget can be dismissed.
 func (v *view) setWidgetValue(key string, value settings.Value) error {
+	if key == settingThemeSelect {
+		return v.selectTheme(value.Text)
+	}
 	values := v.widgetValues()
 	c := settings.CatalogueDefault
 	if s := v.settingsInteraction(); s != nil && s.bindingCommand != nil {

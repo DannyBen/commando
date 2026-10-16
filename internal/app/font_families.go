@@ -2,9 +2,7 @@ package app
 
 import (
 	"os"
-	"strings"
 
-	"github.com/dannyben/commando/internal/settings"
 	fontapi "github.com/go-text/typesetting/font"
 	"github.com/go-text/typesetting/font/opentype"
 	"github.com/go-text/typesetting/fontscan"
@@ -53,35 +51,4 @@ func (v *view) requestFontFamilies() {
 func (v *view) fontFamilyChoices() []string {
 	bundled := string(v.appearance.Font[0].Font.Typeface)
 	return completionCandidates(append([]string{bundled}, v.fontFamilies...))
-}
-
-func (v *view) cycleFontFamily(direction int) {
-	s := v.settingsInteraction()
-	if s == nil || s.editing || s.pending {
-		return
-	}
-	names := s.completion.candidates
-	if len(names) < 2 {
-		return
-	}
-	current := strings.TrimSpace(v.settingText(settingFontFamily))
-	index := -1
-	for i, name := range names {
-		if strings.EqualFold(name, current) {
-			index = i
-			break
-		}
-	}
-	if index < 0 {
-		index = 0
-		if direction < 0 {
-			index = len(names) - 1
-		}
-	} else {
-		index = (index + direction + len(names)) % len(names)
-	}
-	if v.setWidgetValue(settingFontFamily, settings.Value{Text: names[index]}) == nil {
-		v.applySettings()
-		v.announceInteraction(eventValueChanged)
-	}
 }

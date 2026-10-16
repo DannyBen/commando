@@ -95,7 +95,7 @@ label = "Name"
 		t.Fatal(err)
 	}
 	source := []byte("[[items]]\nname = 'one'\n[[items]]\nuuid = 'user_chosen-123'\nname = 'two'\n")
-	values, err := loadDocument(source, catalogue)
+	values, err := Parse(source, catalogue)
 	if err != nil {
 		t.Fatal(err)
 	}

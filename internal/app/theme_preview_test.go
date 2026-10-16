@@ -80,7 +80,7 @@ func TestThemePreviewRenderingPreservesBrowsingAndEditorState(t *testing.T) {
 	items := append([]entry(nil), p.items...)
 	v.startSettingsWidget(settingThemeGenerator)
 	send, _ := panelInputFrames(v)
-	send(pressed(key.NameReturn))
+	send(pressed(key.NameDownArrow), pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{End: 1}, Text: "123"})
 	s := v.settingsInteraction()
 	start, end := s.editor.Selection()

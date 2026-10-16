@@ -1,0 +1,79 @@
+# Built-in Dark: complete color snapshot, independent of generator settings.
+
+[appearance.theme.colors.background]
+lightness = 8.4757
+saturation = 6.2167
+hue = 285.4827
+
+[appearance.theme.colors.alt_background]
+lightness = 9.4906
+saturation = 5.4626
+hue = 276.6513
+
+[appearance.theme.colors.border]
+lightness = 25
+saturation = 25
+hue = 281
+
+[appearance.theme.colors.edge]
+lightness = 69.4704
+saturation = 60.5175
+hue = 281.9385
+
+[appearance.theme.colors.text]
+lightness = 95.0648
+saturation = 12.6129
+hue = 265.79330000000004
+
+[appearance.theme.colors.secondary_text]
+lightness = 94.3839
+saturation = 20.3491
+hue = 284.8891
+
+[appearance.theme.colors.text_selection]
+lightness = 37.7816
+saturation = 10.9542
+hue = 299.4543
+
+[appearance.theme.colors.selection]
+lightness = 39.9309
+saturation = 35.3776
+hue = 301.52700000000004
+
+[appearance.theme.colors.error]
+lightness = 91.3522
+saturation = 68.0131
+hue = 25.684500000000014
+
+[appearance.theme.colors.info]
+lightness = 91.8129
+saturation = 59.0004
+hue = 262.8347
+
+[appearance.theme.colors.success]
+lightness = 91.5408
+saturation = 60.8138
+hue = 114.2079
+
+[appearance.theme.colors.warning]
+lightness = 91.4502
+saturation = 67.6172
+hue = 109.83109999999999
+
+[appearance.autocolor]
+enabled = true
+salt = 0
+
+[appearance.autocolor.lsh]
+lightness = 55
+saturation = 65
+
+[appearance.autocolor.selection]
+lightness_points = -16
+cut_lightness_points = -20
+
+[appearance.autocolor.special_files]
+hidden_lightness_points = -6
+hidden_saturation_multiplier = 0.65
+dotfile_lightness_points = -3
+dotfile_saturation_multiplier = 0.8

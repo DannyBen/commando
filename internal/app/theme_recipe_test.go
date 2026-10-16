@@ -248,7 +248,7 @@ func TestThemeRecipeRejectsInvalidComponentsAndResponses(t *testing.T) {
 }
 
 func TestThemeGeneratorDeterministicAndGray(t *testing.T) {
-	for _, mode := range []string{"Dark", "Midtone", "Light"} {
+	for _, mode := range []string{"Black", "Dark", "Midtone", "Light", "White"} {
 		for seed := uint64(1); seed <= 30; seed++ {
 			for _, dynamics := range []float64{1, 35, 100} {
 				for _, vibrance := range []float64{0, 50, 100} {
@@ -299,6 +299,90 @@ base = "background"
 	for _, name := range []string{"background", "alt_background", "text"} {
 		if before[name] != after[name] {
 			t.Fatalf("selection influenced generated %s", name)
+		}
+	}
+}
+
+func TestThemeGeneratorExtremeModesKeepSurfacesNearEndpoints(t *testing.T) {
+	for _, mode := range []string{"Black", "White"} {
+		for seed := uint64(1); seed <= 100; seed++ {
+			for _, dynamics := range []float64{1, 50, 100} {
+				colors := defaultThemeRecipe.generate(themeGeneration{mode, seed, 50, dynamics, 0}, nil)
+				for _, name := range []string{"background", "alt_background"} {
+					lightness := colors[name].l
+					if mode == "Black" && lightness > 0.19 || mode == "White" && lightness < 0.87 {
+						t.Fatalf("%s %s escaped narrow surface range: %g", mode, name, lightness)
+					}
+				}
+			}
+		}
+	}
+}
+
+func TestThemeRecipeLightnessSpreadKeepsHueAndSaturationVariation(t *testing.T) {
+	r := partialThemeRecipe(t, `[colors.border]
+base = "mode_background"
+lightness.offset = 10
+lightness.range = [-5, 15]
+saturation.center = 30
+saturation.range = [-10, 20]
+hue.center = 180
+hue.range = [-80, 80]
+`)
+	for _, modes := range [][2]string{{"Dark", "Black"}, {"Light", "White"}} {
+		for seed := uint64(1); seed <= 30; seed++ {
+			wide := lshFromOKLCH(r.generate(themeGeneration{modes[0], seed, 50, 100, 0}, nil)["border"])
+			narrow := lshFromOKLCH(r.generate(themeGeneration{modes[1], seed, 50, 100, 0}, nil)["border"])
+			mode := r.Modes[modes[1]]
+			expected := mode.Background + (wide.l-r.Modes[modes[0]].Background)*mode.LightnessSpread
+			if math.Abs(narrow.l-expected) > 1e-7 || math.Abs(narrow.s-wide.s) > 1e-7 || narrow.h != wide.h {
+				t.Fatalf("%s did not narrow only lightness: wide=%+v narrow=%+v", modes[1], wide, narrow)
+			}
+		}
+	}
+	for _, value := range []string{"0", "-1", "1.1", "nan", "inf"} {
+		source := strings.Replace(themeGeneratorTOML, "lightness_spread = 0.35", "lightness_spread = "+value, 1)
+		if _, err := parseThemeRecipe(source); err == nil {
+			t.Fatalf("accepted invalid lightness spread %s", value)
+		}
+	}
+}
+
+func TestBlackSelectionStaysVisibleAcrossSeedsAndDynamics(t *testing.T) {
+	for seed := uint64(1); seed <= 150; seed++ {
+		for _, dynamics := range []float64{1, 50, 100} {
+			colors := defaultThemeRecipe.generate(themeGeneration{"Black", seed, 94, dynamics, 122}, nil)
+			if gap := colors["selection"].l - colors["background"].l; gap < 0.25 {
+				t.Fatalf("Black selection too close to surface: seed=%d dynamics=%g gap=%g", seed, dynamics, gap)
+			}
+		}
+	}
+	for _, value := range []string{"-1", "101", "inf", "nan"} {
+		source := strings.Replace(themeGeneratorTOML, "selection_lightness = 40", "selection_lightness = "+value, 1)
+		if _, err := parseThemeRecipe(source); err == nil {
+			t.Fatalf("accepted invalid selection lightness %s", value)
+		}
+	}
+}
+
+func TestBlackEdgeContrastsWithSurfaceAndSelection(t *testing.T) {
+	for seed := uint64(1); seed <= 150; seed++ {
+		for _, dynamics := range []float64{1, 50, 100} {
+			for _, vibrance := range []float64{0, 50, 100} {
+				colors := defaultThemeRecipe.generate(themeGeneration{"Black", seed, vibrance, dynamics, 122}, nil)
+				for _, surface := range []string{"background", "selection"} {
+					contrast := math.Abs(perceptualContrast(colors["edge"].rgb(), colors[surface].rgb()))
+					if contrast < 15 {
+						t.Fatalf("Black edge too dim on %s: seed=%d dynamics=%g vibrance=%g contrast=%g", surface, seed, dynamics, vibrance, contrast)
+					}
+				}
+			}
+		}
+	}
+	for _, value := range []string{"-1", "101", "inf", "nan"} {
+		source := strings.Replace(themeGeneratorTOML, "edge_lightness = 70", "edge_lightness = "+value, 1)
+		if _, err := parseThemeRecipe(source); err == nil {
+			t.Fatalf("accepted invalid edge lightness %s", value)
 		}
 	}
 }

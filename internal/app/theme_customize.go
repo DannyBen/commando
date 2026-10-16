@@ -58,7 +58,7 @@ func themeElementName(s *settingsSession) string {
 }
 
 func (s *settingsSession) completesField() bool {
-	return s.fields[s.selected].Key == settingFontFamily || s.fields[s.selected].Key == settingThemeElement
+	return s.fields[s.selected].Key == settingFontFamily || s.fields[s.selected].Key == settingThemeElement || s.fields[s.selected].Key == settingThemeSelect
 }
 
 func (v *view) cycleThemeElement(gtx layout.Context, direction int) {

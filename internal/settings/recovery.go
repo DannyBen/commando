@@ -27,7 +27,7 @@ func LoadAndRepair(dataDir string, c Catalogue) (Values, error) {
 	if err != nil {
 		return Values{}, err
 	}
-	values, validationErr := loadDocument(data, c)
+	values, validationErr := Parse(data, c)
 	if validationErr == nil {
 		return values, nil
 	}

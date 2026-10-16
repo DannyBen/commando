@@ -106,17 +106,17 @@ label = "Colors"
 label = "Generator"
 title = "Generator"
 
+[appearance.theme.generator.mode]
+label = "Mode"
+control = "choice"
+choices = ["Black", "Dark", "Midtone", "Light", "White"]
+
 [appearance.theme.generator.seed]
 label = "Seed"
 control = "stepper"
 min = 1.0
 step = 1.0
 integer = true
-
-[appearance.theme.generator.mode]
-label = "Mode"
-control = "choice"
-choices = ["Dark", "Midtone", "Light"]
 
 [appearance.theme.generator.vibrance]
 label = "Vibrance"

@@ -4,7 +4,7 @@
 #
 # User controls (saved in normal settings, not configured here):
 #   Seed: positive integer; chooses the base hue and each property's random value.
-#   Mode: Dark / Midtone / Light.
+#   Mode: Black / Dark / Midtone / Light / White.
 # Mode filename values preserve the separate auto-colored filename lightness.
 #   Vibrance: 0–100; 50 uses the recipe's saturation, 0 is grayscale.
 #   Dynamics: 1–100; opens each property's random range from zero to full width.
@@ -22,23 +22,46 @@ dynamics_exponent = 1.0
 # Saturation multiplier: (Vibrance / 50) raised to this power.
 vibrance_exponent = 1.5
 
+# Lightness spread scales color lightness offsets and random ranges,
+# retaining independent saturation and hue variation. 1 uses the full spread.
+[modes.Black]
+background = 8
+text = 96
+direction = 1
+filename = 90
+lightness_spread = 0.35
+# Anchor accents independently of the near-black surface; their random ranges
+# still use lightness_spread. Omit to inherit their normal color rules.
+selection_lightness = 40
+edge_lightness = 70
+
 [modes.Dark]
 background = 25
 text = 94
 direction = 1
 filename = 80
+lightness_spread = 1.0
 
 [modes.Midtone]
 background = 42
 text = 98
 direction = 1
 filename = 90
+lightness_spread = 1.0
 
 [modes.Light]
 background = 88
 text = 18
 direction = -1
 filename = 30
+lightness_spread = 1.0
+
+[modes.White]
+background = 98
+text = 10
+direction = -1
+filename = 20
+lightness_spread = 0.35
 
 # Color rules:
 #   base: another color, mode_background, or mode_text.
@@ -58,6 +81,7 @@ filename = 30
 #
 # For lightness, mode direction multiplies BOTH offset and random adjustment.
 # Positive adjustments therefore point toward text in every mode.
+# The mode lightness_spread scales both offsets and random adjustments.
 # Explicit centers remain absolute. Saturation/hue have no mode direction.
 # L/S are clamped to 0–100 and hue wraps around the wheel.
 # Resolve all bases before applying Vibrance and Color Shift, so neither

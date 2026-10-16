@@ -27,6 +27,9 @@ type themeRecipe struct {
 	}
 	Modes map[string]struct {
 		Background, Text, Direction, Filename float64
+		LightnessSpread                       float64  `toml:"lightness_spread"`
+		SelectionLightness                    *float64 `toml:"selection_lightness"`
+		EdgeLightness                         *float64 `toml:"edge_lightness"`
 	}
 	Files struct {
 		SelectionOffset float64 `toml:"selection_offset"`
@@ -100,10 +103,15 @@ func parseThemeRecipe(source string) (themeRecipe, error) {
 			return r, fmt.Errorf("invalid response exponent")
 		}
 	}
-	for _, name := range []string{"Dark", "Midtone", "Light"} {
+	for _, name := range []string{"Black", "Dark", "Midtone", "Light", "White"} {
 		m, ok := r.Modes[name]
-		if !ok || !finite(m.Background) || m.Background < 0 || m.Background > 100 || !finite(m.Text) || m.Text < 0 || m.Text > 100 || !finite(m.Filename) || m.Filename < 0 || m.Filename > 100 || m.Direction != 1 && m.Direction != -1 {
+		if !ok || !finite(m.Background) || m.Background < 0 || m.Background > 100 || !finite(m.Text) || m.Text < 0 || m.Text > 100 || !finite(m.Filename) || m.Filename < 0 || m.Filename > 100 || (m.Direction != 1 && m.Direction != -1) || !finite(m.LightnessSpread) || m.LightnessSpread <= 0 || m.LightnessSpread > 1 {
 			return r, fmt.Errorf("invalid mode: %s", name)
+		}
+		for _, n := range []*float64{m.SelectionLightness, m.EdgeLightness} {
+			if n != nil && (!finite(*n) || *n < 0 || *n > 100) {
+				return r, fmt.Errorf("invalid accent lightness: %s", name)
+			}
 		}
 	}
 	for _, offset := range []float64{r.Files.Saturation, r.Files.SelectionOffset, r.Files.CutOffset, r.Files.HiddenOffset, r.Files.DotfileOffset} {
@@ -180,7 +188,17 @@ func (r themeRecipe) generate(options themeGeneration, retained map[string]lshCo
 	for _, name := range r.order {
 		c := r.Colors[name]
 		value := colors[c.Base]
-		value.l = max(0, min(100, c.Lightness.value(value.l, themeRandom(options.Seed, name+".lightness"), dynamics, m.Direction)))
+		var anchor *float64
+		switch name {
+		case "selection":
+			anchor = m.SelectionLightness
+		case "edge":
+			anchor = m.EdgeLightness
+		}
+		if anchor != nil {
+			c.Lightness.Center, c.Lightness.Offset = anchor, 0
+		}
+		value.l = max(0, min(100, c.Lightness.value(value.l, themeRandom(options.Seed, name+".lightness"), dynamics, m.Direction*m.LightnessSpread)))
 		value.s = max(0, min(100, c.Saturation.value(value.s, themeRandom(options.Seed, name+".saturation"), dynamics, 1)))
 		value.h = wrapHue(c.Hue.value(value.h, themeRandom(options.Seed, name+".hue"), dynamics, 1))
 		colors[name] = value
