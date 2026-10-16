@@ -10,6 +10,7 @@ import (
 type textContrastPair struct {
 	foreground, background color.NRGBA
 	rule                   contrastRule
+	surface                color.NRGBA
 }
 
 // Resolved display colors are disposable and never enter the saved palette.
@@ -17,17 +18,27 @@ type textContrastPair struct {
 type textContrastCache map[textContrastPair]color.NRGBA
 
 func (c *textContrastCache) resolve(foreground, background color.NRGBA, role contrastRole) color.NRGBA {
+	return c.resolveOn(foreground, background, color.NRGBA{}, role)
+}
+
+func (c *textContrastCache) resolveOn(foreground, background, surface color.NRGBA, role contrastRole) color.NRGBA {
 	rule := themeContrastRules[role]
-	pair := textContrastPair{foreground, background, rule}
+	pair := textContrastPair{foreground, background, rule, surface}
 	if resolved, ok := (*c)[pair]; ok {
 		return resolved
 	}
-	resolved := contrastColor(foreground, background, rule)
+	resolved := contrastColorOn(foreground, background, surface, rule)
 	if *c == nil {
 		*c = make(textContrastCache)
 	}
 	(*c)[pair] = resolved
 	return resolved
+}
+
+// Gio uses one foreground for both selected and unselected editor text.
+// Resolve it against the ordinary surface first, then adjust selection alone.
+func (v *view) resolvedTextSelection(text, surface color.NRGBA) color.NRGBA {
+	return v.textContrast.resolveOn(text, v.appearance.Colors.TextSelection, surface, contrastTextSelection)
 }
 
 func linearColorChannel(n uint8) float64 {

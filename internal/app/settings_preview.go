@@ -40,7 +40,8 @@ func (v *view) settingsPreviewItems(kind string) previewSamples {
 	case "selected_text":
 		return sample("Selected text", c.SelectedName, c.Selected)
 	case "text_selection":
-		return previewSamples{{label: "Selected text", foreground: v.resolvedTextOn(c.EditorText, c.Surface), background: c.TextSelection, textSelection: true}}
+		foreground := v.resolvedTextOn(c.EditorText, c.Surface)
+		return previewSamples{{label: "Selected text", foreground: foreground, background: v.resolvedTextSelection(foreground, c.Surface), textSelection: true}}
 	case "info":
 		return sample("Info text", c.Info, c.Footer)
 	case "success":

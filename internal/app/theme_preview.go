@@ -66,9 +66,11 @@ func (v *view) themePreviewSelection(gtx layout.Context) layout.Dimensions {
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			const sample = "Example selection"
+			foreground := v.resolvedTextOn(c.EditorText, c.Surface)
+			background := v.resolvedTextSelection(foreground, c.Surface)
 			size := image.Pt(min(gtx.Constraints.Max.X, v.textWidth(gtx, sample, v.appearance.SmallTextSize)), v.textHeight(gtx, v.appearance.SmallTextSize))
-			return v.fileRowSurface(gtx, size, c.TextSelection, color.NRGBA{}, func(gtx layout.Context) layout.Dimensions {
-				return v.rawLabel(gtx, sample, v.appearance.SmallTextSize, v.resolvedTextOn(c.EditorText, c.Surface), text.Start)
+			return v.fileRowSurface(gtx, size, background, color.NRGBA{}, func(gtx layout.Context) layout.Dimensions {
+				return v.rawLabel(gtx, sample, v.appearance.SmallTextSize, foreground, text.Start)
 			})
 		}),
 	)

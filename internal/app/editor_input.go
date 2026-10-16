@@ -68,8 +68,8 @@ func (v *view) textEditor(editor *widget.Editor, hint string) material.EditorSty
 	style := material.Editor(v.theme, editor, hint)
 	style.Font.Weight = v.appearance.FontWeight
 	style.TextSize = v.appearance.TextSize
-	// Only the ordinary editor surface participates. Text selection is unguarded.
-	style.Color, style.SelectionColor = v.resolvedText(v.appearance.Colors.EditorText), v.appearance.Colors.TextSelection
+	style.Color = v.resolvedText(v.appearance.Colors.EditorText)
+	style.SelectionColor = v.resolvedTextSelection(style.Color, v.currentTextBackground())
 	style.HintColor = v.resolvedText(style.HintColor)
 	return style
 }

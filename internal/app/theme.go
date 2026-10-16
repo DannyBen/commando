@@ -24,6 +24,7 @@ type contrastRole uint8
 const (
 	contrastPrimary contrastRole = iota
 	contrastSecondary
+	contrastTextSelection
 )
 
 type contrastAdjustment uint8
@@ -36,13 +37,16 @@ const (
 type contrastRule struct {
 	targetLc float64
 	adjust   contrastAdjustment
+	// Background adjustments stop this many LSH points from the editor surface.
+	minLightnessGap float64
 }
 
-// Display policy for generated and customized palettes alike. Selection text
-// has no rule yet; a future selection rule can adjust its background instead.
+// Display policy for generated and customized palettes alike. Text selection
+// keeps the editor's resolved foreground and adjusts only its own background.
 var themeContrastRules = map[contrastRole]contrastRule{
-	contrastPrimary:   {targetLc: 75, adjust: adjustForeground},
-	contrastSecondary: {targetLc: 60, adjust: adjustForeground},
+	contrastPrimary:       {targetLc: 75, adjust: adjustForeground},
+	contrastSecondary:     {targetLc: 60, adjust: adjustForeground},
+	contrastTextSelection: {targetLc: 60, adjust: adjustBackground, minLightnessGap: 8},
 }
 
 // Theme holds the appearance choices independently of Gio's widget theme.

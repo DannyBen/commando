@@ -62,14 +62,14 @@ func TestTextContrastRawPaletteAndSelectionSurviveRenderingAndSave(t *testing.T)
 	gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(800, 480))}
 	v.layout(gtx)
 	c := v.appearance.Colors
-	if displayed, ok := v.textContrast[textContrastPair{c.Foreground, c.Surface, themeContrastRules[contrastPrimary]}]; !ok || displayed != c.Foreground {
+	if displayed, ok := v.textContrast[textContrastPair{c.Foreground, c.Surface, themeContrastRules[contrastPrimary], color.NRGBA{}}]; !ok || displayed != c.Foreground {
 		t.Fatal("main text lost requested yellow")
 	}
-	if displayed, ok := v.textContrast[textContrastPair{c.Foreground, c.Footer, themeContrastRules[contrastPrimary]}]; !ok || displayed == c.Foreground {
+	if displayed, ok := v.textContrast[textContrastPair{c.Foreground, c.Footer, themeContrastRules[contrastPrimary], color.NRGBA{}}]; !ok || displayed == c.Foreground {
 		t.Fatal("footer did not get its own readable variant")
 	}
-	if _, guarded := v.textContrast[textContrastPair{c.EditorText, c.TextSelection, themeContrastRules[contrastPrimary]}]; guarded {
-		t.Fatal("text selection was contrast-guarded")
+	if _, guarded := v.textContrast[textContrastPair{c.EditorText, c.TextSelection, themeContrastRules[contrastPrimary], color.NRGBA{}}]; guarded {
+		t.Fatal("selection changed its foreground instead of its background")
 	}
 	if !reflect.DeepEqual(v.settingsValues.Clone(), before) {
 		t.Fatal("rendering mutated saved palette")
@@ -91,7 +91,7 @@ func TestTextContrastRawPaletteAndSelectionSurviveRenderingAndSave(t *testing.T)
 	}
 }
 
-func TestTextBackgroundScopesAndEditorSelectionExclusion(t *testing.T) {
+func TestTextBackgroundScopesAndEditorSelectionCorrection(t *testing.T) {
 	v := newPreviewView()
 	v.applySettings()
 	v.appearance.Colors.EditorText = rgb(0xffff00)
@@ -101,8 +101,11 @@ func TestTextBackgroundScopesAndEditorSelectionExclusion(t *testing.T) {
 	root := v.currentTextBackground()
 	v.textOn(rgb(0), func(gtx layout.Context) layout.Dimensions {
 		style := v.textEditor(&v.location, "Path")
-		if style.Color != rgb(0xffff00) || style.SelectionColor != rgb(0xffff00) {
-			t.Fatal("selection background influenced editor text or was itself corrected")
+		if style.Color != rgb(0xffff00) || style.SelectionColor == rgb(0xffff00) {
+			t.Fatal("selection must adjust its background without changing editor text")
+		}
+		if math.Abs(perceptualContrast(style.Color, style.SelectionColor)) < themeContrastRules[contrastTextSelection].targetLc {
+			t.Fatal("selection did not meet its reachable contrast target")
 		}
 		return v.band(gtx, 30, rgb(0xffff00), func(gtx layout.Context) layout.Dimensions {
 			if v.resolvedText(rgb(0xffff00)) == rgb(0xffff00) {
@@ -223,7 +226,7 @@ func TestSelectedSeedUsesAPCAOnPinkBackground(t *testing.T) {
 	if c.SelectedName != c.Foreground {
 		t.Fatal("selection text was adjusted in the palette")
 	}
-	if displayed, ok := v.textContrast[textContrastPair{c.SelectedName, c.Selected, themeContrastRules[contrastPrimary]}]; !ok || displayed != rgb(0xffffff) {
+	if displayed, ok := v.textContrast[textContrastPair{c.SelectedName, c.Selected, themeContrastRules[contrastPrimary], color.NRGBA{}}]; !ok || displayed != rgb(0xffffff) {
 		t.Fatalf("selected Seed did not render white on pink: %v (cached %v)", displayed, ok)
 	}
 	if v.resolvedTextOn(c.Foreground, c.Surface) != c.Foreground {
@@ -256,11 +259,11 @@ func TestPrimaryAndSecondaryContrastAreIndependentWhenColorsMatch(t *testing.T) 
 	var ops op.Ops
 	gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(800, 480))}
 	v.layout(gtx)
-	primary, ok := v.textContrast[textContrastPair{c.Foreground, c.Footer, themeContrastRules[contrastPrimary]}]
+	primary, ok := v.textContrast[textContrastPair{c.Foreground, c.Footer, themeContrastRules[contrastPrimary], color.NRGBA{}}]
 	if !ok || primary == c.Foreground || math.Abs(perceptualContrast(primary, c.Footer)) < themeContrastRules[contrastPrimary].targetLc {
 		t.Fatal("primary footer text did not retain its stronger requirement")
 	}
-	secondary, ok := v.textContrast[textContrastPair{c.Muted, c.Footer, themeContrastRules[contrastSecondary]}]
+	secondary, ok := v.textContrast[textContrastPair{c.Muted, c.Footer, themeContrastRules[contrastSecondary], color.NRGBA{}}]
 	if !ok || secondary != c.Muted {
 		t.Fatal("secondary footer position was corrected using the primary target")
 	}
@@ -282,10 +285,7 @@ func TestBackgroundContrastRuleUsesSameAPCASearch(t *testing.T) {
 	if resolved == background || math.Abs(perceptualContrast(foreground, resolved)) < rule.targetLc {
 		t.Fatal("background rule did not adjust the requested side")
 	}
-	// No production role currently registers a background-adjusting rule.
-	for _, active := range themeContrastRules {
-		if active.adjust != adjustForeground {
-			t.Fatal("background guard was enabled before selection work")
-		}
+	if themeContrastRules[contrastTextSelection].adjust != adjustBackground {
+		t.Fatal("text selection must adjust its background")
 	}
 }

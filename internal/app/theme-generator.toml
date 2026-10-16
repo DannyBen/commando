@@ -63,7 +63,8 @@ filename = 30
 # Resolve all bases before applying Vibrance and Color Shift, so neither
 # modifier compounds down an inheritance chain.
 # The generated palette stays unchanged by contrast guards. Displayed text is
-# resolved separately against its actual background; text selection is unguarded.
+# resolved separately against its actual background. Text selection keeps that
+# text color and gently corrects its background within display-policy limits.
 # Dynamics controls permitted differences; it does not force large differences.
 
 [colors.background]
@@ -107,9 +108,11 @@ hue.range = [-120, 120]
 
 [colors.text_selection]
 base = "selection"
-lightness.offset = 4
-lightness.range = [-4, 8]
-saturation.range = [-10, 10]
+# Stay closer to the editor surface and less saturated than file selection.
+lightness.offset = -6
+lightness.range = [-2, 2]
+saturation.center = 12
+saturation.range = [-4, 4]
 hue.range = [-30, 30]
 
 [colors.text]

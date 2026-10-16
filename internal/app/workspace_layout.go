@@ -149,7 +149,8 @@ func (v *view) labelFor(role contrastRole, gtx layout.Context, value string, siz
 	return v.rawLabel(gtx, value, size, v.resolvedTextFor(role, fg, v.currentTextBackground()), alignment)
 }
 
-// Raw labels are used for measurement and the unguarded text-selection sample.
+// Raw labels are used for measurement and selection samples whose foreground
+// was already resolved against the ordinary editor surface.
 func (v *view) rawLabel(gtx layout.Context, value string, size unit.Sp, fg color.NRGBA, alignment text.Alignment) layout.Dimensions {
 	label := material.Label(v.theme, size, value)
 	label.Font.Weight = v.appearance.FontWeight
