@@ -61,6 +61,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 				if len(s.results) == 0 {
 					return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							gtx.Constraints.Min.Y = 0
 							message := "No commands found"
 							if s.settingsMode {
 								message = "No settings found"

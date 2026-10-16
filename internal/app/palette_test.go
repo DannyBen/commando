@@ -456,7 +456,7 @@ func TestPalettePreview(t *testing.T) {
 	if directory == "" {
 		t.Skip("optional headless palette preview")
 	}
-	for _, query := range []string{"", "panel", "settings", "xyz"} {
+	for _, query := range []string{"", "panel", "settings", "xyz", "@xyz"} {
 		v := newPreviewView()
 		var ops op.Ops
 		v.startPalette(layout.Context{Ops: &ops})
