@@ -146,11 +146,11 @@ func TestStepperKeysKeepNativeEditingChoicesAndActions(t *testing.T) {
 		t.Fatal("stepper keys changed a setting while typing")
 	}
 	send(pressed(key.NameEscape))
-	s.selected = 0 // Mode is a choice, not a stepper.
+	s.selected = 0 // Mode is a choice, not a numeric stepper.
 	send()
-	send(pressed(key.NameHome), pressed(key.NameEnd), pressed(key.NamePageUp), pressed(key.NamePageDown))
+	send(pressed(key.NamePageUp), pressed(key.NamePageDown))
 	if s.selected != 0 || s.dirty || !reflect.DeepEqual(v.settingsValues.Clone(), before) {
-		t.Fatal("stepper keys affected a choice")
+		t.Fatal("page keys affected a choice")
 	}
 	s.selected, s.actionsFocused = 0, true
 	send()

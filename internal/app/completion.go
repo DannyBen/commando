@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -135,7 +136,19 @@ func (v *view) cycleCompletedSetting(key string, direction int) {
 	} else {
 		index = (index + direction + len(names)) % len(names)
 	}
-	value := settings.Value{Text: names[index]}
+	v.selectCompletedSetting(key, index)
+}
+
+func (v *view) selectCompletedSetting(key string, index int) {
+	s := v.settingsInteraction()
+	if s == nil || s.editing || s.pending || index < 0 || index >= len(s.completion.candidates) {
+		return
+	}
+	name := s.completion.candidates[index]
+	if strings.EqualFold(v.settingText(key), name) {
+		return
+	}
+	value := settings.Value{Text: name}
 	d, _ := settings.CatalogueDefault.Definition(key)
 	if len(d.ChoiceValues) > 0 {
 		value = settings.Value{Number: d.ChoiceValues[index]}
@@ -146,4 +159,46 @@ func (v *view) cycleCompletedSetting(key string, direction int) {
 		v.applySettings()
 		v.announceInteraction(eventValueChanged)
 	}
+}
+
+// Ordered choices share endpoints, independently of their value source. While
+// typing, native editor Home/End remains responsible for caret movement.
+func (v *view) settingsChoiceBoundary(gtx layout.Context, field settings.Field, ke key.Event) bool {
+	if ke.Modifiers != 0 || ke.Name != key.NameHome && ke.Name != key.NameEnd {
+		return false
+	}
+	s := v.settingsInteraction()
+	if s == nil || s.editing || s.pending || s.actionsFocused {
+		return false
+	}
+	if field.Control == "choice" {
+		d, _ := settings.CatalogueDefault.Definition(field.Key)
+		if len(d.Choices) == 0 {
+			return true
+		}
+		index := 0
+		if ke.Name == key.NameEnd {
+			index = len(d.Choices) - 1
+		}
+		if v.settingText(field.Key) != d.Choices[index] {
+			v.previewSettingValue(field.Key, settings.Value{Text: d.Choices[index]})
+		}
+		return true
+	}
+	if !s.completesField() {
+		return false
+	}
+	index := 0
+	if ke.Name == key.NameEnd {
+		index = len(s.completion.candidates) - 1
+	}
+	if field.Key == settingThemeElement {
+		elements := themeElements()
+		if index >= 0 && index < len(elements) {
+			v.switchThemeElement(gtx, elements[index].Key)
+		}
+	} else {
+		v.selectCompletedSetting(field.Key, index)
+	}
+	return true
 }

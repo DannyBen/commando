@@ -121,6 +121,9 @@ module/executable and `Commando` for the window title and data-folder name.
   metadata, independently of the semantic event-to-cue map. Preview sound setting
   changes through the same gate and master volume, with one cue; Off and zero
   volume remain silent. Stop active audio when profile or volume changes.
+- Choice and autocomplete steppers use Home/End for the first/last available
+  choice. Keep native caret movement while editing and leave the action bar
+  unchanged. Repeated endpoint presses and key releases stay silent.
 - Keyboard navigation plays the quiet semantic Navigation cue, when allowed by
   the sound profile, when the current
   row or active panel changes, including palette results and inline choices.

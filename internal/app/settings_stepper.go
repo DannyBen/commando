@@ -5,12 +5,16 @@ import (
 	"math/rand/v2"
 
 	"gioui.org/io/key"
+	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/settings"
 )
 
 // Stepper commands run only while browsing values. Native editor keys and the
 // action bar retain ownership while typing or choosing Save/Cancel/Reset.
-func (v *view) settingsStepperKey(field settings.Field, ke key.Event) bool {
+func (v *view) settingsStepperKey(gtx layout.Context, field settings.Field, ke key.Event) bool {
+	if v.settingsChoiceBoundary(gtx, field, ke) {
+		return true
+	}
 	if field.Control != "stepper" && field.Control != "stepper-progress" {
 		return false
 	}

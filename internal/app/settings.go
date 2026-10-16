@@ -737,8 +737,14 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	if !s.editing {
 		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow}, key.Filter{Focus: focus, Name: key.NameLeftArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameRightArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameSpace})
 		field := s.fields[s.selected]
-		if !s.actionsFocused && (field.Control == "stepper" || field.Control == "stepper-progress") {
-			filters = append(filters, key.Filter{Focus: focus, Name: key.NameHome}, key.Filter{Focus: focus, Name: key.NameEnd}, key.Filter{Focus: focus, Name: key.NamePageUp}, key.Filter{Focus: focus, Name: key.NamePageDown})
+		if !s.actionsFocused {
+			numeric := field.Control == "stepper" || field.Control == "stepper-progress"
+			if numeric || field.Control == "choice" || s.completesField() {
+				filters = append(filters, key.Filter{Focus: focus, Name: key.NameHome}, key.Filter{Focus: focus, Name: key.NameEnd})
+			}
+			if numeric {
+				filters = append(filters, key.Filter{Focus: focus, Name: key.NamePageUp}, key.Filter{Focus: focus, Name: key.NamePageDown})
+			}
 		}
 		if s.fields[s.selected].Control == "shortcut" {
 			filters = append(filters, key.Filter{Focus: focus, Name: key.NameDeleteForward})
@@ -775,7 +781,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		s.completion.update(&s.editor)
 	}
 	for _, ke := range keys {
-		if !s.editing && !s.actionsFocused && v.settingsStepperKey(s.fields[s.selected], ke) {
+		if !s.editing && !s.actionsFocused && v.settingsStepperKey(gtx, s.fields[s.selected], ke) {
 			continue
 		}
 		if ke.Modifiers == key.ModCtrl && (ke.Name == key.NameLeftArrow || ke.Name == key.NameRightArrow) {
