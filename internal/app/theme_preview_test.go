@@ -114,3 +114,38 @@ func TestThemePanelPreviewsRender(t *testing.T) {
 		}
 	}
 }
+
+func TestThemePreviewCurrentRowFallbackAndViewport(t *testing.T) {
+	for _, tc := range []struct {
+		name                        string
+		count, first, visible, want int
+	}{
+		{"empty", 0, 0, 0, -1},
+		{"parent only", 1, 0, 1, 0},
+		{"two rows", 2, 0, 2, 1},
+		{"three rows", 3, 0, 3, 2},
+		{"long listing", 10, 0, 10, 2},
+		{"scrolled listing", 10, 4, 6, 6},
+		{"two visible rows", 10, 4, 2, 5},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := newView(samplePanels())
+			p := &v.panels[0]
+			p.items = p.items[:tc.count]
+			p.list.Position.First, p.list.Position.Count = tc.first, tc.visible
+			p.selected = 0
+			v.active = 1
+			v.startSettingsWidget(settingThemeGenerator)
+			if row := v.themePreview(0).currentRow(p); row != tc.want {
+				t.Fatalf("preview current row %d, want %d", row, tc.want)
+			}
+			if p.selected != 0 || v.active != 1 {
+				t.Fatal("preview changed real selection or panel focus")
+			}
+			v.finishSettingsWidget(layout.Context{}, false)
+			if v.themePreview(0).currentRow(p) != p.selected {
+				t.Fatal("preview dismissal did not restore real current-row presentation")
+			}
+		})
+	}
+}

@@ -92,16 +92,20 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					size := image.Pt(gtx.Constraints.Max.X, rowHeight)
 					bg := v.appearance.Colors.Surface
 					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Metadata
+					current := preview.currentRow(p)
 					if naming {
 						bg = v.appearance.Colors.NameRow
 					} else {
 						active := storedRow == p.selected && index == v.active && transient < 0 && !p.navigating
+						if preview.selection {
+							active = storedRow == current
+						}
 						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, v.cutEntry(index, storedRow))
 					}
 					edge := color.NRGBA{}
 					if naming && v.nameInteraction().draft() {
 						edge = v.appearance.Colors.InlineEdge
-					} else if preview.marked(p, storedRow) || p.marks[storedRow] || (storedRow == p.selected && index != v.active) {
+					} else if preview.marked(p, storedRow) || p.marks[storedRow] || (storedRow == current && index != v.active && !preview.selection) {
 						edge = v.appearance.Colors.Edge
 					}
 					return v.fileRowSurface(gtx, size, bg, edge, func(gtx layout.Context) layout.Dimensions {

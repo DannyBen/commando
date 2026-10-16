@@ -29,6 +29,21 @@ func (v *view) themePreview(index int) themePanelPreview {
 	return themePanelPreview{}
 }
 
+func (preview themePanelPreview) currentRow(p *panel) int {
+	if !preview.selection {
+		return p.selected
+	}
+	first := max(0, p.list.Position.First)
+	count := len(p.items) - first
+	if p.list.Position.Count > 0 {
+		count = min(count, p.list.Position.Count)
+	}
+	if count <= 0 {
+		return -1
+	}
+	return first + min(2, count-1)
+}
+
 func (preview themePanelPreview) marked(p *panel, row int) bool {
 	if !preview.marks || !p.markable(row) {
 		return false
