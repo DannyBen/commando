@@ -7,65 +7,68 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
+	"github.com/dannyben/commando/internal/settings"
 )
 
-func TestThemePreviewUsesOnlyFirstPanel(t *testing.T) {
-	for count := 1; count <= 3; count++ {
-		v := newView(samplePanels()[:count])
-		v.startSettingsWidget(settingThemeGenerator)
-		for i := range v.panels {
-			preview := v.themePreview(i)
-			switch {
-			case i == 0:
-				if !preview.selection || !preview.marks || !reflect.DeepEqual(preview.messages, []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}) {
-					t.Fatal("first panel missing priority samples")
+func TestSettingsPanelPreviewProfilesAndIsolation(t *testing.T) {
+	for _, group := range []string{settingThemeGenerator, settingThemeSelect, settingThemeCustomize, "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
+		for count := 1; count <= 3; count++ {
+			v := newView(samplePanels()[:count])
+			v.startSettingsWidget(group)
+			preview := v.settingsPanelPreview(0)
+			if len(preview.rows) == 0 {
+				t.Fatal("missing synthetic preview", group)
+			}
+			theme := group == settingThemeGenerator || group == settingThemeSelect || group == settingThemeCustomize
+			if theme {
+				if !preview.textSelection || !reflect.DeepEqual(preview.messages, []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}) {
+					t.Fatal("theme preview lost full samples", group)
 				}
-			default:
-				if preview.selection || preview.marks || len(preview.messages) != 0 {
-					t.Fatal("additional panel has preview overrides")
+			} else if preview.textSelection || len(preview.messages) != 0 {
+				t.Fatal("Auto Colors preview contains unrelated samples", group)
+			}
+			for i := 1; i < count; i++ {
+				if other := v.settingsPanelPreview(i); len(other.rows) != 0 || other.textSelection || len(other.messages) != 0 {
+					t.Fatal("preview leaked to another panel", group)
 				}
+			}
+			v.finishSettingsWidget(layout.Context{}, false)
+			if preview := v.settingsPanelPreview(0); len(preview.rows) != 0 || preview.textSelection || len(preview.messages) != 0 {
+				t.Fatal("preview survived dismissal", group)
 			}
 		}
-		v.finishSettingsWidget(layout.Context{}, false)
-		for i := range v.panels {
-			preview := v.themePreview(i)
-			if preview.selection || preview.marks || len(preview.messages) != 0 {
-				t.Fatal("preview survived dismissal")
-			}
+	}
+	for _, group := range []string{"appearance.font", "appearance.padding.vertical", "appearance.padding.horizontal"} {
+		v := newPreviewView()
+		v.startSettingsWidget(group)
+		if len(v.settingsPanelPreview(0).rows) != 0 {
+			t.Fatal("unnecessary Font/Padding preview", group)
 		}
 	}
 }
 
-func TestThemePreviewMarksVisibleEligibleRowsWithoutChangingMarks(t *testing.T) {
-	v := newView(samplePanels())
-	p := &v.panels[0]
-	p.list.Position.First = 5
-	p.toggleMark(10)
-	before := maps.Clone(p.marks)
-	v.startSettingsWidget(settingThemeGenerator)
-	preview := v.themePreview(0)
-	for row := range p.items {
-		if got, want := preview.marked(p, row), row >= 5 && row <= 7; got != want {
-			t.Fatalf("row %d marked=%v want %v", row, got, want)
-		}
+func TestThemePreviewSamplesCoverDirectoryStates(t *testing.T) {
+	var folder, normal, selected, cut, marked, hidden, dot bool
+	for _, row := range themePreviewRows() {
+		folder = folder || row.file.Directory
+		normal = normal || (!row.selected && !row.cut)
+		selected = selected || row.selected
+		cut = cut || row.cut
+		marked = marked || row.marked
+		hidden = hidden || row.file.Hidden
+		dot = dot || strings.HasPrefix(row.file.Name, ".")
 	}
-	p.list.Position.First = 0
-	if preview.marked(p, 0) {
-		t.Fatal("parent row received a sample mark")
-	}
-	if !maps.Equal(before, p.marks) {
-		t.Fatal("sample marks changed real marks")
-	}
-	p.items = nil
-	if preview.marked(p, 0) {
-		t.Fatal("empty listing received a sample mark")
+	if !folder || !normal || !selected || !cut || !marked || !hidden || !dot {
+		t.Fatal("theme preview lacks representative directory states")
 	}
 }
 
@@ -115,37 +118,160 @@ func TestThemePanelPreviewsRender(t *testing.T) {
 	}
 }
 
-func TestThemePreviewCurrentRowFallbackAndViewport(t *testing.T) {
-	for _, tc := range []struct {
-		name                        string
-		count, first, visible, want int
+func TestAutoColorPreviewComparesNormalAndSelectedExtensions(t *testing.T) {
+	normal, selected := map[string]bool{}, map[string]bool{}
+	for _, row := range autoColorPreviewRows() {
+		if row.marked || row.cut {
+			t.Fatal("main Auto Colors preview contains unrelated states")
+		}
+		if row.selected {
+			selected[filepath.Ext(row.file.Name)] = true
+		} else {
+			normal[filepath.Ext(row.file.Name)] = true
+		}
+	}
+	if len(normal) < 3 || !reflect.DeepEqual(normal, selected) {
+		t.Fatal("missing comparable normal and selected extension samples")
+	}
+}
+
+func TestAutoColorSelectionPreviewSeparatesSelectionAndCutOffsets(t *testing.T) {
+	rows := selectionPreviewRows()
+	if len(rows) != 6 {
+		t.Fatal("expected four selection samples and two cut samples")
+	}
+	extensions := map[string]bool{}
+	for i, row := range rows {
+		if row.marked || row.file.Directory || row.file.Parent {
+			t.Fatal("unexpected sample styling")
+		}
+		if i < 4 {
+			if !row.selected || row.cut {
+				t.Fatal("first four rows must show ordinary selection backgrounds")
+			}
+			extensions[filepath.Ext(row.file.Name)] = true
+		} else {
+			if row.selected || !row.cut {
+				t.Fatal("last two rows must show cut filename colors without backgrounds")
+			}
+			if !extensions[filepath.Ext(row.file.Name)] {
+				t.Fatal("cut sample lacks a matching selection extension")
+			}
+		}
+	}
+	if len(extensions) != 4 {
+		t.Fatal("selected samples should compare four different extension colors")
+	}
+}
+
+func TestSpecialFilePreviewSeparatesHiddenDotfilesAndCombinedModifiers(t *testing.T) {
+	names := map[string]bool{}
+	for _, row := range specialFilePreviewRows() {
+		names[row.file.Name] = row.file.Hidden
+	}
+	for _, spec := range []struct {
+		name   string
+		hidden bool
 	}{
-		{"empty", 0, 0, 0, -1},
-		{"parent only", 1, 0, 1, 0},
-		{"two rows", 2, 0, 2, 1},
-		{"three rows", 3, 0, 3, 2},
-		{"long listing", 10, 0, 10, 2},
-		{"scrolled listing", 10, 4, 6, 6},
-		{"two visible rows", 10, 4, 2, 5},
+		{"normal-file.txt", false}, {"hidden-file.txt", true}, {".dotfile.txt", false}, {".hidden-dotfile.txt", true}, {"normal-noext", false}, {".dotfile-noext", false},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			v := newView(samplePanels())
+		hidden, exists := names[spec.name]
+		if !exists || hidden != spec.hidden {
+			t.Fatal("sample name does not describe its attributes", spec.name)
+		}
+	}
+	states := map[string]bool{}
+	for _, row := range specialFilePreviewRows() {
+		if row.marked || row.selected || row.cut {
+			t.Fatal("special file sample has unrelated styling")
+		}
+		dot := strings.HasPrefix(row.file.Name, ".")
+		ext := filenameColorKey(row.file)
+		states[fmt.Sprintf("%s/%t/%t", ext, row.file.Hidden, dot)] = true
+	}
+	for _, state := range []string{"extension:.txt/false/false", "extension:.txt/true/false", "extension:.txt/false/true", "extension:.txt/true/true", "category:._extless/false/false", "category:._extless_dotfile/false/true"} {
+		if !states[state] {
+			t.Fatal("missing comparison sample", state)
+		}
+	}
+}
+
+func TestSettingsPanelPreviewPreservesListingViewportClipboardAndEditor(t *testing.T) {
+	for _, group := range []string{settingThemeGenerator, settingThemeSelect, settingThemeCustomize, "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
+		for _, empty := range []bool{false, true} {
+			v := newPreviewView()
+			v.applySettings()
+			v.active = len(v.panels) - 1
+			origin := v.active
 			p := &v.panels[0]
-			p.items = p.items[:tc.count]
-			p.list.Position.First, p.list.Position.Count = tc.first, tc.visible
-			p.selected = 0
-			v.active = 1
-			v.startSettingsWidget(settingThemeGenerator)
-			if row := v.themePreview(0).currentRow(p); row != tc.want {
-				t.Fatalf("preview current row %d, want %d", row, tc.want)
+			if empty {
+				p.items = nil
+				p.drives = true
 			}
-			if p.selected != 0 || v.active != 1 {
-				t.Fatal("preview changed real selection or panel focus")
+			p.filter = "query"
+			p.list.Position.First, p.list.Position.Offset = 5, 3
+			p.feedback.Show(feedback.Warning, "Real warning")
+			if !empty {
+				p.toggleMark(10)
 			}
-			v.finishSettingsWidget(layout.Context{}, false)
-			if v.themePreview(0).currentRow(p) != p.selected {
-				t.Fatal("preview dismissal did not restore real current-row presentation")
+			v.cutClipboard = browser.FileClipboard{Move: true, Sequence: 7, Paths: []string{"existing-cut"}}
+			v.clipboardSequence = func() uint32 { return 7 }
+			selected, marks, items, position, message := p.selected, maps.Clone(p.marks), append([]entry(nil), p.items...), p.list.Position, p.feedback.Current()
+			clipboard := v.cutClipboard
+			before := v.settingsValues.Clone()
+			v.startSettingsWidget(group)
+			session := v.settingsInteraction()
+			for i, field := range session.fields {
+				if field.Control != "toggle" && field.Control != "choice" {
+					session.selected = i
+					break
+				}
 			}
-		})
+			send, _ := panelInputFrames(v)
+			send(pressed(key.NameReturn))
+			s := v.settingsInteraction()
+			send(key.EditEvent{Range: key.Range{End: len(s.editor.Text())}, Text: "12"})
+			a, b := s.editor.Selection()
+			var ops op.Ops
+			gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(800, 480))}
+			v.layout(gtx)
+			for _, metric := range []unit.Metric{{PxPerDp: 1, PxPerSp: 1}, {PxPerDp: 2, PxPerSp: 2}} {
+				ops.Reset()
+				v.layout(layout.Context{Ops: &ops, Metric: metric, Constraints: layout.Exact(image.Pt(360, 260))})
+			}
+			nextA, nextB := s.editor.Selection()
+			if !s.editing || s.editor.Text() != "12" || nextA != a || nextB != b {
+				t.Fatal("preview disturbed editor")
+			}
+			if v.active != origin || p.selected != selected || !maps.Equal(marks, p.marks) || !reflect.DeepEqual(items, p.items) || p.list.Position != position || p.filter != "query" || p.feedback.Current() != message || !reflect.DeepEqual(v.cutClipboard, clipboard) {
+				t.Fatal("preview changed browsing, viewport, feedback or clipboard state")
+			}
+			v.activateSettingsAction(layout.Context{}, 1)
+			if !reflect.DeepEqual(v.settingsValues.Clone(), before) || p.list.Position != position || !v.interaction.idle() || v.active != origin {
+				t.Fatal("Cancel did not restore settings and browsing")
+			}
+		}
+	}
+}
+
+func TestSettingsPanelPreviewRenders(t *testing.T) {
+	dir := os.Getenv("COMMANDO_PREVIEW_SETTINGS")
+	if dir == "" {
+		t.Skip("optional settings panel previews")
+	}
+	for _, theme := range builtInThemes {
+		for _, group := range []string{settingThemeGenerator, settingThemeSelect, settingThemeCustomize, "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
+			for _, enabled := range []bool{false, true} {
+				v := newPreviewView()
+				v.settingsValues = theme.values.Clone()
+				_ = v.settingsValues.Set(settings.CatalogueDefault, settingAutoColorEnabled, settings.Value{Bool: enabled})
+				v.applySettings()
+				v.startSettingsWidget(group)
+				name := fmt.Sprintf("%s-preview-%s-%t.png", theme.name, group, enabled)
+				if err := renderViewPNG(filepath.Join(dir, name), v); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
 	}
 }

@@ -14,7 +14,7 @@ import (
 
 func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 	p := &v.panels[index]
-	preview := v.themePreview(index)
+	preview := v.settingsPanelPreview(index)
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
 	smallTextHeight := v.textHeight(gtx, v.appearance.SmallTextSize)
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
@@ -33,7 +33,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
-				if preview.selection {
+				if preview.textSelection {
 					return v.themePreviewSelection(gtx)
 				}
 				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
@@ -43,6 +43,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			if len(preview.rows) > 0 {
+				return preview.layoutRows(v, gtx, p.metadata, rowHeight)
+			}
 			transient, extra := v.transientRows(index)
 			count := len(p.items) + extra
 			if count == 0 {
@@ -92,22 +95,18 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					size := image.Pt(gtx.Constraints.Max.X, rowHeight)
 					bg := v.appearance.Colors.Surface
 					nameColor, sizeColor := v.appearance.Colors.Filename, v.appearance.Colors.Metadata
-					current := preview.currentRow(p)
 					active, cut := false, false
 					if naming {
 						bg = v.appearance.Colors.NameRow
 					} else {
 						active = storedRow == p.selected && index == v.active && transient < 0 && !p.navigating
-						if preview.selection {
-							active = storedRow == current
-						}
 						cut = v.cutEntry(index, storedRow)
 						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, cut)
 					}
 					edge := color.NRGBA{}
 					if naming && v.nameInteraction().draft() {
 						edge = v.appearance.Colors.InlineEdge
-					} else if preview.marked(p, storedRow) || p.marks[storedRow] || (storedRow == current && index != v.active && !preview.selection) {
+					} else if p.marks[storedRow] || (storedRow == p.selected && index != v.active) {
 						edge = v.appearance.Colors.Edge
 					}
 					return v.fileRowSurface(gtx, size, bg, edge, func(gtx layout.Context) layout.Dimensions {
@@ -118,7 +117,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							}
 							return v.nameContents(gtx, metadata, sizeColor)
 						}
-						return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata, v.appearance.metadataContrastRole(p.items[storedRow].file, active, cut))
+						return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata, v.appearance.entryTextRoles(p.items[storedRow].file, active, cut))
 					})
 				}
 				if naming {
@@ -167,11 +166,13 @@ func (v *view) fileRowSurface(gtx layout.Context, size image.Point, background, 
 	return v.textOn(background, content)(gtx)
 }
 
-func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn, metadataRole contrastRole) layout.Dimensions {
-	return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			gtx.Constraints.Min.Y = 0
-			return v.columns(gtx, entry{name: mode.displayName(item), size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize, metadataRole)
+func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn, roles fileTextRoles) layout.Dimensions {
+	return v.textAs(roles.filename, func(gtx layout.Context) layout.Dimensions {
+		return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				gtx.Constraints.Min.Y = 0
+				return v.columns(gtx, entry{name: mode.displayName(item), size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata)
+			})
 		})
-	})
+	})(gtx)
 }

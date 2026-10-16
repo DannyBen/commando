@@ -90,15 +90,22 @@ func (t Theme) entryColors(file browser.Entry, active, cut bool) (background, fi
 	return
 }
 
-// Auto-colored, cut and selected metadata follows the filename's contrast rule.
-// Ordinary metadata uses the secondary-text policy regardless of RGB equality.
-func (t Theme) metadataContrastRole(file browser.Entry, active, cut bool) contrastRole {
+// File text roles keep filenames and matching metadata under one policy.
+// Only actual dimming states get the weaker floor; selected rows remain primary.
+type fileTextRoles struct{ filename, metadata contrastRole }
+
+func (t Theme) entryTextRoles(file browser.Entry, active, cut bool) fileTextRoles {
+	roles := fileTextRoles{contrastPrimary, contrastSecondary}
 	colors := defaultFilenameColors
 	if t.FilenameColors != nil {
 		colors = *t.FilenameColors
 	}
-	if active || cut || colors.enabled && file.Path == "" {
-		return contrastPrimary
+	generated := colors.enabled && file.Path == ""
+	if !active && !file.Parent && file.Path == "" && (cut || generated && (file.Hidden || strings.HasPrefix(file.Name, "."))) {
+		return fileTextRoles{contrastDimmedFile, contrastDimmedFile}
 	}
-	return contrastSecondary
+	if active || cut || generated {
+		roles.metadata = contrastPrimary
+	}
+	return roles
 }
