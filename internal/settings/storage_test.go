@@ -1,10 +1,12 @@
 package settings
 
 import (
+	"fmt"
 	"github.com/BurntSushi/toml"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"testing"
 )
 
@@ -228,5 +230,57 @@ func TestFilteredSaveFailureKeepsTransaction(t *testing.T) {
 	}
 	if !reflect.DeepEqual(values, before) {
 		t.Fatal("failed save modified transaction values")
+	}
+}
+
+func TestColorPrecisionStaysConciseThroughNormalizationAndSaveLoad(t *testing.T) {
+	for _, tc := range []struct {
+		key         string
+		input, want float64
+	}{
+		{"appearance.theme.colors.alt_background.hue", 90.11250000000001, 90.1125},
+		{"appearance.theme.colors.background.hue", 80.92790000000002, 80.9279},
+		{"appearance.theme.colors.background.hue", -10.1234567, 349.8765},
+		{"appearance.theme.colors.background.hue", 359.9999999, 0},
+		{"appearance.autocolor.lsh.saturation", 70.594642289, 70.5946},
+		{"appearance.autocolor.selection.lightness_points", -16.1234567, -16.1235},
+	} {
+		t.Run(fmt.Sprintf("%s/%g", tc.key, tc.input), func(t *testing.T) {
+			source := fmt.Sprintf("%s = %.17g\n", tc.key, tc.input)
+			values, err := Parse([]byte(source), CatalogueDefault)
+			if err != nil || values.Get(CatalogueDefault, tc.key).Number != tc.want {
+				t.Fatal("committed value not rounded after normalization", err, values.Get(CatalogueDefault, tc.key))
+			}
+			dir := t.TempDir()
+			var previous string
+			for attempt := 0; attempt < 3; attempt++ {
+				if err := Save(dir, values); err != nil {
+					t.Fatal(err)
+				}
+				data, err := os.ReadFile(filepath.Join(dir, "settings.toml"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if regexp.MustCompile(`\.\d{5}`).Match(data) {
+					t.Fatalf("excess fractional digits: %s", data)
+				}
+				if attempt > 0 && string(data) != previous {
+					t.Fatal("save/load changed serialized precision")
+				}
+				previous = string(data)
+				values, err = Load(dir, CatalogueDefault)
+				if err != nil || values.Get(CatalogueDefault, tc.key).Number != tc.want {
+					t.Fatal("round trip lost rounded value", err)
+				}
+			}
+		})
+	}
+	var values Values
+	const fontSize = 18.123456789
+	if err := values.Set(CatalogueDefault, "appearance.font.text_size", Value{Number: fontSize}); err != nil {
+		t.Fatal(err)
+	}
+	if values.Get(CatalogueDefault, "appearance.font.text_size").Number != fontSize {
+		t.Fatal("color precision affected an unrelated setting")
 	}
 }

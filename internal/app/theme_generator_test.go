@@ -146,3 +146,27 @@ func TestThemeGeneratorPreview(t *testing.T) {
 		}
 	}
 }
+
+func TestThemeGeneratorCommitsRoundedAutoColors(t *testing.T) {
+	v := newPreviewView()
+	v.applySettings()
+	v.startSettingsWidget(settingThemeGenerator)
+	if err := v.setWidgetValue(settingThemeGenerator+".vibrance", settings.Value{Number: 46}); err != nil {
+		t.Fatal(err)
+	}
+	v.applySettings()
+	if v.settingText(settingSaturation) != "70.5946" {
+		t.Fatal("generator saturation has excess decimals", v.settingText(settingSaturation))
+	}
+	for _, theme := range builtInThemes {
+		for _, d := range settings.CatalogueDefault.Settings {
+			if !themeSnapshotKey(d.Key) || d.Kind != settings.Number || d.Integer {
+				continue
+			}
+			n := theme.values.Get(settings.CatalogueDefault, d.Key).Number
+			if n != colorSettingNumber(n) {
+				t.Fatalf("%s %s retains decimal noise: %g", theme.name, d.Key, n)
+			}
+		}
+	}
+}

@@ -33,16 +33,17 @@ type Value struct {
 }
 
 type Definition struct {
-	Key      string
-	Kind     Kind
-	Default  Value
-	Minimum  float64
-	Maximum  *float64 // nil means unbounded.
-	Step     float64
-	Cycle    float64
-	Integer  bool
-	Choices  []string
-	Validate func(Value) error
+	DecimalPlaces int // Positive values limit committed numeric precision; zero retains full precision.
+	Key           string
+	Kind          Kind
+	Default       Value
+	Minimum       float64
+	Maximum       *float64 // nil means unbounded.
+	Step          float64
+	Cycle         float64
+	Integer       bool
+	Choices       []string
+	Validate      func(Value) error
 }
 
 type Group struct{ Key, Parent, Label string }
@@ -118,7 +119,10 @@ func (v *Values) Set(c Catalogue, key string, value Value) error {
 		return fmt.Errorf("%w: %s", ErrUnknownKey, key)
 	}
 	if d.Kind == Number && d.Cycle > 0 && !math.IsNaN(value.Number) && !math.IsInf(value.Number, 0) {
-		value.Number = math.Mod(math.Mod(value.Number, d.Cycle)+d.Cycle, d.Cycle)
+		value.Number = math.Mod(value.Number, d.Cycle)
+		if value.Number < 0 {
+			value.Number += d.Cycle
+		}
 	}
 	if d.Kind == Number && (math.IsNaN(value.Number) || math.IsInf(value.Number, 0) || value.Number < d.Minimum || d.Maximum != nil && value.Number > *d.Maximum) {
 		return fmt.Errorf("%w: %s", ErrRange, key)
@@ -130,6 +134,13 @@ func (v *Values) Set(c Catalogue, key string, value Value) error {
 		// Keep integer step increments exact in the numeric value store.
 		if math.Abs(value.Number) > 1<<53-1 {
 			return fmt.Errorf("%w: %s", ErrRange, key)
+		}
+	}
+	if d.Kind == Number && d.DecimalPlaces > 0 {
+		scale := math.Pow10(d.DecimalPlaces)
+		value.Number = math.Round(value.Number*scale) / scale
+		if d.Cycle > 0 && value.Number >= d.Cycle {
+			value.Number = 0
 		}
 	}
 	if d.Validate != nil {

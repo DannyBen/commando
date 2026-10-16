@@ -28,6 +28,8 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 	}
 	message := "Cannot read settings"
 	switch {
+	case errors.Is(err, errInitialThemeSave):
+		message = "Cannot save initial theme"
 	case errors.Is(err, settings.ErrRepaired):
 		message = "Settings error (auto-fixed)"
 	case errors.Is(err, settings.ErrRepairFailed):

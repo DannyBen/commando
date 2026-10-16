@@ -23,7 +23,7 @@ hue = 281.9385
 [appearance.theme.colors.text]
 lightness = 95.0648
 saturation = 12.6129
-hue = 265.79330000000004
+hue = 265.7933
 
 [appearance.theme.colors.secondary_text]
 lightness = 94.3839
@@ -38,12 +38,12 @@ hue = 299.4543
 [appearance.theme.colors.selection]
 lightness = 39.9309
 saturation = 35.3776
-hue = 301.52700000000004
+hue = 301.527
 
 [appearance.theme.colors.error]
 lightness = 91.3522
 saturation = 68.0131
-hue = 25.684500000000014
+hue = 25.6845
 
 [appearance.theme.colors.info]
 lightness = 91.8129
@@ -58,7 +58,7 @@ hue = 114.2079
 [appearance.theme.colors.warning]
 lightness = 91.4502
 saturation = 67.6172
-hue = 109.83109999999999
+hue = 109.8311
 
 [appearance.autocolor]
 enabled = true

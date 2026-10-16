@@ -49,7 +49,7 @@ func Run() error {
 	if folderErr != nil {
 		store.chosen = "" // Saving a choice can repair an unreadable startup pointer.
 	}
-	settingsValues, settingsErr := settings.LoadAndRepair(dataDir, bindingSettingsCatalogue())
+	settingsValues, settingsErr := loadStartupSettings(dataDir, systemPrefersDarkTheme)
 	if settingsErr != nil {
 		fmt.Fprintln(os.Stderr, "settings:", settingsErr)
 	}

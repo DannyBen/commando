@@ -23,6 +23,12 @@ func embeddedCatalogue() Catalogue {
 	if err != nil {
 		panic(fmt.Errorf("embedded settings: %w", err))
 	}
+	for i := range c.Settings {
+		d := &c.Settings[i]
+		if d.Kind == Number && !d.Integer && (strings.HasPrefix(d.Key, "appearance.theme.colors.") || strings.HasPrefix(d.Key, "appearance.autocolor.")) {
+			d.DecimalPlaces = 4
+		}
+	}
 	return c
 }
 
