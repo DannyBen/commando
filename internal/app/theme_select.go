@@ -88,10 +88,7 @@ func (v *view) selectTheme(name string) error {
 		return fmt.Errorf("theme selector unavailable")
 	}
 	name = strings.TrimSpace(name)
-	if name == "Current theme" && s.themeName == "" {
-		return nil
-	}
-	for _, theme := range builtInThemes {
+	for _, theme := range s.themes {
 		if !strings.EqualFold(name, theme.name) {
 			continue
 		}
@@ -105,6 +102,9 @@ func (v *view) selectTheme(name string) error {
 		}
 		s.themeName, s.dirty, s.errorText = theme.name, true, ""
 		v.settingsValues = values
+		return nil
+	}
+	if name == "Current theme" && s.themeName == "" {
 		return nil
 	}
 	return fmt.Errorf("unknown theme: %s", name)

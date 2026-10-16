@@ -58,6 +58,9 @@ func (v *view) offerNameDraft(gtx layout.Context) {
 		if len(result.clipboard.ImagePNG) > 0 {
 			message = "Paste cancelled"
 		}
+		if result.request.fileDraft != nil {
+			message = "Save cancelled"
+		}
 		v.showFeedback(panel, feedback.Info, message)
 		return
 	}
@@ -66,12 +69,13 @@ func (v *view) offerNameDraft(gtx layout.Context) {
 	}
 	v.pendingNameDraft = nil
 	p := &v.panels[panel]
+	if draft := result.request.fileDraft; draft != nil {
+		v.beginFileDraft(gtx, panel, draft.name, draft.data)
+		return
+	}
 	if len(result.clipboard.ImagePNG) > 0 {
 		v.transferPending = false
-		r := &nameSession{kind: nameCreateFile, panel: panel, path: p.path,
-			row: max(0, min(p.selected+1, len(p.items))), data: result.clipboard.ImagePNG,
-			previousPosition: p.list.Position, previousReveal: p.reveal}
-		v.beginName(gtx, r, "file.png", false)
+		v.beginFileDraft(gtx, panel, "file.png", result.clipboard.ImagePNG)
 		return
 	}
 	source, name := result.duplicatePlan.DuplicateSubject()

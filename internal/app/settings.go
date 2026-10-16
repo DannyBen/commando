@@ -92,12 +92,21 @@ func settingsGroupLabel(key string) string {
 func (v *view) settingsCatalogue() []command {
 	var catalogue []command
 	themeAdded := false
-	widgets := append(slices.Clone(settings.CatalogueDefault.UI.Widgets), themeSelectWidget)
+	widgets := append(slices.Clone(settings.CatalogueDefault.UI.Widgets), themeSelectWidget, themeSaveWidget)
 	for _, widget := range widgets {
 		if !widget.Visible {
 			continue
 		}
 		key := widget.Key
+		if key == settingThemeSave {
+			catalogue = append(catalogue, v.resolveCommandBindings(command{id: "settings." + key,
+				group: settingsGroupLabel(widget.Parent), name: widget.Label,
+				available: func(v *view) bool {
+					return v.activeDataFolder != "" && v.loader != nil && v.canOfferInteraction(v.active, actionMutation)
+				},
+				execute: func(v *view) { v.saveThemeFile() }}))
+			continue
+		}
 		if isThemeColorWidget(key) {
 			if themeAdded {
 				continue
@@ -166,6 +175,7 @@ type settingsSession struct {
 	dirty              bool
 	completion         inlineCompletion
 	themeName          string // Selected snapshot name, confined to this transaction.
+	themes             []themeSnapshot
 	bindingCommand     *command
 	capturing          bool
 }
@@ -202,7 +212,9 @@ func (v *view) startSettingsWidget(group string) {
 		return
 	}
 	if s := v.newSettingsWidget(group); s != nil {
-		v.startInteraction(s)
+		if v.startInteraction(s) && group == settingThemeSelect {
+			v.loadThemeLibrary(s)
+		}
 	}
 }
 func (v *view) newSettingsWidget(group string) *settingsSession {
@@ -230,7 +242,8 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 	}
 	if group == settingThemeSelect {
 		s.fields = []settings.Field{{Key: settingThemeSelect, Widget: settingThemeSelect, Label: "Theme", Control: "input"}}
-		for _, theme := range builtInThemes {
+		s.themes = slices.Clone(builtInThemes)
+		for _, theme := range s.themes {
 			s.completion.candidates = append(s.completion.candidates, theme.name)
 			if theme.matches(v.settingsValues) {
 				s.themeName = theme.name

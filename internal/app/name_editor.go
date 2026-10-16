@@ -40,6 +40,20 @@ type nameSession struct {
 	previousReveal    bool
 }
 
+// Captured contents use the same draft and exclusive creation as an empty file.
+type fileDraftRequest struct {
+	name string
+	data []byte
+}
+
+func (v *view) beginFileDraft(gtx layout.Context, panel int, name string, data []byte) {
+	p := &v.panels[panel]
+	r := &nameSession{kind: nameCreateFile, panel: panel, path: p.path,
+		row: max(0, min(p.selected+1, len(p.items))), data: data,
+		previousPosition: p.list.Position, previousReveal: p.reveal}
+	v.beginName(gtx, r, name, false)
+}
+
 func (n *nameSession) draft() bool { return n.kind != nameRename && !n.finished }
 
 func (v *view) startName(gtx layout.Context, kind nameOperation) {

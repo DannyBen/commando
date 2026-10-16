@@ -30,6 +30,8 @@ type loadRequest struct {
 	settingsSave     *settingsSaveRequest
 	editor           *editorRequest
 	fontFamilies     bool
+	fileDraft        *fileDraftRequest
+	themeLibrary     *settingsSession
 }
 
 type loadResult struct {
@@ -53,6 +55,7 @@ type loadResult struct {
 	externalOpen      bool
 	fontFamilies      []string
 	pathMissing       bool
+	themes            []themeSnapshot
 }
 
 type directoryLoader struct {
@@ -105,6 +108,14 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
+				if request.themeLibrary != nil {
+					themes, err := readThemeLibrary(request.path)
+					l.results <- loadResult{request: request, themes: themes, err: err}
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
 				if request.fontFamilies {
 					l.results <- loadResult{request: request, fontFamilies: readFontFamilies()}
 					if invalidate != nil {
@@ -188,6 +199,11 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 						for pi, resolved := range result.locations {
 							sameDirectory[pi] = resolved != "" && samePath(filepath.Clean(resolved), recycled.Directory)
 						}
+					}
+				} else if request.fileDraft != nil {
+					err = os.MkdirAll(request.path, 0700)
+					if err == nil {
+						directory, err = l.readDirectory(request.path)
 					}
 				} else if request.shortcut {
 					target, resolveErr := l.folderShortcutTarget(request.path)

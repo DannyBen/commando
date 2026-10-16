@@ -95,10 +95,14 @@ func (v *view) acceptLoad(result loadResult) {
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
 	}
+	if s := result.request.themeLibrary; s != nil {
+		v.acceptThemeLibrary(s, result.themes, result.err)
+		return
+	}
 	if result.request.fontFamilies {
 		v.fontFamiliesLoading = false
 		v.fontFamilies = append([]string{}, result.fontFamilies...)
-		if s := v.settingsInteraction(); s != nil && !isThemeWidget(s) {
+		if s := v.settingsInteraction(); s != nil && len(s.fields) > 0 && s.fields[0].Key == settingFontFamily {
 			s.completion.candidates = v.fontFamilyChoices()
 			s.completion.update(&s.editor)
 		}
@@ -212,6 +216,9 @@ func (v *view) acceptLoad(result loadResult) {
 		v.showFeedback(result.request.panel, feedback.Warning, "Path not found")
 	} else if result.request.successMessage != "" {
 		v.showFeedback(result.request.panel, feedback.Info, result.request.successMessage)
+	}
+	if result.request.fileDraft != nil {
+		v.pendingNameDraft = &result
 	}
 }
 
