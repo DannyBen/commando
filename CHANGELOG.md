@@ -1,6 +1,65 @@
 Changelog
 ========================================
 
+v0.3.0 - 2026-10-16
+----------------------------------------
+
+- Add preliminary settings model
+- Reafacor settings as TOML
+- Organize settings
+- Allow choosing data location
+- Expose settings in command palette
+- File editors and edit command
+- Allow disabling auto color
+- Sound settings (on/off)
+- Notification animation settings (on/off)
+- Fix regression: Error on invalid Alt+D folder
+- Avoid saving default settings in user file
+- Folder .lnk files open in app
+- Fix filtering commit sound
+- Accept environment variables in location bar
+- Additional autocolor settings
+- Font settings
+- Update gio to fix fallback glyphs
+- Autocomplete font family
+- Switch to Victor Mono as default font
+- Fix Ctrl+Backspace in input fields
+- Ctrl+Shift+C to copy paths
+- Shift+Insert to paste
+- Change autocolor from hue rotation to salted random
+- Normalize padding values
+- Settings > Appearance > Padding
+- Change default padding
+- Application > Open data folder
+- Refactor command dispatch and model dual key bindings
+- Allow overriding key bindings
+- Ctrl+E to edit command palette shortcut
+- Allow shortcut config for special keys
+- Allow adding shortcuts to settings widgets
+- Fix reset button sound
+- Allow adding shortcuts to program rules
+- Refactor sound map internals
+- Alt+D accepts filenames
+- Add theme settings
+- Update color controls
+- Add swatch to Hue control
+- Remove selected file edge color
+- Refactor theme editor
+- Ctrl+Left/Right in stepper fields for larger steps
+- Notify on opening Data Folder
+- Add theme generator
+- Implement APCA contrast for selected text
+- Refactor theme generator controls
+- Live theme generator preview
+- Update theme generator values
+- Refactor APCA contrast guard
+- Show file selection in theme preview
+- Allow different APCA target per UI component
+- Implement APCA guard for text selection
+- Support PgUp/PgDn/Home/End in input steppers
+- Fix No Command Found padding
+
+
 v0.2.0 - 2026-10-13
 ----------------------------------------
 
