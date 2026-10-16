@@ -95,7 +95,11 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 							if focused && !s.editing && field.Control != "toggle" && field.Control != "choice" {
 								paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, textHeight)}.Op())
 							}
-							dims := (layout.Inset{Left: 4, Right: 4}).Layout(gtx, control)
+							background := v.appearance.Colors.Surface
+							if focused && !s.editing && field.Control != "toggle" && field.Control != "choice" {
+								background = v.appearance.Colors.Selected
+							}
+							dims := (layout.Inset{Left: 4, Right: 4}).Layout(gtx, v.textOn(background, control))
 							if field.Control == "stepper-progress" {
 								ratio := (v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number - d.Minimum) / (*d.Maximum - d.Minimum)
 								y := textHeight - gtx.Dp(1)
@@ -138,8 +142,8 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 				gtx.Source = gtx.Source.Disabled()
 			}
 			return s.actions.layout(gtx, s.actionLabels(), selected, rowHeight, v.appearance.Colors,
-				func(gtx layout.Context, label string, fg color.NRGBA) layout.Dimensions {
-					return v.label(gtx, label, v.appearance.TextSize, fg, text.Middle)
+				func(gtx layout.Context, label string, fg, bg color.NRGBA) layout.Dimensions {
+					return v.rawLabel(gtx, label, v.appearance.TextSize, v.resolvedTextOn(fg, bg), text.Middle)
 				})
 		}))
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -253,7 +257,12 @@ func (v *view) settingsChoice(gtx layout.Context, label string, selected, focuse
 		fg = v.appearance.Colors.Muted
 		fg.A = uint8(uint16(fg.A) * 4 / 5)
 	}
-	dims := v.label(gtx, label, v.appearance.TextSize, fg, text.Start)
+	background := v.currentTextBackground()
+	if focused && selected {
+		background = v.appearance.Colors.Selected
+	}
+	fg = v.resolvedTextOn(fg, background)
+	dims := v.rawLabel(gtx, label, v.appearance.TextSize, fg, text.Start)
 	if selected && !focused {
 		padding := v.textWidth(gtx, " ", v.appearance.TextSize)
 		y := max(0, height-gtx.Dp(1))

@@ -5,32 +5,57 @@ import (
 	"math"
 )
 
-func themeLuminance(c color.NRGBA) float64 {
-	linear := func(n uint8) float64 {
-		x := float64(n) / 255
-		if x <= 0.04045 {
-			return x / 12.92
-		}
-		return math.Pow((x+0.055)/1.055, 2.4)
-	}
-	return 0.2126*linear(c.R) + 0.7152*linear(c.G) + 0.0722*linear(c.B)
-}
+const textContrastMinimumLc = 75
 
-func themeContrast(a, b color.NRGBA) float64 {
-	x, y := themeLuminance(a), themeLuminance(b)
-	return (max(x, y) + 0.05) / (min(x, y) + 0.05)
-}
-
-// Selection retains normal text at Lc 75, otherwise uses the stronger neutral.
-// Lc 75 is the initial policy for Commando's small interface text. Rank absolute
-// magnitudes while retaining the signed scores in the underlying APCA function.
-func selectionTextColor(text, background color.NRGBA) color.NRGBA {
-	if math.Abs(perceptualContrast(text, background)) >= 75 {
+// Resolve one foreground/background edge using APCA alone. Prefer the nearest
+// passing lightness along the original hue/chroma; RGB conversion reduces chroma
+// only where needed to fit the gamut. If no candidate can pass, keep the strongest
+// contrast found, including black and white. Results are cached by the caller.
+func readableTextColor(text, background color.NRGBA) color.NRGBA {
+	score := func(value color.NRGBA) float64 { return math.Abs(perceptualContrast(value, background)) }
+	visible := compositeText(text, background)
+	if score(visible) >= textContrastMinimumLc {
 		return text
 	}
-	black, white := rgb(0), rgb(0xffffff)
-	if math.Abs(perceptualContrast(white, background)) > math.Abs(perceptualContrast(black, background)) {
-		return white
+	base := oklchFromRGB(visible)
+	best, bestScore := text, score(visible)
+	nearest, distance := text, math.Inf(1)
+	for _, endpoint := range []float64{0, 1} {
+		extreme := rgb(0)
+		if endpoint == 1 {
+			extreme = rgb(0xffffff)
+		}
+		extremeScore := score(extreme)
+		if extremeScore > bestScore {
+			best, bestScore = extreme, extremeScore
+		}
+		// Black and white bound APCA contrast in each lightness direction.
+		if extremeScore < textContrastMinimumLc {
+			continue
+		}
+		low, high := 0.0, 1.0
+		passing := extreme
+		for range 16 {
+			fraction := (low + high) / 2
+			candidate := base
+			candidate.l += (endpoint - base.l) * fraction
+			value := candidate.rgb()
+			contrast := score(value)
+			if contrast > bestScore {
+				best, bestScore = value, contrast
+			}
+			if contrast >= textContrastMinimumLc {
+				high, passing = fraction, value
+			} else {
+				low = fraction
+			}
+		}
+		if change := high * math.Abs(endpoint-base.l); change < distance {
+			nearest, distance = passing, change
+		}
 	}
-	return black
+	if !math.IsInf(distance, 1) {
+		return nearest
+	}
+	return best
 }

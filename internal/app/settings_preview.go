@@ -15,6 +15,7 @@ import (
 type previewSample struct {
 	label                        string
 	foreground, background, edge color.NRGBA
+	textSelection                bool
 }
 type previewSamples []previewSample
 
@@ -26,19 +27,19 @@ func (v *view) settingsPreviewItems(kind string) previewSamples {
 	switch kind {
 	case "notifications":
 		return previewSamples{
-			{"Info", c.Info, c.Footer, color.NRGBA{}},
-			{"Success", c.Success, c.Footer, color.NRGBA{}},
-			{"Warning", c.Warning, c.Footer, color.NRGBA{}},
-			{"Error", c.Error, c.Footer, color.NRGBA{}},
+			{"Info", c.Info, c.Footer, color.NRGBA{}, false},
+			{"Success", c.Success, c.Footer, color.NRGBA{}, false},
+			{"Warning", c.Warning, c.Footer, color.NRGBA{}, false},
+			{"Error", c.Error, c.Footer, color.NRGBA{}, false},
 		}
 	case "edge":
-		return previewSamples{{"Accent mark", c.Foreground, c.Surface, c.Edge}}
+		return previewSamples{{"Accent mark", c.Foreground, c.Surface, c.Edge, false}}
 	case "secondary":
 		return sample("Secondary text", c.Muted, c.Surface)
 	case "selected_text":
 		return sample("Selected text", c.SelectedName, c.Selected)
 	case "text_selection":
-		return sample("Selected text", c.EditorText, c.TextSelection)
+		return previewSamples{{label: "Selected text", foreground: v.resolvedTextOn(c.EditorText, c.Surface), background: c.TextSelection, textSelection: true}}
 	case "info":
 		return sample("Info text", c.Info, c.Footer)
 	case "success":
@@ -63,6 +64,9 @@ func (samples previewSamples) layout(v *view, gtx layout.Context, height int) la
 				return layout.Inset{Left: unit.Dp(8), Right: unit.Dp(8)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						gtx.Constraints.Min.Y = 0
+						if sample.textSelection {
+							return v.rawLabel(gtx, sample.label, v.appearance.TextSize, sample.foreground, text.Start)
+						}
 						return v.label(gtx, sample.label, v.appearance.TextSize, sample.foreground, text.Start)
 					})
 				})

@@ -2,6 +2,7 @@ package app
 
 import (
 	"image"
+	"image/color"
 	"time"
 
 	"gioui.org/layout"
@@ -53,6 +54,8 @@ type view struct {
 	fontFamilies        []string
 	fontFamiliesLoading bool
 
+	textBackground    color.NRGBA
+	textContrast      textContrastCache
 	appearance        Theme
 	theme             *material.Theme
 	panels            []panel

@@ -94,7 +94,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 						}
 						paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 						gtx.Constraints = layout.Exact(size)
-						return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return v.contentInset().Layout(gtx, v.textOn(bg, func(gtx layout.Context) layout.Dimensions {
 							return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 								gtx.Constraints.Min.Y = 0
 								result := s.results[row]
@@ -104,7 +104,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 									return v.label(gtx, result.command.shortcut(), v.appearance.SmallTextSize, fg, text.End)
 								})
 							})
-						})
+						}))
 					})
 				})
 			}),

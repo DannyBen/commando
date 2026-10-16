@@ -158,7 +158,7 @@ func (v *view) fileRowSurface(gtx layout.Context, size image.Point, background, 
 		paint.FillShape(gtx.Ops, edge, clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
 	}
 	gtx.Constraints = layout.Exact(size)
-	return content(gtx)
+	return v.textOn(background, content)(gtx)
 }
 
 func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn) layout.Dimensions {

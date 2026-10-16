@@ -15,7 +15,8 @@ func themeColorsFromSettings(values settings.Values) ThemeColors {
 		Selected: get("selection"), TextSelection: get("text_selection"),
 		Info: get("info"), Success: get("success"), Warning: get("warning"), Error: get("error"),
 	}
-	c.SelectedName = selectionTextColor(c.Foreground, c.Selected)
+	// Selection aliases retain requested text; the shared render guard resolves it.
+	c.SelectedName = c.Foreground
 	c.Footer = c.Header
 	c.Filename, c.Metadata = c.Foreground, c.Muted
 	c.ActiveLocation = c.Edge

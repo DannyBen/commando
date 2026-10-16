@@ -1,7 +1,6 @@
 package app
 
 import (
-	"image/color"
 	"math"
 	"reflect"
 	"strings"
@@ -248,7 +247,7 @@ func TestThemeRecipeRejectsInvalidComponentsAndResponses(t *testing.T) {
 	}
 }
 
-func TestThemeGeneratorDeterministicReadableAndGray(t *testing.T) {
+func TestThemeGeneratorDeterministicAndGray(t *testing.T) {
 	for _, mode := range []string{"Dark", "Midtone", "Light"} {
 		for seed := uint64(1); seed <= 30; seed++ {
 			for _, dynamics := range []float64{1, 35, 100} {
@@ -267,39 +266,39 @@ func TestThemeGeneratorDeterministicReadableAndGray(t *testing.T) {
 							t.Fatalf("%s colored at zero Vibrance", name)
 						}
 					}
-					for _, name := range []string{"text", "secondary_text", "error", "info", "success", "warning"} {
-						backgrounds := []string{"background", "alt_background"}
-						if name == "text" {
-							backgrounds = append(backgrounds, "text_selection")
-						}
-						for _, bg := range backgrounds {
-							if ratio := themeContrast(colors[name].rgb(), colors[bg].rgb()); ratio < 4.5 {
-								t.Fatalf("%s seed %d dynamics %g vibrance %g: %s on %s contrast %.3f", mode, seed, dynamics, vibrance, name, bg, ratio)
-							}
-						}
-					}
 				}
 			}
 		}
 	}
 }
 
-func TestThemeContrastWithColorfulTextAndSelectionSurface(t *testing.T) {
-	text := (lshColor{54.5225, 100, 333.2329}).oklch()
-	backgrounds := []color.NRGBA{
-		(lshColor{90.0936, 61.0815, 242.8279}).oklch().rgb(),
-		(lshColor{94.161, 74.864, 304.7657}).oklch().rgb(),
-		(lshColor{63.2168, 100, 161.222}).oklch().rgb(),
-	}
-	corrected := readableThemeColor(text, backgrounds, 4.5)
-	t.Logf("raw RGB=%v corrected RGB=%v; lightness %.4f -> %.4f", text.rgb(), corrected.rgb(), text.l*100, corrected.l*100)
-	for i, bg := range backgrounds {
-		t.Logf("surface %d contrast %.3f -> %.3f", i, themeContrast(text.rgb(), bg), themeContrast(corrected.rgb(), bg))
-		if themeContrast(corrected.rgb(), bg) < 4.5 {
-			t.Fatal("corrected text does not satisfy shared surface contrast")
+func TestThemeGeneratorPreservesRequestedColorsDespitePoorContrast(t *testing.T) {
+	r := partialThemeRecipe(t, `[colors.background]
+base = "mode_background"
+lightness.center = 50
+[colors.alt_background]
+base = "background"
+[colors.text_selection]
+base = "background"
+[colors.text]
+base = "background"
+`)
+	options := themeGeneration{"Light", 127, 50, 100, 96}
+	before := r.generate(options, nil)
+	for _, name := range []string{"background", "alt_background", "text_selection", "text"} {
+		if before[name].l != 0.5 {
+			t.Fatalf("generator contrast-corrected %s", name)
 		}
 	}
-	if corrected.l >= text.l {
-		t.Fatal("guard did not darken the supplied text example")
+	// Changing selection cannot change the generated primary text or surfaces.
+	rule := r.Colors["text_selection"]
+	center := 10.0
+	rule.Lightness.Center = &center
+	r.Colors["text_selection"] = rule
+	after := r.generate(options, nil)
+	for _, name := range []string{"background", "alt_background", "text"} {
+		if before[name] != after[name] {
+			t.Fatalf("selection influenced generated %s", name)
+		}
 	}
 }

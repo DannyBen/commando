@@ -67,12 +67,12 @@ func (v *view) bandWithInset(gtx layout.Context, height int, bg color.NRGBA, ins
 	// Content can fill its row, but must not paint over the separating border
 	// or outside the band. Keep layout metrics unchanged for text alignment.
 	contentArea := clip.Rect{Max: image.Pt(size.X, max(0, size.Y-gtx.Dp(1)))}.Push(gtx.Ops)
-	inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	inset.Layout(gtx, v.textOn(bg, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
 			return content(gtx)
 		})
-	})
+	}))
 	contentArea.Pop()
 	return layout.Dimensions{Size: size}
 }
@@ -142,6 +142,11 @@ func (v *view) trailingLayout(gtx layout.Context, name, metadata layout.Widget) 
 }
 
 func (v *view) label(gtx layout.Context, value string, size unit.Sp, fg color.NRGBA, alignment text.Alignment) layout.Dimensions {
+	return v.rawLabel(gtx, value, size, v.resolvedText(fg), alignment)
+}
+
+// Raw labels are used for measurement and the unguarded text-selection sample.
+func (v *view) rawLabel(gtx layout.Context, value string, size unit.Sp, fg color.NRGBA, alignment text.Alignment) layout.Dimensions {
 	label := material.Label(v.theme, size, value)
 	label.Font.Weight = v.appearance.FontWeight
 	label.Color, label.Alignment, label.MaxLines = fg, alignment, 1
@@ -153,7 +158,7 @@ func (v *view) label(gtx layout.Context, value string, size unit.Sp, fg color.NR
 func (v *view) textHeight(gtx layout.Context, size unit.Sp) int {
 	gtx.Constraints = layout.Constraints{Max: image.Pt(1_000_000, 1_000_000)}
 	macro := op.Record(gtx.Ops)
-	dims := v.label(gtx, "Mg", size, v.appearance.Colors.Foreground, text.Start)
+	dims := v.rawLabel(gtx, "Mg", size, v.appearance.Colors.Foreground, text.Start)
 	macro.Stop()
 	return dims.Size.Y
 }

@@ -339,6 +339,7 @@ func (v *view) adjustSetting(key string, direction int) {
 	}
 }
 func (v *view) applySettings() {
+	clear(v.textContrast)
 	v.updateNativeBindings()
 	c := settings.CatalogueDefault
 	v.appearance.Colors = themeColorsFromSettings(v.settingsValues)

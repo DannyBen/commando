@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"fmt"
-	"image/color"
 	"maps"
 	"math"
 	"slices"
@@ -197,7 +196,6 @@ func (r themeRecipe) generate(options themeGeneration, retained map[string]lshCo
 	for name, value := range colors {
 		resolved[name] = value.oklch()
 	}
-	r.correctContrast(resolved, options.Mode)
 
 	for name := range resolved {
 		if _, included := r.Colors[name]; !included {
@@ -206,84 +204,6 @@ func (r themeRecipe) generate(options themeGeneration, retained map[string]lshCo
 	}
 
 	return resolved
-}
-
-func (r themeRecipe) correctContrast(resolved map[string]oklchColor, mode string) {
-	m := r.Modes[mode]
-	// Measure the displayed sRGB colors, including gamut mapping and rounding.
-	// Main text also appears in the location bar and native text selection.
-	backgrounds := []color.NRGBA{resolved["background"].rgb(), resolved["alt_background"].rgb(), resolved["text_selection"].rgb()}
-	// Widely separated surfaces can make a shared text color impossible. In
-	// that case, bring generated surfaces back into the mode's readable range
-	// before correcting text. Omitted colors remain untouched.
-	if _, included := r.Colors["text"]; included {
-		candidate := readableThemeColor(resolved["text"], backgrounds, 4.5)
-		for _, bg := range backgrounds {
-			if themeContrast(candidate.rgb(), bg) >= 4.5 {
-				continue
-			}
-			endpoint := color.NRGBA{A: 255}
-			if m.Text > m.Background {
-				endpoint = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-			}
-			for i, name := range []string{"background", "alt_background", "text_selection"} {
-				if _, generated := r.Colors[name]; generated {
-					resolved[name] = readableThemeColor(resolved[name], []color.NRGBA{endpoint}, 4.5)
-					backgrounds[i] = resolved[name].rgb()
-				}
-			}
-			break
-		}
-	}
-	// Contrast correction may only update colors included in this recipe.
-	for _, name := range []string{"text", "secondary_text", "error", "info", "success", "warning"} {
-		if _, included := r.Colors[name]; !included {
-			continue
-		}
-		against := backgrounds[:2]
-		if name == "text" {
-			against = backgrounds
-		}
-		resolved[name] = readableThemeColor(resolved[name], against, 4.5)
-	}
-}
-
-// Keep the intended color when readable; otherwise move its lightness toward
-// the nearest readable endpoint. Chroma/hue survive, subject to gamut mapping.
-func readableThemeColor(value oklchColor, backgrounds []color.NRGBA, ratio float64) oklchColor {
-	score := func(c oklchColor) float64 {
-		minimum := math.Inf(1)
-		for _, bg := range backgrounds {
-			minimum = min(minimum, themeContrast(c.rgb(), bg))
-		}
-		return minimum
-	}
-	if score(value) >= ratio {
-		return value
-	}
-	best, distance := value, math.Inf(1)
-	for _, endpoint := range []float64{0, 1} {
-		candidate := value
-		candidate.l = endpoint
-		if score(candidate) < ratio {
-			continue
-		}
-		low, high := 0.0, 1.0
-		for range 24 {
-			middle := (low + high) / 2
-			candidate.l = value.l + (endpoint-value.l)*middle
-			if score(candidate) >= ratio {
-				high = middle
-			} else {
-				low = middle
-			}
-		}
-		candidate.l = value.l + (endpoint-value.l)*high
-		if d := math.Abs(candidate.l - value.l); d < distance {
-			best, distance = candidate, d
-		}
-	}
-	return best
 }
 
 // Generator output becomes ordinary editable colors. Subsequent Customize

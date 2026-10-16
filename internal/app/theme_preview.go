@@ -53,7 +53,7 @@ func (v *view) themePreviewSelection(gtx layout.Context) layout.Dimensions {
 			const sample = "Example selection"
 			size := image.Pt(min(gtx.Constraints.Max.X, v.textWidth(gtx, sample, v.appearance.SmallTextSize)), v.textHeight(gtx, v.appearance.SmallTextSize))
 			return v.fileRowSurface(gtx, size, c.TextSelection, color.NRGBA{}, func(gtx layout.Context) layout.Dimensions {
-				return v.label(gtx, sample, v.appearance.SmallTextSize, c.EditorText, text.Start)
+				return v.rawLabel(gtx, sample, v.appearance.SmallTextSize, v.resolvedTextOn(c.EditorText, c.Surface), text.Start)
 			})
 		}),
 	)

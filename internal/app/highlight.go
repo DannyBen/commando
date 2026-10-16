@@ -17,6 +17,7 @@ import (
 // Underline matching runs using the text color, preserving the theme's palette
 // and selection contrast. Indices are runes, including for non-ASCII labels.
 func (v *view) highlightedLabel(gtx layout.Context, value string, indices []int, size unit.Sp, fg color.NRGBA) layout.Dimensions {
+	fg = v.resolvedText(fg)
 	style := material.Label(v.theme, size, value)
 	style.Font.Weight = v.appearance.FontWeight
 	macro := op.Record(gtx.Ops)
@@ -47,7 +48,7 @@ func (v *view) highlightedLabel(gtx layout.Context, value string, indices []int,
 func (v *view) textWidth(gtx layout.Context, value string, size unit.Sp) int {
 	gtx.Constraints = layout.Constraints{Max: image.Pt(1_000_000, 1_000_000)}
 	macro := op.Record(gtx.Ops)
-	dims := v.label(gtx, value, size, v.appearance.Colors.Foreground, text.Start)
+	dims := v.rawLabel(gtx, value, size, v.appearance.Colors.Foreground, text.Start)
 	macro.Stop()
 	return dims.Size.X
 }

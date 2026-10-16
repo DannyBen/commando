@@ -62,10 +62,8 @@ filename = 30
 # L/S are clamped to 0–100 and hue wraps around the wheel.
 # Resolve all bases before applying Vibrance and Color Shift, so neither
 # modifier compounds down an inheritance chain.
-# Readability correction follows these adjustments for generated text colors.
-# If surfaces are too far apart for any shared readable text color, generated
-# surfaces also move toward the mode's readable lightness range. Omitted colors
-# remain untouched. These corrections can limit the requested random ranges.
+# The generated palette stays unchanged by contrast guards. Displayed text is
+# resolved separately against its actual background; text selection is unguarded.
 # Dynamics controls permitted differences; it does not force large differences.
 
 [colors.background]

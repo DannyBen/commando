@@ -22,7 +22,7 @@ func (b *actionBar) update(gtx layout.Context) (int, bool) {
 	}
 	return 0, false
 }
-func (b *actionBar) layout(gtx layout.Context, labels []string, selected, height int, colors ThemeColors, label func(layout.Context, string, color.NRGBA) layout.Dimensions) layout.Dimensions {
+func (b *actionBar) layout(gtx layout.Context, labels []string, selected, height int, colors ThemeColors, label func(layout.Context, string, color.NRGBA, color.NRGBA) layout.Dimensions) layout.Dimensions {
 	if len(b.buttons) != len(labels) {
 		b.buttons = make([]widget.Clickable, len(labels))
 	}
@@ -41,7 +41,7 @@ func (b *actionBar) layout(gtx layout.Context, labels []string, selected, height
 					paint.FillShape(gtx.Ops, colors.Border, clip.Rect{Max: image.Pt(gtx.Dp(1), height)}.Op())
 				}
 				paint.FillShape(gtx.Ops, colors.Border, clip.Rect{Min: image.Pt(0, height-gtx.Dp(1)), Max: size}.Op())
-				return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return label(gtx, value, fg) })
+				return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return label(gtx, value, fg, bg) })
 			})
 		}))
 	}
