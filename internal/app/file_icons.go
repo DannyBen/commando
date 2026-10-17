@@ -25,8 +25,9 @@ type fileIconEntry struct {
 }
 
 // Original Windows icons, enabled only for live Windows listings.
-func (v *view) withFileIcon(gtx layout.Context, p *panel, item entry, content layout.Widget) layout.Dimensions {
-	if !v.settingsValues.Get(settings.CatalogueDefault, settingIconsEnabled).Bool || v.loader == nil || v.loader.readFileIcon == nil {
+func (v *view) withFileIcon(gtx layout.Context, p *panel, item entry, cut bool, content layout.Widget) layout.Dimensions {
+	if !v.settingsValues.Get(settings.CatalogueDefault, settingIconsEnabled).Bool ||
+		v.loader == nil && v.fileIcons == nil || v.loader != nil && v.loader.readFileIcon == nil {
 		return content(gtx)
 	}
 	size := max(1, min(gtx.Dp(16), v.textHeight(gtx, v.appearance.TextSize)))
@@ -43,11 +44,11 @@ func (v *view) withFileIcon(gtx layout.Context, p *panel, item entry, content la
 		icon.used = v.fileIconClock
 		v.fileIcons[key] = icon
 	}
-	if !found && !item.file.Parent && !v.fileIconPending {
+	if !found && !item.file.Parent && !v.fileIconPending && v.loader != nil {
 		v.wantFileIcon(key)
 	}
 	if found && icon.source != nil {
-		icon.image = v.adjustedFileIcon(icon, item.file)
+		icon.image = v.adjustedFileIcon(icon, item.file, cut)
 	}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {

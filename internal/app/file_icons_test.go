@@ -32,9 +32,9 @@ func TestFileIconsLoadWithoutChangingRowHeightAndReuseResults(t *testing.T) {
 		item := entry{file: browser.Entry{Name: "sample.exe"}}
 		other := entry{file: browser.Entry{Name: "another.exe"}}
 		row := func(gtx layout.Context) layout.Dimensions { return layout.Dimensions{Size: gtx.Constraints.Max} }
-		first := v.withFileIcon(gtx, &v.panels[0], item, row)
-		v.withFileIcon(gtx, &v.panels[0], other, row)
-		v.withFileIcon(gtx, &v.panels[0], item, row)
+		first := v.withFileIcon(gtx, &v.panels[0], item, false, row)
+		v.withFileIcon(gtx, &v.panels[0], other, false, row)
+		v.withFileIcon(gtx, &v.panels[0], item, false, row)
 		v.submitFileIcons()
 		select {
 		case result := <-v.loader.results:
@@ -47,8 +47,8 @@ func TestFileIconsLoadWithoutChangingRowHeightAndReuseResults(t *testing.T) {
 			t.Fatal("icon load did not complete")
 		}
 		v.fileIconWanted = v.fileIconWanted[:0]
-		second := v.withFileIcon(gtx, &v.panels[0], item, row)
-		v.withFileIcon(gtx, &v.panels[0], other, row)
+		second := v.withFileIcon(gtx, &v.panels[0], item, false, row)
+		v.withFileIcon(gtx, &v.panels[0], other, false, row)
 		v.submitFileIcons()
 		if first.Size != image.Pt(400, 24) || second.Size != first.Size || v.fileIconPending || calls.Load() != 2 {
 			t.Fatalf("icon changed row size or retried cached result: first=%v second=%v pending=%v", first.Size, second.Size, v.fileIconPending)
@@ -89,12 +89,12 @@ func TestIconsSettingsDefaultToggleCancelAndSave(t *testing.T) {
 		width = gtx.Constraints.Max.X
 		return layout.Dimensions{Size: gtx.Constraints.Max}
 	}
-	v.withFileIcon(gtx, &v.panels[0], item, row)
+	v.withFileIcon(gtx, &v.panels[0], item, false, row)
 	iconWidth := width
 	v.adjustSetting(settingIconsEnabled, 0)
 	v.submitFileIcons() // An already collected request must also stay idle.
 	v.fileIconWanted = nil
-	v.withFileIcon(gtx, &v.panels[0], item, row)
+	v.withFileIcon(gtx, &v.panels[0], item, false, row)
 	if width != 400 || iconWidth >= width || len(v.fileIconWanted) != 0 || v.fileIconPending {
 		t.Fatal("Off retained icon spacing or requested icons")
 	}
@@ -102,7 +102,7 @@ func TestIconsSettingsDefaultToggleCancelAndSave(t *testing.T) {
 	if v.settingsValues.Get(settings.CatalogueDefault, settingIconOriginalColor).Number != 80 {
 		t.Fatal("Cancel did not restore the default color amount")
 	}
-	v.withFileIcon(gtx, &v.panels[0], item, row)
+	v.withFileIcon(gtx, &v.panels[0], item, false, row)
 	if width != iconWidth || len(v.fileIconWanted) != 1 {
 		t.Fatal("Cancel did not restore icon display")
 	}
@@ -139,7 +139,7 @@ func TestFileIconCacheKeepsRecentlyViewedIconsWhenFull(t *testing.T) {
 	v.acceptFileIcons(loadResult{request: loadRequest{icons: keys}, icons: make([]image.Image, len(keys))})
 	var ops op.Ops
 	gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 24))}
-	v.withFileIcon(gtx, &v.panels[0], entry{file: browser.Entry{Name: "0"}}, func(gtx layout.Context) layout.Dimensions {
+	v.withFileIcon(gtx, &v.panels[0], entry{file: browser.Entry{Name: "0"}}, false, func(gtx layout.Context) layout.Dimensions {
 		return layout.Dimensions{Size: gtx.Constraints.Max}
 	})
 	newKey := fileIconKey{path: "new", size: 16}

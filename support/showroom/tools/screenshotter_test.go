@@ -49,6 +49,7 @@ type showroomRequest struct {
 		Created   time.Time `json:"created"`
 	} `json:"folders"`
 	Theme  string `json:"theme"`
+	Icons  string `json:"icons"`
 	Output string `json:"output"`
 	Steps  []struct {
 		File   string `json:"file"`
@@ -94,6 +95,7 @@ func (r showroomRequest) view(t *testing.T) *view {
 	}
 	v.restoreSettings(builtInThemes[themeIndex].values.Clone(), nil)
 	v.active = r.ActivePanel - 1
+	r.loadIcons(t, v)
 	return v
 }
 

@@ -25,6 +25,10 @@ func filenameColorKey(file browser.Entry) string {
 }
 
 func (s filenameColorSettings) filename(file browser.Entry) oklchColor {
+	return s.specialFileColor(file, s.baseFilename(file)).oklch()
+}
+
+func (s filenameColorSettings) baseFilename(file browser.Entry) lshColor {
 	// Seed a local PCG from the extension hash plus salt, then take one hue.
 	// Without shared random state, colors stay independent of listing,
 	// platform and encounter order.
@@ -32,8 +36,11 @@ func (s filenameColorSettings) filename(file browser.Entry) oklchColor {
 	_, _ = hash.Write([]byte(filenameColorKey(file)))
 	seed := math.Float64bits(float64(hash.Sum32()) + s.salt)
 	random := rand.New(rand.NewPCG(seed, 0))
-	value := lshColor{s.filenameLightness * 100, s.filenameSaturation * 100,
+	return lshColor{s.filenameLightness * 100, s.filenameSaturation * 100,
 		random.Float64() * 360}
+}
+
+func (s filenameColorSettings) specialFileColor(file browser.Entry, value lshColor) lshColor {
 	if file.Hidden && !file.Parent {
 		value.l += s.hiddenLightnessOffset * 100
 		value.s *= s.hiddenSaturationMultiplier
@@ -42,7 +49,7 @@ func (s filenameColorSettings) filename(file browser.Entry) oklchColor {
 		value.l += s.dotfileLightnessOffset * 100
 		value.s *= s.dotfileSaturationMultiplier
 	}
-	return value.oklch()
+	return value
 }
 
 func (s filenameColorSettings) activeBackground(value oklchColor) oklchColor {

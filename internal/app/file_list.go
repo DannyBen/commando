@@ -118,7 +118,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							}
 							return v.nameContents(gtx, metadata, sizeColor)
 						}
-						return v.withFileIcon(gtx, p, p.items[storedRow], func(gtx layout.Context) layout.Dimensions {
+						return v.withFileIcon(gtx, p, p.items[storedRow], cut, func(gtx layout.Context) layout.Dimensions {
 							return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata, v.appearance.entryTextRoles(p.items[storedRow].file, active, cut), p.drives)
 						})
 					})

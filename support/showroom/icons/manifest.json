@@ -1,0 +1,200 @@
+[
+  {
+    "name": "folder",
+    "directory": true,
+    "images": {
+      "16": "folder.16.png",
+      "32": "folder.32.png",
+      "48": "folder.48.png"
+    }
+  },
+  {
+    "name": "sample.code-workspace",
+    "directory": false,
+    "images": {
+      "16": "sample.code-workspace.16.png",
+      "32": "sample.code-workspace.32.png",
+      "48": "sample.code-workspace.48.png"
+    }
+  },
+  {
+    "name": "sample.css",
+    "directory": false,
+    "images": {
+      "16": "sample.css.16.png",
+      "32": "sample.css.32.png",
+      "48": "sample.css.48.png"
+    }
+  },
+  {
+    "name": "sample.csv",
+    "directory": false,
+    "images": {
+      "16": "sample.csv.16.png",
+      "32": "sample.csv.32.png",
+      "48": "sample.csv.48.png"
+    }
+  },
+  {
+    "name": "sample.exe",
+    "directory": false,
+    "images": {
+      "16": "sample.exe.16.png",
+      "32": "sample.exe.32.png",
+      "48": "sample.exe.48.png"
+    }
+  },
+  {
+    "name": "sample.go",
+    "directory": false,
+    "images": {
+      "16": "sample.go.16.png",
+      "32": "sample.go.32.png",
+      "48": "sample.go.48.png"
+    }
+  },
+  {
+    "name": "sample.gz",
+    "directory": false,
+    "images": {
+      "16": "sample.gz.16.png",
+      "32": "sample.gz.32.png",
+      "48": "sample.gz.48.png"
+    }
+  },
+  {
+    "name": "sample.html",
+    "directory": false,
+    "images": {
+      "16": "sample.html.16.png",
+      "32": "sample.html.32.png",
+      "48": "sample.html.48.png"
+    }
+  },
+  {
+    "name": "sample.jpg",
+    "directory": false,
+    "images": {
+      "16": "sample.jpg.16.png",
+      "32": "sample.jpg.32.png",
+      "48": "sample.jpg.48.png"
+    }
+  },
+  {
+    "name": "sample.json",
+    "directory": false,
+    "images": {
+      "16": "sample.json.16.png",
+      "32": "sample.json.32.png",
+      "48": "sample.json.48.png"
+    }
+  },
+  {
+    "name": "sample.md",
+    "directory": false,
+    "images": {
+      "16": "sample.md.16.png",
+      "32": "sample.md.32.png",
+      "48": "sample.md.48.png"
+    }
+  },
+  {
+    "name": "sample.mod",
+    "directory": false,
+    "images": {
+      "16": "sample.mod.16.png",
+      "32": "sample.mod.32.png",
+      "48": "sample.mod.48.png"
+    }
+  },
+  {
+    "name": "sample.mp3",
+    "directory": false,
+    "images": {
+      "16": "sample.mp3.16.png",
+      "32": "sample.mp3.32.png",
+      "48": "sample.mp3.48.png"
+    }
+  },
+  {
+    "name": "sample.mp4",
+    "directory": false,
+    "images": {
+      "16": "sample.mp4.16.png",
+      "32": "sample.mp4.32.png",
+      "48": "sample.mp4.48.png"
+    }
+  },
+  {
+    "name": "sample.pdf",
+    "directory": false,
+    "images": {
+      "16": "sample.pdf.16.png",
+      "32": "sample.pdf.32.png",
+      "48": "sample.pdf.48.png"
+    }
+  },
+  {
+    "name": "sample.png",
+    "directory": false,
+    "images": {
+      "16": "sample.png.16.png",
+      "32": "sample.png.32.png",
+      "48": "sample.png.48.png"
+    }
+  },
+  {
+    "name": "sample.ps1",
+    "directory": false,
+    "images": {
+      "16": "sample.ps1.16.png",
+      "32": "sample.ps1.32.png",
+      "48": "sample.ps1.48.png"
+    }
+  },
+  {
+    "name": "sample.svg",
+    "directory": false,
+    "images": {
+      "16": "sample.svg.16.png",
+      "32": "sample.svg.32.png",
+      "48": "sample.svg.48.png"
+    }
+  },
+  {
+    "name": "sample.ttf",
+    "directory": false,
+    "images": {
+      "16": "sample.ttf.16.png",
+      "32": "sample.ttf.32.png",
+      "48": "sample.ttf.48.png"
+    }
+  },
+  {
+    "name": "sample.txt",
+    "directory": false,
+    "images": {
+      "16": "sample.txt.16.png",
+      "32": "sample.txt.32.png",
+      "48": "sample.txt.48.png"
+    }
+  },
+  {
+    "name": "sample.yml",
+    "directory": false,
+    "images": {
+      "16": "sample.yml.16.png",
+      "32": "sample.yml.32.png",
+      "48": "sample.yml.48.png"
+    }
+  },
+  {
+    "name": "sample.zip",
+    "directory": false,
+    "images": {
+      "16": "sample.zip.16.png",
+      "32": "sample.zip.32.png",
+      "48": "sample.zip.48.png"
+    }
+  }
+]

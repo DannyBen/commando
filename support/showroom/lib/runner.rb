@@ -47,7 +47,9 @@ module Showroom
       overlay = File.join(build, 'overlay.json')
       target = File.join(@project, 'internal/app/showroom_screenshotter_test.go')
       source = File.join(@root, 'tools/screenshotter_test.go')
-      File.write(overlay, JSON.pretty_generate('Replace' => { target => source }))
+      icons_target = File.join(@project, 'internal/app/showroom_icons_test.go')
+      icons_source = File.join(@root, 'tools/icons_test.go')
+      File.write(overlay, JSON.pretty_generate('Replace' => { target => source, icons_target => icons_source }))
       overlay
     end
 
@@ -65,7 +67,8 @@ module Showroom
 
     def capture_request(build, name, theme, output, scenario)
       capture = @config.capture.merge(scenario.dimensions)
-      request = @config.payload.merge(capture: capture, theme: theme, output: output, steps: scenario.steps)
+      request = @config.payload.merge(capture: capture, theme: theme, output: output, steps: scenario.steps,
+                                      icons: File.join(@root, 'icons'))
       path = File.join(build, "#{name}-#{theme}.json")
       File.write(path, JSON.pretty_generate(request))
       path

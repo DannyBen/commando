@@ -364,6 +364,9 @@ module/executable and `Commando` for the window title and data-folder name.
   gentle contrast reduction toward the surface below 50. Preserve shading and
   transparency; 100 uses the untouched original. Cache adjusted artwork by
   source, file color, surface and amount, independently of Windows icon reads.
+  Apply hidden/dotfile modifiers and cut lightness to icon pixels through the
+  same file-color settings, including at Original color 100. Keep cached state
+  variants independent so cutting or uncutting never changes other rows.
 
 ## Changes and Documentation
 
