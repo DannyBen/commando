@@ -11,6 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/settings"
@@ -23,6 +24,7 @@ type inlineCompletion struct {
 	query      string
 	matches    []string
 	selected   int
+	trailer    string // Optional closing delimiter, retained when completing inside quotes.
 }
 
 func completionCandidates(names []string) []string {
@@ -36,7 +38,12 @@ func completionCandidates(names []string) []string {
 func (c *inlineCompletion) update(editor *widget.Editor) {
 	query := editor.Text()
 	start, end := editor.Selection()
-	if query == "" || start != end || end != utf8.RuneCountInString(query) {
+	limit := utf8.RuneCountInString(query)
+	if c.trailer != "" && strings.HasSuffix(query, c.trailer) {
+		query = strings.TrimSuffix(query, c.trailer)
+		limit -= utf8.RuneCountInString(c.trailer)
+	}
+	if query == "" || start != end || end != limit {
 		query = ""
 	}
 	if query != c.query {
@@ -48,7 +55,7 @@ func (c *inlineCompletion) update(editor *widget.Editor) {
 	}
 	n := utf8.RuneCountInString(query)
 	for _, name := range c.candidates {
-		if strings.EqualFold(name, query) {
+		if strings.EqualFold(strings.TrimSuffix(name, c.trailer), query) {
 			// A complete name stays literal, even if longer names share it.
 			c.matches = c.matches[:0]
 			return
@@ -87,6 +94,10 @@ func (c *inlineCompletion) accept(editor *widget.Editor) bool {
 	name := c.matches[c.selected]
 	editor.SetCaret(0, utf8.RuneCountInString(editor.Text()))
 	editor.Insert(name)
+	if c.trailer != "" && strings.HasSuffix(name, c.trailer) {
+		end := utf8.RuneCountInString(strings.TrimSuffix(name, c.trailer))
+		editor.SetCaret(end, end)
+	}
 	c.update(editor)
 	return true
 }
@@ -105,6 +116,11 @@ func (v *view) completionEditor(gtx layout.Context, editor *widget.Editor, c *in
 		call := macro.Stop()
 		caret := editor.CaretCoords()
 		at := image.Pt(int(math.Round(float64(caret.X))), int(math.Round(float64(caret.Y)))-label.Size.Y+label.Baseline)
+		if c.trailer != "" && strings.HasSuffix(editor.Text(), c.trailer) {
+			// The preview replaces the closing delimiter visually; the editor's
+			// text and selection stay untouched until explicit acceptance.
+			paint.FillShape(gtx.Ops, v.currentTextBackground(), clip.Rect{Min: at, Max: at.Add(image.Pt(v.textWidth(gtx, c.trailer, v.appearance.TextSize), label.Size.Y))}.Op())
+		}
 		defer op.Offset(at).Push(gtx.Ops).Pop()
 		call.Add(gtx.Ops)
 	}

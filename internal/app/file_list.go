@@ -26,7 +26,8 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					fg = v.appearance.Colors.ActiveLocation
 				}
 				if v.locationEditing() && index == v.active {
-					return v.textEditor(&v.location, "Path").Layout(gtx)
+					s := v.interaction.current.(*locationSession)
+					return v.completionEditor(gtx, &v.location, &s.completion, "Path")
 				}
 				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), v.appearance.TextSize, fg, text.Start)
 			}, index == v.active)

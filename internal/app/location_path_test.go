@@ -81,7 +81,7 @@ func TestExplicitPathStopsAtReadErrorsAndDoesNotUseFallbackRoot(t *testing.T) {
 				}
 				return browser.Directory{}, failure
 			}}
-			_, selected, recovered, err := l.readExplicitPath(missing)
+			_, selected, recovered, err := l.readExplicitPath(missing, "")
 			if !errors.Is(err, failure) || selected != "" || recovered {
 				t.Fatal("read failure was hidden", err)
 			}

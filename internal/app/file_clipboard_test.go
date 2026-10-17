@@ -278,8 +278,10 @@ func TestFileClipboardShortcutsSkipBusyDrivesAndEditors(t *testing.T) {
 			} else {
 				send(modified("C", key.ModCtrl), modified("X", key.ModCtrl), modified("D", key.ModCtrl))
 			}
-			if len(v.loader.requests) != 0 {
-				t.Fatal("ignored/editor clipboard shortcut queued file operation")
+			for len(v.loader.requests) > 0 {
+				if request := <-v.loader.requests; request.completion == nil {
+					t.Fatal("ignored/editor clipboard shortcut queued file operation")
+				}
 			}
 		})
 	}

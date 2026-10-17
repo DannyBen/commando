@@ -13,6 +13,7 @@ import (
 type loadRequest struct {
 	panel            int
 	path, selectName string
+	suggestedPath    string // Visible location completion captured at submission.
 	successMessage   string
 	refresh          bool
 	autoRefresh      bool
@@ -30,6 +31,7 @@ type loadRequest struct {
 	settingsSave     *settingsSaveRequest
 	editor           *editorRequest
 	fontFamilies     bool
+	completion       *locationSession
 	fileDraft        *fileDraftRequest
 	themeLibrary     *settingsSession
 }
@@ -108,6 +110,17 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
+				if request.completion != nil {
+					result := loadResult{request: request}
+					if localCompletionPath(request.path) {
+						result.directory, result.err = l.readDirectory(request.path)
+					}
+					l.results <- result
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
 				if request.themeLibrary != nil {
 					themes, err := readThemeLibrary(request.path)
 					l.results <- loadResult{request: request, themes: themes, err: err}
@@ -213,7 +226,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 						directory, err = l.readExistingParent(target)
 					}
 				} else if request.explicitPath {
-					directory, result.request.selectName, result.pathMissing, err = l.readExplicitPath(request.path)
+					directory, result.request.selectName, result.pathMissing, err = l.readExplicitPath(request.path, request.suggestedPath)
 				} else {
 					directory, err = l.readExistingParent(request.path)
 				}
@@ -256,7 +269,7 @@ func (l *directoryLoader) readExistingParent(path string) (browser.Directory, er
 // Explicit locations may name files or incomplete paths. Stay within the given
 // ancestry, stopping at permission errors or an unavailable root. All reads and
 // file probing stay on the worker, independently of UI input and rendering.
-func (l *directoryLoader) readExplicitPath(path string) (browser.Directory, string, bool, error) {
+func (l *directoryLoader) readExplicitPath(path, suggestedPath string) (browser.Directory, string, bool, error) {
 	directory, err := l.readDirectory(path)
 	if !browser.IsMissingDirectory(err) {
 		return directory, "", false, err
@@ -264,6 +277,16 @@ func (l *directoryLoader) readExplicitPath(path string) (browser.Directory, stri
 	info, statErr := os.Stat(path)
 	if statErr != nil && !browser.IsMissingDirectory(statErr) {
 		return browser.Directory{}, "", false, statErr
+	}
+	// Existing literal paths always win. Try only the captured, visible
+	// completion, and only for a missing literal; permission/read errors above
+	// retain their normal behavior. A vanished suggestion keeps parent recovery.
+	if browser.IsMissingDirectory(statErr) && suggestedPath != "" {
+		if _, suggestionErr := os.Stat(suggestedPath); suggestionErr == nil {
+			return l.readExplicitPath(suggestedPath, "")
+		} else if !browser.IsMissingDirectory(suggestionErr) {
+			return browser.Directory{}, "", false, suggestionErr
+		}
 	}
 	selected := ""
 	if statErr == nil && !info.IsDir() {
