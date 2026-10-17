@@ -1,6 +1,7 @@
 package app
 
 import (
+	"image"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -34,6 +35,7 @@ type loadRequest struct {
 	completion       *locationSession
 	fileDraft        *fileDraftRequest
 	themeLibrary     *settingsSession
+	icons            []fileIconKey
 }
 
 type loadResult struct {
@@ -58,6 +60,7 @@ type loadResult struct {
 	fontFamilies      []string
 	pathMissing       bool
 	themes            []themeSnapshot
+	icons             []image.Image
 }
 
 type directoryLoader struct {
@@ -72,6 +75,7 @@ type directoryLoader struct {
 	readDirectory        func(string) (browser.Directory, error)
 	launchEditor         func(string, []string, string) error
 	folderShortcutTarget func(string) (string, error)
+	readFileIcon         func(string, int) image.Image
 	busy                 atomic.Int32
 	stopOnce             sync.Once
 	stopped              chan struct{}
@@ -110,6 +114,17 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
+				if len(request.icons) > 0 {
+					icons := make([]image.Image, len(request.icons))
+					for i, key := range request.icons {
+						icons[i] = l.readFileIcon(key.path, key.size)
+					}
+					l.results <- loadResult{request: request, icons: icons}
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
 				if request.completion != nil {
 					result := loadResult{request: request}
 					if localCompletionPath(request.path) {

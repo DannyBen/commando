@@ -58,6 +58,7 @@ const (
 	settingSoundProfile          = "feedback.sounds.profile"
 	settingSoundVolume           = "feedback.sounds.master_volume"
 	settingContrastGuard         = "appearance.contrast_guard.enabled"
+	settingIconsEnabled          = "appearance.icons.enabled"
 	settingAutoColorEnabled      = "appearance.autocolor.enabled"
 	settingLightness             = "appearance.autocolor.lsh.lightness"
 	settingSaturation            = "appearance.autocolor.lsh.saturation"

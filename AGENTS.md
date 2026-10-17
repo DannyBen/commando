@@ -355,6 +355,11 @@ module/executable and `Commando` for the window title and data-folder name.
   selections retain normal text when readable on their background, otherwise
   use the better-contrasting black or white through shared theme resolution.
   File-color selections retain their existing inversion behavior.
+- Appearance › Icons contains Enabled, defaulting to On. Apply changes live
+  through the shared settings session, with Cancel restoring the previous value.
+  Preserve icon size, alignment, spacing and row height. Load visible Windows
+  shell icons in bounded batches through the directory worker, with bounded
+  memory caches; disabling icons removes their space and stops new requests.
 
 ## Changes and Documentation
 

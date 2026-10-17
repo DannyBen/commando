@@ -18,6 +18,7 @@ import (
 func (v *view) layout(gtx layout.Context) layout.Dimensions {
 	v.frameSize = gtx.Constraints.Max
 	v.update(gtx)
+	v.fileIconWanted = v.fileIconWanted[:0]
 	paint.Fill(gtx.Ops, v.appearance.Colors.Surface)
 	event.Op(gtx.Ops, &v.focus)
 	children := make([]layout.FlexChild, 0, len(v.panels)*2-1)
@@ -37,6 +38,7 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 		}))
 	}
 	dims := layout.Flex{}.Layout(gtx, children...)
+	v.submitFileIcons()
 	area := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
 	pass := pointer.PassOp{}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &v.feedbackPointer)

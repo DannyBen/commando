@@ -25,6 +25,7 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 	v.openFile = browser.OpenFile
 	v.invalidate = invalidate
 	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate, len(panels))
+	v.loader.readFileIcon = browser.NewFileIconReader()
 	for i, location := range locations {
 		v.panels[i].metadata = metadataFromState(location.Metadata)
 		v.panels[i].sortByMetadata = location.SortByMetadata
@@ -95,6 +96,10 @@ func (v *view) pollLoads() {
 func (v *view) acceptLoad(result loadResult) {
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
+	}
+	if len(result.request.icons) > 0 {
+		v.acceptFileIcons(result)
+		return
 	}
 	if result.request.completion != nil {
 		v.acceptLocationCompletion(result)

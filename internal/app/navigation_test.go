@@ -25,6 +25,7 @@ func newBrowserView(paths []string, invalidate func()) *view {
 		locations[i].Path = path
 	}
 	v := newLocationView(locations, 0, invalidate)
+	v.loader.readFileIcon = nil
 	// These navigation fixtures also exercise the optional parent row.
 	_ = v.settingsValues.Set(settings.CatalogueDefault, settingParentEntry, settings.Value{Bool: true})
 	v.applySettings()

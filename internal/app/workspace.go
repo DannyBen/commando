@@ -70,6 +70,10 @@ type view struct {
 	loader            *directoryLoader
 	monitor           *directoryMonitor
 	openFile          func(string) error
+	fileIcons         map[fileIconKey]fileIconEntry
+	fileIconPending   bool
+	fileIconWanted    []fileIconKey
+	fileIconClock     uint64
 	invalidate        func()
 	interaction       interactionController
 	location          widget.Editor

@@ -13,6 +13,15 @@ label = "Enabled"
 description = "Adjust display colors to maintain contrast."
 control = "toggle"
 
+[appearance.icons]
+label = "Icons"
+title = "Icons"
+
+[appearance.icons.enabled]
+label = "Enabled"
+description = "Show Windows file icons."
+control = "toggle"
+
 [appearance.autocolor]
 label = "Auto color"
 title = "Auto color"
