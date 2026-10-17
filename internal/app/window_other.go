@@ -37,7 +37,7 @@ func (n *nativeWindow) configure(_ *gioapp.Window, e event.Event) {
 			n.suppressWidth = true
 		}
 		n.mode = e.Config.Mode
-		if n.mode != gioapp.Minimized {
+		if n.mode != gioapp.Minimized && n.mode != gioapp.Fullscreen {
 			state.Maximized = n.mode == gioapp.Maximized
 		}
 	case gioapp.FrameEvent:
@@ -66,3 +66,18 @@ func (n *nativeWindow) resizePanels(w *gioapp.Window, count int) {
 }
 
 func (*nativeWindow) owner() uintptr { return 0 }
+
+func (n *nativeWindow) toggleFullScreen(w *gioapp.Window) {
+	if n.mode != gioapp.Fullscreen {
+		n.mode = gioapp.Fullscreen
+		w.Option(gioapp.Fullscreen.Option())
+		return
+	}
+	saved := n.state.snapshot()
+	n.suppressWidth = true
+	n.mode = gioapp.Windowed
+	if saved.Maximized {
+		n.mode = gioapp.Maximized
+	}
+	w.Option(gioapp.Size(unit.Dp(saved.Width), unit.Dp(saved.Height)), n.mode.Option())
+}

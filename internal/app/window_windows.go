@@ -39,6 +39,8 @@ type nativeWindow struct {
 	state            *windowTracker
 	keys             *nativeKeyInput
 	hwnd             uintptr
+	fullscreen       bool // Accessed only on the native window thread.
+	beforeFullscreen windowPlacement
 	configured       bool
 	userSizing       bool
 	resizeStartWidth float64 // dp; moving between DPI scales alone is not a width edit.
@@ -149,6 +151,9 @@ func (p windowPlacement) state() windowState {
 }
 
 func (n *nativeWindow) capture(hwnd uintptr) {
+	if n.fullscreen {
+		return
+	}
 	var placement windowPlacement
 	placement.Length = uint32(unsafe.Sizeof(placement))
 	if ok, _, _ := getWindowPlacement.Call(hwnd, uintptr(unsafe.Pointer(&placement))); ok != 0 {
@@ -160,9 +165,14 @@ func (n *nativeWindow) capture(hwnd uintptr) {
 
 func shortcutKeyboardProc(code int32, wParam, lParam uintptr) uintptr {
 	const vkReturn = 0x0d
-	// Consume Alt+Enter before it reaches DXGI or Gio. The context bit applies
+	// Forward Alt+Enter through our command bindings before DXGI sees it. The context bit applies
 	// to both key presses and releases, including repeats and keypad Enter.
 	if code >= 0 && wParam == vkReturn && lParam&(1<<29) != 0 {
+		if code == 0 {
+			if native, ok := nativeWindows.Load(uintptr(windows.GetForegroundWindow())); ok {
+				native.(*nativeWindow).keys.altEnter(lParam, nativeModifiers()|key.ModAlt)
+			}
+		}
 		return 1
 	}
 	result, _, _ := callNextHookEx.Call(0, uintptr(code), wParam, lParam)
@@ -213,18 +223,7 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 				if message == wmKeyUp {
 					e.State = key.Release
 				}
-				for _, modifier := range []struct {
-					vk  uintptr
-					mod key.Modifiers
-				}{
-					{0x10, key.ModShift}, {0x11, key.ModCtrl}, {0x12, key.ModAlt},
-					{0x5b, key.ModSuper}, {0x5c, key.ModSuper},
-				} {
-					state, _, _ := getKeyState.Call(modifier.vk)
-					if state&0x8000 != 0 {
-						e.Modifiers |= modifier.mod
-					}
-				}
+				e.Modifiers = nativeModifiers()
 				n.keys.push(e)
 			}
 		}
@@ -273,3 +272,55 @@ func passivePointerUpdate(message uint32, wParam uintptr) bool {
 }
 
 func (n *nativeWindow) owner() uintptr { return n.hwnd }
+
+func nativeModifiers() key.Modifiers {
+	var modifiers key.Modifiers
+	for _, modifier := range []struct {
+		vk  uintptr
+		mod key.Modifiers
+	}{
+		{0x10, key.ModShift}, {0x11, key.ModCtrl}, {0x12, key.ModAlt},
+		{0x5b, key.ModSuper}, {0x5c, key.ModSuper},
+	} {
+		state, _, _ := getKeyState.Call(modifier.vk)
+		if state&0x8000 != 0 {
+			modifiers |= modifier.mod
+		}
+	}
+	return modifiers
+}
+
+// Gio options run synchronously on the window thread. Keep capture suspended
+// across both the style change and placement restoration on leaving fullscreen.
+func (n *nativeWindow) toggleFullScreen(w *gioapp.Window) {
+	var leaving, ready bool
+	w.Run(func() {
+		leaving = n.fullscreen
+		if leaving {
+			ready = true
+			return
+		}
+		placement := windowPlacement{Length: uint32(unsafe.Sizeof(windowPlacement{}))}
+		if ok, _, _ := getWindowPlacement.Call(n.hwnd, uintptr(unsafe.Pointer(&placement))); ok == 0 {
+			return
+		}
+		n.beforeFullscreen = placement
+		n.capture(n.hwnd)
+		n.fullscreen, ready = true, true
+	})
+	if !ready {
+		return
+	}
+	if !leaving {
+		w.Option(gioapp.Fullscreen.Option())
+		return
+	}
+	w.Option(gioapp.Windowed.Option())
+	w.Run(func() {
+		if ok, _, err := setWindowPlacement.Call(n.hwnd, uintptr(unsafe.Pointer(&n.beforeFullscreen))); ok == 0 {
+			fmt.Fprintln(os.Stderr, "cannot restore window after fullscreen:", err)
+		}
+		n.fullscreen = false
+		n.capture(n.hwnd)
+	})
+}

@@ -20,6 +20,12 @@ module/executable and `Commando` for the window title and data-folder name.
 
 ## Behavior to Preserve
 
+- Application › Toggle full screen defaults to Alt+Enter and F11 through the shared
+  configurable bindings. Windows forwards Alt+Enter through the existing native
+  bridge, suppressing DXGI handling, repeats and releases. Restore the previous
+  window placement on exit; fullscreen must not replace saved normal geometry
+  or learn a new panel base width.
+
 - Regular outbound dragging starts after a mouse movement threshold on a file
   or folder. A marked row carries the marked set; an unmarked row carries only
   that item. Suppress the originating click after a drag, retaining normal clicks

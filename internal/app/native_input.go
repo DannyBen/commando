@@ -85,3 +85,10 @@ func (q *nativeKeyInput) drain() []key.Event {
 	q.events = nil
 	return events
 }
+
+// Ignore repeats and releases so holding Alt+Enter cannot oscillate window mode.
+func (q *nativeKeyInput) altEnter(data uintptr, modifiers key.Modifiers) {
+	if q != nil && data&(1<<30|1<<31) == 0 {
+		q.push(key.Event{Name: key.NameReturn, Modifiers: modifiers, State: key.Press})
+	}
+}

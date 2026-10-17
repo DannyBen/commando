@@ -59,7 +59,7 @@ func bindingDefinition(c command, slot int) settings.Definition {
 					return errors.New("use a modified key")
 				}
 			}
-			if s.Name == key.NameReturn && s.Modifiers&key.ModAlt != 0 || s.Name == contextMenuKey && s.Modifiers != 0 {
+			if s.Name == contextMenuKey && s.Modifiers != 0 {
 				return errors.New("unsupported native shortcut")
 			}
 			return nil

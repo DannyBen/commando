@@ -91,6 +91,7 @@ type view struct {
 	cutPanelPaths     []string
 	transferPending   bool
 	clipboardSequence func() uint32
+	toggleFullScreen  func()
 	ownerWindow       uintptr
 	pendingNameDraft  *loadResult
 	shellExecutor     func(shellRequest) shellCompletion

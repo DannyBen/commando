@@ -69,7 +69,7 @@ func (n *nativeWindow) geometry() (windowGeometry, bool) {
 	}
 	arranged, _, _ := isWindowArranged.Call(n.hwnd)
 	g := windowGeometry{window: outer.rectangle(), work: info.Work.rectangle(),
-		clientWidth: int(client.Right - client.Left), scale: float64(dpi) / 96, monitor: monitor, ordinary: placement.ShowCmd == 1 && arranged == 0}
+		clientWidth: int(client.Right - client.Left), scale: float64(dpi) / 96, monitor: monitor, ordinary: !n.fullscreen && placement.ShowCmd == 1 && arranged == 0}
 	return g, g.clientWidth > 0 && g.work.Dx() > 0
 }
 

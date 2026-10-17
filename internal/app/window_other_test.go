@@ -23,7 +23,7 @@ func TestDevelopmentWindowGeometry(t *testing.T) {
 	if config.Size != image.Pt(1800, 1000) || config.Mode != gioapp.Maximized {
 		t.Fatalf("saved window options were not applied: %+v", config)
 	}
-	for _, mode := range []gioapp.WindowMode{gioapp.Maximized, gioapp.Minimized} {
+	for _, mode := range []gioapp.WindowMode{gioapp.Maximized, gioapp.Minimized, gioapp.Fullscreen} {
 		n.configure(nil, gioapp.ConfigEvent{Config: gioapp.Config{Mode: mode}})
 		n.configure(nil, gioapp.FrameEvent{Size: image.Pt(4000, 2000), Metric: unit.Metric{PxPerDp: 2}})
 		if got := tracker.snapshot(); got.Width != 900 || got.Height != 500 || !got.Maximized {

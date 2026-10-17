@@ -125,6 +125,7 @@ func defaultCommands() []command {
 		toggleSettingCommand("feedback.toggle_sound", "Feedback", "sound", settingSoundEnabled),
 		toggleSettingCommand("feedback.toggle_notification_animation", "Feedback", "notification animation", settingNotificationAnimation),
 
+		cmd("application.toggle_full_screen", "Application", "Toggle full screen", key.NameReturn, key.ModAlt, func(v *view) bool { return v.toggleFullScreen != nil }),
 		cmd("application.command_palette", "Application", "Command palette", "`", 0, nil),
 		{id: "application.open_data_folder", group: "Application", name: "Open data folder",
 			available: func(v *view) bool {
@@ -142,6 +143,9 @@ func defaultCommands() []command {
 			c.bindings[1].Default = shortcut{Name: insertKey, Modifiers: key.ModShift}
 		case "entry.context_menu":
 			c.bindings[1].Default = shortcut{Name: contextMenuKey}
+		case "application.toggle_full_screen":
+			c.bindings[1].Default = shortcut{Name: key.NameF11}
+			c.execute = func(v *view) { v.toggleFullScreen() }
 		case "application.command_palette":
 			c.bindings[1].Default = shortcut{Name: "P", Modifiers: key.ModCtrl | key.ModShift}
 		case "selection.clear_filter_or_marks":

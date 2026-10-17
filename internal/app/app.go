@@ -107,6 +107,8 @@ func Run() error {
 			return func() (string, error) { return store.save(values, state) }
 		}
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
+		fullScreenRequested := false
+		v.toggleFullScreen = func() { fullScreenRequested = !fullScreenRequested }
 		v.nativeKeys = keys
 		v.updateNativeBindings()
 		v.shellExecutor = native.shellExecutor(w)
@@ -142,6 +144,10 @@ func Run() error {
 				e.Frame(&ops)
 			}
 			native.configure(w, e)
+			if fullScreenRequested {
+				fullScreenRequested = false
+				native.toggleFullScreen(w)
+			}
 			native.resizePanels(w, len(v.panels))
 			v.ownerWindow = native.owner()
 			v.dispatchNative(w.Invalidate)
