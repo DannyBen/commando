@@ -5,7 +5,37 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
+
+// NormalizeCreatePath validates every component before any directory is created.
+// Both separators are accepted; absolute paths and traversal are not names.
+func NormalizeCreatePath(name string) (string, error) {
+	parts := strings.Split(strings.ReplaceAll(name, `\`, "/"), "/")
+	for _, part := range parts {
+		if err := ValidateName(part); err != nil {
+			return "", err
+		}
+	}
+	return filepath.Join(parts...), nil
+}
+
+// CreatePath makes missing parents, then exclusively creates the final item.
+// Failures may leave parent directories behind; a retry reuses those parents.
+func CreatePath(directory, name string, folder bool, data []byte) (string, Entry, error) {
+	name, err := NormalizeCreatePath(name)
+	if err != nil {
+		return directory, Entry{}, err
+	}
+	parent := filepath.Join(directory, filepath.Dir(name))
+	if filepath.Dir(name) != "." {
+		if err := os.MkdirAll(parent, 0777); err != nil {
+			return parent, Entry{}, err
+		}
+	}
+	item, err := createEntry(parent, filepath.Base(name), folder, data)
+	return parent, item, err
+}
 
 // CreateFolder creates one named child without accepting paths or reusing an
 // existing file, directory or link.

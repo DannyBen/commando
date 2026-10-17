@@ -2,9 +2,11 @@ package browser
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -75,5 +77,60 @@ func TestCreateFolderRejectsPathsAndInvalidNames(t *testing.T) {
 	}
 	if _, err := CreateFolder(filepath.Join(root, "missing"), "child"); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("missing parent: %v", err)
+	}
+}
+
+func TestCreatePathMakesParentsAndNeverReplacesTarget(t *testing.T) {
+	for _, folder := range []bool{false, true} {
+		for _, name := range []string{"new/sub/item.txt", `new\sub\item.txt`} {
+			t.Run(fmt.Sprintf("folder=%v/%s", folder, name), func(t *testing.T) {
+				root := t.TempDir()
+				parent, item, err := CreatePath(root, name, folder, []byte("contents"))
+				if err != nil || parent != filepath.Join(root, "new", "sub") || item.Name != "item.txt" || item.Directory != folder {
+					t.Fatalf("created path: parent=%s item=%+v error=%v", parent, item, err)
+				}
+				if _, _, err := CreatePath(root, name, folder, nil); !errors.Is(err, fs.ErrExist) {
+					t.Fatal("existing target was accepted", err)
+				}
+				if !folder {
+					data, err := os.ReadFile(filepath.Join(parent, item.Name))
+					if err != nil || string(data) != "contents" {
+						t.Fatal("collision changed existing file", err)
+					}
+				}
+				if _, _, err := CreatePath(root, "new/sub/another", folder, nil); err != nil {
+					t.Fatal("existing parents could not be reused", err)
+				}
+			})
+		}
+	}
+}
+
+func TestCreatePathValidatesWholePathBeforeMutation(t *testing.T) {
+	for _, name := range []string{"", "/absolute", `C:\absolute`, "a/../escape", "a/./file", "a//file", "a/CON/file", "a/invalid?", "a/trailing.", "a/"} {
+		root := t.TempDir()
+		if _, _, err := CreatePath(root, name, false, nil); !errors.Is(err, ErrInvalidName) {
+			t.Fatalf("invalid path %q accepted: %v", name, err)
+		}
+		files, err := os.ReadDir(root)
+		if err != nil || len(files) != 0 {
+			t.Fatalf("invalid path %q created parents", name)
+		}
+	}
+}
+
+func TestCreatePathRetainsPartialParentsAndRetries(t *testing.T) {
+	root := t.TempDir()
+	// A component exceeding the filesystem limit fails after MkdirAll has
+	// created the preceding parents. No permission assumptions or races needed.
+	name := "new/sub/" + strings.Repeat("x", 300)
+	if _, _, err := CreatePath(root, name, true, nil); err == nil {
+		t.Fatal("overlong final component unexpectedly succeeded")
+	}
+	if info, err := os.Stat(filepath.Join(root, "new", "sub")); err != nil || !info.IsDir() {
+		t.Fatal("partial parents were removed", err)
+	}
+	if _, _, err := CreatePath(root, "new/sub/retry", true, nil); err != nil {
+		t.Fatal("retry could not reuse partial parents", err)
 	}
 }

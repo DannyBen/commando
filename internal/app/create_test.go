@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -35,6 +36,88 @@ func waitCreated(t *testing.T, v *view) {
 		case <-timer.C:
 			t.Fatal("folder creation did not complete")
 		}
+	}
+}
+
+func TestNestedCreationNavigatesAndReconcilesPanels(t *testing.T) {
+	for _, folder := range []bool{false, true} {
+		for _, separator := range []string{"/", `\`} {
+			root := t.TempDir()
+			existing := filepath.Join(root, "existing")
+			if err := os.Mkdir(existing, 0700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(existing, "keep.txt"), nil, 0600); err != nil {
+				t.Fatal(err)
+			}
+			v := newBrowserView([]string{root, root, existing}, nil)
+			t.Cleanup(v.loader.close)
+			for pi := range v.panels {
+				waitLoaded(t, v, pi)
+			}
+			selectName(t, &v.panels[2], "keep.txt")
+			v.panels[2].toggleMark(v.panels[2].selected)
+			send, _ := panelInputFrames(v)
+			shortcut := modified("N", key.ModCtrl)
+			if folder {
+				shortcut = newFolderKey()
+			}
+			send(shortcut, replaceCreate(v, strings.Join([]string{"existing", "new", "sub", "item.txt"}, separator)))
+			send(pressed(key.NameReturn))
+			waitCreated(t, v)
+			send()
+			p := &v.panels[0]
+			parent := filepath.Join(existing, "new", "sub")
+			if v.nameInteraction() != nil || v.active != 0 || p.path != parent || p.selected < 0 ||
+				p.items[p.selected].name != "item.txt" || p.items[p.selected].file.Directory != folder {
+				t.Fatalf("nested creation did not navigate and select: folder=%v path=%s selected=%d", folder, p.path, p.selected)
+			}
+			if v.panels[1].path != root || !slices.Equal(visibleNames(&v.panels[1]), []string{"..", "existing"}) {
+				t.Fatal("source peer received a nested path as a listing entry")
+			}
+			peer := &v.panels[2]
+			if !slices.Contains(visibleNames(peer), "new") || peer.items[peer.selected].name != "keep.txt" || !peer.marks[peer.selected] {
+				t.Fatal("parent reconciliation lost new folder, existing selection or marks")
+			}
+			v.loader.close()
+		}
+	}
+}
+
+func TestNestedCreationFailureRetainsEditorAndCanRetry(t *testing.T) {
+	root := t.TempDir()
+	v := newBrowserView([]string{root, root}, nil)
+	defer v.loader.close()
+	for pi := range v.panels {
+		waitLoaded(t, v, pi)
+	}
+	send, _ := panelInputFrames(v)
+	name := "new/sub/" + strings.Repeat("x", 300)
+	send(newFolderKey(), replaceCreate(v, name))
+	send(pressed(key.NameReturn))
+	waitCreated(t, v)
+	send()
+	r := v.nameInteraction()
+	if r == nil || r.pending || r.err == nil || v.nameEditor.ReadOnly || v.nameEditor.Text() != name || v.panels[0].path != root {
+		t.Fatalf("failed nested creation did not retain its editable path: session=%+v readOnly=%v text=%q path=%s", r, v.nameEditor.ReadOnly, v.nameEditor.Text(), v.panels[0].path)
+	}
+	if !slices.Contains(visibleNames(&v.panels[1]), "new") {
+		t.Fatal("partial parent was not reconciled in another panel")
+	}
+	send(replaceCreate(v, "new/sub/retry"), pressed(key.NameReturn))
+	waitCreated(t, v)
+	send()
+	p := &v.panels[0]
+	if v.nameInteraction() != nil || p.path != filepath.Join(root, "new", "sub") || p.items[p.selected].name != "retry" {
+		t.Fatal("corrected path did not reuse parents and complete creation")
+	}
+	// A collision also retains the editor and never replaces the existing item.
+	send(newFolderKey(), replaceCreate(v, "retry"))
+	send(pressed(key.NameReturn))
+	waitCreated(t, v)
+	send()
+	if v.nameInteraction() == nil || !errors.Is(v.nameInteraction().err, fs.ErrExist) || v.nameEditor.Text() != "retry" {
+		t.Fatal("collision did not retain the draft")
 	}
 }
 

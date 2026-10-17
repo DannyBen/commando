@@ -260,6 +260,11 @@ module/executable and `Commando` for the window title and data-folder name.
   Never reuse an existing entry. Errors use the panel footer and retain the draft.
   Select the created item and preserve existing marks; update other panels
   showing the directory without changing their current item.
+  Creation accepts relative paths with `/` or `\`, creating missing parent
+  directories before exclusively creating the final file or folder. Validate
+  every component before creating anything. Failures may leave created parents;
+  retain the editable path for retry. On success, open the final item's parent
+  and select it; changing folders clears listing-specific marks as usual.
 - Resolve one shared `dataDir` for state and other application data. Windows uses
   `%LOCALAPPDATA%\Commando`. Previews use fixed sample entries and bypass persistence.
 - Ctrl+C/Ctrl+X puts marked files/folders, otherwise the current item, on the

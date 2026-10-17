@@ -174,7 +174,12 @@ func (v *view) updateName(gtx layout.Context) {
 				v.stopName(gtx)
 				return
 			}
-			if err := browser.ValidateName(e.Text); err != nil {
+			name := e.Text
+			err := browser.ValidateName(name)
+			if r.kind == nameCreateFile || r.kind == nameCreateFolder {
+				name, err = browser.NormalizeCreatePath(name)
+			}
+			if err != nil {
 				r.err = err
 				v.showFeedback(r.panel, feedback.Error, r.errorText(err))
 				continue
@@ -192,7 +197,7 @@ func (v *view) updateName(gtx layout.Context) {
 				request.duplicate = &duplicateRequest{plan: r.duplicate, name: e.Text, locations: v.fileOperationLocations(), owner: v.ownerWindow}
 				progress = "Copying"
 			} else {
-				request.create = &createRequest{name: e.Text, folder: r.kind == nameCreateFolder, data: r.data}
+				request.create = &createRequest{name: name, folder: r.kind == nameCreateFolder, data: r.data}
 				progress = "Creating " + r.noun()
 			}
 			r.err, r.pending, v.nameEditor.ReadOnly = nil, true, true
@@ -212,6 +217,27 @@ func (v *view) acceptName(result loadResult) {
 		return
 	}
 	r.pending, r.err, v.nameEditor.ReadOnly = false, result.err, false
+	if result.request.create != nil && filepath.Dir(result.request.create.name) != "." {
+		// A failed attempt retains its stationary draft. Reconcile its partial
+		// parent directories after the editor closes, without disturbing input.
+		if result.err != nil && result.created.Name == "" {
+			if r.panel < len(result.panelUpdates) {
+				result.panelUpdates[r.panel].needed = false
+			}
+			v.panels[r.panel].refreshNeeded = true
+		}
+		v.applyTransferPanels(result, result.request.locations)
+		if result.created.Name != "" && result.directory.Path != "" {
+			p := &v.panels[r.panel]
+			p.reconcileDirectoryListing(result.directory)
+			for row, item := range p.items {
+				if item.file.Name == result.created.Name {
+					p.selected, p.reveal = row, true
+					break
+				}
+			}
+		}
+	}
 	if result.request.duplicate != nil && result.transferred.Attempted {
 		refreshFailed := v.applyTransferPanels(result, result.request.duplicate.locations)
 		r.finished = true
@@ -242,7 +268,11 @@ func (v *view) acceptName(result loadResult) {
 	}
 	r.finished = true
 	if result.err != nil {
-		v.showFeedback(r.panel, feedback.Warning, "Copied; cleanup failed")
+		message := "Copied; cleanup failed"
+		if result.request.create != nil {
+			message = "Created; refresh failed"
+		}
+		v.showFeedback(r.panel, feedback.Warning, message)
 	} else {
 		v.showFeedback(r.panel, feedback.Success, success)
 	}

@@ -190,10 +190,13 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				} else if r := request.rename; r != nil {
 					err = browser.Rename(mutationPath, r.oldName, r.newName)
 				} else if request.create != nil {
-					if request.create.folder {
-						created, err = browser.CreateFolder(mutationPath, request.create.name)
-					} else {
-						created, err = browser.CreateFileData(mutationPath, request.create.name, request.create.data)
+					result.mutationDirectory, created, err = browser.CreatePath(mutationPath, request.create.name, request.create.folder, request.create.data)
+					if filepath.Dir(request.create.name) != "." {
+						l.refreshTransferPanels(&result)
+						if err == nil {
+							// Navigate through the original spelling, preserving directory aliases.
+							directory, err = l.readDirectory(filepath.Join(request.path, filepath.Dir(request.create.name)))
+						}
 					}
 				} else if request.recycle != nil {
 					// Capture alias/backing locations before recycling can remove
