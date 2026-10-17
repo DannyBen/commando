@@ -62,3 +62,7 @@ colors.
 Navigation, selection, filtering, and file operations all work from the keyboard.
 The command palette puts actions, settings, and shortcut customization in one
 searchable place—part command launcher, part help, all within reach.
+
+---
+
+![repocard](https://repocard.dannyben.com/svg/bashly.svg)

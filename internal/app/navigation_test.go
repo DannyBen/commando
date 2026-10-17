@@ -320,6 +320,63 @@ func TestDriveListNavigation(t *testing.T) {
 	}
 }
 
+func TestGoToDrivesFromNestedFolder(t *testing.T) {
+	for _, route := range []string{"keyboard", "palette"} {
+		t.Run(route, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "nested", "folder")
+			root := filepath.VolumeName(path) + string(filepath.Separator)
+			v := newView([]panel{{path: path}, {path: path}})
+			v.loader = newDirectoryLoader(func(path string) (browser.Directory, error) {
+				if path != "" {
+					return browser.Directory{}, fmt.Errorf("unexpected location %q", path)
+				}
+				return browser.Directory{Drives: true, Entries: []browser.Entry{
+					{Name: "Other", Path: filepath.Join(root, "other"), Directory: true},
+					{Name: "System", Path: root, Directory: true},
+				}}, nil
+			}, nil)
+			defer v.finishOperations()
+			send, _ := panelInputFrames(v)
+			p := &v.panels[0]
+			p.loading = true
+			send(modified(key.NameHome, key.ModCtrl))
+			if len(v.loader.requests) != 0 {
+				t.Fatal("Ctrl+Home queued navigation in a busy panel")
+			}
+			p.loading = false
+			send(modified("D", key.ModAlt), modified(key.NameHome, key.ModCtrl))
+			if !v.locationEditing() || p.loading || p.drives {
+				t.Fatal("Ctrl+Home navigated while editing a location")
+			}
+			send(pressed(key.NameEscape))
+			p.filter, p.prefix = "query", "prefix"
+			p.marks = map[int]bool{0: true}
+			if route == "keyboard" {
+				send(modified(key.NameHome, key.ModCtrl))
+			} else {
+				send(pressed("`"), key.EditEvent{Text: "Navigation Drives"})
+				s := v.paletteInteraction()
+				if len(s.results) == 0 || s.results[0].command.id != "navigation.drives" {
+					t.Fatal("Drives command not found in palette")
+				}
+				send(pressed(key.NameReturn))
+			}
+			waitLoaded(t, v, 0)
+			send()
+			if !p.drives || p.selected != 1 || p.filter != "" || p.prefix != "" || len(p.marks) != 0 {
+				t.Fatal("Drives did not select the current drive and clear listing state")
+			}
+			if v.active != 0 || v.panels[1].drives || v.panels[1].path != path {
+				t.Fatal("Drives navigation changed another panel or focus")
+			}
+			send(modified(key.NameHome, key.ModCtrl))
+			if p.loading || p.selected != 1 {
+				t.Fatal("Ctrl+Home reloaded or changed the drive list")
+			}
+		})
+	}
+}
+
 func TestLargeListKeepsOnlyVisibleRowWidgets(t *testing.T) {
 	items := make([]entry, 10000)
 	for i := range items {

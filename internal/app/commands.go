@@ -68,6 +68,7 @@ func defaultCommands() []command {
 		cmd("entry.arm_drag", "Entry", "Arm drag", "D", key.ModCtrl|key.ModShift, func(v *view) bool { return v.dragAvailable(v.active, v.panels[v.active].selected, true) }),
 
 		cmd("navigation.parent_folder", "Navigation", "Parent folder", key.NameDeleteBackward, 0, func(v *view) bool { return folderReady(v) && v.loader != nil }),
+		cmd("navigation.drives", "Navigation", "Drives", key.NameHome, key.ModCtrl, func(v *view) bool { return folderReady(v) && v.loader != nil }),
 		cmd("navigation.edit_location", "Navigation", "Edit location", "D", key.ModAlt, nil),
 		cmd("navigation.next_panel", "Navigation", "Next panel", key.NameTab, 0, nil),
 		cmd("navigation.previous_panel", "Navigation", "Previous panel", key.NameTab, key.ModShift, nil),
@@ -177,7 +178,7 @@ func (c command) defaultShortcut(s shortcut) bool {
 func (v *view) executeCommand(gtx layout.Context, c command) {
 	// Opening and going up finish filename-prefix input even when no directory
 	// read can start (for example at a root or in a preview).
-	if c.id == "entry.open" || c.id == "navigation.parent_folder" {
+	if c.id == "entry.open" || c.id == "navigation.parent_folder" || c.id == "navigation.drives" {
 		v.panels[v.active].prefix = ""
 	}
 	if !c.allowed(v) {

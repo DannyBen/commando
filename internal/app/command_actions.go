@@ -39,6 +39,8 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		v.startDrag(gtx, v.active, p.selected, true)
 	case "navigation.parent_folder":
 		v.parentFolder()
+	case "navigation.drives":
+		v.showDrives()
 	case "navigation.edit_location":
 		v.startLocation(gtx)
 	case "navigation.next_panel":

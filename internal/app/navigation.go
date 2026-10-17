@@ -266,10 +266,18 @@ func (v *view) parentFolder() {
 	}
 	parent := filepath.Dir(p.path)
 	if parent == p.path {
-		v.load(v.active, "", p.path)
+		v.showDrives()
 		return
 	}
 	v.load(v.active, parent, filepath.Base(p.path))
+}
+
+func (v *view) showDrives() {
+	if !folderReady(v) {
+		return
+	}
+	root := filepath.VolumeName(v.panels[v.active].path) + string(filepath.Separator)
+	v.load(v.active, "", root)
 }
 
 func (v *view) openAdjacent(direction int) {

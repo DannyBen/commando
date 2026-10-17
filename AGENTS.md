@@ -221,6 +221,8 @@ module/executable and `Commando` for the window title and data-folder name.
   destination listing and show its footer error.
 - On Windows, a bare ASCII drive letter with an optional colon opens its root
   (`d`/`d:` -> `D:\`). Explicit relative paths such as `.\d` retain their meaning.
+- Ctrl+Home opens Drives in the current panel, selecting its current drive.
+  Reuse root Backspace navigation; editors retain native Ctrl+Home behavior.
 - Opening a Windows .lnk shortcut to a filesystem folder navigates in the current
   panel. Resolve it on activation through the shared worker, with no shortcut edits
   or resolver dialogs. Other targets retain native opening. Keep the shortcut a
