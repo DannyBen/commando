@@ -1,6 +1,30 @@
 Changelog
 ========================================
 
+v0.4.0 - 2026-10-17
+----------------------------------------
+
+- Appearance > Theme > Select
+- Auto select theme on clean startup
+- Reduce theme generator autocolor influence
+- Improve preview for autocolor settings
+- Update APCA thresholds for naturally dimmed items
+- Appearance > Contrast guard
+- Appearance > Theme > Save
+- View > Metadata columns
+- Sound profiles
+- Home/End to navigate autocompelte steppers
+- Fix sound and visual palette opening issues
+- Fix focus steal
+- Allow bold weight for dirs
+- Autocomplete location bar
+- Use []/{} to copy/move entries left/right
+- Update icon
+- View > Parent entry
+- Ctrl+Left/Right on a file clones the panel also
+- Ctrl+N/Ctrl+Shift+N now allow deep creation
+
+
 v0.3.0 - 2026-10-16
 ----------------------------------------
 
