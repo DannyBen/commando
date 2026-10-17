@@ -170,6 +170,12 @@ func shortcutKeyboardProc(code int32, wParam, lParam uintptr) uintptr {
 }
 
 func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data uintptr) uintptr {
+	// Gio's Windows pointerUpdate calls SetFocus even for hover movement. Stop
+	// inactive hover updates before they reach Gio so passing the mouse over
+	// Commando cannot activate it. Keep clicks, drags and cancellation intact.
+	if passivePointerUpdate(message, wParam) && uintptr(windows.GetForegroundWindow()) != hwnd {
+		return 0
+	}
 	if native, ok := nativeWindows.Load(hwnd); ok {
 		if instance := native.(*nativeWindow).instance; instance != nil && message == instance.message {
 			activateInstanceWindow(hwnd)
@@ -257,6 +263,13 @@ func shortcutWindowProc(hwnd uintptr, message uint32, wParam, lParam, id, data u
 		}
 	}
 	return result
+}
+
+func passivePointerUpdate(message uint32, wParam uintptr) bool {
+	const wmPointerUpdate = 0x0245
+	// WM_POINTER message flags occupy the high word of wParam.
+	const inContact, buttons, canceled = 0x0004, 0x01f0, 0x0800
+	return message == wmPointerUpdate && (wParam>>16)&(inContact|buttons|canceled) == 0
 }
 
 func (n *nativeWindow) owner() uintptr { return n.hwnd }

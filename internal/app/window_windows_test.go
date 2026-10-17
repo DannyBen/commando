@@ -5,6 +5,33 @@ import (
 	"unsafe"
 )
 
+func TestPassivePointerUpdate(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		message uint32
+		flags   uintptr
+		want    bool
+	}{
+		{"hover", 0x0245, 0x2003, true},
+		{"contact", 0x0245, 0x0004, false},
+		{"left drag", 0x0245, 0x0010, false},
+		{"right drag", 0x0245, 0x0020, false},
+		{"middle drag", 0x0245, 0x0040, false},
+		{"fourth button", 0x0245, 0x0080, false},
+		{"fifth button", 0x0245, 0x0100, false},
+		{"cancel", 0x0245, 0x0800, false},
+		{"press", 0x0246, 0, false},
+		{"release", 0x0247, 0, false},
+		{"capture changed", 0x024c, 0, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := passivePointerUpdate(tc.message, tc.flags<<16|7); got != tc.want {
+				t.Fatalf("passivePointerUpdate = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestWindowsPlacementRoundTrip(t *testing.T) {
 	want := windowState{X: -1300, Y: 56, Width: 900, Height: 500, Positioned: true}
 	for _, maximized := range []bool{false, true} {
