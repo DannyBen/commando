@@ -18,6 +18,8 @@ func (n *nativeWindow) shellExecutor(w *gioapp.Window) func(shellRequest) shellC
 				return
 			}
 			switch request.action {
+			case shellProperties:
+				result.result, result.err = n.shell.Properties(request.paths, request.options)
 			case shellDrag:
 				result.result, result.err = n.shell.Drag(request.paths, request.armed)
 			default:

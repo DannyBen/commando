@@ -43,6 +43,10 @@ module/executable and `Commando` for the window title and data-folder name.
   native sessions, eligibility, close/mutation blocking and quiet reconciliation.
   Keep the source pinned/rooted until its final COM Release. Native completion
   reports acceptance rather than claiming the destination finished an upload.
+- F12 and Entry › Properties invoke native Windows properties for marked items,
+  otherwise the current file or folder. Anchor beside the revealed current row.
+  Exclude parents and drives. Reuse the
+  shell host, foreground session, busy policy and quiet reconciliation.
 - Right-click targets only the clicked file or folder, selects its row and panel,
   and retains independent marks. Alt+/ and the native Menu key use marked items,
   otherwise the current item; command search uses the same handler. Keyboard

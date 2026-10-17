@@ -27,6 +27,7 @@ type shellAction uint8
 const (
 	shellMenu shellAction = iota
 	shellDrag
+	shellProperties
 )
 
 type shellRequest struct {
@@ -75,8 +76,11 @@ func (v *view) completeNative(completion shellCompletion) bool {
 	}
 	if completion.err != nil {
 		message := "Cannot open context menu"
-		if completion.session.request.action == shellDrag {
+		switch completion.session.request.action {
+		case shellDrag:
 			message = "Cannot drag files"
+		case shellProperties:
+			message = "Cannot open properties"
 		}
 		switch {
 		case errors.Is(completion.err, fs.ErrPermission):

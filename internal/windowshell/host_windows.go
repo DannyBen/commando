@@ -153,14 +153,9 @@ func (h *Host) ContextMenu(paths []string, options MenuOptions) (Result, error) 
 		return r, err
 	}
 	defer h.end()
-	var point nativePoint
-	if options.ClientPoint != nil {
-		point = nativePoint{int32(options.ClientPoint.X), int32(options.ClientPoint.Y)}
-		if ok, _, err := clientToScreen.Call(h.hwnd, uintptr(unsafe.Pointer(&point))); ok == 0 {
-			return r, fmt.Errorf("ClientToScreen: %w", err)
-		}
-	} else if ok, _, err := getCursorPos.Call(uintptr(unsafe.Pointer(&point))); ok == 0 {
-		return r, fmt.Errorf("GetCursorPos: %w", err)
+	point, err := h.invocationPoint(options)
+	if err != nil {
+		return r, err
 	}
 	menu, err := timedShellObject(h.hwnd, paths, &iidMenu, &r.Timings)
 	if err != nil {
@@ -230,6 +225,46 @@ func (h *Host) ContextMenu(paths []string, options MenuOptions) (Result, error) 
 		r.Action = "menu: " + windows.UTF16ToString(verb[:])
 	}
 	return r, hresult(uintptr(menu.call(4, uintptr(unsafe.Pointer(&info)))))
+}
+
+// Properties invokes the canonical shell verb for the whole sibling selection.
+func (h *Host) Properties(paths []string, options MenuOptions) (Result, error) {
+	r := Result{Action: "properties", ThreadID: h.thread}
+	if err := h.begin(); err != nil {
+		return r, err
+	}
+	defer h.end()
+	point, err := h.invocationPoint(options)
+	if err != nil {
+		return r, err
+	}
+	menu, err := shellObject(h.hwnd, paths, &iidMenu)
+	if err != nil {
+		return r, err
+	}
+	defer menu.call(2)
+	verb := []byte("properties\x00")
+	verbW, _ := windows.UTF16PtrFromString("properties")
+	info := invokeInfo{Mask: 0x4000 | 0x100 | 0x20000000, Window: h.hwnd,
+		Verb: uintptr(unsafe.Pointer(&verb[0])), VerbW: uintptr(unsafe.Pointer(verbW)), Show: windows.SW_SHOWNORMAL, Point: point}
+	info.Size = uint32(unsafe.Sizeof(info)) // UNICODE | NOASYNC | PTINVOKE
+	err = hresult(uintptr(menu.call(4, uintptr(unsafe.Pointer(&info)))))
+	runtime.KeepAlive(verb)
+	runtime.KeepAlive(verbW)
+	return r, err
+}
+
+func (h *Host) invocationPoint(options MenuOptions) (nativePoint, error) {
+	var point nativePoint
+	if options.ClientPoint != nil {
+		point = nativePoint{int32(options.ClientPoint.X), int32(options.ClientPoint.Y)}
+		if ok, _, err := clientToScreen.Call(h.hwnd, uintptr(unsafe.Pointer(&point))); ok == 0 {
+			return point, fmt.Errorf("ClientToScreen: %w", err)
+		}
+	} else if ok, _, err := getCursorPos.Call(uintptr(unsafe.Pointer(&point))); ok == 0 {
+		return point, fmt.Errorf("GetCursorPos: %w", err)
+	}
+	return point, nil
 }
 
 type nativePoint struct{ X, Y int32 }

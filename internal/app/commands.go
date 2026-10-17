@@ -73,6 +73,8 @@ func defaultCommands() []command {
 		cmd("entry.new_folder", "Entry", "New folder", "N", key.ModCtrl|key.ModShift, writableFolder),
 		cmd("entry.context_menu", "Entry", "Context menu", "/", key.ModAlt, func(v *view) bool { return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false) }),
 
+		cmd("entry.properties", "Entry", "Properties", key.NameF12, 0, func(v *view) bool { return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false) }),
+
 		cmd("entry.arm_drag", "Entry", "Arm drag", "D", key.ModCtrl|key.ModShift, func(v *view) bool { return v.dragAvailable(v.active, v.panels[v.active].selected, true) }),
 
 		cmd("navigation.parent_folder", "Navigation", "Parent folder", key.NameDeleteBackward, 0, func(v *view) bool { return folderReady(v) && v.loader != nil }),
