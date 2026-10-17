@@ -182,6 +182,8 @@ type settingsSession struct {
 	completion         inlineCompletion
 	themeName          string // Selected snapshot name, confined to this transaction.
 	themes             []themeSnapshot
+	themesLoading      bool        // Library reads must not lock the widget like a save.
+	themeLibraryResult *loadResult // Choices arriving during text editing wait.
 	bindingCommand     *command
 	capturing          bool
 }
@@ -709,6 +711,8 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	if s.pending {
 		return
 	}
+	v.offerThemeLibrary(s)
+	defer v.offerThemeLibrary(s)
 	if action, ok := s.actions.update(gtx); ok {
 		s.action, s.actionsFocused = action, true
 		v.activateSettingsAction(gtx, action)

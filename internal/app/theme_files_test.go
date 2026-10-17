@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"errors"
+	"image"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -12,6 +13,7 @@ import (
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/settings"
 )
 
@@ -137,13 +139,116 @@ func waitThemeLibrary(t *testing.T, v *view) {
 	t.Helper()
 	deadline := time.NewTimer(3 * time.Second)
 	defer deadline.Stop()
-	for s := v.settingsInteraction(); s != nil && s.pending; s = v.settingsInteraction() {
+	for s := v.settingsInteraction(); s != nil && (s.pending || s.themesLoading); s = v.settingsInteraction() {
 		select {
 		case result := <-v.loader.results:
 			v.acceptLoad(result)
 		case <-deadline.C:
 			t.Fatal("theme library did not finish loading")
 		}
+	}
+}
+
+func TestThemeSelectRemainsResponsiveBehindSlowIconRead(t *testing.T) {
+	for _, action := range []string{"choose", "cancel"} {
+		t.Run(action, func(t *testing.T) {
+			v := newPreviewView()
+			v.activeDataFolder = t.TempDir()
+			v.fileIcons = make(map[fileIconKey]fileIconEntry)
+			v.loader = newDirectoryLoader(browser.ReadLocation, nil)
+			started, release := make(chan struct{}), make(chan struct{})
+			released, first := false, true
+			defer func() {
+				if !released {
+					close(release)
+				}
+				v.finishOperations()
+			}()
+			v.loader.readFileIcon = func(string, int) image.Image {
+				if first {
+					first = false
+					close(started)
+					<-release
+				}
+				return nil
+			}
+			if !v.loader.submit(loadRequest{action: actionBrowse, icons: []fileIconKey{{path: "slow", size: 16}}}) {
+				t.Fatal("icon request was not accepted")
+			}
+			select {
+			case <-started:
+			case <-time.After(3 * time.Second):
+				t.Fatal("icon read did not start")
+			}
+			v.startSettingsWidget(settingThemeSelect)
+			s := v.settingsInteraction()
+			if s == nil || !s.themesLoading || s.pending {
+				t.Fatal("library read locked the selector")
+			}
+			send, _ := panelInputFrames(v)
+			before := v.settingText(settingThemeSelect)
+			if action == "choose" {
+				send(pressed(key.NameRightArrow))
+				chosen := v.settingText(settingThemeSelect)
+				if chosen == before {
+					t.Fatal("Right waited for the library read")
+				}
+				close(release)
+				released = true
+				waitThemeLibrary(t, v)
+				if v.settingText(settingThemeSelect) != chosen {
+					t.Fatal("arriving library lost the live selection")
+				}
+			} else {
+				send(pressed(key.NameEscape))
+				if !v.interaction.idle() {
+					t.Fatal("Escape waited for the library read")
+				}
+				v.startSettingsWidget("appearance.icons")
+				current := v.settingsInteraction()
+				close(release)
+				released = true
+				for {
+					select {
+					case result := <-v.loader.results:
+						v.acceptLoad(result)
+						if result.request.themeLibrary == s {
+							if v.settingsInteraction() != current || current.errorText != "" {
+								t.Fatal("late library result affected another widget")
+							}
+							return
+						}
+					case <-time.After(3 * time.Second):
+						t.Fatal("library read did not finish")
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestThemeLibraryDefersChoicesDuringEditingAndRetainsSaveLock(t *testing.T) {
+	v := newPreviewView()
+	v.startSettingsWidget(settingThemeSelect)
+	send, _ := panelInputFrames(v)
+	send(pressed(key.NameReturn))
+	s := v.settingsInteraction()
+	s.editor.SetText("unfinished draft")
+	s.editor.SetCaret(2, 6)
+	themes := append(slices.Clone(builtInThemes), themeSnapshot{name: "New theme", values: builtInThemes[0].values})
+	v.acceptThemeLibrary(s, themes, nil)
+	start, end := s.editor.Selection()
+	if !s.editing || s.editor.Text() != "unfinished draft" || start != 2 || end != 6 || len(s.completion.candidates) != 2 {
+		t.Fatal("arriving choices changed the editor or its completion list")
+	}
+	send(pressed(key.NameEscape))
+	if s.editing || len(s.completion.candidates) != 3 {
+		t.Fatal("choices did not appear after editing closed")
+	}
+	s.pending = true // A submitted settings save must keep its existing lock.
+	v.acceptThemeLibrary(s, themes, nil)
+	if !s.pending || !v.interaction.operationsHeld() {
+		t.Fatal("library completion released a settings save")
 	}
 }
 

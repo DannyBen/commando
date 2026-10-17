@@ -113,9 +113,9 @@ func (v *view) loadThemeLibrary(s *settingsSession) {
 	if v.activeDataFolder == "" || v.loader == nil {
 		return
 	}
-	s.pending = v.loader.submit(loadRequest{panel: s.panel, path: filepath.Join(v.activeDataFolder, "themes"),
+	s.themesLoading = v.loader.submit(loadRequest{panel: s.panel, path: filepath.Join(v.activeDataFolder, "themes"),
 		themeLibrary: s, action: actionBrowse})
-	if !s.pending {
+	if !s.themesLoading {
 		s.errorText = "Cannot read themes"
 	}
 }
@@ -124,7 +124,11 @@ func (v *view) acceptThemeLibrary(s *settingsSession, themes []themeSnapshot, er
 	if v.settingsInteraction() != s {
 		return
 	}
-	s.pending = false
+	s.themesLoading = false
+	if s.editing {
+		s.themeLibraryResult = &loadResult{themes: themes, err: err}
+		return
+	}
 	s.themes, s.completion.candidates = themes, nil
 	s.themeName = ""
 	for _, theme := range themes {
@@ -136,4 +140,13 @@ func (v *view) acceptThemeLibrary(s *settingsSession, themes []themeSnapshot, er
 	if err != nil {
 		s.errorText = "Some themes could not load"
 	}
+}
+
+func (v *view) offerThemeLibrary(s *settingsSession) {
+	if v.settingsInteraction() != s || s.editing || s.pending || s.themeLibraryResult == nil {
+		return
+	}
+	result := s.themeLibraryResult
+	s.themeLibraryResult = nil
+	v.acceptThemeLibrary(s, result.themes, result.err)
 }
