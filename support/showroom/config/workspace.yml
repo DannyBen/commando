@@ -1,0 +1,132 @@
+# This is showcase data, independent of internal/app/samples.go and its tests.
+# Paths are display paths in a virtual Windows workspace, even on Linux.
+# Every directory contains optional `directories` and `files` collections.
+# Directory names are mapping keys; an empty mapping means an empty directory.
+# File sizes are bytes. Dates are quoted ISO 8601 strings in UTC.
+# Omitted file metadata inherits these defaults; omitted size means zero bytes.
+defaults:
+  modified: '2026-10-01T12:00:00Z'
+  created: '2026-09-01T12:00:00Z'
+
+roots:
+  'C:\Projects':
+    directories:
+      commando:
+        directories:
+          assets: {}
+          internal: {}
+        files:
+          - name: main.go
+            size: 3200
+          - name: go.mod
+            size: 1100
+          - name: README.md
+            size: 4800
+      website:
+        directories:
+          images: {}
+        files:
+          - name: index.html
+            size: 6400
+      notes: {}
+    files:
+      - name: ideas.md
+        size: 2400
+      - name: architecture.pdf
+        size: 184000
+      - name: build.ps1
+        size: 1800
+      - name: config.yml
+        size: 840
+      - name: dashboard.html
+        size: 12400
+      - name: demo.mp4
+        size: 28626124
+      - name: design-notes.md
+        size: 6400
+      - name: icon.svg
+        size: 14800
+      - name: main.go
+        size: 3200
+      - name: palette.json
+        size: 2100
+      - name: preview.png
+        size: 843776
+      - name: project-assets.zip
+        size: 19503513
+      - name: release.exe
+        size: 16986931
+      - name: sample-data.csv
+        size: 94208
+      - name: styles.css
+        size: 4200
+      - name: workspace.code-workspace
+        size: 480
+
+  'D:\Downloads':
+    directories:
+      documents: {}
+      images: {}
+    files:
+      - name: album-cover.jpg
+        size: 655360
+      - name: backup.tar.gz
+        size: 26004684
+      - name: brochure.pdf
+        size: 4404019
+      - name: color-palette.json
+        size: 2100
+      - name: data-export.csv
+        size: 2936012
+      - name: demo.mp4
+        size: 34183577
+      - name: font-family.ttf
+        size: 286720
+      - name: icon-set.svg
+        size: 18432
+      - name: installer.exe
+        size: 48234496
+      - name: meeting-notes.txt
+        size: 3100
+      - name: reference.png
+        size: 843776
+      - name: project-assets.zip
+        size: 19503513
+      - name: release-notes.txt
+        size: 6400
+        modified: '2026-10-15T09:30:00Z'
+      - name: soundtrack.mp3
+        size: 8074035
+      - name: theme-preview.html
+        size: 12800
+      - name: website.css
+        size: 4800
+
+  'E:\Archive':
+    directories:
+      '2026':
+        directories:
+          september: {}
+          october: {}
+        files:
+          - name: assets-09.zip
+            size: 50541363
+          - name: assets-10.zip
+            size: 44879052
+          - name: design-review.pdf
+            size: 1782579
+          - name: notes.md
+            size: 3200
+          - name: project-index.csv
+            size: 8396
+          - name: release-checklist.txt
+            size: 3100
+          - name: screenshot-dark.png
+            size: 1258291
+          - name: screenshot-light.png
+            size: 1153433
+          - name: source-backup.zip
+            size: 88604672
+    files:
+      - name: archive-index.txt
+        size: 8200
