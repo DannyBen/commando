@@ -79,7 +79,7 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 			groups = append(groups, result.command.group)
 		}
 	}
-	if !slices.Equal(groups, []string{"File", "Entry", "Navigation", "View", "Panel", "Selection", "Feedback", "Application"}) ||
+	if !slices.Equal(groups, []string{"File", "Entry", "Navigation", "View", "Panel", "Selection", "Appearance", "Feedback", "Application"}) ||
 		s.results[0].command.label() != "File › Edit" || s.results[1].command.label() != "Entry › Open" || s.results[2].command.label() != "Entry › Rename" {
 		t.Fatalf("blank search lost reviewed browsing order: %v", groups)
 	}
@@ -278,7 +278,7 @@ func TestPaletteSearchSelectionAndExecutionInOneEventBatch(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
 	send(key.EditEvent{Text: "metadata column"}, pressed(key.NameDownArrow), pressed(key.NameReturn))
-	if !v.interaction.idle() || v.panels[0].metadata != metadataExtension {
+	if !v.interaction.idle() || v.panels[0].metadata != metadataNone {
 		t.Fatalf("query, Down, Enter did not execute the second search result: metadata=%v session=%T", v.panels[0].metadata, v.interaction.current)
 	}
 }
@@ -399,10 +399,10 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 	}{
 		{320, 0, 320, 1, 15},
 		{480, 0, 480, 1, 15},
-		{600, 60, 480, 1, 15},
-		{800, 160, 480, 1, 15},
-		{960, 240, 480, 1, 15},
-		{1600, 560, 480, 1, 15},
+		{600, 0, 0, 1, 15}, // Catalogue labels can grow beyond the minimum width.
+		{800, 0, 0, 1, 15},
+		{960, 0, 0, 1, 15},
+		{1600, 0, 0, 1, 15},
 		{1200, 0, 0, 1.5, 24}, // Content-sized width depends on font metrics.
 		{720, 0, 720, 1, 48},
 	} {

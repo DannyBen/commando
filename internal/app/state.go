@@ -22,6 +22,7 @@ type panelState struct {
 	Path           string `json:"path"`
 	Drives         bool   `json:"drives,omitempty"`
 	Metadata       string `json:"metadata,omitempty"`
+	LastMetadata   string `json:"lastMetadata,omitempty"`
 	SortByMetadata bool   `json:"sortByMetadata,omitempty"`
 	Visibility     string `json:"visibility,omitempty"`
 }
@@ -135,6 +136,7 @@ func startingLocations(args []string, saved []panelState) ([]panelState, error) 
 		// Column choices belong to the panel independently of its location.
 		if i < len(saved) {
 			locations[i].Metadata = saved[i].Metadata
+			locations[i].LastMetadata = saved[i].LastMetadata
 			locations[i].SortByMetadata = saved[i].SortByMetadata
 			locations[i].Visibility = saved[i].Visibility
 		}
@@ -149,6 +151,9 @@ func (v *view) sessionState(window windowState) sessionState {
 	state := sessionState{Window: window, ActivePanel: v.active, Panels: make([]panelState, len(v.panels))}
 	for i, p := range v.panels {
 		state.Panels[i] = panelState{Path: p.path, Drives: p.drives, Metadata: p.metadata.stateName(), Visibility: p.visibility.stateName(), SortByMetadata: p.sortByMetadata}
+		if p.metadata == metadataNone && p.lastMetadata != metadataNone {
+			state.Panels[i].LastMetadata = p.lastMetadata.stateName()
+		}
 	}
 	return state
 }

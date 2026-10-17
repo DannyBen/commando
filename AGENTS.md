@@ -161,6 +161,10 @@ module/executable and `Commando` for the window title and data-folder name.
   default to Size. Keep the header synchronized
   with the column. None reserves no metadata width. Preserve listing order,
   marks, current row and scroll. Handle browsing keys in event order.
+  View › Toggle metadata column is unbound by default and switches between None
+  and the last visible column. Remember it with the panel's persisted preferences;
+  if disabled, fall back to Size, then another enabled column. Retain the memory
+  through cycling, panel swaps, cloning and close/reopen, and restore it on Cancel.
 - Ctrl+F3 toggles Sort by metadata independently for each panel; the command
   palette uses the same browsing handler. Persist the choice independently of
   startup paths, defaulting to off. None uses name order without clearing the
@@ -173,6 +177,10 @@ module/executable and `Commando` for the window title and data-folder name.
   marks and viewport anchors. Apply the same comparator after reads, filtering,
   renames, creation and transfers. Editors, inline interactions, busy panels
   and drive lists ignore the toggle; choices follow swapped panes.
+  Its palette label is View › Toggle sort by metadata; retain its command identity
+  and bindings. Unbound Toggle commands for parent entry, protected system files,
+  icons, auto color, contrast guard and notification animation use the shared
+  boolean-settings command path, applying live and saving through the worker.
 - File marks are separate from the current row, local to each panel, and not
   persisted. Preserve them during navigation within a listing and failed reads;
   clear them on successful listing changes. Exclude parent rows and drives.

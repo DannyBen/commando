@@ -33,6 +33,7 @@ type panel struct {
 	marks               map[int]bool
 	markRange           *selectionRange
 	metadata            metadataColumn
+	lastMetadata        metadataColumn // Last visible column, retained while metadata is None.
 	sortByMetadata      bool
 	visibility          visibilityMode
 	reveal              bool

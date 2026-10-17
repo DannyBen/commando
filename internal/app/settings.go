@@ -436,7 +436,7 @@ func (v *view) applySettings() {
 	showParent := v.settingsValues.Get(c, settingParentEntry).Bool
 	apply := func(p *panel) {
 		if !v.metadataColumnEnabled(p.metadata) {
-			p.metadata = v.nextMetadataColumn(p.metadata, 1)
+			p.setMetadataColumn(v.nextMetadataColumn(p.metadata, 1))
 			if p.sortByMetadata {
 				p.resort()
 			}

@@ -29,6 +29,7 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 	v.loader.readFileTypeIcon = browser.NewFileTypeIconReader()
 	for i, location := range locations {
 		v.panels[i].metadata = metadataFromState(location.Metadata)
+		v.panels[i].lastMetadata = metadataFromState(location.LastMetadata)
 		v.panels[i].sortByMetadata = location.SortByMetadata
 		v.panels[i].visibility = visibilityFromState(location.Visibility)
 		if location.Drives {

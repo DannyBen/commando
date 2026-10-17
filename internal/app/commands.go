@@ -10,14 +10,15 @@ import (
 // IDs are persistent identities, independent of labels and catalogue order.
 // Availability is checked at execution for both palette and keyboard routes.
 type command struct {
-	id           string
-	group        string
-	name         string
-	bindings     [2]commandBinding
-	overrides    [2]bindingOverride
-	available    func(*view) bool
-	execute      func(*view) // Workspace actions can run without a keyboard binding.
-	paletteQuery string      // Replace the search text while retaining the palette session.
+	id            string
+	group         string
+	name          string
+	bindings      [2]commandBinding
+	overrides     [2]bindingOverride
+	available     func(*view) bool
+	execute       func(*view) // Workspace actions can run without a keyboard binding.
+	paletteQuery  string      // Replace the search text while retaining the palette session.
+	toggleSetting string      // Boolean setting changed through shared live application and persistence.
 }
 
 // Workspace-dependent commands join their category in catalogue order. The
@@ -37,6 +38,13 @@ func (v *view) commandCatalogue() []command {
 
 func cmd(id, group, name string, nameKey key.Name, modifiers key.Modifiers, available func(*view) bool) command {
 	return command{id: id, group: group, name: name, bindings: [2]commandBinding{{Default: shortcut{Name: nameKey, Modifiers: modifiers}}}, available: available}
+}
+
+func toggleSettingCommand(id, group, name, field string) command {
+	c := cmd(id, group, "Toggle "+name, "", 0,
+		func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) })
+	c.toggleSetting = field
+	return c
 }
 
 // Catalogue order is the browsing order. Searches rank the complete label.
@@ -84,9 +92,13 @@ func defaultCommands() []command {
 		cmd("view.refresh", "View", "Refresh", "R", key.ModCtrl, func(v *view) bool { return panelReady(v) && v.loader != nil }),
 		cmd("view.filter_files", "View", "Filter files", "/", 0, folderReady),
 		cmd("view.hidden_files", "View", "Hidden files", "H", key.ModCtrl, folderReady),
+		toggleSettingCommand("view.toggle_parent_entry", "View", "parent entry", settingParentEntry),
+		toggleSettingCommand("view.toggle_protected_system_files", "View", "protected system files", settingProtectedSystem),
+		cmd("view.toggle_metadata_column", "View", "Toggle metadata column", "", 0,
+			func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) }),
 		cmd("view.next_metadata_column", "View", "Next metadata column", "M", key.ModCtrl, nil),
 		cmd("view.previous_metadata_column", "View", "Previous metadata column", "M", key.ModCtrl|key.ModShift, nil),
-		cmd("view.sort_by_metadata", "View", "Sort by metadata", key.NameF3, key.ModCtrl, folderReady),
+		cmd("view.sort_by_metadata", "View", "Toggle sort by metadata", key.NameF3, key.ModCtrl, folderReady),
 
 		cmd("panel.move_left", "Panel", "Move left", key.NameLeftArrow, key.ModShift, func(v *view) bool { return v.active > 0 && panelsCanSwap(v) }),
 		cmd("panel.move_right", "Panel", "Move right", key.NameRightArrow, key.ModShift, func(v *view) bool { return v.active+1 < len(v.panels) && panelsCanSwap(v) }),
@@ -103,8 +115,12 @@ func defaultCommands() []command {
 		cmd("selection.mark_all", "Selection", "Mark all", "A", key.ModCtrl, nil),
 		cmd("selection.clear_filter_or_marks", "Selection", "Clear filter or marks", key.NameEscape, 0, nil),
 
-		cmd("feedback.toggle_sound", "Feedback", "Toggle sound", "", 0,
-			func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) }),
+		toggleSettingCommand("appearance.toggle_icons", "Appearance", "icons", settingIconsEnabled),
+		toggleSettingCommand("appearance.toggle_auto_color", "Appearance", "auto color", settingAutoColorEnabled),
+		toggleSettingCommand("appearance.toggle_contrast_guard", "Appearance", "contrast guard", settingContrastGuard),
+
+		toggleSettingCommand("feedback.toggle_sound", "Feedback", "sound", settingSoundEnabled),
+		toggleSettingCommand("feedback.toggle_notification_animation", "Feedback", "notification animation", settingNotificationAnimation),
 
 		cmd("application.command_palette", "Application", "Command palette", "`", 0, nil),
 		{id: "application.open_data_folder", group: "Application", name: "Open data folder",
@@ -191,7 +207,9 @@ func (v *view) executeCommand(gtx layout.Context, c command) {
 		v.openPaletteQuery(gtx, c.paletteQuery)
 		return
 	}
-	if c.execute != nil {
+	if c.toggleSetting != "" {
+		v.toggleBooleanSetting(c.toggleSetting)
+	} else if c.execute != nil {
 		c.execute(v)
 	} else {
 		v.executeBuiltinCommand(gtx, c.id)
