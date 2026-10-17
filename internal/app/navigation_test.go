@@ -16,6 +16,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/settings"
 )
 
 func newBrowserView(paths []string, invalidate func()) *view {
@@ -23,7 +24,11 @@ func newBrowserView(paths []string, invalidate func()) *view {
 	for i, path := range paths {
 		locations[i].Path = path
 	}
-	return newLocationView(locations, 0, invalidate)
+	v := newLocationView(locations, 0, invalidate)
+	// These navigation fixtures also exercise the optional parent row.
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingParentEntry, settings.Value{Bool: true})
+	v.applySettings()
+	return v
 }
 
 func navigationFrames(v *view) (frame func(), press func(key.Name)) {
@@ -103,7 +108,6 @@ func TestRealFolderNavigation(t *testing.T) {
 	if p.itemCount() != 30 {
 		t.Fatalf("item count=%d", p.itemCount())
 	}
-	press(key.NameDownArrow)
 	press(key.NameReturn)
 	waitLoaded(t, v, 0)
 	frame()
@@ -152,7 +156,7 @@ func TestRealFolderNavigation(t *testing.T) {
 	press(key.NameReturn)
 	waitLoaded(t, v, 0)
 	frame()
-	if p.path != root || p.err != nil || p.selected != 0 {
+	if p.path != root || p.err != nil || p.selected != 1 {
 		t.Fatal("disappeared child did not recover to its surviving parent")
 	}
 	for _, item := range p.items {

@@ -21,6 +21,7 @@ type entry struct {
 
 type panel struct {
 	showProtectedSystem bool
+	showParentEntry     bool
 	path                string // Last physical directory, retained while displaying drives.
 	drives              bool
 	items               []entry
@@ -95,6 +96,9 @@ type view struct {
 
 func newPreviewView() *view {
 	v := newView(samplePanels())
+	for i := range v.panels {
+		v.panels[i].showParentEntry = true
+	}
 	for _, row := range []int{1, 3, 4} {
 		v.panels[0].toggleMark(row)
 	}

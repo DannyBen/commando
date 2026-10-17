@@ -129,7 +129,7 @@ func TestFilterEditorAndPanelFocus(t *testing.T) {
 		t.Fatal("editor did not filter immediately")
 	}
 	send(pressed(key.NameDownArrow))
-	if v.panels[0].selected != 1 || v.filterInteraction() == nil {
+	if v.panels[0].selected != 2 || v.filterInteraction() == nil {
 		t.Fatal("arrow did not navigate matches while retaining editor")
 	}
 	send(pressed(key.NameReturn))

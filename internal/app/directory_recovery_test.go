@@ -185,7 +185,7 @@ func TestRefreshRecoversMissingLocationAndClearsOldIdentity(t *testing.T) {
 	}
 	v.refreshPanel()
 	waitLoaded(t, v, 0)
-	if p.path != root || p.err != nil || len(p.marks) != 0 || p.selected != 0 || p.feedback.Current() != nil {
+	if p.path != root || p.err != nil || len(p.marks) != 0 || p.selected != 1 || p.feedback.Current() != nil {
 		t.Fatal("manual refresh treated the surviving parent as the old listing")
 	}
 }

@@ -181,6 +181,9 @@ func (v *view) acceptLoad(result loadResult) {
 	p.selected = -1
 	if len(p.items) > 0 {
 		p.selected = 0
+		if !refresh && len(files) > 1 && files[0].Parent {
+			p.selected = 1
+		}
 		if refresh {
 			p.selected = max(0, min(previousRow, len(p.items)-1))
 		}

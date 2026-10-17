@@ -65,7 +65,7 @@ func TestAdjacentFolderOpening(t *testing.T) {
 				t.Fatal("opening adjacent changed the uninvolved panel")
 			}
 			send(pressed(key.NameDownArrow))
-			if v.panels[target].selected != 1 || source.selected != selected {
+			if v.panels[target].selected != 2 || source.selected != selected {
 				t.Fatal("keyboard navigation did not follow focus to the destination")
 			}
 			send(pressed(adjacentKey(-direction).Name))

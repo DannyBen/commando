@@ -159,7 +159,9 @@ func Run() error {
 }
 
 func renderPNG(path string) error {
-	return renderViewPNG(path, newPreviewView())
+	v := newPreviewView()
+	v.applySettings()
+	return renderViewPNG(path, v)
 }
 
 func renderViewPNG(path string, view *view) error {

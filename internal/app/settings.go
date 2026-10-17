@@ -53,6 +53,7 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 // Application bindings identify leaves; defaults and UI definitions live in TOML.
 const (
 	settingProtectedSystem       = "view.show_protected_system_files"
+	settingParentEntry           = "view.show_parent_entry"
 	settingNotificationAnimation = "feedback.notifications.animation"
 	settingSoundProfile          = "feedback.sounds.profile"
 	settingSoundVolume           = "feedback.sounds.master_volume"
@@ -426,6 +427,7 @@ func (v *view) applySettings() {
 	colors.dotfileSaturationMultiplier = v.settingsValues.Get(c, settingDotfileSaturation).Number
 	v.appearance.FilenameColors = &colors
 	show := v.settingsValues.Get(c, settingProtectedSystem).Bool
+	showParent := v.settingsValues.Get(c, settingParentEntry).Bool
 	apply := func(p *panel) {
 		if !v.metadataColumnEnabled(p.metadata) {
 			p.metadata = v.nextMetadataColumn(p.metadata, 1)
@@ -436,9 +438,10 @@ func (v *view) applySettings() {
 		if geometryChanged {
 			p.reveal = true
 		}
-		if p.showProtectedSystem != show {
+		if p.showProtectedSystem != show || p.showParentEntry != showParent {
 			p.ensureEntries()
 			p.showProtectedSystem = show
+			p.showParentEntry = showParent
 			p.refilter()
 		}
 	}

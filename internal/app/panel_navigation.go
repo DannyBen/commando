@@ -30,6 +30,7 @@ func (v *view) switchPanelTo(target int) {
 	v.panels[v.active].prefix = ""
 	v.active = target
 	if changed {
+		v.panels[target].reveal = true
 		v.announceInteraction(eventSelectionChanged)
 	}
 }

@@ -597,6 +597,12 @@ label = "Show protected system entries"
 description = "Include entries with both hidden and system attributes."
 control = "toggle"
 
+[view.show_parent_entry]
+palette = "Parent entry"
+title = "Parent entry"
+label = "Show .. entry"
+control = "toggle"
+
 [application]
 label = "Application"
 

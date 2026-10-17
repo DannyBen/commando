@@ -137,6 +137,7 @@ func TestPaddingWidgetsPreviewCancelResetAndSave(t *testing.T) {
 
 func TestPaddingKeyboardInputAndMinimum(t *testing.T) {
 	v := newPreviewView()
+	v.applySettings()
 	p := &v.panels[0]
 	selected, marks := p.selected, maps.Clone(p.marks)
 	originalPadding := v.appearance.RowPaddingVertical

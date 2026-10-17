@@ -54,6 +54,7 @@ func TestMetadataSettingsFourTogglesAndCreatedDefaultOff(t *testing.T) {
 
 func TestMetadataSettingsDisableAllAndCancelRestoresPanels(t *testing.T) {
 	v := newView([]panel{sortedMetadataPanel(metadataSize, true), sortedMetadataPanel(metadataModified, true), sortedMetadataPanel(metadataExtension, false)})
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingParentEntry, settings.Value{Bool: true})
 	columns := []metadataColumn{metadataSize, metadataModified, metadataExtension}
 	for i := range v.panels {
 		v.panels[i].metadata = columns[i]

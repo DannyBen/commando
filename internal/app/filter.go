@@ -24,6 +24,9 @@ func (v *view) filterInteraction() *filterSession {
 }
 
 func (p *panel) shows(file browser.Entry) bool {
+	if file.Parent {
+		return p.showParentEntry
+	}
 	visible := p.visibility.shows(file)
 	if p.showProtectedSystem && file.Hidden && file.System {
 		copy := file

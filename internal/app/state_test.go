@@ -149,6 +149,9 @@ func TestStartingLocations(t *testing.T) {
 
 func TestWorkspaceStateRestoresRealLocationsAndActivePanel(t *testing.T) {
 	root, other := t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "z.txt"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
 	child := filepath.Join(root, "child")
 	if err := os.Mkdir(child, 0700); err != nil {
 		t.Fatal(err)
@@ -217,7 +220,7 @@ func TestWorkspaceStateRestoresRealLocationsAndActivePanel(t *testing.T) {
 	}
 	send, _ = panelInputFrames(restored)
 	send(pressed(key.NameDownArrow))
-	if restored.panels[1].selected != 1 || restored.panels[0].selected != 0 {
+	if restored.panels[1].selected != 1 || restored.panels[0].selected != -1 {
 		t.Fatal("restored active panel did not receive keyboard input")
 	}
 }

@@ -265,7 +265,7 @@ func TestLocationEditing(t *testing.T) {
 		t.Fatal("Escape navigated or failed to cancel path editing")
 	}
 	send(pressed(key.NameDownArrow))
-	if v.panels[0].selected != 1 {
+	if v.panels[0].selected != 2 {
 		t.Fatalf("Escape did not restore list keyboard focus: selected=%d editing=%v", v.panels[0].selected, v.locationEditing())
 	}
 	send(altD)

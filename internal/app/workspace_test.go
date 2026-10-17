@@ -86,3 +86,61 @@ func TestWorkspaceKeyboardNavigation(t *testing.T) {
 		t.Fatal("keyboard navigation after a row click did not operate in the clicked panel")
 	}
 }
+
+func TestPanelSwitchRevealsSelectedRow(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		from int
+		key  key.Event
+	}{
+		{"right", 0, key.Event{Name: key.NameRightArrow}},
+		{"left", 2, key.Event{Name: key.NameLeftArrow}},
+		{"tab", 0, key.Event{Name: key.NameTab}},
+		{"shift tab", 2, key.Event{Name: key.NameTab, Modifiers: key.ModShift}},
+		{"number", 0, key.Event{Name: "2", Modifiers: key.ModAlt}},
+	} {
+		for _, placement := range []string{"above", "below", "visible"} {
+			t.Run(tc.name+"/"+placement, func(t *testing.T) {
+				v := newPreviewView()
+				v.active = tc.from
+				var router input.Router
+				var ops op.Ops
+				frame := func() {
+					ops.Reset()
+					v.layout(layout.Context{Ops: &ops, Source: router.Source(), Now: time.Now(),
+						Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(960, 420))})
+					router.Frame(&ops)
+				}
+				frame()
+				frame()
+				p := &v.panels[1]
+				p.selected, p.reveal = 0, false
+				p.list.ScrollTo(0)
+				if placement == "above" {
+					p.list.ScrollTo(len(p.items) - 1)
+				} else if placement == "below" {
+					p.selected = len(p.items) - 1
+				}
+				frame()
+				selected, position := p.selected, p.list.Position
+				event := tc.key
+				event.State = key.Press
+				router.Queue(event)
+				frame()
+				frame()
+				pos := p.list.Position
+				if v.active != 1 || p.selected != selected {
+					t.Fatalf("panel switch changed selection: active=%d selected=%d", v.active, p.selected)
+				}
+				if selected < pos.First || selected >= pos.First+pos.Count ||
+					(selected == pos.First && pos.Offset > 0) ||
+					(selected == pos.First+pos.Count-1 && pos.OffsetLast < 0) {
+					t.Fatalf("selected row remains offscreen: selected=%d position=%+v", selected, pos)
+				}
+				if placement == "visible" && pos != position {
+					t.Fatalf("visible selection scrolled: before=%+v after=%+v", position, pos)
+				}
+			})
+		}
+	}
+}

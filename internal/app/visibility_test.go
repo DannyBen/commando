@@ -33,6 +33,9 @@ func visibilityView(t *testing.T) (*view, *atomic.Int32) {
 	slices.SortFunc(files, browser.CompareEntries)
 	root := t.TempDir()
 	v := newView([]panel{{path: root, selected: -1}, {path: root, selected: -1}, {path: root, selected: -1}})
+	for i := range v.panels {
+		v.panels[i].showParentEntry = true
+	}
 	reads := new(atomic.Int32)
 	v.loader = newDirectoryLoader(func(path string) (browser.Directory, error) {
 		reads.Add(1)

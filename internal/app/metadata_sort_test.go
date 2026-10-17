@@ -32,7 +32,7 @@ func metadataSortFiles() []browser.Entry {
 }
 
 func sortedMetadataPanel(mode metadataColumn, enabled bool) panel {
-	p := panel{path: filepath.Clean("/sample"), metadata: mode, sortByMetadata: enabled, selected: -1}
+	p := panel{path: filepath.Clean("/sample"), metadata: mode, sortByMetadata: enabled, selected: -1, showParentEntry: true}
 	files := metadataSortFiles()
 	slices.SortFunc(files, browser.CompareEntries)
 	p.reconcileDirectoryListing(browser.Directory{Path: p.path, Entries: files})
@@ -79,7 +79,7 @@ func TestCreatedSortUsesCreationTimeForFilesAndFolders(t *testing.T) {
 		{Name: "new2.txt", Created: recent, Modified: old},
 		{Name: "unknown.txt", Modified: recent},
 	}
-	p := panel{path: "/sample", metadata: metadataCreated, sortByMetadata: true, selected: -1}
+	p := panel{path: "/sample", metadata: metadataCreated, sortByMetadata: true, selected: -1, showParentEntry: true}
 	slices.SortFunc(files, browser.CompareEntries)
 	p.reconcileDirectoryListing(browser.Directory{Path: p.path, Entries: files})
 	want := []string{"..", "folder2", "folder10", "folder-old", "unknown-folder", "new2.txt", "new10.txt", "older.txt", "unknown.txt"}
