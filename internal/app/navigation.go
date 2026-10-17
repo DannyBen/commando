@@ -26,6 +26,7 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 	v.invalidate = invalidate
 	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate, len(panels))
 	v.loader.readFileIcon = browser.NewFileIconReader()
+	v.loader.readFileTypeIcon = browser.NewFileTypeIconReader()
 	for i, location := range locations {
 		v.panels[i].metadata = metadataFromState(location.Metadata)
 		v.panels[i].sortByMetadata = location.SortByMetadata

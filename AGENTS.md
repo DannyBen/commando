@@ -367,6 +367,9 @@ module/executable and `Commando` for the window title and data-folder name.
   Apply hidden/dotfile modifiers and cut lightness to icon pixels through the
   same file-color settings, including at Original color 100. Keep cached state
   variants independent so cutting or uncutting never changes other rows.
+  Name editors retain filename icon spacing; new rows and settings file samples
+  use Windows association icons without creating files. Folder drafts show a
+  folder icon. Reuse the same layout, recoloring, worker and bounded caches.
 
 ## Changes and Documentation
 

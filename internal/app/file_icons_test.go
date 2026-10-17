@@ -134,7 +134,7 @@ func TestFileIconCacheKeepsRecentlyViewedIconsWhenFull(t *testing.T) {
 	v.fileIcons = make(map[fileIconKey]fileIconEntry)
 	keys := make([]fileIconKey, fileIconCacheLimit)
 	for i := range keys {
-		keys[i] = fileIconKey{filepath.Join(v.panels[0].path, strconv.Itoa(i)), 16}
+		keys[i] = fileIconKey{path: filepath.Join(v.panels[0].path, strconv.Itoa(i)), size: 16}
 	}
 	v.acceptFileIcons(loadResult{request: loadRequest{icons: keys}, icons: make([]image.Image, len(keys))})
 	var ops op.Ops
@@ -149,5 +149,87 @@ func TestFileIconCacheKeepsRecentlyViewedIconsWhenFull(t *testing.T) {
 	_, added := v.fileIcons[newKey]
 	if !recent || oldest || !added || len(v.fileIcons) != fileIconCacheLimit {
 		t.Fatal("cache overflow discarded recent icons instead of only the oldest")
+	}
+}
+
+func TestNameEditorsAndSettingsPreviewsRequestIcons(t *testing.T) {
+	for _, kind := range []nameOperation{nameCreateFile, nameCreateFolder, nameRename} {
+		v := newPreviewView()
+		v.loader = &directoryLoader{readFileIcon: func(string, int) image.Image { return nil }}
+		var ops op.Ops
+		gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 300))}
+		v.startName(gtx, kind)
+		v.nameEditor.SetText("new.txt")
+		v.panel(gtx, 0)
+		found := false
+		for _, key := range v.fileIconWanted {
+			if kind == nameRename {
+				found = found || !key.sample && key.path == filepath.Join(v.panels[0].path, v.nameInteraction().oldName)
+			} else {
+				found = found || key.sample && key.directory == (kind == nameCreateFolder)
+			}
+		}
+		if !found {
+			t.Fatalf("name operation %d omitted its icon", kind)
+		}
+	}
+	for _, group := range []string{settingThemeSelect, settingThemeGenerator, settingThemeCustomize, "appearance.contrast_guard", "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
+		v := newPreviewView()
+		v.loader = &directoryLoader{readFileIcon: func(string, int) image.Image { return nil }}
+		v.startSettingsWidget(group)
+		var ops op.Ops
+		gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 500))}
+		v.panel(gtx, 0)
+		if len(v.fileIconWanted) == 0 {
+			t.Fatalf("%s preview omitted icons", group)
+		}
+		for _, key := range v.fileIconWanted {
+			if !key.sample {
+				t.Fatalf("%s queried a real path for a sample", group)
+			}
+		}
+		v.fileIconWanted = nil
+		v.previewSettingValue(settingIconsEnabled, settings.Value{Bool: false})
+		v.panel(gtx, 0)
+		if len(v.fileIconWanted) != 0 {
+			t.Fatalf("%s ignored disabled icons", group)
+		}
+	}
+}
+
+func TestSampleIconsShareAssociationsAndUseDirectoryWorker(t *testing.T) {
+	v := newPreviewView()
+	v.loader = newDirectoryLoader(browser.ReadLocation, nil)
+	defer v.loader.close()
+	v.loader.readFileTypeIcon = func(name string, size int, directory bool) image.Image {
+		if name != "sample.txt" && !directory {
+			t.Errorf("unexpected association lookup %q", name)
+		}
+		return image.NewRGBA(image.Rect(0, 0, size, size))
+	}
+	var ops op.Ops
+	gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 24))}
+	width := 0
+	content := func(gtx layout.Context) layout.Dimensions {
+		width = gtx.Constraints.Max.X
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	}
+	for _, file := range []browser.Entry{{Name: "notes.txt"}, {Name: ".hidden.TXT", Hidden: true}, {Name: "documents", Directory: true}} {
+		v.withRowIcon(gtx, &panel{}, entry{file: file}, false, true, content)
+	}
+	if width >= 400 || len(v.fileIconWanted) != 2 {
+		t.Fatal("sample rows lost spacing or repeated association lookups")
+	}
+	v.submitFileIcons()
+	select {
+	case result := <-v.loader.results:
+		v.acceptFileIcons(result)
+		for _, icon := range v.fileIcons {
+			if icon.source == nil {
+				t.Fatal("worker did not supply association artwork")
+			}
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("sample icons did not complete")
 	}
 }

@@ -76,6 +76,7 @@ type directoryLoader struct {
 	launchEditor         func(string, []string, string) error
 	folderShortcutTarget func(string) (string, error)
 	readFileIcon         func(string, int) image.Image
+	readFileTypeIcon     func(string, int, bool) image.Image
 	busy                 atomic.Int32
 	stopOnce             sync.Once
 	stopped              chan struct{}
@@ -117,7 +118,13 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				if len(request.icons) > 0 {
 					icons := make([]image.Image, len(request.icons))
 					for i, key := range request.icons {
-						icons[i] = l.readFileIcon(key.path, key.size)
+						if key.sample {
+							if l.readFileTypeIcon != nil {
+								icons[i] = l.readFileTypeIcon(key.path, key.size, key.directory)
+							}
+						} else if l.readFileIcon != nil {
+							icons[i] = l.readFileIcon(key.path, key.size)
+						}
 					}
 					l.results <- loadResult{request: request, icons: icons}
 					if invalidate != nil {

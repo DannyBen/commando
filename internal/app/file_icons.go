@@ -3,16 +3,19 @@ package app
 import (
 	"image"
 	"path/filepath"
+	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/paint"
+	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/settings"
 )
 
 type fileIconKey struct {
-	path string
-	size int
+	path              string
+	size              int
+	sample, directory bool
 }
 
 const fileIconCacheLimit = 512
@@ -24,15 +27,32 @@ type fileIconEntry struct {
 	used   uint64
 }
 
-// Original Windows icons, enabled only for live Windows listings.
+// Sample keys share association artwork across previews and new-name drafts.
+func sampleFileIconKey(file browser.Entry, size int) fileIconKey {
+	name := "sample" + strings.ToLower(filepath.Ext(file.Name))
+	if strings.HasPrefix(file.Name, ".") && !strings.Contains(file.Name[1:], ".") {
+		name = "sample"
+	}
+	if file.Directory {
+		name = "folder"
+	}
+	return fileIconKey{path: name, size: size, sample: true, directory: file.Directory}
+}
+
 func (v *view) withFileIcon(gtx layout.Context, p *panel, item entry, cut bool, content layout.Widget) layout.Dimensions {
+	return v.withRowIcon(gtx, p, item, cut, false, content)
+}
+
+func (v *view) withRowIcon(gtx layout.Context, p *panel, item entry, cut, sample bool, content layout.Widget) layout.Dimensions {
 	if !v.settingsValues.Get(settings.CatalogueDefault, settingIconsEnabled).Bool ||
-		v.loader == nil && v.fileIcons == nil || v.loader != nil && v.loader.readFileIcon == nil {
+		v.loader == nil && v.fileIcons == nil || v.loader != nil && v.loader.readFileIcon == nil && v.loader.readFileTypeIcon == nil {
 		return content(gtx)
 	}
 	size := max(1, min(gtx.Dp(16), v.textHeight(gtx, v.appearance.TextSize)))
-	key := fileIconKey{filepath.Join(p.path, item.file.Name), size}
-	if item.file.Path != "" {
+	key := fileIconKey{path: filepath.Join(p.path, item.file.Name), size: size}
+	if sample {
+		key = sampleFileIconKey(item.file, size)
+	} else if item.file.Path != "" {
 		key.path = item.file.Path
 	}
 	if v.fileIcons == nil {

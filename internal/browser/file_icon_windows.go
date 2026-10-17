@@ -26,6 +26,16 @@ var (
 // NewFileIconReader reuses Windows' system image list. Call the returned reader
 // only on the directory worker; its small image cache is memory-only.
 func NewFileIconReader() func(string, int) image.Image {
+	read := newFileIconReader(false)
+	return func(path string, size int) image.Image { return read(path, size, false) }
+}
+
+// NewFileTypeIconReader resolves association artwork without accessing a file.
+func NewFileTypeIconReader() func(string, int, bool) image.Image {
+	return newFileIconReader(true)
+}
+
+func newFileIconReader(sample bool) func(string, int, bool) image.Image {
 	type key struct {
 		list  uintptr
 		index int32
@@ -37,7 +47,7 @@ func NewFileIconReader() func(string, int) image.Image {
 	}
 	cache := make(map[key]cachedIcon)
 	var clock uint64
-	return func(path string, size int) image.Image {
+	return func(path string, size int, directory bool) image.Image {
 		if size < 1 || size > 128 {
 			return nil
 		}
@@ -60,7 +70,16 @@ func NewFileIconReader() func(string, int) image.Image {
 		}
 		// The real path is important: EXEs, shortcuts and custom folders can
 		// have their own artwork rather than an extension-wide default.
-		list, _, _ := iconShellInfo.Call(uintptr(unsafe.Pointer(name)), 0, uintptr(unsafe.Pointer(&info)), unsafe.Sizeof(info), 0x4000|0x1)
+		var attributes uintptr
+		flags := uintptr(0x4000 | 0x1)
+		if sample {
+			flags |= 0x10 // SHGFI_USEFILEATTRIBUTES: the sample need not exist.
+			attributes = windows.FILE_ATTRIBUTE_NORMAL
+			if directory {
+				attributes = windows.FILE_ATTRIBUTE_DIRECTORY
+			}
+		}
+		list, _, _ := iconShellInfo.Call(uintptr(unsafe.Pointer(name)), attributes, uintptr(unsafe.Pointer(&info)), unsafe.Sizeof(info), flags)
 		runtime.KeepAlive(name)
 		if list == 0 {
 			return nil

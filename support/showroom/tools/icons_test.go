@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"gioui.org/op/paint"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 // Fixtures supply original artwork only. Production row layout and color
@@ -32,6 +33,7 @@ func (r showroomRequest) loadIcons(t *testing.T, v *view) {
 		t.Fatal(err)
 	}
 	icons := make(map[string]map[int]fileIconEntry)
+	v.fileIcons = make(map[fileIconKey]fileIconEntry)
 	for _, entry := range manifest {
 		key := strings.ToLower(filepath.Ext(entry.Name))
 		if entry.Directory {
@@ -55,12 +57,13 @@ func (r showroomRequest) loadIcons(t *testing.T, v *view) {
 			if img.Bounds().Size() != image.Pt(size, size) {
 				t.Fatal("icon size does not match manifest")
 			}
-			images[size] = fileIconEntry{image: paint.NewImageOp(img), source: img}
+			icon := fileIconEntry{image: paint.NewImageOp(img), source: img}
+			images[size] = icon
+			v.fileIcons[sampleFileIconKey(browser.Entry{Name: entry.Name, Directory: entry.Directory}, size)] = icon
 		}
 		icons[key] = images
 		icons[strings.ToLower(entry.Name)] = images
 	}
-	v.fileIcons = make(map[fileIconKey]fileIconEntry)
 	for folder, files := range r.Folders {
 		for _, file := range files {
 			key := strings.ToLower(file.Name)

@@ -10,6 +10,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/widget/material"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
@@ -113,10 +114,14 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					return v.fileRowSurface(gtx, size, bg, edge, func(gtx layout.Context) layout.Dimensions {
 						if naming {
 							metadata := ""
+							item := entry{file: browser.Entry{Name: v.nameEditor.Text(), Directory: v.nameInteraction().noun() == "folder"}}
 							if storedRow >= 0 {
 								metadata = p.metadata.value(p.items[storedRow])
+								item = p.items[storedRow]
 							}
-							return v.nameContents(gtx, metadata, sizeColor)
+							return v.withRowIcon(gtx, p, item, false, storedRow < 0, func(gtx layout.Context) layout.Dimensions {
+								return v.nameContents(gtx, metadata, sizeColor)
+							})
 						}
 						return v.withFileIcon(gtx, p, p.items[storedRow], cut, func(gtx layout.Context) layout.Dimensions {
 							return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata, v.appearance.entryTextRoles(p.items[storedRow].file, active, cut), p.drives)
