@@ -4,10 +4,13 @@ require 'json'
 require 'fileutils'
 require_relative 'config'
 require_relative 'scenario'
+require_relative 'progress'
 
 module Showroom
   # Builds the private Go capture harness and runs each configured theme.
   class Runner
+    include Progress
+
     def initialize(root)
       @root = File.expand_path(root)
       @project = File.expand_path('../..', @root)
@@ -17,12 +20,12 @@ module Showroom
     def run(scene)
       puts 'Preparing workspace and scene…'
       path = File.expand_path(scene, @root)
-      scenario = Scenario.new(path)
+      scenarios = @config.capture.fetch('themes').to_h { |theme| [theme, Scenario.new(path, theme: theme)] }
       name = File.basename(path, '.rb')
       build = File.join(@config.output, 'build')
       FileUtils.mkdir_p(build)
       binary = build_renderer(build)
-      @config.capture.fetch('themes').each do |theme|
+      scenarios.each do |theme, scenario|
         capture(binary, build, name, theme, scenario)
       end
     end
@@ -61,37 +64,11 @@ module Showroom
     end
 
     def capture_request(build, name, theme, output, scenario)
-      request = @config.payload.merge(theme: theme, output: output, steps: scenario.steps)
+      capture = @config.capture.merge(scenario.dimensions)
+      request = @config.payload.merge(capture: capture, theme: theme, output: output, steps: scenario.steps)
       path = File.join(build, "#{name}-#{theme}.json")
       File.write(path, JSON.pretty_generate(request))
       path
-    end
-
-    # Child processes inherit the console; the heartbeat stays visible while a
-    # compiler or graphics call runs without producing its own output.
-    def progress(label)
-      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      puts "#{label}…"
-      heartbeat = progress_heartbeat(label, started)
-      yield
-      report_progress(label, started, 'finished')
-    ensure
-      heartbeat&.kill
-      heartbeat&.join
-    end
-
-    def progress_heartbeat(label, started)
-      Thread.new do
-        loop do
-          sleep 5
-          report_progress(label, started, '— still working')
-        end
-      end
-    end
-
-    def report_progress(label, started, status)
-      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-      puts format('%<label>s %<status>s (%<elapsed>.1fs)', label: label, status: status, elapsed: elapsed)
     end
   end
 end

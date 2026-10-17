@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"gioui.org/gpu/headless"
 	"gioui.org/io/event"
@@ -30,6 +31,7 @@ type showroomRequest struct {
 	Capture struct {
 		Width     int       `json:"width"`
 		Height    int       `json:"height"`
+		Scale     int       `json:"scale"`
 		Themes    []string  `json:"themes"`
 		StartTime time.Time `json:"start_time"`
 	} `json:"capture"`
@@ -115,6 +117,15 @@ func TestShowroomScreenshots(t *testing.T) {
 	if size.X < 320 || size.Y < 320 || size.X > 4096 || size.Y > 4096 {
 		t.Fatal("capture dimensions must be between 320 and 4096")
 	}
+	scale := request.Capture.Scale
+	if scale == 0 {
+		scale = 1
+	}
+	if scale < 1 || scale > 3 {
+		t.Fatal("capture scale must be between 1 and 3")
+	}
+	// Increase the framebuffer and Gio metrics together: more pixels, same layout.
+	size = size.Mul(scale)
 	t.Log("Preparing workspace and theme…")
 	v := request.view(t)
 	t.Log("Initializing headless graphics…")
@@ -129,7 +140,7 @@ func TestShowroomScreenshots(t *testing.T) {
 	frame := func() {
 		ops.Reset()
 		v.layout(layout.Context{Ops: &ops, Source: router.Source(), Now: now,
-			Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(size)})
+			Metric: unit.Metric{PxPerDp: float32(scale), PxPerSp: float32(scale)}, Constraints: layout.Exact(size)})
 		router.Frame(&ops)
 		if err := window.Frame(&ops); err != nil {
 			t.Fatal(err)
@@ -156,12 +167,7 @@ func TestShowroomScreenshots(t *testing.T) {
 			}
 		}
 		if scene.Text != "" {
-			selection := key.Range{}
-			if editor := v.activeEditor(); editor != nil {
-				start, end := editor.Selection()
-				selection = key.Range{Start: min(start, end), End: max(start, end)}
-			}
-			send(key.EditEvent{Range: selection, Text: scene.Text})
+			send(showroomTextEvents(v, scene.Text)...)
 		}
 		if scene.WaitMS < 0 {
 			t.Fatal("wait_ms cannot be negative")
@@ -194,5 +200,42 @@ func TestShowroomScreenshots(t *testing.T) {
 			t.Fatal(closeErr)
 		}
 		t.Logf("%s (%dx%d, %s, %d panels)", path, size.X, size.Y, request.Theme, len(v.panels))
+	}
+}
+
+// Gio expects the input method to advance the selection after inserting text.
+// Sending only EditEvent leaves the caret behind and reverses later type calls.
+func showroomTextEvents(v *view, text string) []event.Event {
+	selection := key.Range{}
+	editor := v.activeEditor()
+	if editor != nil {
+		start, end := editor.Selection()
+		selection = key.Range{Start: min(start, end), End: max(start, end)}
+	}
+	events := []event.Event{key.EditEvent{Range: selection, Text: text}}
+	if editor != nil {
+		caret := selection.Start + utf8.RuneCountInString(text)
+		events = append(events, key.SelectionEvent{Start: caret, End: caret})
+	}
+	return events
+}
+
+func TestShowroomTextInputAppendsAndReplacesSelection(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	send(pressed("/"), key.EditEvent{Text: "/"})
+	for _, text := range []string{"m", "p"} {
+		send(showroomTextEvents(v, text)...)
+	}
+	if v.filterEditor.Text() != "mp" || v.panels[v.active].filter != "mp" {
+		t.Fatalf("consecutive input reversed the filter: %q", v.filterEditor.Text())
+	}
+	v.filterEditor.SetCaret(0, 2)
+	for _, text := range []string{"é", "té"} {
+		send(showroomTextEvents(v, text)...)
+	}
+	start, end := v.filterEditor.Selection()
+	if v.filterEditor.Text() != "été" || start != 3 || end != 3 {
+		t.Fatalf("replacement/caret used incorrect rune offsets: %q, %d:%d", v.filterEditor.Text(), start, end)
 	}
 }

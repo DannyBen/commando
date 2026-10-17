@@ -7,13 +7,15 @@ require_relative 'workspace'
 module Showroom
   # Loads capture settings and checks their references into the workspace.
   class Config
-    attr_reader :output, :capture, :panels, :active_panel, :folders
+    attr_reader :output, :capture, :panels, :active_panel, :folders, :video, :gif
 
     def initialize(path)
       data = YAML.safe_load_file(path)
       base = File.dirname(path)
       @output = File.expand_path(data.fetch('output'), base)
       @capture = data.fetch('capture')
+      @video = data.fetch('video')
+      @gif = data.fetch('gif')
       load_panels(data)
       validate_capture
       @folders = Workspace.new(File.expand_path(data.fetch('workspace'), base)).folders

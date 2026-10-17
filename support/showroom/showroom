@@ -1,14 +1,12 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative 'lib/runner'
+require_relative 'lib/cli'
 
 $stdout.sync = true
 
 begin
-  raise ArgumentError, 'usage: showroom [scenes/workspace.rb]' if ARGV.length > 1
-
-  Showroom::Runner.new(__dir__).run(ARGV.first || 'scenes/workspace.rb')
+  exit Showroom::CLI.run(ARGV, __dir__)
 rescue ArgumentError, KeyError, Psych::Exception, SystemCallError => e
   warn "showroom: #{e.message}"
   exit 1
