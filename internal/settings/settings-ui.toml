@@ -22,6 +22,15 @@ label = "Enabled"
 description = "Show Windows file icons."
 control = "toggle"
 
+[appearance.icons.original_color]
+label = "Original color"
+description = "Subdued file colors at 0; original Windows colors at 100."
+control = "stepper-progress"
+min = 0.0
+max = 100.0
+step = 1.0
+integer = true
+
 [appearance.autocolor]
 label = "Auto color"
 title = "Auto color"

@@ -71,8 +71,12 @@ func TestIconsSettingsDefaultToggleCancelAndSave(t *testing.T) {
 		}
 	}
 	s := v.settingsInteraction()
-	if !found || s == nil || len(s.fields) != 1 || s.fields[0].Label != "Enabled" || s.fields[0].Control != "toggle" {
-		t.Fatal("Icons did not offer a single Enabled toggle")
+	if !found || s == nil || len(s.fields) != 2 || s.fields[0].Label != "Enabled" || s.fields[0].Control != "toggle" || s.fields[1].Key != settingIconOriginalColor || s.fields[1].Control != "stepper-progress" {
+		t.Fatal("Icons did not offer Enabled and Original color")
+	}
+	v.adjustSetting(settingIconOriginalColor, -1)
+	if v.settingsValues.Get(settings.CatalogueDefault, settingIconOriginalColor).Number != 79 {
+		t.Fatal("Original color did not default to 80 or preview live")
 	}
 	v.loader = newDirectoryLoader(browser.ReadLocation, nil)
 	defer v.loader.close()
@@ -95,6 +99,9 @@ func TestIconsSettingsDefaultToggleCancelAndSave(t *testing.T) {
 		t.Fatal("Off retained icon spacing or requested icons")
 	}
 	v.finishSettingsWidget(layout.Context{}, false)
+	if v.settingsValues.Get(settings.CatalogueDefault, settingIconOriginalColor).Number != 80 {
+		t.Fatal("Cancel did not restore the default color amount")
+	}
 	v.withFileIcon(gtx, &v.panels[0], item, row)
 	if width != iconWidth || len(v.fileIconWanted) != 1 {
 		t.Fatal("Cancel did not restore icon display")
@@ -107,6 +114,7 @@ func TestIconsSettingsDefaultToggleCancelAndSave(t *testing.T) {
 	}
 	v.startSettingsWidget("appearance.icons")
 	v.adjustSetting(settingIconsEnabled, 0)
+	v.previewSettingValue(settingIconOriginalColor, settings.Value{Number: 25})
 	v.finishSettingsWidget(layout.Context{}, true)
 	values, err := settings.Load(dir, settings.CatalogueDefault)
 	if err != nil {
@@ -114,6 +122,9 @@ func TestIconsSettingsDefaultToggleCancelAndSave(t *testing.T) {
 	}
 	if values.Get(settings.CatalogueDefault, settingIconsEnabled).Bool {
 		t.Fatal("saved Off was not retained on load")
+	}
+	if values.Get(settings.CatalogueDefault, settingIconOriginalColor).Number != 25 {
+		t.Fatal("saved icon color amount was not retained on load")
 	}
 }
 

@@ -19,8 +19,9 @@ const fileIconCacheLimit = 512
 const fileIconBatchSize = 32
 
 type fileIconEntry struct {
-	image paint.ImageOp
-	used  uint64
+	image  paint.ImageOp
+	source image.Image
+	used   uint64
 }
 
 // Original Windows icons, enabled only for live Windows listings.
@@ -44,6 +45,9 @@ func (v *view) withFileIcon(gtx layout.Context, p *panel, item entry, content la
 	}
 	if !found && !item.file.Parent && !v.fileIconPending {
 		v.wantFileIcon(key)
+	}
+	if found && icon.source != nil {
+		icon.image = v.adjustedFileIcon(icon, item.file)
 	}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -96,6 +100,6 @@ func (v *view) acceptFileIcons(result loadResult) {
 			icon = paint.NewImageOp(result.icons[i])
 		}
 		v.fileIconClock++
-		v.fileIcons[key] = fileIconEntry{image: icon, used: v.fileIconClock}
+		v.fileIcons[key] = fileIconEntry{image: icon, source: result.icons[i], used: v.fileIconClock}
 	}
 }

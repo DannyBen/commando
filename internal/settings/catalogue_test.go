@@ -193,8 +193,13 @@ func TestCatalogueControlsIndependentOfValues(t *testing.T) {
 		t.Fatalf("missing field %s", key)
 		return ""
 	}
+	prefix, section, found := strings.Cut(uiTOML, "[appearance.autocolor.lsh.lightness]")
+	if !found {
+		t.Fatal("missing lightness metadata")
+	}
 	for _, control := range []string{"input", "stepper", "stepper-progress"} {
-		c, err := ParseCatalogue(defaultTOML, strings.Replace(uiTOML, `control = "stepper-progress"`, `control = "`+control+`"`, 1))
+		metadata := prefix + "[appearance.autocolor.lsh.lightness]" + strings.Replace(section, `control = "stepper-progress"`, `control = "`+control+`"`, 1)
+		c, err := ParseCatalogue(defaultTOML, metadata)
 		if err != nil {
 			t.Fatal(err)
 		}

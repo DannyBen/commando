@@ -4,6 +4,7 @@ enabled = true
 
 [appearance.icons]
 enabled = true
+original_color = 80
 
 [appearance.theme.generator]
 mode = "Light"

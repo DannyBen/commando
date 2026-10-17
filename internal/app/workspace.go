@@ -74,6 +74,7 @@ type view struct {
 	fileIconPending   bool
 	fileIconWanted    []fileIconKey
 	fileIconClock     uint64
+	fileIconAdjusted  map[fileIconAdjustment]fileIconEntry
 	invalidate        func()
 	interaction       interactionController
 	location          widget.Editor
