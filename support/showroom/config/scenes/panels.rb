@@ -7,6 +7,21 @@ press 'Ctrl+W'
 wait 400
 screenshot '01-two-panels'
 
+# Show how the same workspace becomes a quieter, icon-free list.
+press 'Ctrl+Shift+P'
+type '@icons'
+press 'Enter'
+wait 400
+screenshot 'icons-enabled'
+
+press 'Right'
+wait 400
+screenshot 'icons-disabled'
+
+press 'Ctrl+Enter'
+wait 400
+screenshot 'two-panels-clean'
+
 press 'Ctrl+Shift+W'
 wait 400
 screenshot '02-three-panels'

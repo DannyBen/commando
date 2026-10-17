@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 shot '01-two-panels', duration: 1.5
+shot 'icons-enabled', duration: 1.2
+shot 'icons-disabled', duration: 1.0
+shot 'two-panels-clean', duration: 1.2
 shot '02-three-panels', duration: 1.5
 shot '03-filtering', duration: 0.8
 shot '04-filtered-media', duration: 1.2
