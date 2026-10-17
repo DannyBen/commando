@@ -224,4 +224,8 @@ func TestEnterOpensOnlyCurrentFile(t *testing.T) {
 	if len(opened) != 0 {
 		t.Fatal("Enter opened marked files")
 	}
+	v.pollFeedback()
+	if v.panels[0].feedback.Current() != nil {
+		t.Fatal("successful opening showed feedback")
+	}
 }

@@ -87,7 +87,7 @@ func TestNonFolderShortcutsKeepOriginalNativeOpening(t *testing.T) {
 			v, link, _ := shortcutView(t)
 			v.loader.folderShortcutTarget = func(string) (string, error) { return "", resolveErr }
 			opened := make(chan string, 1)
-			v.openFile = func(path string) error { opened <- path; return errors.New("silent opening failure") }
+			v.openFile = func(path string) error { opened <- path; return nil }
 			send, _ := panelInputFrames(v)
 			p := &v.panels[0]
 			selected, position, count := p.selected, p.list.Position, len(p.items)

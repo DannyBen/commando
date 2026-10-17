@@ -23,6 +23,7 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 		v.active = active
 	}
 	v.openFile = browser.OpenFile
+	v.invalidate = invalidate
 	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate, len(panels))
 	for i, location := range locations {
 		v.panels[i].metadata = metadataFromState(location.Metadata)
@@ -141,7 +142,7 @@ func (v *view) acceptLoad(result loadResult) {
 		if result.externalOpen {
 			p.loading, p.navigating = false, false
 			p.feedback.Complete()
-			v.openPath(result.request.path)
+			v.openPath(result.request.panel, result.request.path)
 			return
 		}
 		v.announceInteraction(eventDirectoryNavigation)
@@ -244,7 +245,7 @@ func (v *view) activateSelected() {
 			if strings.EqualFold(filepath.Ext(path), ".lnk") && v.loader != nil {
 				v.queueLoad(loadRequest{panel: v.active, path: path, shortcut: true})
 			} else {
-				v.openPath(path)
+				v.openPath(v.active, path)
 			}
 		}
 		return
@@ -349,8 +350,13 @@ func (p *panel) locationPath() string {
 	return p.path
 }
 
-func (v *view) openPath(path string) {
+func (v *view) openPath(index int, path string) {
 	if open := v.openFile; open != nil {
-		go func() { _ = open(path) }()
+		post := v.backgroundFeedback(index)
+		go func() {
+			if err := open(path); err != nil {
+				post(feedback.Error, "Failed to open")
+			}
+		}()
 	}
 }

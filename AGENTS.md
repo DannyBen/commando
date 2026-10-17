@@ -225,8 +225,9 @@ module/executable and `Commando` for the window title and data-folder name.
   panel. Resolve it on activation through the shared worker, with no shortcut edits
   or resolver dialogs. Other targets retain native opening. Keep the shortcut a
   file for listing, marking, rename, copy, move and recycle operations.
-- Directory reads run off the UI thread through one worker. Keep file-opening
-  failures silent unless changing their feedback is part of the requested scope.
+- Directory reads run off the UI thread through one worker. File-opening
+  failures show Failed to open through the originating panel's feedback channel;
+  keep native error strings out of the footer and successful opens silent.
 - Windows directory notifications trigger quiet, coalesced automatic refreshes
   of open folders through the same worker. Protect foreground sessions and
   pending mutations; defer both dispatch and arriving results when necessary.

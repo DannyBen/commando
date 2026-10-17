@@ -17,6 +17,35 @@ func (v *view) showFeedback(index int, kind feedback.Kind, text string) {
 	v.panels[index].feedback.Show(kind, text)
 }
 
+// Capture a mailbox rather than a panel index: panels can move or close while
+// background work finishes. Apply messages only on the UI thread.
+func (v *view) backgroundFeedback(index int) func(feedback.Kind, string) {
+	p := &v.panels[index]
+	if p.pendingFeedback == nil {
+		p.pendingFeedback = make(chan feedback.Message, 1)
+	}
+	pending, invalidate := p.pendingFeedback, v.invalidate
+	return func(kind feedback.Kind, text string) {
+		select {
+		case pending <- feedback.Message{Kind: kind, Text: text}:
+		default:
+		}
+		if invalidate != nil {
+			invalidate()
+		}
+	}
+}
+
+func (v *view) pollFeedback() {
+	for i := range v.panels {
+		select {
+		case message := <-v.panels[i].pendingFeedback:
+			v.showFeedback(i, message.Kind, message.Text)
+		default:
+		}
+	}
+}
+
 func (v *view) dismissFeedback() {
 	dismissed := false
 	for i := range v.panels {

@@ -13,6 +13,7 @@ func (v *view) update(gtx layout.Context) {
 	defer v.dismissUnhandledFeedbackKeys(gtx)
 	v.pollNative(gtx)
 	v.pollLoads()
+	v.pollFeedback()
 	if v.interaction.focusPending {
 		v.focusInteraction(gtx)
 		v.interaction.focusPending = false

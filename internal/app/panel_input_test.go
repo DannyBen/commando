@@ -18,6 +18,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/feedback"
 )
 
 func panelInputFrames(v *view) (send func(...event.Event), advance func(time.Duration)) {
@@ -445,7 +446,7 @@ func TestLocationDriveShortcutSubmission(t *testing.T) {
 	}
 }
 
-func TestFileOpeningIsNonblockingAndSilent(t *testing.T) {
+func TestFileOpeningFailureIsNonblockingAndReportsFixedFeedback(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "hello world.txt"), []byte("hello"), 0600); err != nil {
 		t.Fatal(err)
@@ -456,6 +457,8 @@ func TestFileOpeningIsNonblockingAndSilent(t *testing.T) {
 		waitLoaded(t, v, i)
 	}
 	opened := make(chan string, 1)
+	wake := make(chan struct{}, 1)
+	v.invalidate = func() { wake <- struct{}{} }
 	release, finished := make(chan struct{}), make(chan struct{})
 	v.openFile = func(path string) error {
 		defer close(finished)
@@ -491,9 +494,21 @@ func TestFileOpeningIsNonblockingAndSilent(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("opener did not finish")
 	}
+	select {
+	case <-wake:
+	case <-time.After(3 * time.Second):
+		t.Fatal("opening failure did not request a frame")
+	}
 	send()
 	if v.panels[0].err != nil || v.panels[0].path != root || v.panels[0].selected != 1 {
-		t.Fatal("file-opening failure changed panel state or showed an error")
+		t.Fatal("file-opening failure changed panel state")
+	}
+	message := v.panels[0].feedback.Current()
+	if message == nil || message.Kind != feedback.Error || message.Text != "Failed to open" {
+		t.Fatalf("opening failure feedback = %+v", message)
+	}
+	if v.active != 1 || v.panels[1].feedback.Current() != nil {
+		t.Fatal("opening failure changed focus or another panel's feedback")
 	}
 }
 

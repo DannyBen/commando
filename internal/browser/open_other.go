@@ -7,7 +7,7 @@ import (
 	"runtime"
 )
 
-// OpenFile asks the desktop to open a file. Its failure is silent in the UI.
+// OpenFile asks the desktop to open a file. The caller owns failure feedback.
 func OpenFile(path string) error {
 	command := "xdg-open"
 	if runtime.GOOS == "darwin" {

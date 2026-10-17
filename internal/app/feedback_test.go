@@ -19,6 +19,21 @@ type recordedSounds struct {
 	stops   int
 }
 
+func TestBackgroundFeedbackFollowsPanelWithoutLeakingIntoClone(t *testing.T) {
+	v := selectionView()
+	post := v.backgroundFeedback(0)
+	v.insertPanel(0, v.panels[0].clone(), "", "")
+	post(feedback.Error, "Failed to open")
+	v.pollFeedback()
+	if v.panels[0].feedback.Current() != nil {
+		t.Fatal("cloned panel received original panel's background feedback")
+	}
+	message := v.panels[1].feedback.Current()
+	if message == nil || message.Text != "Failed to open" || message.Kind != feedback.Error {
+		t.Fatalf("moved panel feedback = %+v", message)
+	}
+}
+
 func (s *recordedSounds) Play(name sound.Name, volume float64) {
 	s.played = append(s.played, name)
 	s.volumes = append(s.volumes, volume)

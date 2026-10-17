@@ -45,6 +45,7 @@ type panel struct {
 	prefix              string
 	prefixAt            time.Time
 	feedback            feedback.Channel
+	pendingFeedback     chan feedback.Message
 }
 
 type view struct {
@@ -69,6 +70,7 @@ type view struct {
 	loader            *directoryLoader
 	monitor           *directoryMonitor
 	openFile          func(string) error
+	invalidate        func()
 	interaction       interactionController
 	location          widget.Editor
 	nameEditor        widget.Editor

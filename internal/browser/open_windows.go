@@ -27,7 +27,7 @@ type shellExecuteInfo struct {
 }
 
 // OpenFile uses the associated Windows application, suppressing shell error UI.
-// Called off the UI thread; errors are intentionally not surfaced yet.
+// Called off the UI thread; the caller owns failure feedback.
 func OpenFile(path string) error {
 	file, err := windows.UTF16PtrFromString(path)
 	if err != nil {

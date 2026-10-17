@@ -25,6 +25,7 @@ func (p panel) clone() panel {
 	p.marks, p.markRange = nil, nil
 	p.list = widget.List{List: layout.List{Axis: layout.Vertical, Position: p.list.Position}}
 	p.feedback = feedback.Channel{}
+	p.pendingFeedback = nil
 	p.prefix = ""
 	p.err = nil
 	p.reveal, p.loading, p.refreshing, p.refreshNeeded = false, false, false, false
