@@ -60,6 +60,7 @@ type Theme struct {
 	Font                    []font.FontFace
 	FontFamily              string
 	FontWeight              font.Weight
+	BoldWeight              font.Weight
 	TextSize, SmallTextSize unit.Sp
 	// Padding is measured in dp per side. Border thicknesses remain separate
 	// layout rules.
@@ -106,6 +107,7 @@ var defaultTheme = Theme{
 	Font:                        themeFont,
 	FontFamily:                  "Victor Mono",
 	FontWeight:                  font.SemiBold,
+	BoldWeight:                  font.SemiBold,
 	TextSize:                    15, // File rows and panel paths.
 	SmallTextSize:               12, // Column headings and panel footers.
 	RowPaddingVertical:          2,  // dp per side; row height grows with the font.

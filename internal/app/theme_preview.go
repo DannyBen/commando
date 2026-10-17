@@ -126,7 +126,7 @@ func (preview panelPreview) layoutRows(v *view, gtx layout.Context, mode metadat
 			if row.file.Directory {
 				item.size = "—"
 			}
-			return v.rowContents(gtx, item, name, metadata, mode, v.appearance.entryTextRoles(row.file, row.selected, row.cut))
+			return v.rowContents(gtx, item, name, metadata, mode, v.appearance.entryTextRoles(row.file, row.selected, row.cut), false)
 		})
 		stack.Pop()
 	}
