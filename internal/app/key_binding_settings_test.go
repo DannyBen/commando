@@ -144,10 +144,10 @@ func TestInvalidBindingsUseSettingsRecovery(t *testing.T) {
 		"[keybindings.entry.rename]\nshortcut_1 = 'Ctrl+'",
 		"[keybindings.entry.rename]\nshortcut_1 = 42",
 		"[keybindings.selection.clear_filter_or_marks]\nshortcut_1 = 'none'",
-		"[keybindings.entry.rename]\nshortcut_1 = 'Ctrl+C'",
+		"[keybindings.entry.rename]\nshortcut_1 = 'Ctrl+Y'\n[keybindings.entry.copy]\nshortcut_1 = 'Ctrl+Y'",
 		"[keybindings.entry.rename]\nshortcut_1 = 'Ctrl+Y'\nshortcut_2 = 'Ctrl+Y'",
 		"[keybindings.entry.rename]\nshortcut_1 = 'Up'",
-		"[keybindings.entry.rename]\nshortcut_1 = 'Alt+1'",
+		"[keybindings.entry.rename]\nshortcut_1 = 'Esc'",
 		"[keybindings.entry.rename]\nshortcut_1 = 'x'",
 	} {
 		t.Run(invalid, func(t *testing.T) {
@@ -199,6 +199,9 @@ func TestConflictingSaveDoesNotChangeFileOrCaller(t *testing.T) {
 	if err := values.Set(catalogue, field, settings.Value{Text: "Ctrl+C"}); err != nil {
 		t.Fatal(err)
 	}
+	if err := values.Set(catalogue, bindingSettingKey("entry.copy", 0), settings.Value{Text: "Ctrl+C"}); err != nil {
+		t.Fatal(err)
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.toml")
 	if err := os.WriteFile(path, []byte("# existing\n"), 0600); err != nil {
@@ -232,5 +235,94 @@ func TestAltBindingUpdatesWindowsInputAndResets(t *testing.T) {
 	v.applySettings()
 	if v.nativeKeys.suppressesAltText('y') {
 		t.Fatal("reset retained old Alt character suppression")
+	}
+}
+
+func TestNewDefaultBindingPreservesSavedAssignments(t *testing.T) {
+	original := commands
+	t.Cleanup(func() { commands = original })
+	launches := 0
+	terminal := cmd("programs.terminal_here", "Programs", "Terminal here", "T", key.ModCtrl, nil)
+	terminal.bindings[1].Default = shortcut{Name: "T", Modifiers: key.ModCtrl | key.ModShift}
+	terminal.execute = func(*view) { launches++ }
+
+	for _, defaultFirst := range []bool{false, true} {
+		commands = append([]command{terminal}, original...)
+		if !defaultFirst {
+			commands = append(append([]command{}, original...), terminal)
+		}
+		for _, tc := range []struct {
+			name, document string
+			terminalOwnsT  bool
+		}{
+			{"fresh", "", true},
+			{"saved primary", "[keybindings.view.next_metadata_column]\nshortcut_1 = 'Ctrl+T'\n", false},
+			{"saved secondary", "[keybindings.view.next_metadata_column]\nshortcut_2 = 'Ctrl+T'\n", false},
+		} {
+			t.Run(tc.name+"/first_command="+commands[0].id, func(t *testing.T) {
+				dir := t.TempDir()
+				path := filepath.Join(dir, "settings.toml")
+				document := tc.document + "[keybindings.entry.rename]\nshortcut_1 = 'Ctrl+Y'\n"
+				if err := os.WriteFile(path, []byte(document), 0600); err != nil {
+					t.Fatal(err)
+				}
+				catalogue := bindingSettingsCatalogue()
+				loaded, err := settings.LoadAndRepair(dir, catalogue)
+				if err != nil {
+					t.Fatal("upgrade treated saved bindings as invalid", err)
+				}
+				data, err := os.ReadFile(path)
+				if err != nil || string(data) != document {
+					t.Fatal("upgrade rewrote the user's settings", err)
+				}
+				if _, err := os.Stat(path + ".bak"); !errors.Is(err, os.ErrNotExist) {
+					t.Fatal("upgrade triggered settings recovery", err)
+				}
+				for restart := range 2 {
+					v := newPreviewView()
+					v.restoreSettings(loaded, nil)
+					resolved := v.resolveCommandBindings(terminal)
+					if (resolved.effectiveShortcut(0).Name != "") != tc.terminalOwnsT || resolved.effectiveShortcut(1) != terminal.bindings[1].Default {
+						t.Fatal("wrong terminal slots were unassigned", resolved.shortcut(), restart)
+					}
+					if loaded.Get(catalogue, bindingSettingKey("entry.rename", 0)).Text != "Ctrl+Y" {
+						t.Fatal("unrelated custom binding was lost")
+					}
+					launches = 0
+					send, _ := panelInputFrames(v)
+					before := v.panels[0].metadata
+					send(modified("T", key.ModCtrl))
+					if tc.terminalOwnsT {
+						if launches != 1 || v.panels[0].metadata != before {
+							t.Fatal("fresh install did not execute the default")
+						}
+					} else if launches != 0 || v.panels[0].metadata != before.cycle(1) {
+						t.Fatal("upgrade did not preserve custom Ctrl+T dispatch")
+					}
+					if err := catalogue.Save(dir, loaded); err != nil {
+						t.Fatal(err)
+					}
+					loaded, err = settings.LoadAndRepair(dir, catalogue)
+					if err != nil {
+						t.Fatal("saved upgrade did not reload", err)
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestSavedAssignmentCanReplaceGeneratedDefault(t *testing.T) {
+	catalogue := bindingSettingsCatalogue()
+	values, err := settings.Parse([]byte("[keybindings.entry.rename]\nshortcut_1 = 'Alt+1'\n"), catalogue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := view{settingsValues: values}
+	if got := v.resolveCommandBindings(panelFocusCommand(1)); got.shortcut() != "" {
+		t.Fatal("generated default kept the saved assignment's shortcut", got.shortcut())
+	}
+	if got := v.resolveCommandBindings(panelFocusCommand(2)); got.shortcut() != "Alt+2" {
+		t.Fatal("unrelated generated default changed", got.shortcut())
 	}
 }

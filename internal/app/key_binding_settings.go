@@ -77,14 +77,44 @@ func (v *view) resolveCommandBindings(c command) command {
 	return c
 }
 
-// A conflicting set is one invalid group. Restore its defaults together so
-// recovery cannot create a second conflict by reverting only one side of a swap.
-// The existing settings recovery flow backs up the original document first.
+// Saved assignments take precedence over inherited defaults introduced by an
+// upgrade. Explicit conflicts still recover as a group, preserving valid swaps.
+// The shortcut editor checks conflicts before reaching this normalization.
 func validateBindingOverrides(values *settings.Values) error {
 	pruneRuleBindings(values)
+	if err := unassignConflictingDefaults(values); err != nil {
+		return err
+	}
 	if conflict := findBindingConflict(*values); conflict != nil {
 		values.Reset("keybindings")
 		return conflict
+	}
+	return nil
+}
+
+func unassignConflictingDefaults(values *settings.Values) error {
+	v := view{settingsValues: *values}
+	catalogue := bindingCommands(*values)
+	assigned := map[shortcut]bool{}
+	for i, c := range catalogue {
+		c = v.resolveCommandBindings(c)
+		catalogue[i] = c
+		for _, override := range c.overrides {
+			if override.Mode == bindingAssigned {
+				assigned[override.Shortcut] = true
+			}
+		}
+	}
+	definitions := bindingSettingsCatalogue()
+	for _, c := range catalogue {
+		for slot, binding := range c.bindings {
+			if c.overrides[slot].Mode != bindingInherited || binding.Protected || !assigned[binding.Default] {
+				continue
+			}
+			if err := values.Set(definitions, bindingSettingKey(c.id, slot), settings.Value{Text: "none"}); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
