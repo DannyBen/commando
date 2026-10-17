@@ -205,9 +205,9 @@ func (v *view) acceptLoad(result loadResult) {
 				p.selected = i
 			}
 		}
-		if (file.Directory || result.request.explicitPath) && (file.Name == result.request.selectName ||
+		if file.Name == result.request.selectName ||
 			result.request.explicitPath && samePath(file.Name, result.request.selectName) ||
-			file.Path != "" && strings.EqualFold(file.Path, result.request.selectName)) {
+			file.Path != "" && strings.EqualFold(file.Path, result.request.selectName) {
 			p.selected = i
 		}
 	}
@@ -281,12 +281,13 @@ func (v *view) openAdjacent(direction int) {
 		return
 	}
 	file := p.items[p.selected].file
-	if !file.Directory {
-		return
-	}
 	path := file.Path
 	if path == "" {
 		path = filepath.Join(p.path, file.Name)
+	}
+	selectName := ""
+	if !file.Directory {
+		path, selectName = filepath.Dir(path), filepath.Base(path)
 	}
 	if target < 0 || target >= len(v.panels) {
 		if !v.addPanel(direction) {
@@ -295,7 +296,7 @@ func (v *view) openAdjacent(direction int) {
 	} else {
 		v.switchPanel(direction)
 	}
-	v.load(v.active, path, "")
+	v.load(v.active, path, selectName)
 	v.panels[v.active].prefix = ""
 }
 

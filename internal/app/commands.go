@@ -236,6 +236,6 @@ func panelsCanSwap(v *view) bool {
 
 func adjacentReady(v *view, direction int) bool {
 	target := v.active + direction
-	return selectedReady(v) && v.panels[v.active].items[v.panels[v.active].selected].file.Directory &&
+	return selectedReady(v) &&
 		v.loader != nil && (target >= 0 && target < len(v.panels) && !v.panels[target].loading || (target < 0 || target >= len(v.panels)) && panelsCanChange(v))
 }

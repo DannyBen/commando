@@ -215,7 +215,8 @@ module/executable and `Commando` for the window title and data-folder name.
   valid. Persist the resulting order through the existing state store.
 - Ctrl+Left/Right opens the selected folder, parent row or drive in the adjacent
   panel and moves focus there. Preserve the source listing, selection and scroll.
-  At outer edges, create a pane on that side before opening it. Files and busy
+  Files open their containing folder in the adjacent panel and select the file.
+  At outer edges, create a pane on that side before opening it. Busy
   panels produce no action. Failed reads retain the
   destination listing and show its footer error.
 - On Windows, a bare ASCII drive letter with an optional colon opens its root

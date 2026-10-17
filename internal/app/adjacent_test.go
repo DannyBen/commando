@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -76,6 +77,65 @@ func TestAdjacentFolderOpening(t *testing.T) {
 	}
 }
 
+func TestAdjacentFileOpening(t *testing.T) {
+	for _, direction := range []int{-1, 1} {
+		for _, edge := range []bool{false, true} {
+			t.Run(fmt.Sprintf("direction=%d/edge=%v", direction, edge), func(t *testing.T) {
+				root, other := t.TempDir(), t.TempDir()
+				for i := range 30 {
+					if err := os.WriteFile(filepath.Join(root, fmt.Sprintf("file-%02d.txt", i)), nil, 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				locations := []panelState{{Path: other}, {Path: root}, {Path: other}}
+				active := 1
+				if edge {
+					locations, active = []panelState{{Path: root}}, 0
+				}
+				v := newLocationView(locations, active, nil)
+				defer v.loader.close()
+				for i := range v.panels {
+					waitLoaded(t, v, i)
+				}
+				if !edge {
+					v.panels[active+direction].setFilter("unmatched")
+				}
+				source := &v.panels[active]
+				source.setFilter("file")
+				send, _ := panelInputFrames(v)
+				send(pressed(key.NameEnd))
+				source.toggleMark(source.selected)
+				selected, position := source.selected, source.list.Position
+				items, marks := slices.Clone(source.items), maps.Clone(source.marks)
+				if position.First == 0 {
+					t.Fatal("test source must be scrolled")
+				}
+				send(adjacentKey(direction))
+				waitLoaded(t, v, v.active)
+				send()
+				target := &v.panels[v.active]
+				if target.path != root || target.err != nil || target.filter != "" ||
+					target.selected < 0 || target.items[target.selected].name != "file-29.txt" || target.list.Position.First == 0 {
+					t.Fatalf("file not selected and revealed in its containing folder: path=%s selected=%d", target.path, target.selected)
+				}
+				sourceIndex, targetIndex, count := active, active+direction, 3
+				if edge {
+					sourceIndex, targetIndex, count = 0, 1, 2
+					if direction < 0 {
+						sourceIndex, targetIndex = 1, 0
+					}
+				}
+				source = &v.panels[sourceIndex]
+				if len(v.panels) != count || v.active != targetIndex || source.path != root ||
+					source.selected != selected || source.list.Position != position || source.filter != "file" ||
+					!slices.Equal(source.items, items) || !maps.Equal(source.marks, marks) || len(target.marks) != 0 {
+					t.Fatal("file navigation changed source state, inherited marks, or focused the wrong panel")
+				}
+			})
+		}
+	}
+}
+
 func TestAdjacentOpeningNoAction(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
@@ -85,7 +145,6 @@ func TestAdjacentOpeningNoAction(t *testing.T) {
 	}{
 		{"left edge with work pending", 0, -1, func(v *view) { v.panels[2].refreshing = true }},
 		{"right edge with work pending", 2, 1, func(v *view) { v.panels[0].loading = true }},
-		{"file", 1, 1, func(v *view) { v.panels[1].items[0].file.Directory = false }},
 		{"empty", 1, -1, func(v *view) { v.panels[1].items = nil; v.panels[1].selected = -1 }},
 		{"invalid selection", 1, 1, func(v *view) { v.panels[1].selected = 4 }},
 		{"source busy", 1, 1, func(v *view) { v.panels[1].loading = true }},
@@ -127,6 +186,7 @@ func TestAdjacentParentDriveAndReadError(t *testing.T) {
 		{"parent", browser.Entry{Name: "..", Directory: true, Parent: true}, filepath.Dir(base), nil},
 		{"drive", browser.Entry{Name: root, Path: root, Directory: true}, root, nil},
 		{"unreadable", browser.Entry{Name: "missing", Directory: true}, filepath.Join(base, "missing"), os.ErrPermission},
+		{"file unreadable", browser.Entry{Name: "missing.txt"}, base, os.ErrPermission},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			v := newView([]panel{{path: base, items: []entry{{file: tc.file}}},
