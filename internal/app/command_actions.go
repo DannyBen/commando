@@ -104,5 +104,7 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		v.escape(gtx)
 	case "application.command_palette":
 		v.startPalette(gtx)
+	case "feedback.toggle_sound":
+		v.toggleBooleanSetting(settingSoundEnabled)
 	}
 }

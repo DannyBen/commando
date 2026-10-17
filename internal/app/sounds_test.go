@@ -9,6 +9,7 @@ import (
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
@@ -19,7 +20,7 @@ func TestSoundProfilesGateAllSemanticCues(t *testing.T) {
 	for _, tc := range []struct {
 		profile float64
 		count   int
-	}{{0, 0}, {1, 1}, {2, 2}, {3, 4}, {4, 7}, {sound.All, 9}} {
+	}{{1, 1}, {2, 2}, {3, 4}, {4, 7}, {sound.All, 9}} {
 		v := newPreviewView()
 		recorder := &recordedSounds{}
 		v.sounds = recorder
@@ -45,14 +46,15 @@ func TestSoundSettingsStopsAudioAndPreviewsAtMasterVolume(t *testing.T) {
 	v.applySettings()
 	v.startSettingsWidget("feedback.sounds")
 	s := v.settingsInteraction()
-	if s.title != "Feedback › Sounds" || len(s.fields) != 2 || s.fields[0].Label != "Profile" || s.fields[1].Label != "Master volume" {
-		t.Fatal("Sounds must offer Profile and Master volume")
+	if s.title != "Feedback › Sounds" || len(s.fields) != 3 || s.fields[0].Label != "Enabled" || s.fields[1].Label != "Profile" || s.fields[2].Label != "Master volume" {
+		t.Fatal("Sounds must offer Enabled, Profile and Master volume")
 	}
 	stops, played := recorder.stops, len(recorder.played)
-	v.previewSettingValue(settingSoundProfile, settings.Value{Number: 0})
+	v.previewSettingValue(settingSoundEnabled, settings.Value{Bool: false})
 	if recorder.stops != stops+1 || len(recorder.played) != played {
-		t.Fatal("Off did not stop audio silently")
+		t.Fatal("disabling sounds did not stop audio silently")
 	}
+	v.previewSettingValue(settingSoundEnabled, settings.Value{Bool: true})
 	v.previewSettingValue(settingSoundProfile, settings.Value{Number: 1})
 	if recorder.played[len(recorder.played)-1] != sound.MessageError {
 		t.Fatal("profile preview bypassed profile policy")
@@ -77,7 +79,7 @@ func TestMutedInputAndFeedbackStillWork(t *testing.T) {
 	for _, context := range []string{"navigation", "cancel", "palette", "settings", "messages", "directory"} {
 		t.Run(context, func(t *testing.T) {
 			v := newPreviewView()
-			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: 0})
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundEnabled, settings.Value{Bool: false})
 			recorder := &recordedSounds{}
 			v.sounds = recorder
 			v.applySettings()
@@ -132,6 +134,7 @@ func TestSoundsSaveStartupCancelAndReset(t *testing.T) {
 	dir := t.TempDir()
 	v := newPreviewView()
 	v.startSettingsWidget("feedback.sounds")
+	v.previewSettingValue(settingSoundEnabled, settings.Value{Bool: false})
 	v.previewSettingValue(settingSoundProfile, settings.Value{Number: 2})
 	v.previewSettingValue(settingSoundVolume, settings.Value{Number: 35})
 	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
@@ -149,16 +152,16 @@ func TestSoundsSaveStartupCancelAndReset(t *testing.T) {
 	restored.announceInteraction(eventSelectionChanged)
 	restored.announceInteraction(eventMessageInfo)
 	restored.announceInteraction(eventMessageWarning)
-	if !slices.Equal(recorder.played, []sound.Name{sound.MessageWarning}) || recorder.volumes[0] != 35 {
-		t.Fatal("startup ignored profile or volume")
+	if len(recorder.played) != 0 || restored.currentSoundSettings() != (soundSettings{enabled: false, profile: 2, volume: 35}) {
+		t.Fatal("startup ignored enabled, profile or volume")
 	}
 	restored.startSettingsWidget("feedback.sounds")
 	restored.activateSettingsAction(layout.Context{}, 2)
-	if restored.currentSoundSettings().profile != sound.All || restored.currentSoundSettings().volume != 50 {
+	if restored.currentSoundSettings() != (soundSettings{enabled: true, profile: sound.All, volume: 50}) {
 		t.Fatal("Reset did not restore All sounds and 50%")
 	}
 	restored.finishSettingsWidget(layout.Context{}, false)
-	if restored.currentSoundSettings().profile != 2 || restored.currentSoundSettings().volume != 35 {
+	if restored.currentSoundSettings() != (soundSettings{enabled: false, profile: 2, volume: 35}) {
 		t.Fatal("Cancel did not undo Reset")
 	}
 	restored.startSettingsWidget("feedback.sounds")
@@ -174,7 +177,8 @@ func TestSoundProfileCyclingAndAutocomplete(t *testing.T) {
 	v := newPreviewView()
 	v.startSettingsWidget("feedback.sounds")
 	send, _ := panelInputFrames(v)
-	for _, label := range []string{"Off", "Errors only", "Warnings and errors", "Notifications only", "All except navigation", "All sounds"} {
+	send(pressed(key.NameDownArrow)) // Select Profile after Enabled.
+	for _, label := range []string{"Errors only", "Warnings and errors", "Notifications only", "All except navigation", "All sounds"} {
 		send(pressed(key.NameRightArrow))
 		if v.settingText(settingSoundProfile) != label {
 			t.Fatal("profile did not cycle", label, v.settingText(settingSoundProfile))
@@ -203,7 +207,14 @@ func TestSoundsSettingsPreview(t *testing.T) {
 	if dir == "" {
 		t.Skip("optional sound settings preview")
 	}
-	for _, profile := range []float64{0, 1, 2, 3, 4, sound.All} {
+	v := newPreviewView()
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundEnabled, settings.Value{Bool: false})
+	v.applySettings()
+	v.startSettingsWidget("feedback.sounds")
+	if err := renderViewPNG(filepath.Join(dir, "settings-sounds-disabled.png"), v); err != nil {
+		t.Fatal(err)
+	}
+	for _, profile := range []float64{1, 2, 3, 4, sound.All} {
 		v := newPreviewView()
 		_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: profile})
 		v.applySettings()
@@ -212,5 +223,81 @@ func TestSoundsSettingsPreview(t *testing.T) {
 		if err := renderViewPNG(filepath.Join(dir, name), v); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestToggleSoundPaletteAndCustomShortcut(t *testing.T) {
+	v := newPreviewView()
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: 2})
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundVolume, settings.Value{Number: 35})
+	recorder := &recordedSounds{}
+	v.sounds = recorder
+	v.applySettings()
+	send, _ := panelInputFrames(v)
+	send(pressed("`"))
+	send(key.EditEvent{Text: "Feedback Toggle sound"})
+	p := v.paletteInteraction()
+	if len(p.results) == 0 || p.results[0].command.id != "feedback.toggle_sound" || p.results[0].command.shortcut() != "" {
+		t.Fatal("Toggle sound must be discoverable and initially unbound")
+	}
+	send(pressed(key.NameReturn))
+	if !v.interaction.idle() || v.currentSoundSettings() != (soundSettings{enabled: false, profile: 2, volume: 35}) || len(recorder.played) != 0 {
+		t.Fatal("palette toggle did not mute while preserving preferences")
+	}
+	setTestShortcut(t, v, "feedback.toggle_sound", 0, "Ctrl+T")
+	v.applySettings()
+	send(modified("T", key.ModCtrl))
+	if v.currentSoundSettings() != (soundSettings{enabled: true, profile: 2, volume: 35}) || !slices.Equal(recorder.played, []sound.Name{sound.MessageWarning}) || recorder.volumes[0] != 35 {
+		t.Fatal("bound toggle did not restore sound with one profile-gated preview")
+	}
+	send(key.Event{Name: "T", Modifiers: key.ModCtrl, State: key.Release})
+	if !v.currentSoundSettings().enabled || len(recorder.played) != 1 {
+		t.Fatal("key release toggled or played sound")
+	}
+}
+
+func TestToggleSoundWorkerSaveAndFailure(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		t.Run(strconv.FormatBool(fail), func(t *testing.T) {
+			dir := t.TempDir()
+			v := newPreviewView()
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: 2})
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundVolume, settings.Value{Number: 35})
+			v.applySettings()
+			catalogue := bindingSettingsCatalogue()
+			if err := catalogue.Save(dir, v.settingsValues); err != nil {
+				t.Fatal(err)
+			}
+			v.loader = newDirectoryLoader(browser.ReadLocation, nil, len(v.panels))
+			v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
+				return func() (string, error) {
+					if fail {
+						return "", os.ErrPermission
+					}
+					return "", catalogue.Save(dir, values)
+				}
+			}
+			v.toggleBooleanSetting(settingSoundEnabled)
+			if v.currentSoundSettings().enabled || !v.mutationsBusy() {
+				t.Fatal("toggle did not apply live and track its pending save")
+			}
+			v.finishOperations()
+			loaded, err := settings.LoadAndRepair(dir, catalogue)
+			if err != nil {
+				t.Fatal(err)
+			}
+			restored := newPreviewView()
+			restored.restoreSettings(loaded, nil)
+			want := soundSettings{enabled: fail, profile: 2, volume: 35}
+			if v.currentSoundSettings() != want || restored.currentSoundSettings() != want {
+				t.Fatal("save/revert changed profile or volume or lost Enabled")
+			}
+			if fail {
+				message := v.panels[0].feedback.Current()
+				if message == nil || message.Text != "Settings save: access denied" || message.Kind != feedback.Error {
+					t.Fatal("failed toggle did not report its save error")
+				}
+			}
+		})
 	}
 }

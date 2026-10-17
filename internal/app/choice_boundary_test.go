@@ -10,7 +10,7 @@ import (
 
 func TestChoiceHomeEndSelectFirstAndLastAcrossWidgets(t *testing.T) {
 	for _, tc := range []struct{ group, setting, first, last string }{
-		{"feedback.sounds", settingSoundProfile, "Off", "All sounds"},
+		{"feedback.sounds", settingSoundProfile, "Errors only", "All sounds"},
 		{"appearance.font", settingFontFamily, "Alpha", "Zulu"},
 		{settingThemeSelect, settingThemeSelect, "Built-in Light", "Built-in Dark"},
 		{settingThemeGenerator, settingThemeGenerator + ".mode", "Black", "White"},
@@ -21,6 +21,12 @@ func TestChoiceHomeEndSelectFirstAndLastAcrossWidgets(t *testing.T) {
 			recorder := &recordedSounds{}
 			v.sounds = recorder
 			v.startSettingsWidget(tc.group)
+			for i, field := range v.settingsInteraction().fields {
+				if field.Key == tc.setting {
+					v.settingsInteraction().selected = i
+					break
+				}
+			}
 			send, _ := panelInputFrames(v)
 			for _, step := range []struct {
 				name key.Name
@@ -44,6 +50,7 @@ func TestChoiceBoundariesKeepEditorCaretActionsAndModifiers(t *testing.T) {
 	v := newPreviewView()
 	v.startSettingsWidget("feedback.sounds")
 	s := v.settingsInteraction()
+	s.selected = 1 // Profile follows Enabled.
 	recorder := &recordedSounds{}
 	v.sounds = recorder
 	send, _ := panelInputFrames(v)

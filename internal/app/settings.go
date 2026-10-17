@@ -55,6 +55,7 @@ const (
 	settingProtectedSystem       = "view.show_protected_system_files"
 	settingParentEntry           = "view.show_parent_entry"
 	settingNotificationAnimation = "feedback.notifications.animation"
+	settingSoundEnabled          = "feedback.sounds.enabled"
 	settingSoundProfile          = "feedback.sounds.profile"
 	settingSoundVolume           = "feedback.sounds.master_volume"
 	settingContrastGuard         = "appearance.contrast_guard.enabled"
@@ -189,8 +190,9 @@ type settingsSession struct {
 }
 
 type settingsSaveRequest struct {
-	session *settingsSession
-	run     func() (string, error)
+	session  *settingsSession
+	run      func() (string, error)
+	complete func(string, error)
 }
 
 func (*settingsSession) openingEvent() interactionEvent { return eventWidgetOpened }
@@ -639,12 +641,7 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 	v.interaction.focusPending = true
 	if err != nil {
 		s.afterSave = nil
-		s.errorText = "Could not save settings"
-		if errors.Is(err, os.ErrPermission) {
-			s.errorText = "Settings save: access denied"
-		} else if errors.Is(err, errDataFolderPath) {
-			s.errorText = "Choose an absolute folder"
-		}
+		s.errorText = settingsSaveError(err)
 		return
 	}
 	if s.bindingCommand != nil {
@@ -663,6 +660,17 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 		v.announceInteraction(eventSettingsSaved)
 	}
 }
+
+func settingsSaveError(err error) string {
+	if errors.Is(err, os.ErrPermission) {
+		return "Settings save: access denied"
+	}
+	if errors.Is(err, errDataFolderPath) {
+		return "Choose an absolute folder"
+	}
+	return "Could not save settings"
+}
+
 func (v *view) updateSettingsSelection() {
 	s := v.settingsInteraction()
 	if s == nil || !s.selecting {

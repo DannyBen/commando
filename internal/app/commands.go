@@ -103,6 +103,9 @@ func defaultCommands() []command {
 		cmd("selection.mark_all", "Selection", "Mark all", "A", key.ModCtrl, nil),
 		cmd("selection.clear_filter_or_marks", "Selection", "Clear filter or marks", key.NameEscape, 0, nil),
 
+		cmd("feedback.toggle_sound", "Feedback", "Toggle sound", "", 0,
+			func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) }),
+
 		cmd("application.command_palette", "Application", "Command palette", "`", 0, nil),
 		{id: "application.open_data_folder", group: "Application", name: "Open data folder",
 			available: func(v *view) bool {

@@ -74,7 +74,7 @@ func TestSilentOrMutedInteractionEventsDoNotPlay(t *testing.T) {
 	if len(recorder.played) != 0 {
 		t.Fatal("silent events reached audio player", recorder.played)
 	}
-	if err := v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: 0}); err != nil {
+	if err := v.settingsValues.Set(settings.CatalogueDefault, settingSoundEnabled, settings.Value{Bool: false}); err != nil {
 		t.Fatal(err)
 	}
 	v.announceInteraction(eventEditStarted)

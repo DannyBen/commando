@@ -66,11 +66,7 @@ func TestFilterEnterSound(t *testing.T) {
 	for _, name := range []key.Name{key.NameReturn, key.NameEnter} {
 		for _, enabled := range []bool{true, false} {
 			v := newPreviewView()
-			profile := float64(sound.All)
-			if !enabled {
-				profile = 0
-			}
-			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: profile})
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundEnabled, settings.Value{Bool: enabled})
 			recorded := &recordedSounds{}
 			v.sounds = recorded
 			send, _ := panelInputFrames(v)

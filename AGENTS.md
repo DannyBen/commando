@@ -112,15 +112,17 @@ module/executable and `Commando` for the window title and data-folder name.
   sizing, clamping, snap/maximize/restore and DPI changes do not. Leave snapped or
   maximized geometry under OS control. Keep base width separate from pane models
   so future fixed width presets can build on it.
-- Feedback › Sounds contains Profile and Master volume. Profiles ascend through
-  Off, Errors only, Warnings and errors, Notifications only, All except navigation,
-  and All sounds. Defaults preserve all cues at 50% master volume. Each cue in
+- Feedback › Sounds contains Enabled, Profile and Master volume. Profiles ascend
+  through Errors only, Warnings and errors, Notifications only, All except navigation,
+  and All sounds. Enabled defaults to On, preserving all cues at 50% master volume.
+  Feedback › Toggle sound is unbound by default and changes Enabled only,
+  retaining the chosen profile and volume. Each cue in
   `internal/sound/sounds.toml` declares a positive numeric level and synthesis
   parameters; profiles use cumulative numeric thresholds, with 0 silent and -1
   including every configured level. Keep profile labels and order in settings
   metadata, independently of the semantic event-to-cue map. Preview sound setting
-  changes through the same gate and master volume, with one cue; Off and zero
-  volume remain silent. Stop active audio when profile or volume changes.
+  changes through the same gate and master volume, with one cue; disabled sound
+  and zero volume remain silent. Stop active audio when Enabled, profile or volume changes.
 - Choice and autocomplete steppers use Home/End for the first/last available
   choice. Keep native caret movement while editing and leave the action bar
   unchanged. Repeated endpoint presses and key releases stay silent.

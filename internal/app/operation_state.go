@@ -83,9 +83,9 @@ func (v *view) finishOperations() {
 	if v.loader == nil {
 		return
 	}
-	// A settings save may still be queued behind reads. Finish it before
-	// stopping the worker so a destroyed window cannot lose the folder choice.
-	for s := v.settingsInteraction(); s != nil && s.pending; s = v.settingsInteraction() {
+	// A settings save may still be queued behind reads. Finish widget and direct
+	// saves before stopping the worker so shutdown cannot discard them.
+	for s := v.settingsInteraction(); v.directSettingsSave != nil || s != nil && s.pending; s = v.settingsInteraction() {
 		v.acceptLoad(<-v.loader.results)
 	}
 	v.loader.close()

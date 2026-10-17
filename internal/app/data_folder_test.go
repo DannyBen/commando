@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -267,38 +268,46 @@ func TestSettingsSaveWorkerKeepsSessionUntilCompletion(t *testing.T) {
 }
 
 func TestShutdownFinishesSettingsSaveQueuedBehindRead(t *testing.T) {
-	v := newPreviewView()
-	reading, release := make(chan struct{}), make(chan struct{})
-	v.loader = newDirectoryLoader(func(path string) (browser.Directory, error) {
-		close(reading)
-		<-release
-		return browser.Directory{Path: path}, nil
-	}, nil)
-	if !v.loader.submit(loadRequest{path: v.panels[0].path, action: actionBrowse}) {
-		t.Fatal("read not queued")
-	}
-	<-reading
-	saved := make(chan struct{})
-	v.prepareSettingsSave = func(settings.Values) func() (string, error) {
-		return func() (string, error) { close(saved); return "Restart Commando", nil }
-	}
-	openSettingsGroup(t, v, "application.data_folder")
-	v.finishSettingsWidget(layout.Context{}, true)
-	done := make(chan struct{})
-	go func() { v.finishOperations(); close(done) }()
-	close(release)
-	select {
-	case <-done:
-	case <-time.After(3 * time.Second):
-		t.Fatal("shutdown did not drain queued save")
-	}
-	select {
-	case <-saved:
-	default:
-		t.Fatal("shutdown discarded settings save")
-	}
-	if !v.interaction.idle() || v.mutationsBusy() {
-		t.Fatal("shutdown lost save reconciliation")
+	for _, direct := range []bool{false, true} {
+		t.Run(fmt.Sprint(direct), func(t *testing.T) {
+			v := newPreviewView()
+			reading, release := make(chan struct{}), make(chan struct{})
+			v.loader = newDirectoryLoader(func(path string) (browser.Directory, error) {
+				close(reading)
+				<-release
+				return browser.Directory{Path: path}, nil
+			}, nil)
+			if !v.loader.submit(loadRequest{path: v.panels[0].path, action: actionBrowse}) {
+				t.Fatal("read not queued")
+			}
+			<-reading
+			saved := make(chan struct{})
+			v.prepareSettingsSave = func(settings.Values) func() (string, error) {
+				return func() (string, error) { close(saved); return "Restart Commando", nil }
+			}
+			if direct {
+				v.toggleBooleanSetting(settingSoundEnabled)
+			} else {
+				openSettingsGroup(t, v, "application.data_folder")
+				v.finishSettingsWidget(layout.Context{}, true)
+			}
+			done := make(chan struct{})
+			go func() { v.finishOperations(); close(done) }()
+			close(release)
+			select {
+			case <-done:
+			case <-time.After(3 * time.Second):
+				t.Fatal("shutdown did not drain queued save")
+			}
+			select {
+			case <-saved:
+			default:
+				t.Fatal("shutdown discarded settings save")
+			}
+			if !v.interaction.idle() || v.mutationsBusy() {
+				t.Fatal("shutdown lost save reconciliation")
+			}
+		})
 	}
 }
 

@@ -124,7 +124,12 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	if result.request.settingsSave != nil {
-		v.acceptSettingsSave(result.request.settingsSave.session, result.settingsMessage, result.err)
+		request := result.request.settingsSave
+		if request.complete != nil {
+			request.complete(result.settingsMessage, result.err)
+		} else {
+			v.acceptSettingsSave(request.session, result.settingsMessage, result.err)
+		}
 		return
 	}
 	if result.request.autoRefresh {

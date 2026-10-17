@@ -51,6 +51,7 @@ type panel struct {
 type view struct {
 	settingsValues      settings.Values
 	prepareSettingsSave func(settings.Values) func() (string, error) // Captures UI state before worker I/O; nil in previews.
+	directSettingsSave  *settingsSaveRequest
 	defaultDataFolder   string
 	activeDataFolder    string // Fixed for this process; settings changes apply after restart.
 	fontFamilies        []string

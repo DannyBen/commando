@@ -6,13 +6,18 @@ import (
 )
 
 type soundSettings struct {
+	enabled bool
 	profile int
 	volume  float64
 }
 
 func (v *view) currentSoundSettings() soundSettings {
 	c := settings.CatalogueDefault
-	return soundSettings{int(v.settingsValues.Get(c, settingSoundProfile).Number), v.settingsValues.Get(c, settingSoundVolume).Number}
+	return soundSettings{
+		enabled: v.settingsValues.Get(c, settingSoundEnabled).Bool,
+		profile: int(v.settingsValues.Get(c, settingSoundProfile).Number),
+		volume:  v.settingsValues.Get(c, settingSoundVolume).Number,
+	}
 }
 
 func (v *view) applySoundSettings() {
@@ -28,13 +33,13 @@ func (v *view) applySoundSettings() {
 // Every semantic event shares this gate; profile names belong to settings UI.
 func (v *view) playSound(cue sound.Name) {
 	options := v.currentSoundSettings()
-	if v.sounds != nil && options.volume > 0 && sound.Allows(cue, options.profile) {
+	if v.sounds != nil && options.enabled && options.volume > 0 && sound.Allows(cue, options.profile) {
 		v.sounds.Play(cue, options.volume)
 	}
 }
 
 func (v *view) previewSoundSetting(key string) bool {
-	if key != settingSoundProfile && key != settingSoundVolume {
+	if key != settingSoundEnabled && key != settingSoundProfile && key != settingSoundVolume {
 		return false
 	}
 	for _, cue := range []sound.Name{sound.MessageInfo, sound.MessageWarning, sound.MessageError} {
