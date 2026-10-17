@@ -23,6 +23,10 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		v.duplicateSelected()
 	case "entry.copy_to_panel", "entry.move_to_panel":
 		v.startPanelTransfer(id == "entry.move_to_panel")
+	case "entry.copy_left", "entry.move_left":
+		v.transferToNeighbor(-1, id == "entry.move_left")
+	case "entry.copy_right", "entry.move_right":
+		v.transferToNeighbor(1, id == "entry.move_right")
 	case "entry.recycle":
 		v.recycleSelected()
 	case "entry.new_file":

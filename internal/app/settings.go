@@ -72,6 +72,7 @@ const (
 	settingFontTextSize          = "appearance.font.text_size"
 	settingFontSmallTextSize     = "appearance.font.small_text_size"
 	settingFontWeight            = "appearance.font.weight"
+	settingFontBoldWeight        = "appearance.font.bold_weight"
 	settingPaddingRows           = "appearance.padding.vertical.rows"
 	settingPaddingHeadersFooters = "appearance.padding.vertical.headers_footers"
 	settingPaddingLocation       = "appearance.padding.vertical.location"

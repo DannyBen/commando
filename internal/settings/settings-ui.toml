@@ -508,6 +508,14 @@ min = 100.0
 max = 900.0
 step = 100.0
 
+[appearance.font.bold_weight]
+label = "Bold weight"
+description = "Weight for emphasis, currently directory names. Uses the closest weight available in the family."
+control = "stepper-progress"
+min = 100.0
+max = 900.0
+step = 100.0
+
 [appearance.padding]
 label = "Padding"
 

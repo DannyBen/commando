@@ -40,8 +40,8 @@ func TestFontWidgetInputPreviewCancelResetAndPersistence(t *testing.T) {
 	before := v.appearance
 	v.startSettingsWidget("appearance.font")
 	s := v.settingsInteraction()
-	if s == nil || s.title != "Appearance › Font" || len(s.fields) != 4 {
-		t.Fatal("font settings did not open as one four-field widget")
+	if s == nil || s.title != "Appearance › Font" || len(s.fields) != 5 {
+		t.Fatal("font settings did not open as one five-field widget")
 	}
 	send, _ := panelInputFrames(v)
 	send(pressed(key.NameReturn))
@@ -53,13 +53,14 @@ func TestFontWidgetInputPreviewCancelResetAndPersistence(t *testing.T) {
 	v.adjustSetting(settingFontTextSize, 1)
 	v.adjustSetting(settingFontSmallTextSize, 1)
 	v.adjustSetting(settingFontWeight, 1)
-	if v.appearance.TextSize != 16 || v.appearance.SmallTextSize != 13 || v.appearance.FontWeight != font.Bold ||
+	v.adjustSetting(settingFontBoldWeight, -1)
+	if v.appearance.TextSize != 16 || v.appearance.SmallTextSize != 13 || v.appearance.FontWeight != font.Bold || v.appearance.BoldWeight != font.Medium ||
 		v.textEditor(&widget.Editor{}, "").Font.Weight != font.Bold || v.appearance.RowPaddingVertical != before.RowPaddingVertical {
 		t.Fatal("font settings did not preview together or changed geometry")
 	}
 	v.finishSettingsWidget(layout.Context{}, false)
 	if v.appearance.FontFamily != before.FontFamily || v.appearance.TextSize != before.TextSize ||
-		v.appearance.SmallTextSize != before.SmallTextSize || v.appearance.FontWeight != before.FontWeight {
+		v.appearance.SmallTextSize != before.SmallTextSize || v.appearance.FontWeight != before.FontWeight || v.appearance.BoldWeight != before.BoldWeight {
 		t.Fatal("Cancel did not restore the font")
 	}
 
@@ -67,6 +68,7 @@ func TestFontWidgetInputPreviewCancelResetAndPersistence(t *testing.T) {
 	_ = v.setWidgetValue(settingFontFamily, settings.Value{Text: "Arial"})
 	v.adjustSetting(settingFontTextSize, 2)
 	v.adjustSetting(settingFontWeight, 1)
+	v.adjustSetting(settingFontBoldWeight, -1)
 	dir := t.TempDir()
 	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
 		return func() (string, error) { return "", settings.Save(dir, values) }
@@ -78,16 +80,16 @@ func TestFontWidgetInputPreviewCancelResetAndPersistence(t *testing.T) {
 	}
 	restored := newPreviewView()
 	restored.restoreSettings(values, nil)
-	if restored.appearance.FontFamily != "Arial" || restored.appearance.TextSize != 17 || restored.appearance.FontWeight != font.Bold {
+	if restored.appearance.FontFamily != "Arial" || restored.appearance.TextSize != 17 || restored.appearance.FontWeight != font.Bold || restored.appearance.BoldWeight != font.Medium {
 		t.Fatal("font settings did not apply on startup")
 	}
 	restored.startSettingsWidget("appearance.font")
 	restored.activateSettingsAction(layout.Context{}, 2)
-	if restored.appearance.FontFamily != before.FontFamily || restored.appearance.TextSize != before.TextSize || restored.appearance.FontWeight != before.FontWeight {
+	if restored.appearance.FontFamily != before.FontFamily || restored.appearance.TextSize != before.TextSize || restored.appearance.FontWeight != before.FontWeight || restored.appearance.BoldWeight != before.BoldWeight {
 		t.Fatal("Reset did not restore bundled defaults")
 	}
 	restored.finishSettingsWidget(layout.Context{}, false)
-	if restored.appearance.FontFamily != "Arial" || restored.appearance.TextSize != 17 || restored.appearance.FontWeight != font.Bold {
+	if restored.appearance.FontFamily != "Arial" || restored.appearance.TextSize != 17 || restored.appearance.FontWeight != font.Bold || restored.appearance.BoldWeight != font.Medium {
 		t.Fatal("Cancel did not undo Reset")
 	}
 }
@@ -119,7 +121,7 @@ func TestUnavailableFontUsesBundledMetricsAndSizeRemainsLive(t *testing.T) {
 	for _, tc := range []struct {
 		key string
 		n   float64
-	}{{settingFontTextSize, 0}, {settingFontSmallTextSize, 100}, {settingFontWeight, 1000}} {
+	}{{settingFontTextSize, 0}, {settingFontSmallTextSize, 100}, {settingFontWeight, 1000}, {settingFontBoldWeight, 1000}} {
 		if err := v.setWidgetValue(tc.key, settings.Value{Number: tc.n}); err == nil {
 			t.Fatalf("invalid %s accepted", tc.key)
 		}
@@ -133,6 +135,7 @@ func TestFontWidgetPreview(t *testing.T) {
 	}
 	v := newPreviewView()
 	v.startSettingsWidget("appearance.font")
+	v.adjustSetting(settingFontBoldWeight, 1)
 	if err := renderViewPNG(filepath.Join(dir, "settings-font.png"), v); err != nil {
 		t.Fatal(err)
 	}

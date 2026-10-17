@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative 'lib/cli'
+
+$stdout.sync = true
+
+begin
+  exit Showroom::CLI.run(ARGV, __dir__)
+rescue ArgumentError, KeyError, Psych::Exception, SystemCallError => e
+  warn "showroom: #{e.message}"
+  exit 1
+end

@@ -55,7 +55,7 @@ func bindingDefinition(c command, slot int) settings.Definition {
 			}
 			s := override.Shortcut
 			if s.Name == key.NameSpace || len(s.Name) == 1 {
-				if s.Modifiers&(key.ModCtrl|key.ModAlt|key.ModSuper|key.ModCommand) == 0 && !c.defaultShortcut(s) {
+				if s.Modifiers&(key.ModCtrl|key.ModAlt|key.ModSuper|key.ModCommand) == 0 && s.textTrigger() == "" && !c.defaultShortcut(s) {
 					return errors.New("use a modified key")
 				}
 			}

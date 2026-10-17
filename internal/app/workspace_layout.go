@@ -102,7 +102,7 @@ func (v *view) headerBand(gtx layout.Context, height int, bg color.NRGBA, conten
 	return layout.Dimensions{Size: size}
 }
 
-func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, metadataRole contrastRole) layout.Dimensions {
+func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, metadataRole contrastRole, boldName bool) layout.Dimensions {
 	var metadata layout.Widget
 	if item.size != "" {
 		metadata = func(gtx layout.Context) layout.Dimensions {
@@ -110,7 +110,7 @@ func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA
 		}
 	}
 	return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return v.label(gtx, item.name, size, fg, text.Start)
+		return v.labelStyle(item.name, size, v.resolvedText(fg), text.Start, boldName).Layout(gtx)
 	}, metadata)
 }
 
@@ -152,10 +152,17 @@ func (v *view) labelFor(role contrastRole, gtx layout.Context, value string, siz
 // Raw labels are used for measurement and selection samples whose foreground
 // was already resolved against the ordinary editor surface.
 func (v *view) rawLabel(gtx layout.Context, value string, size unit.Sp, fg color.NRGBA, alignment text.Alignment) layout.Dimensions {
+	return v.labelStyle(value, size, fg, alignment, false).Layout(gtx)
+}
+
+func (v *view) labelStyle(value string, size unit.Sp, fg color.NRGBA, alignment text.Alignment, bold bool) material.LabelStyle {
 	label := material.Label(v.theme, size, value)
 	label.Font.Weight = v.appearance.FontWeight
+	if bold {
+		label.Font.Weight = v.appearance.BoldWeight
+	}
 	label.Color, label.Alignment, label.MaxLines = fg, alignment, 1
-	return label.Layout(gtx)
+	return label
 }
 
 // Measure an unconstrained line using the same font and layout as the rows.

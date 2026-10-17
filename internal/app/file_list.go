@@ -26,7 +26,8 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					fg = v.appearance.Colors.ActiveLocation
 				}
 				if v.locationEditing() && index == v.active {
-					return v.textEditor(&v.location, "Path").Layout(gtx)
+					s := v.interaction.current.(*locationSession)
+					return v.completionEditor(gtx, &v.location, &s.completion, "Path")
 				}
 				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), v.appearance.TextSize, fg, text.Start)
 			}, index == v.active)
@@ -39,7 +40,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
 					return v.filterContents(gtx, index)
 				}
-				return v.columns(gtx, entry{name: "NAME", size: p.metadata.heading()}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize, contrastSecondary)
+				return v.columns(gtx, entry{name: "NAME", size: p.metadata.heading()}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize, contrastSecondary, false)
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -117,7 +118,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							}
 							return v.nameContents(gtx, metadata, sizeColor)
 						}
-						return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata, v.appearance.entryTextRoles(p.items[storedRow].file, active, cut))
+						return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata, v.appearance.entryTextRoles(p.items[storedRow].file, active, cut), p.drives)
 					})
 				}
 				if naming {
@@ -166,12 +167,12 @@ func (v *view) fileRowSurface(gtx layout.Context, size image.Point, background, 
 	return v.textOn(background, content)(gtx)
 }
 
-func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn, roles fileTextRoles) layout.Dimensions {
+func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn, roles fileTextRoles, drives bool) layout.Dimensions {
 	return v.textAs(roles.filename, func(gtx layout.Context) layout.Dimensions {
 		return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.Y = 0
-				return v.columns(gtx, entry{name: mode.displayName(item), size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata)
+				return v.columns(gtx, entry{name: mode.displayName(item), size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata, item.file.Directory && !item.file.Parent && !drives)
 			})
 		})
 	})(gtx)

@@ -67,7 +67,7 @@ func (v *view) applyFontSettings() {
 	}
 	v.appearance.TextSize = unit.Sp(v.settingsValues.Get(c, settingFontTextSize).Number)
 	v.appearance.SmallTextSize = unit.Sp(v.settingsValues.Get(c, settingFontSmallTextSize).Number)
-	// Gio's zero weight is regular (CSS 400). Keep this as the shared default;
-	// semantic styles can override it independently in the future.
+	// Gio's zero weight is regular (CSS 400).
 	v.appearance.FontWeight = font.Weight(v.settingsValues.Get(c, settingFontWeight).Number - 400)
+	v.appearance.BoldWeight = font.Weight(v.settingsValues.Get(c, settingFontBoldWeight).Number - 400)
 }

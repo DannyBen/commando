@@ -4,6 +4,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
+	"github.com/dannyben/commando/internal/browser"
 )
 
 // Foreground interaction has one owner. Background work and panel loading are
@@ -75,7 +76,13 @@ func (c *interactionController) protectsListing(panel int) bool {
 	return c.current != nil && c.current.interactionPanel() == panel
 }
 
-type locationSession struct{ panel int }
+type locationSession struct {
+	panel                       int
+	completion                  inlineCompletion
+	completionPath, pendingPath string
+	completionLoaded            bool
+	completionEntries           []browser.Entry
+}
 
 func (s *locationSession) interactionPanel() int     { return s.panel }
 func (s *nameSession) interactionPanel() int         { return s.panel }
@@ -247,7 +254,7 @@ func (v *view) updateInteraction(gtx layout.Context) bool {
 	if v.activeEditor() == nil {
 		return false
 	}
-	for {
+	for !v.locationEditing() {
 		e, ok := gtx.Event(key.Filter{Name: key.NameTab, Optional: key.ModShift})
 		if !ok {
 			break

@@ -44,6 +44,4 @@ changelog:
       - "^- "
 
 release:
-  prerelease: true
-  header: |
-    Commando is a work in progress. This is an early Windows preview.
+  prerelease: false

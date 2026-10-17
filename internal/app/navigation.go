@@ -95,6 +95,10 @@ func (v *view) acceptLoad(result loadResult) {
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
 	}
+	if result.request.completion != nil {
+		v.acceptLocationCompletion(result)
+		return
+	}
 	if s := result.request.themeLibrary; s != nil {
 		v.acceptThemeLibrary(s, result.themes, result.err)
 		return

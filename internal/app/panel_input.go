@@ -93,8 +93,14 @@ func (v *view) stopLocation(gtx layout.Context) {
 }
 
 func (v *view) updateLocation(gtx layout.Context) {
+	var keys []key.Event
 	for {
 		e, ok := gtx.Event(
+			key.Filter{Focus: &v.location, Name: key.NameTab, Optional: key.ModShift},
+			key.Filter{Focus: &v.location, Name: key.NameUpArrow},
+			key.Filter{Focus: &v.location, Name: key.NameDownArrow},
+			key.Filter{Focus: &v.location, Name: key.NameReturn},
+			key.Filter{Focus: &v.location, Name: key.NameEnter},
 			key.Filter{Focus: &v.location, Name: key.NameEscape},
 			key.Filter{Focus: &v.location, Name: "D", Required: key.ModAlt},
 		)
@@ -102,48 +108,103 @@ func (v *view) updateLocation(gtx layout.Context) {
 			break
 		}
 		if ke, ok := e.(key.Event); ok && ke.State == key.Press {
-			v.dismissFeedback()
 			if ke.Name == key.NameEscape {
+				// Release ownership before the editor can consume subsequent browsing
+				// keys from the same input batch.
 				v.escape(gtx)
 				return
 			}
-			v.location.SetCaret(0, utf8.RuneCountInString(v.location.Text()))
+			keys = append(keys, ke)
+			// Leave later events available for browsing after dismissal/navigation.
+			if ke.Name == key.NameReturn || ke.Name == key.NameEnter {
+				break
+			}
 		}
 	}
+	submitted := false
 	for {
 		e, ok := v.location.Update(gtx)
 		if !ok {
-			return
+			break
 		}
 		if _, ok := e.(widget.ChangeEvent); ok {
 			v.dismissFeedback()
 		}
-		if submit, ok := e.(widget.SubmitEvent); ok {
-			v.dismissFeedback()
-			path := strings.TrimSpace(submit.Text)
-			if len(path) >= 2 && path[0] == '"' && path[len(path)-1] == '"' {
-				path = path[1 : len(path)-1]
-			}
-			path = expandLocationEnvironment(path)
-			if path == "" || v.panels[v.active].loading {
-				return
-			}
-			if runtime.GOOS == "windows" {
-				path = normalizeDriveShortcut(path)
-			}
-			if !filepath.IsAbs(path) && filepath.VolumeName(path) == "" {
-				base := v.panels[v.active].locationPath()
-				if os.IsPathSeparator(path[0]) {
-					path = filepath.VolumeName(base) + path
-				} else {
-					path = filepath.Join(base, path)
-				}
-			}
-			v.stopLocation(gtx)
-			v.queueLoad(loadRequest{panel: v.active, path: path, explicitPath: true})
-			return
+		if _, ok := e.(widget.SubmitEvent); ok {
+			submitted = true
 		}
 	}
+	v.updateLocationCompletion()
+	s := v.interaction.current.(*locationSession)
+	for _, ke := range keys {
+		v.dismissFeedback()
+		switch ke.Name {
+		case key.NameEscape:
+			v.escape(gtx)
+			return
+		case key.NameReturn, key.NameEnter:
+			v.submitLocation(gtx)
+			return
+		case "D":
+			v.location.SetCaret(0, utf8.RuneCountInString(v.location.Text()))
+			v.updateLocationCompletion()
+		case key.NameTab:
+			if ke.Modifiers == 0 && s.completion.accept(&v.location) {
+				v.updateLocationCompletion()
+			}
+		case key.NameUpArrow, key.NameDownArrow:
+			direction := 1
+			if ke.Name == key.NameUpArrow {
+				direction = -1
+			}
+			if s.completion.cycle(direction) {
+				v.announceInteraction(eventSelectionChanged)
+			}
+		}
+	}
+	if submitted {
+		v.submitLocation(gtx)
+	}
+}
+
+func (v *view) submitLocation(gtx layout.Context) {
+	v.dismissFeedback()
+	base := v.panels[v.active].locationPath()
+	path := resolveLocationPath(base, v.location.Text())
+	if path == "" || v.panels[v.active].loading {
+		return
+	}
+	suggestedPath := ""
+	if s, ok := v.interaction.current.(*locationSession); ok {
+		s.completion.update(&v.location)
+		if s.completion.suffix() != "" {
+			suggestedPath = resolveLocationPath(base, s.completion.matches[s.completion.selected])
+		}
+	}
+	v.stopLocation(gtx)
+	v.queueLoad(loadRequest{panel: v.active, path: path, suggestedPath: suggestedPath, explicitPath: true})
+}
+
+func resolveLocationPath(base, text string) string {
+	path := strings.TrimSpace(text)
+	if len(path) >= 2 && path[0] == '"' && path[len(path)-1] == '"' {
+		path = path[1 : len(path)-1]
+	}
+	path = expandLocationEnvironment(path)
+	if path == "" {
+		return ""
+	}
+	if runtime.GOOS == "windows" {
+		path = normalizeDriveShortcut(path)
+	}
+	if !filepath.IsAbs(path) && filepath.VolumeName(path) == "" {
+		if os.IsPathSeparator(path[0]) {
+			path = filepath.VolumeName(base) + path
+		} else {
+			path = filepath.Join(base, path)
+		}
+	}
+	return path
 }
 
 // Expand %NAME% once, preserving unknown variables and literal percent signs.
