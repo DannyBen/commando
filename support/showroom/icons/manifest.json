@@ -1,5 +1,14 @@
 [
   {
+    "name": "sample",
+    "directory": false,
+    "images": {
+      "16": "sample.code-workspace.16.png",
+      "32": "sample.code-workspace.32.png",
+      "48": "sample.code-workspace.48.png"
+    }
+  },
+  {
     "name": "folder",
     "directory": true,
     "images": {
