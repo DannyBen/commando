@@ -115,6 +115,9 @@ func defaultCommands() []command {
 		cmd("selection.mark_all", "Selection", "Mark all", "A", key.ModCtrl, nil),
 		cmd("selection.clear_filter_or_marks", "Selection", "Clear filter or marks", key.NameEscape, 0, nil),
 
+		cmd("programs.terminal_here", "Programs", "Terminal here", "T", key.ModCtrl, terminalReady),
+		cmd("programs.terminal_here_admin", "Programs", "Terminal here (Admin)", "", 0, terminalReady),
+
 		toggleSettingCommand("appearance.toggle_icons", "Appearance", "icons", settingIconsEnabled),
 		toggleSettingCommand("appearance.toggle_auto_color", "Appearance", "auto color", settingAutoColorEnabled),
 		toggleSettingCommand("appearance.toggle_contrast_guard", "Appearance", "contrast guard", settingContrastGuard),

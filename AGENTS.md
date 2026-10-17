@@ -358,6 +358,19 @@ module/executable and `Commando` for the window title and data-folder name.
   Saved rules replace Reset with Delete, staged until Save and reversible through
   Cancel; New has no Reset/Delete. Separate launches per file remain future work.
 
+- Programs › Terminal here uses Ctrl+T by default; Terminal here (Admin) is
+  unbound. Saved user bindings take precedence. Both launch cmd.exe in the active
+  panel's open folder, ignoring selection and marks, and are unavailable on
+  Drives or during editors/busy operations. Launch through the shared worker;
+  preserve browsing state, keep success and UAC cancellation quiet, and report
+  failures in the originating footer. Admin elevates the system cmd.exe directly,
+  resolving its folder through ResolveOperationPath before elevation to expand
+  SUBST aliases. Use the Windows system directory as the launch directory.
+  Normal launches pass the folder through the child environment; Admin uses a
+  quoted pushd command and refuses percent-containing paths to avoid expansion.
+  Never wait for the terminal to close. Verify elevation and the starting
+  folder on a real Windows desktop before marking complete.
+
 - Editable colors use LSH: lightness and saturation are 0–100; hue is a
   360-degree wheel. Saturation is the percentage of usable sRGB OKLCH chroma
   at the chosen lightness and hue. UI, clipboard and saved values share units.

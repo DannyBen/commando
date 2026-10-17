@@ -120,6 +120,10 @@ func (v *view) acceptLoad(result loadResult) {
 		}
 		return
 	}
+	if result.request.terminal != nil {
+		v.acceptTerminalLaunch(result)
+		return
+	}
 	if result.request.editor != nil {
 		v.acceptEditorLaunch(result)
 		return

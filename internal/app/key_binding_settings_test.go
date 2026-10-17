@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -240,6 +241,7 @@ func TestAltBindingUpdatesWindowsInputAndResets(t *testing.T) {
 
 func TestNewDefaultBindingPreservesSavedAssignments(t *testing.T) {
 	original := commands
+	base := slices.DeleteFunc(slices.Clone(commands), func(c command) bool { return c.id == "programs.terminal_here" })
 	t.Cleanup(func() { commands = original })
 	launches := 0
 	terminal := cmd("programs.terminal_here", "Programs", "Terminal here", "T", key.ModCtrl, nil)
@@ -247,9 +249,9 @@ func TestNewDefaultBindingPreservesSavedAssignments(t *testing.T) {
 	terminal.execute = func(*view) { launches++ }
 
 	for _, defaultFirst := range []bool{false, true} {
-		commands = append([]command{terminal}, original...)
+		commands = append([]command{terminal}, base...)
 		if !defaultFirst {
-			commands = append(append([]command{}, original...), terminal)
+			commands = append(append([]command{}, base...), terminal)
 		}
 		for _, tc := range []struct {
 			name, document string

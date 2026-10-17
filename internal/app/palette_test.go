@@ -79,7 +79,7 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 			groups = append(groups, result.command.group)
 		}
 	}
-	if !slices.Equal(groups, []string{"File", "Entry", "Navigation", "View", "Panel", "Selection", "Appearance", "Feedback", "Application"}) ||
+	if !slices.Equal(groups, []string{"File", "Entry", "Navigation", "View", "Panel", "Selection", "Programs", "Appearance", "Feedback", "Application"}) ||
 		s.results[0].command.label() != "File › Edit" || s.results[1].command.label() != "Entry › Open" || s.results[2].command.label() != "Entry › Rename" {
 		t.Fatalf("blank search lost reviewed browsing order: %v", groups)
 	}
@@ -480,7 +480,7 @@ func TestPalettePreview(t *testing.T) {
 	if directory == "" {
 		t.Skip("optional headless palette preview")
 	}
-	for _, query := range []string{"", "panel", "settings", "xyz", "@xyz"} {
+	for _, query := range []string{"", "panel", "settings", "terminal", "xyz", "@xyz"} {
 		v := newPreviewView()
 		var ops op.Ops
 		v.startPalette(layout.Context{Ops: &ops})

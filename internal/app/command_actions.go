@@ -7,6 +7,8 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 	switch id {
 	case "file.edit":
 		v.editSelectedFiles()
+	case "programs.terminal_here", "programs.terminal_here_admin":
+		v.openTerminal(id == "programs.terminal_here_admin")
 	case "entry.open":
 		v.activateSelected()
 	case "entry.rename":

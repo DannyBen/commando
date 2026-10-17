@@ -244,13 +244,13 @@ func TestToggleSoundPaletteAndCustomShortcut(t *testing.T) {
 	if !v.interaction.idle() || v.currentSoundSettings() != (soundSettings{enabled: false, profile: 2, volume: 35}) || len(recorder.played) != 0 {
 		t.Fatal("palette toggle did not mute while preserving preferences")
 	}
-	setTestShortcut(t, v, "feedback.toggle_sound", 0, "Ctrl+T")
+	setTestShortcut(t, v, "feedback.toggle_sound", 0, "Ctrl+Y")
 	v.applySettings()
-	send(modified("T", key.ModCtrl))
+	send(modified("Y", key.ModCtrl))
 	if v.currentSoundSettings() != (soundSettings{enabled: true, profile: 2, volume: 35}) || !slices.Equal(recorder.played, []sound.Name{sound.MessageWarning}) || recorder.volumes[0] != 35 {
 		t.Fatal("bound toggle did not restore sound with one profile-gated preview")
 	}
-	send(key.Event{Name: "T", Modifiers: key.ModCtrl, State: key.Release})
+	send(key.Event{Name: "Y", Modifiers: key.ModCtrl, State: key.Release})
 	if !v.currentSoundSettings().enabled || len(recorder.played) != 1 {
 		t.Fatal("key release toggled or played sound")
 	}

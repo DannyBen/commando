@@ -45,9 +45,9 @@ func TestBooleanToggleCommandsApplyPersistAndBind(t *testing.T) {
 					t.Fatal("toggle changed an unrelated preference or did not save", definition.Key)
 				}
 			}
-			setTestShortcut(t, v, tc.id, 0, "Ctrl+T")
+			setTestShortcut(t, v, tc.id, 0, "Ctrl+Y")
 			v.applySettings()
-			send(modified("T", key.ModCtrl))
+			send(modified("Y", key.ModCtrl))
 			if v.settingsValues.Get(catalogue, tc.field) != before.Get(catalogue, tc.field) || !v.interaction.idle() {
 				t.Fatal("bound toggle did not restore the setting")
 			}

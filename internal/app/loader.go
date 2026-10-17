@@ -30,6 +30,7 @@ type loadRequest struct {
 	clipboard        *fileClipboardRequest
 	transfer         *transferRequest
 	settingsSave     *settingsSaveRequest
+	terminal         *terminalRequest
 	editor           *editorRequest
 	fontFamilies     bool
 	completion       *locationSession
@@ -74,6 +75,7 @@ type directoryLoader struct {
 	transfer             func(browser.TransferRequest) (browser.TransferResult, error)
 	readDirectory        func(string) (browser.Directory, error)
 	launchEditor         func(string, []string, string) error
+	launchTerminal       func(string, bool, uintptr) error
 	folderShortcutTarget func(string) (string, error)
 	readFileIcon         func(string, int) image.Image
 	readFileTypeIcon     func(string, int, bool) image.Image
@@ -101,6 +103,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		stopped:              make(chan struct{}),
 		readDirectory:        read,
 		launchEditor:         browser.LaunchEditor,
+		launchTerminal:       browser.LaunchTerminal,
 		folderShortcutTarget: browser.FolderShortcutTarget,
 	}
 	go func() {
@@ -153,6 +156,14 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				}
 				if request.fontFamilies {
 					l.results <- loadResult{request: request, fontFamilies: readFontFamilies()}
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
+				if request.terminal != nil {
+					result := loadResult{request: request, err: l.launchTerminal(request.path, request.terminal.admin, request.terminal.owner)}
+					l.results <- result
 					if invalidate != nil {
 						invalidate()
 					}

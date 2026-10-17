@@ -28,8 +28,8 @@ func TestMetadataToggleRestoresColumnAndPreservesBrowsing(t *testing.T) {
 	if p.metadata != metadataNone || p.lastMetadata != metadataModified {
 		t.Fatal("toggle did not remember the visible column")
 	}
-	setTestShortcut(t, v, "view.toggle_metadata_column", 0, "Ctrl+T")
-	send(modified("T", key.ModCtrl))
+	setTestShortcut(t, v, "view.toggle_metadata_column", 0, "Ctrl+Y")
+	send(modified("Y", key.ModCtrl))
 	if p.metadata != metadataModified || v.panels[1].metadata != metadataSize || !slices.Equal(items, p.items) || !maps.Equal(marks, p.marks) || p.selected != selected || p.list.Position != position {
 		t.Fatal("toggle lost its column or changed panel browsing state")
 	}
@@ -38,11 +38,11 @@ func TestMetadataToggleRestoresColumnAndPreservesBrowsing(t *testing.T) {
 	if p.metadata != metadataNone {
 		t.Fatal("cycle no longer reaches None")
 	}
-	send(modified("T", key.ModCtrl))
+	send(modified("Y", key.ModCtrl))
 	if p.metadata != metadataModified {
 		t.Fatal("toggle did not restore the column hidden by cycling")
 	}
-	send(modified("D", key.ModAlt), modified("T", key.ModCtrl))
+	send(modified("D", key.ModAlt), modified("Y", key.ModCtrl))
 	if p.metadata != metadataModified || !v.locationEditing() {
 		t.Fatal("toggle interrupted a native editor")
 	}
