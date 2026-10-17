@@ -22,8 +22,8 @@ func (v *view) browsingKeyFilters() []event.Filter {
 	for _, c := range v.shortcutCommands() {
 		for slot := range c.bindings {
 			s := c.effectiveShortcut(slot)
-			if s.Name == "" || s.Modifiers == 0 && (s.Name == "/" || s.Name == "@") {
-				continue // These existing triggers enter through text events.
+			if s.Name == "" || s.textTrigger() != "" && s.Name != "`" {
+				continue // Printable triggers enter through text events; avoid double dispatch.
 			}
 			filters = append(filters, key.Filter{Focus: &v.focus, Name: s.Name, Required: s.Modifiers})
 			if s.Name == key.NameReturn {
