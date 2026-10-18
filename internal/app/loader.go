@@ -76,6 +76,7 @@ type directoryLoader struct {
 	writeClipboard       func([]string, bool) (browser.FileClipboard, error)
 	completeClipboard    func(browser.FileClipboard, []string) (browser.FileClipboard, error)
 	transfer             func(browser.TransferRequest) (browser.TransferResult, error)
+	createShortcuts      func([]string, string) (browser.TransferResult, error)
 	readDirectory        func(string) (browser.Directory, error)
 	launchEditor         func(string, []string, string) error
 	launchTerminal       func(string, bool, uintptr) error
@@ -104,6 +105,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		writeClipboard:       browser.WriteFileClipboard,
 		completeClipboard:    browser.CompleteFileClipboard,
 		transfer:             browser.Transfer,
+		createShortcuts:      browser.CreateShortcuts,
 		stopped:              make(chan struct{}),
 		readDirectory:        read,
 		launchEditor:         browser.LaunchEditor,

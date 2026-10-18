@@ -62,6 +62,7 @@ func defaultCommands() []command {
 		cmd("entry.copy_paths", "Entry", "Copy paths", "C", key.ModCtrl|key.ModShift, textClipboardReady),
 		cmd("entry.cut", "Entry", "Cut", "X", key.ModCtrl, clipboardReady),
 		cmd("entry.paste", "Entry", "Paste", "V", key.ModCtrl, mutationReady),
+		cmd("entry.paste_shortcut", "Entry", "Paste shortcut", "V", key.ModCtrl|key.ModShift, mutationReady),
 		cmd("entry.duplicate", "Entry", "Duplicate", "D", key.ModCtrl, selectedMutationReady),
 		cmd("entry.copy_to_panel", "Entry", "Copy to panel", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && selectedMutationReady(v) }),
 		cmd("entry.move_to_panel", "Entry", "Move to panel", key.NameF6, 0, func(v *view) bool { return len(v.panels) > 1 && selectedMutationReady(v) }),

@@ -33,6 +33,7 @@ type fileClipboardRequest struct {
 type transferRequest struct {
 	locations []string
 	duplicate bool                   // Direct duplication does not read or change the clipboard.
+	shortcuts bool                   // Create shell links instead of transferring clipboard sources.
 	snapshot  *browser.FileClipboard // Captured selection; bypasses system clipboard reads and writes.
 	owner     uintptr
 }
@@ -63,13 +64,23 @@ func (v *view) clipboardSelected(move bool) {
 }
 
 func (v *view) pasteFiles() {
+	v.pasteClipboard(false)
+}
+
+func (v *view) pasteShortcuts() {
+	v.pasteClipboard(true)
+}
+
+func (v *view) pasteClipboard(shortcuts bool) {
 	p := &v.panels[v.active]
 	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
 		return
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true
 	// Windows owns the transfer UI, including progress and cancellation.
-	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{locations: v.fileOperationLocations(), owner: v.ownerWindow}}) {
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{locations: v.fileOperationLocations(), owner: v.ownerWindow, shortcuts: shortcuts}}) {
 		p.loading, v.transferPending = false, false
+	} else if shortcuts {
+		v.operationProgress(v.active, "Creating shortcuts")
 	}
 }

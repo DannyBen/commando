@@ -21,6 +21,8 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		v.clipboardSelected(true)
 	case "entry.paste":
 		v.pasteFiles()
+	case "entry.paste_shortcut":
+		v.pasteShortcuts()
 	case "entry.duplicate":
 		v.duplicateSelected()
 	case "entry.copy_to_panel", "entry.move_to_panel":

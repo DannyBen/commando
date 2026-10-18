@@ -42,7 +42,7 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	if result.err != nil {
 		return result
 	}
-	if len(snapshot.ImagePNG) > 0 && len(snapshot.Paths) == 0 {
+	if !request.transfer.shortcuts && len(snapshot.ImagePNG) > 0 && len(snapshot.Paths) == 0 {
 		result.clipboard = snapshot
 		return result
 	}
@@ -53,6 +53,14 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	// File selections take precedence over any alternate image representation.
 	snapshot.ImagePNG = nil
 	result.clipboard, result.transferMove = snapshot, snapshot.Move
+	if request.transfer.shortcuts {
+		result.transferMove = false
+		result.transferred, result.err = l.createShortcuts(snapshot.Paths, request.path)
+		if result.transferred.Attempted {
+			l.refreshTransferPanels(&result)
+		}
+		return result
+	}
 	sameFolder, err := browser.SourcesInDirectory(snapshot.Paths, request.path)
 	if err != nil {
 		result.err = err

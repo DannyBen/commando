@@ -39,6 +39,9 @@ func (r loadRequest) traceKind() (diagnostics.Mask, string) {
 	case r.duplicate != nil:
 		return diagnostics.FileOperations, "duplicate"
 	case r.transfer != nil:
+		if r.transfer.shortcuts {
+			return diagnostics.FileOperations, "paste_shortcut"
+		}
 		return diagnostics.FileOperations, "transfer"
 	case r.clipboard != nil:
 		return diagnostics.Shell, "clipboard"
