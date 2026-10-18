@@ -391,6 +391,79 @@ func TestPalettePointerBarrier(t *testing.T) {
 	}
 }
 
+func TestPaletteDoubleClickExecutesClickedResult(t *testing.T) {
+	v := newPreviewView()
+	v.active = 2
+	calls, origin := 0, -1
+	v.toggleFullScreen = func() { calls++; origin = v.active }
+	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+	send(pressed("`"))
+	s := v.paletteInteraction()
+	s.commands = []command{commandByID(v, "entry.rename"), commandByID(v, "application.toggle_full_screen")}
+	s.filter("")
+	send()
+	point := f32.Pt(float32(s.surface.bounds.Min.X+30), float32(s.surface.bounds.Min.Y+78))
+	rowClick(send, point, time.Second, 0)
+	if s.selected != 1 || calls != 0 || v.paletteInteraction() != s || !router.Source().Focused(&v.commandSearch) {
+		t.Fatal("single click did not select without execution and retain Search focus")
+	}
+	rowClick(send, point, time.Second+100*time.Millisecond, 0)
+	if calls != 1 || origin != 2 || v.paletteInteraction() != nil || !router.Source().Focused(&v.focus) {
+		t.Fatal("double click did not dispatch the clicked command once in its original panel")
+	}
+}
+
+func TestPaletteDoubleClickCannotExecuteUnavailableCommand(t *testing.T) {
+	v := newPreviewView()
+	v.panels[0].drives = true
+	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+	send(pressed("`"), key.EditEvent{Text: "Rename"})
+	s := v.paletteInteraction()
+	if len(s.results) == 0 || s.results[0].command.allowed(v) {
+		t.Fatal("expected unavailable rename")
+	}
+	point := f32.Pt(float32(s.surface.bounds.Min.X+30), float32(s.surface.bounds.Min.Y+52))
+	rowClick(send, point, time.Second, 0)
+	rowClick(send, point, time.Second+100*time.Millisecond, 0)
+	if v.paletteInteraction() != s || v.nameInteraction() != nil || !router.Source().Focused(&v.commandSearch) {
+		t.Fatal("unavailable double click executed, closed the palette or lost Search focus")
+	}
+}
+
+func TestPaletteDoubleClickSettingsRestoresPaletteOnCancel(t *testing.T) {
+	v := newPreviewView()
+	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+	send(pressed("`"), key.EditEvent{Text: "@appearance icons"})
+	s := v.paletteInteraction()
+	point := f32.Pt(float32(s.surface.bounds.Min.X+30), float32(s.surface.bounds.Min.Y+52))
+	rowClick(send, point, time.Second, 0)
+	rowClick(send, point, time.Second+100*time.Millisecond, 0)
+	widget := v.settingsInteraction()
+	if widget == nil || widget.palette != s || widget.fields[0].Widget != "appearance.icons" {
+		t.Fatal("settings double click did not use the existing widget handoff")
+	}
+	send(pressed(key.NameEscape))
+	if v.paletteInteraction() != s || !router.Source().Focused(&v.commandSearch) {
+		t.Fatal("settings cancellation did not restore palette and Search focus")
+	}
+}
+
+func TestPaletteDoubleClickCanReplaceResults(t *testing.T) {
+	v := newPreviewView()
+	send, _ := panelInputFrames(v)
+	send(pressed("`"))
+	s := v.paletteInteraction()
+	s.commands = []command{{name: "Settings", paletteQuery: "@appearance"}}
+	s.filter("")
+	send()
+	point := f32.Pt(float32(s.surface.bounds.Min.X+30), float32(s.surface.bounds.Min.Y+52))
+	rowClick(send, point, time.Second, 0)
+	rowClick(send, point, time.Second+100*time.Millisecond, 0)
+	if v.paletteInteraction() != s || s.query != "@appearance" || !s.settingsMode || len(s.results) == 0 {
+		t.Fatal("double click failed to replace results within the palette")
+	}
+}
+
 func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 	for _, tc := range []struct {
 		width, left, overlay int

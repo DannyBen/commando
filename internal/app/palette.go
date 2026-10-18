@@ -162,9 +162,17 @@ func (v *view) updatePalette(gtx layout.Context) {
 		return
 	}
 	for row, clickable := range s.rows {
-		for clickable.Clicked(gtx) {
+		for {
+			click, ok := clickable.Update(gtx)
+			if !ok {
+				break
+			}
 			s.selected, s.reveal = row, true
 			v.focusInteraction(gtx)
+			if click.NumClicks == 2 && click.Modifiers == 0 {
+				v.choosePalette(gtx)
+				return // Execution may close the palette or replace its results.
+			}
 		}
 	}
 	var navigation []key.Event
