@@ -7,12 +7,11 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/widget"
 )
 
 // actionBar is a keyboard-controlled row of equal-width, clickable action cells.
 // Its owner supplies focus, labels and activation, keeping session policy outside.
-type actionBar struct{ buttons []widget.Clickable }
+type actionBar struct{ buttons []clickTarget }
 
 func (b *actionBar) update(gtx layout.Context) (int, bool) {
 	for i := range b.buttons {
@@ -24,7 +23,7 @@ func (b *actionBar) update(gtx layout.Context) (int, bool) {
 }
 func (b *actionBar) layout(gtx layout.Context, labels []string, selected, height int, colors ThemeColors, label func(layout.Context, string, color.NRGBA, color.NRGBA) layout.Dimensions) layout.Dimensions {
 	if len(b.buttons) != len(labels) {
-		b.buttons = make([]widget.Clickable, len(labels))
+		b.buttons = make([]clickTarget, len(labels))
 	}
 	children := make([]layout.FlexChild, 0, len(labels))
 	for i, value := range labels {

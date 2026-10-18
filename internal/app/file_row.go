@@ -12,18 +12,16 @@ import (
 // File rows share ordinary clicks and secondary-button invocation. Passing
 // pointer events through keeps list scrolling and primary clicks independent.
 type fileRow struct {
-	widget.Clickable
+	clickTarget
 	secondary     bool
 	pressed       bool
-	size          image.Point
 	dragCandidate bool
 	dragOrigin    image.Point
 	suppressClick bool
 }
 
 func (r *fileRow) Layout(gtx layout.Context, contents layout.Widget) layout.Dimensions {
-	dims := r.Clickable.Layout(gtx, contents)
-	r.size = dims.Size
+	dims := r.clickTarget.Layout(gtx, contents)
 	area := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
 	pass := pointer.PassOp{}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &r.secondary)
@@ -33,10 +31,17 @@ func (r *fileRow) Layout(gtx layout.Context, contents layout.Widget) layout.Dime
 }
 
 func (r *fileRow) updatePointer(gtx layout.Context) (clicked, dragged bool) {
+	enabled := r.enabled(gtx)
+	if !enabled {
+		r.pressed, r.dragCandidate = false, false
+	}
 	for {
 		e, ok := gtx.Event(pointer.Filter{Target: &r.secondary, Kinds: pointer.Press | pointer.Release | pointer.Cancel | pointer.Move | pointer.Drag})
 		if !ok {
 			break
+		}
+		if !enabled {
+			continue
 		}
 		pe := e.(pointer.Event)
 		switch pe.Kind {
@@ -52,7 +57,7 @@ func (r *fileRow) updatePointer(gtx layout.Context) (clicked, dragged bool) {
 				dragged, r.dragCandidate, r.suppressClick = true, false, true
 			}
 		case pointer.Release:
-			clicked = clicked || r.pressed && pe.Position.Round().In(image.Rectangle{Max: r.size})
+			clicked = clicked || r.pressed && r.contains(pe.Position.Round())
 			r.pressed, r.dragCandidate = false, false
 		case pointer.Cancel:
 			r.pressed, r.dragCandidate = false, false
@@ -62,6 +67,6 @@ func (r *fileRow) updatePointer(gtx layout.Context) (clicked, dragged bool) {
 }
 
 func (r *fileRow) Update(gtx layout.Context) (widget.Click, bool) {
-	click, ok := r.Clickable.Update(gtx)
+	click, ok := r.clickTarget.Update(gtx)
 	return click, ok && !r.suppressClick
 }

@@ -7,7 +7,6 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
-	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
@@ -84,7 +83,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 				}
 				return list.Layout(gtx, len(s.results), func(gtx layout.Context, row int) layout.Dimensions {
 					if s.rows[row] == nil {
-						s.rows[row] = new(widget.Clickable)
+						s.rows[row] = new(clickTarget)
 					}
 					return s.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						size := image.Pt(gtx.Constraints.Max.X, rowHeight)

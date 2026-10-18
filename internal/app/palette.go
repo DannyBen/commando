@@ -28,7 +28,7 @@ type paletteSession struct {
 	settingsCommands []command
 	settingsMode     bool
 	list             widget.List
-	rows             map[int]*widget.Clickable
+	rows             map[int]*clickTarget
 	surface          overlay
 	reveal           bool
 	openingBacktick  bool
@@ -46,7 +46,7 @@ func (v *view) paletteInteraction() *paletteSession {
 }
 
 func (v *view) startPalette(gtx layout.Context) {
-	s := &paletteSession{panel: v.active, rows: make(map[int]*widget.Clickable), commands: v.commandCatalogue(), settingsCommands: v.settingsCatalogue()}
+	s := &paletteSession{panel: v.active, rows: make(map[int]*clickTarget), commands: v.commandCatalogue(), settingsCommands: v.settingsCatalogue()}
 	if !v.startInteraction(s) {
 		return
 	}
@@ -82,7 +82,7 @@ func (s *paletteSession) filter(query string) {
 			return strings.Compare(a.command.label(), b.command.label())
 		})
 	}
-	s.rows = make(map[int]*widget.Clickable)
+	s.rows = make(map[int]*clickTarget)
 	s.list.ScrollTo(0)
 }
 

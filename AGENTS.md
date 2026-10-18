@@ -420,6 +420,16 @@ module/executable and `Commando` for the window title and data-folder name.
   use Windows association icons without creating files. Folder drafts show a
   folder icon. Reuse the same layout, recoloring, worker and bounded caches.
 
+## Mouse Interaction
+
+Use `clickTarget` for custom clickable controls and rows; retain Gio editors and
+scrollbars for their native input behavior. Its measured layout defines the hit
+area, and its shared state keeps enabled, selected, hovered and pressed separate.
+Owners supply selection and disabled contexts through the interaction controller;
+hover must never change focus or selection. Keep semantic activation in existing
+handlers. File rows extend the shared target for right-click and drag, including
+click suppression after dragging. New controls should reuse this foundation.
+
 ## Diagnostics
 
 Production diagnostics are OFF by default. `--trace MASK` overrides the saved

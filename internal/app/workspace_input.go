@@ -26,7 +26,11 @@ func (v *view) update(gtx layout.Context) {
 	for pi := range v.panels {
 		p := &v.panels[pi]
 		for ri, row := range p.rows {
-			context, dragged := row.updatePointer(gtx)
+			pointerContext := gtx
+			if v.interaction.panelsBlocked() {
+				pointerContext = gtx.Disabled()
+			}
+			context, dragged := row.updatePointer(pointerContext)
 			if dragged {
 				v.startDrag(gtx, pi, v.storedRow(pi, ri), false)
 			}
@@ -34,7 +38,7 @@ func (v *view) update(gtx layout.Context) {
 				v.startContextMenu(gtx, pi, v.storedRow(pi, ri), true)
 			}
 			for {
-				click, ok := row.Update(gtx)
+				click, ok := row.Update(pointerContext)
 				if !ok {
 					break
 				}
