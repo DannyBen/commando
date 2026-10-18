@@ -148,11 +148,11 @@ func TestDeleteWorkerUsesOwnBackendAndSharedAliasReconciliation(t *testing.T) {
 	for _, name := range []string{"single_files", "directories", "multiple_entries"} {
 		setGuard(t, v, true, name, "OFF")
 	}
-	v.loader.recycle = func(string, []string) (browser.RemovalResult, error) {
+	v.loader.recycle = func(string, []string, uintptr) (browser.RemovalResult, error) {
 		t.Error("permanent delete used recycle backend")
 		return browser.RemovalResult{}, nil
 	}
-	v.loader.delete = func(path string, names []string) (browser.RemovalResult, error) {
+	v.loader.delete = func(path string, names []string, owner uintptr) (browser.RemovalResult, error) {
 		return browser.RemovalResult{Directory: path, Names: names[:1]}, os.ErrPermission
 	}
 	p := &v.panels[0]

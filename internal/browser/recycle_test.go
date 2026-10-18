@@ -18,7 +18,7 @@ func TestRecyclePreflightsWholeSelectionBeforeMutation(t *testing.T) {
 			return "", os.ErrNotExist
 		}
 		return path, nil
-	}, func([]string) (int, error) { called = true; return 0, nil })
+	}, func([]string) (removalBatch, error) { called = true; return removalBatch{}, nil })
 	if called || len(result.Names) != 0 || !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("preflight mutated or hid failure: result=%+v err=%v", result, err)
 	}
@@ -38,12 +38,16 @@ func TestRecyclePassesBackingPathsAndReportsPartialSuccess(t *testing.T) {
 		result, err := recycle(root, []string{"a", "b"}, func(path string) (string, error) {
 			relative, err := filepath.Rel(root, path)
 			return filepath.Join(backing, relative), err
-		}, func(paths []string) (int, error) {
+		}, func(paths []string) (removalBatch, error) {
 			want := []string{filepath.Join(backing, "a"), filepath.Join(backing, "b")}
 			if !reflect.DeepEqual(paths, want) {
 				t.Fatalf("backend received %v, want %v", paths, want)
 			}
-			return count, failure
+			completed := make([]bool, len(paths))
+			for i := range count {
+				completed[i] = true
+			}
+			return removalBatch{completed: completed}, failure
 		})
 		if result.Directory != backing || len(result.Names) != count || !errors.Is(err, failure) {
 			t.Fatalf("count=%d result=%+v err=%v", count, result, err)
@@ -61,7 +65,10 @@ func TestRecycleRejectsInvalidSelectionWithoutFilesystemCalls(t *testing.T) {
 	for _, names := range [][]string{{".."}, {"."}, {""}, {"../outside"}, {`folder\outside`}, {"C:other"}, {"file:stream"}, {"first", "../outside"}, {"a", "A"}} {
 		result, err := recycle("unused", names,
 			func(string) (string, error) { t.Fatal("invalid selection resolved a path"); return "", nil },
-			func([]string) (int, error) { t.Fatal("invalid selection reached backend"); return 0, nil })
+			func([]string) (removalBatch, error) {
+				t.Fatal("invalid selection reached backend")
+				return removalBatch{}, nil
+			})
 		if len(result.Names) != 0 || !errors.Is(err, ErrInvalidName) {
 			t.Fatalf("accepted %v: %+v, %v", names, result, err)
 		}
@@ -72,7 +79,10 @@ func TestRecycleMappingFailureNeverCallsBackend(t *testing.T) {
 	for _, failure := range []error{ErrPathIdentity, ErrDriveMappingCycle, ErrDriveMapping} {
 		result, err := recycle(t.TempDir(), []string{"a"},
 			func(string) (string, error) { return "", failure },
-			func([]string) (int, error) { t.Fatal("mapping failure reached backend"); return 0, nil })
+			func([]string) (removalBatch, error) {
+				t.Fatal("mapping failure reached backend")
+				return removalBatch{}, nil
+			})
 		if len(result.Names) != 0 || !errors.Is(err, failure) {
 			t.Fatalf("result=%+v err=%v", result, err)
 		}
@@ -87,11 +97,13 @@ func TestPermanentDeleteSharesPreflightAndReportsOnlyConfirmedNames(t *testing.T
 			return "", os.ErrNotExist
 		}
 		return path, nil
-	}, func([]string) (int, error) { called = true; return 0, nil })
+	}, func([]string) (removalBatch, error) { called = true; return removalBatch{}, nil })
 	if called || len(result.Names) != 0 || !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("delete bypassed whole-selection preflight")
 	}
-	result, err = removeSelection(root, []string{"first", "second"}, "delete", func(path string) (string, error) { return path, nil }, func([]string) (int, error) { return 1, os.ErrPermission })
+	result, err = removeSelection(root, []string{"first", "second"}, "delete", func(path string) (string, error) { return path, nil }, func([]string) (removalBatch, error) {
+		return removalBatch{completed: []bool{true, false}}, os.ErrPermission
+	})
 	var pathError *os.PathError
 	if !reflect.DeepEqual(result.Names, []string{"first"}) || !errors.As(err, &pathError) || pathError.Op != "delete" || pathError.Path != "second" {
 		t.Fatal("delete lost confirmed partial result", result, err)
@@ -122,5 +134,16 @@ func TestConfirmDeletedPathRequiresEntryToBeGone(t *testing.T) {
 	}
 	if err := confirmDeletedPath(path); err != nil {
 		t.Fatal("missing root was not confirmed", err)
+	}
+}
+
+func TestRemovalReportsSuccessesAfterSkippedEntries(t *testing.T) {
+	for _, operation := range []string{"recycle", "delete"} {
+		result, err := removeSelection(t.TempDir(), []string{"locked", "removed", "cancelled"}, operation,
+			func(path string) (string, error) { return path, nil },
+			func([]string) (removalBatch, error) { return removalBatch{completed: []bool{false, true, false}}, nil })
+		if err != nil || !result.Incomplete || !reflect.DeepEqual(result.Names, []string{"removed"}) {
+			t.Fatalf("%s lost non-prefix successes or reported skipped entries: %+v %v", operation, result, err)
+		}
 	}
 }

@@ -231,7 +231,7 @@ func TestRecycledFolderOpenInAdjacentPanelRecoversWithoutRepeatedFeedback(t *tes
 	v.monitor.sync(v.fileOperationLocations())
 	watch := v.monitor.watches[directoryWatchKey(child)]
 	recycledPath := filepath.Join(t.TempDir(), "recycled")
-	v.loader.recycle = func(directory string, names []string) (browser.RemovalResult, error) {
+	v.loader.recycle = func(directory string, names []string, owner uintptr) (browser.RemovalResult, error) {
 		if err := os.Rename(child, recycledPath); err != nil {
 			return browser.RemovalResult{}, err
 		}

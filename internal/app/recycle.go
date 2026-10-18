@@ -19,6 +19,7 @@ type removalRequest struct {
 	names     []string
 	permanent bool
 	locations []string // Snapshot for safely updating other alias listings.
+	owner     uintptr
 }
 
 func (v *view) removeSelected(gtx layout.Context, permanent bool) {
@@ -42,7 +43,7 @@ func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 	if len(names) == 0 {
 		return
 	}
-	request := &removalRequest{names: names, permanent: permanent, locations: make([]string, len(v.panels))}
+	request := &removalRequest{names: names, permanent: permanent, locations: make([]string, len(v.panels)), owner: v.ownerWindow}
 	for pi := range v.panels {
 		if !v.panels[pi].drives {
 			request.locations[pi] = v.panels[pi].path
@@ -114,6 +115,7 @@ func (v *view) acceptRemoval(result loadResult) {
 			}
 		}
 	}
+	refreshFailed := v.applyTransferPanels(result, result.request.removal.locations)
 	count := len(result.removed.Names)
 	outcome := "recycled"
 	if result.request.removal.permanent {
@@ -128,6 +130,14 @@ func (v *view) acceptRemoval(result loadResult) {
 			message = fmt.Sprintf("%d %s; %s", count, outcome, message)
 		}
 		v.showFeedback(result.request.panel, feedback.Error, message)
+		return
+	}
+	if refreshFailed {
+		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d %s; refresh failed", count, outcome))
+		return
+	}
+	if result.removed.Incomplete {
+		v.showFeedback(result.request.panel, feedback.Warning, fmt.Sprintf("%d %s; %d remaining", count, outcome, len(result.request.removal.names)-count))
 		return
 	}
 	message := "Item " + outcome

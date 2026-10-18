@@ -29,6 +29,8 @@ func (l *directoryLoader) refreshTransferPanels(result *loadResult) {
 		locations := result.request.locations
 		if result.request.transfer != nil {
 			locations = result.request.transfer.locations
+		} else if result.request.removal != nil {
+			locations = result.request.removal.locations
 		}
 		if pi < len(locations) && locations[pi] != "" {
 			path = locations[pi]

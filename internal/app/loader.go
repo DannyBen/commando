@@ -70,8 +70,8 @@ type directoryLoader struct {
 	requests             chan loadRequest
 	results              chan loadResult
 	done                 chan struct{}
-	recycle              func(string, []string) (browser.RemovalResult, error)
-	delete               func(string, []string) (browser.RemovalResult, error)
+	recycle              func(string, []string, uintptr) (browser.RemovalResult, error)
+	delete               func(string, []string, uintptr) (browser.RemovalResult, error)
 	readClipboard        func() (browser.FileClipboard, error)
 	writeClipboard       func([]string, bool) (browser.FileClipboard, error)
 	completeClipboard    func(browser.FileClipboard, []string) (browser.FileClipboard, error)
@@ -254,9 +254,13 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					// names, and aliases may disappear during the operation.
 					parent, _ := resolveFileLocation(request.path)
 					if request.removal.permanent {
-						removed, err = l.delete(request.path, request.removal.names)
+						removed, err = l.delete(request.path, request.removal.names, request.removal.owner)
 					} else {
-						removed, err = l.recycle(request.path, request.removal.names)
+						removed, err = l.recycle(request.path, request.removal.names, request.removal.owner)
+					}
+					if removed.Incomplete {
+						// A skipped directory may already have lost some children.
+						l.refreshTransferPanels(&result)
 					}
 					if parent != "" && len(removed.Names) > 0 {
 						removed.Directory = parent

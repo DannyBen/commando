@@ -15,7 +15,7 @@ func TestUnsupportedRecycleLeavesFileUntouched(t *testing.T) {
 	if err := os.WriteFile(path, []byte("keep"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	result, err := Recycle(root, []string{"keep.txt"})
+	result, err := Recycle(root, []string{"keep.txt"}, 0)
 	if len(result.Names) != 0 || !errors.Is(err, ErrRecycleUnavailable) {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
@@ -31,7 +31,7 @@ func TestUnsupportedPermanentDeleteLeavesSourcesUntouched(t *testing.T) {
 	if err := os.WriteFile(path, []byte("keep"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	result, err := Delete(root, []string{"keep.txt"})
+	result, err := Delete(root, []string{"keep.txt"}, 0)
 	if len(result.Names) != 0 || !errors.Is(err, ErrDeleteUnavailable) {
 		t.Fatal("unsupported deletion was not refused", result, err)
 	}

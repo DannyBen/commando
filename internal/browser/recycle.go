@@ -15,28 +15,32 @@ var (
 )
 
 type RemovalResult struct {
-	Directory string   // Resolved backing directory, for updating alias listings.
-	Names     []string // Only entries confirmed removed by the requested operation.
+	Directory  string   // Resolved backing directory, for updating alias listings.
+	Names      []string // Only entries confirmed removed by the requested operation.
+	Incomplete bool     // Windows skipped or cancelled part of the selection.
 }
 
-// Recycle preflights all names and paths, then recycles in listing order and
-// stops at the first failure. Previously recycled entries are reported even
-// when a later item fails. There is no permanent-delete fallback.
-func Recycle(directory string, names []string) (RemovalResult, error) {
-	return recycle(directory, names, ResolveOperationPath, recyclePaths)
+type removalBatch struct {
+	completed []bool // Indexed by the original selection; skips need not be a suffix.
+}
+
+// Recycle preflights the whole selection, then lets Windows handle its batch.
+// Only confirmed outcomes are reported. There is no permanent-delete fallback.
+func Recycle(directory string, names []string, owner uintptr) (RemovalResult, error) {
+	return recycle(directory, names, ResolveOperationPath, func(paths []string) (removalBatch, error) { return recyclePaths(paths, owner) })
 }
 
 // Delete permanently removes entries through the native shell. It shares the
 // whole-selection preflight and partial-result contract with recycling.
-func Delete(directory string, names []string) (RemovalResult, error) {
-	return removeSelection(directory, names, "delete", ResolveOperationPath, deletePaths)
+func Delete(directory string, names []string, owner uintptr) (RemovalResult, error) {
+	return removeSelection(directory, names, "delete", ResolveOperationPath, func(paths []string) (removalBatch, error) { return deletePaths(paths, owner) })
 }
 
-func recycle(directory string, names []string, resolve func(string) (string, error), perform func([]string) (int, error)) (RemovalResult, error) {
+func recycle(directory string, names []string, resolve func(string) (string, error), perform func([]string) (removalBatch, error)) (RemovalResult, error) {
 	return removeSelection(directory, names, "recycle", resolve, perform)
 }
 
-func removeSelection(directory string, names []string, operation string, resolve func(string) (string, error), perform func([]string) (int, error)) (RemovalResult, error) {
+func removeSelection(directory string, names []string, operation string, resolve func(string) (string, error), perform func([]string) (removalBatch, error)) (RemovalResult, error) {
 	var result RemovalResult
 	if len(names) == 0 {
 		return result, nil
@@ -63,10 +67,18 @@ func removeSelection(directory string, names []string, operation string, resolve
 			return result, &os.PathError{Op: operation, Path: name, Err: err}
 		}
 	}
-	count, err := perform(paths)
-	result.Names = append([]string(nil), names[:count]...)
-	if err != nil && count < len(names) {
-		err = &os.PathError{Op: operation, Path: names[count], Err: err}
+	batch, err := perform(paths)
+	failed := ""
+	for i, name := range names {
+		if i < len(batch.completed) && batch.completed[i] {
+			result.Names = append(result.Names, name)
+		} else if failed == "" {
+			failed = name
+		}
+	}
+	result.Incomplete = len(result.Names) != len(names)
+	if err != nil && failed != "" {
+		err = &os.PathError{Op: operation, Path: failed, Err: err}
 	}
 	return result, err
 }

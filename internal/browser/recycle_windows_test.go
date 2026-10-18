@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"syscall"
 	"testing"
@@ -153,7 +154,7 @@ func TestPermanentDeleteRemovesFileAndFolderThroughShell(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	result, err := Delete(root, []string{"file with spaces.txt", "folder with spaces"})
+	result, err := Delete(root, []string{"file with spaces.txt", "folder with spaces"}, 0)
 	if err != nil || len(result.Names) != 2 {
 		t.Fatal("shell did not confirm both deletions", result, err)
 	}
@@ -214,5 +215,64 @@ func TestRecursivePermanentDeleteVerifiesSelectedRoot(t *testing.T) {
 	runtime.KeepAlive(sink)
 	if err := (&removalSink{permanent: true}).finish(path, nil, nil, false); !errors.Is(err, ErrDeleteUnconfirmed) {
 		t.Fatal("missing path without an approved operation was called successful", err)
+	}
+}
+
+func TestRemovalSinkAllowsWindowsRetryAndSkip(t *testing.T) {
+	for _, permanent := range []bool{false, true} {
+		sink := &removalSink{permanent: permanent}
+		flags, item := uint32(tsRecycle), uintptr(1)
+		if permanent {
+			flags, item = 0, 0
+		}
+		if sink.preDelete(flags) != 0 || sink.postDelete(flags, 0x80270028, 0) != 0 {
+			t.Fatal("sharing violation aborted Windows recovery")
+		}
+		if sink.postDelete(flags, 0x00270005, 0) != 0 || sink.result(nil, nil, false) == nil {
+			t.Fatal("skip was aborted or counted as success")
+		}
+		if sink.postDelete(flags, 0, item) != 0 || sink.result(nil, nil, false) != nil {
+			t.Fatal("successful retry retained the earlier error")
+		}
+	}
+}
+
+func TestRemovalBatchPreservesSuccessAroundSkipAndCancellation(t *testing.T) {
+	for _, permanent := range []bool{false, true} {
+		root := t.TempDir()
+		paths := []string{filepath.Join(root, "removed before"), filepath.Join(root, "locked"), filepath.Join(root, "removed after"), filepath.Join(root, "not attempted")}
+		sinks := make([]*removalSink, len(paths))
+		flags, item := uint32(tsRecycle), uintptr(1)
+		if permanent {
+			flags, item = 0, 0
+		}
+		for i := range sinks {
+			sinks[i] = &removalSink{permanent: permanent}
+			if i == 0 || i == 2 {
+				sinks[i].preDelete(flags)
+				sinks[i].postDelete(flags, 0, item)
+			} else {
+				if err := os.WriteFile(paths[i], nil, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		sinks[1].preDelete(flags)
+		sinks[1].postDelete(flags, 0x80270028, 0)
+		sinks[1].postDelete(flags, 0x00270005, 0)
+		batch, err := finishRemoval(paths, sinks)
+		if err != nil || !reflect.DeepEqual(batch.completed, []bool{true, false, true, false}) {
+			t.Fatal("batch lost confirmed successes or included skipped/pending entries", batch, err)
+		}
+	}
+}
+
+func TestRecyclingChildCompletionCannotConfirmSurvivingRoot(t *testing.T) {
+	path := t.TempDir()
+	sink := &removalSink{}
+	sink.preDelete(tsRecycle)
+	sink.postDelete(tsRecycle, 0, 1)
+	if err := sink.finish(path, nil, nil, false); err == nil {
+		t.Fatal("recycled child was mistaken for removed root")
 	}
 }

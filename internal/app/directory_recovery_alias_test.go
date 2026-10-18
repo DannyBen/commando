@@ -51,7 +51,7 @@ func TestRecyclingRecoversNestedAndAliasPanelsWithoutNotifications(t *testing.T)
 		v.panels[pi].toggleMark(v.panels[pi].selected)
 	}
 	moved := filepath.Join(t.TempDir(), "recycled")
-	v.loader.recycle = func(directory string, names []string) (browser.RemovalResult, error) {
+	v.loader.recycle = func(directory string, names []string, owner uintptr) (browser.RemovalResult, error) {
 		if err := os.Rename(folder, moved); err != nil {
 			return browser.RemovalResult{}, err
 		}
@@ -87,7 +87,7 @@ func TestRecyclingFromAliasUpdatesBackingListingAndRecoversDescendant(t *testing
 	selectName(t, &v.panels[2], "file")
 	v.panels[2].toggleMark(v.panels[2].selected)
 	moved := filepath.Join(t.TempDir(), "recycled")
-	v.loader.recycle = func(directory string, names []string) (browser.RemovalResult, error) {
+	v.loader.recycle = func(directory string, names []string, owner uintptr) (browser.RemovalResult, error) {
 		if directory != alias {
 			t.Fatalf("recycle did not receive the source alias: %q", directory)
 		}

@@ -254,7 +254,7 @@ func TestVisibilityCacheTracksMutationsAndFailedReads(t *testing.T) {
 	if !slices.Contains(visibleNames(&v.panels[0]), ".created") || !slices.Contains(visibleNames(&v.panels[0]), ".renamed") || slices.Contains(visibleNames(&v.panels[0]), "visible.txt") {
 		t.Fatal("showing entries used a stale mutation cache")
 	}
-	v.loader.recycle = func(path string, names []string) (browser.RemovalResult, error) {
+	v.loader.recycle = func(path string, names []string, owner uintptr) (browser.RemovalResult, error) {
 		if err := os.Remove(filepath.Join(path, names[0])); err != nil {
 			return browser.RemovalResult{}, err
 		}

@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"errors"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -17,13 +18,10 @@ const (
 	fileOpPerform    = 21
 	fileOpAborted    = 22
 
-	fofSilent              = 0x0004
 	fofNoConfirmation      = 0x0010
-	fofNoErrorUI           = 0x0400
 	fofNoConnectedElements = 0x2000
 	fofNoRecurseReparse    = 0x8000
 	fofxRecycleOnDelete    = 0x00080000
-	fofxEarlyFailure       = 0x00100000
 	fofxAddUndoRecord      = 0x20000000
 	tsRecycle              = 0x0080
 
@@ -32,88 +30,77 @@ const (
 	ePointer     = 0x80004003
 )
 
-// All COM calls and synchronous callbacks stay on an STA thread. The directory
-// worker invokes this function; no shell work or dialogs run on the Gio thread.
-func recyclePaths(paths []string) (int, error) {
-	return removalPaths(paths, false)
+// One STA operation owns the whole selection and its native recovery dialogs.
+// Only the worker calls COM; the UI keeps consuming events while Windows runs.
+func recyclePaths(paths []string, owner uintptr) (removalBatch, error) {
+	return removalPaths(paths, false, owner)
 }
 
-func deletePaths(paths []string) (int, error) {
-	return removalPaths(paths, true)
+func deletePaths(paths []string, owner uintptr) (removalBatch, error) {
+	return removalPaths(paths, true, owner)
 }
 
-func removalPaths(paths []string, permanent bool) (count int, err error) {
+func removalPaths(paths []string, permanent bool, owner uintptr) (batch removalBatch, err error) {
 	trace := beginRemovalTrace(paths, permanent)
 	defer func() {
-		trace.record("RemovalResult", map[string]any{"confirmed_count": count, "error": traceError(err)})
+		trace.record("RemovalResult", map[string]any{"completed": batch.completed, "error": traceError(err)})
 	}()
 	major, minor, _ := windows.RtlGetNtVersionNumbers()
 	if major < 6 || major == 6 && minor < 2 {
 		if permanent {
-			return 0, ErrDeleteUnavailable
+			return batch, ErrDeleteUnavailable
 		}
-		return 0, ErrRecycleUnavailable // Never substitute the legacy undo-if-possible API.
+		return batch, ErrRecycleUnavailable
 	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if err := windows.CoInitializeEx(0, windows.COINIT_APARTMENTTHREADED); err != nil && err != syscall.Errno(1) {
-		return 0, err // S_FALSE still requires matching CoUninitialize.
+		return batch, err
 	}
 	defer windows.CoUninitialize()
-	for i, path := range paths {
-		if err := removeShellItem(path, permanent, trace); err != nil {
-			return i, err
-		}
-	}
-	return len(paths), nil
-}
-
-func removeShellItem(path string, permanent bool, trace *transferBatchTrace) error {
 	var operation *shellObject
 	hr, _, _ := coCreateInstance.Call(uintptr(unsafe.Pointer(&clsidFileOperation)), 0, 1,
 		uintptr(unsafe.Pointer(&iidFileOperation)), uintptr(unsafe.Pointer(&operation)))
-	trace.record("RemovalCreateOperation", map[string]any{"path": path, "hresult": traceHRESULT(uint32(hr))})
+	trace.record("RemovalCreateOperation", traceHRESULT(uint32(hr)))
 	if err := shellHRESULT(uint32(hr)); err != nil {
-		return err
+		return batch, err
 	}
-	var sink *removalSink
+	var sinks []*removalSink
 	defer func() {
 		operation.call(2)
-		if sink != nil {
+		for _, sink := range sinks {
 			sink.refs.Add(-1)
 		}
-		runtime.KeepAlive(sink)
+		runtime.KeepAlive(sinks)
 	}()
-	// Set flags explicitly: permanent deletion must never inherit shell undo
-	// defaults. The sink vetoes an operation that disagrees with the chosen mode.
-	flags := fofxEarlyFailure | fofSilent | fofNoConfirmation | fofNoErrorUI | fofNoConnectedElements | fofNoRecurseReparse
+	// Commando owns the initial confirmation. Windows owns progress and error
+	// recovery. Explicit flags and the pre-delete veto preserve the chosen mode.
+	flags := fofNoConfirmation | fofNoConnectedElements | fofNoRecurseReparse
 	if !permanent {
 		flags |= fofxRecycleOnDelete | fofxAddUndoRecord
 	}
 	flagsHR := operation.call(fileOpSetFlags, uintptr(flags))
 	trace.record("RemovalSetFlags", map[string]any{"flags": flags, "hresult": traceHRESULT(flagsHR)})
 	if err := shellHRESULT(flagsHR); err != nil {
-		return err
+		return batch, err
 	}
-	name, err := windows.UTF16PtrFromString(path)
-	if err != nil {
-		return err
+	if err := shellHRESULT(operation.call(fileOpOwner, owner)); err != nil {
+		return batch, err
 	}
-	var item *shellObject
-	hr, _, _ = createShellItem.Call(uintptr(unsafe.Pointer(name)), 0,
-		uintptr(unsafe.Pointer(&iidShellItem)), uintptr(unsafe.Pointer(&item)))
-	trace.record("RemovalCreateItem", traceHRESULT(uint32(hr)))
-	runtime.KeepAlive(name)
-	if err := shellHRESULT(uint32(hr)); err != nil {
-		return err
-	}
-	defer item.call(2)
-	sink = &removalSink{vtable: &removalSinkVtable, permanent: permanent, trace: trace}
-	sink.refs.Store(1)
-	queueHR := operation.call(fileOpDeleteItem, uintptr(unsafe.Pointer(item)), uintptr(unsafe.Pointer(sink)))
-	trace.record("RemovalQueueItem", traceHRESULT(queueHR))
-	if err := shellHRESULT(queueHR); err != nil {
-		return err
+	for _, path := range paths {
+		item, err := shellItem(path)
+		if err != nil {
+			return batch, err
+		}
+		sink := &removalSink{vtable: &removalSinkVtable, permanent: permanent, trace: trace}
+		sink.refs.Store(1)
+		sinks = append(sinks, sink)
+		queueHR := operation.call(fileOpDeleteItem, uintptr(unsafe.Pointer(item)), uintptr(unsafe.Pointer(sink)))
+		item.call(2)
+		trace.record("RemovalQueueItem", map[string]any{"path": path, "hresult": traceHRESULT(queueHR)})
+		if err := shellHRESULT(queueHR); err != nil {
+			return batch, err
+		}
 	}
 	performHR := operation.call(fileOpPerform)
 	trace.record("RemovalPerformOperations", traceHRESULT(performHR))
@@ -121,8 +108,32 @@ func removeShellItem(path string, permanent bool, trace *transferBatchTrace) err
 	var aborted int32
 	abortHR := operation.call(fileOpAborted, uintptr(unsafe.Pointer(&aborted)))
 	trace.record("RemovalOperationsAborted", map[string]any{"aborted": aborted != 0, "hresult": traceHRESULT(abortHR)})
-	abortErr := shellHRESULT(abortHR)
-	return sink.finish(path, performErr, abortErr, aborted != 0)
+	batch, err = finishRemoval(paths, sinks)
+	if err != nil {
+		return batch, err
+	}
+	// Windows has already explained failures. Skip/cancel is an incomplete
+	// result, not a second generic error after the user dismisses its dialog.
+	if shellTransferState(performHR) == transferCancelled {
+		performErr = nil
+	}
+	return batch, errors.Join(performErr, shellHRESULT(abortHR))
+}
+
+func finishRemoval(paths []string, sinks []*removalSink) (removalBatch, error) {
+	batch := removalBatch{completed: make([]bool, len(paths))}
+	var refusal error
+	for i, sink := range sinks {
+		// Cancellation of a later entry must not discard earlier successes.
+		// A child callback alone cannot confirm the selected root's removal.
+		itemErr := sink.finish(paths[i], nil, nil, false)
+		batch.completed[i] = itemErr == nil
+		sink.trace.record("RemovalItemResult", map[string]any{"path": paths[i], "confirmed": itemErr == nil, "error": traceError(itemErr)})
+		if sink.refused {
+			refusal = itemErr
+		}
+	}
+	return batch, refusal
 }
 
 type removalSink struct {
@@ -161,9 +172,8 @@ func (s *removalSink) postDelete(flags, hr uint32, newItem uintptr) uintptr {
 	s.completed, s.err = true, shellHRESULT(hr)
 	s.confirmed = completed && ((s.permanent && newItem == 0 && flags&tsRecycle == 0) || (!s.permanent && newItem != 0 && flags&tsRecycle != 0))
 	s.trace.record("RemovalPostDelete", map[string]any{"flags": flags, "hresult": traceHRESULT(hr), "has_new_item": newItem != 0, "confirmed": s.confirmed})
-	if s.err != nil || !s.confirmed {
-		return eAbort
-	}
+	// Let Windows resolve errors and skips without aborting the remaining batch.
+	// The pre-delete callback remains the authority for vetoing a mode change.
 	return 0
 }
 
@@ -198,7 +208,13 @@ func (s *removalSink) result(performErr, abortErr error, aborted bool) error {
 
 func (s *removalSink) finish(path string, performErr, abortErr error, aborted bool) error {
 	result := s.result(performErr, abortErr, aborted)
-	if !s.permanent || result != nil && result != ErrDeleteUnconfirmed {
+	if !s.permanent {
+		if result == nil {
+			return confirmDeletedPath(path)
+		}
+		return result
+	}
+	if result != nil && result != ErrDeleteUnconfirmed {
 		return result
 	}
 	// A successful child callback does not establish that the selected root

@@ -2,10 +2,10 @@
 
 package browser
 
-func recyclePaths([]string) (int, error) {
-	return 0, ErrRecycleUnavailable
+func recyclePaths([]string, uintptr) (removalBatch, error) {
+	return removalBatch{}, ErrRecycleUnavailable
 }
 
-func deletePaths([]string) (int, error) {
-	return 0, ErrDeleteUnavailable
+func deletePaths([]string, uintptr) (removalBatch, error) {
+	return removalBatch{}, ErrDeleteUnavailable
 }

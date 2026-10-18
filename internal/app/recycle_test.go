@@ -17,6 +17,7 @@ import (
 func TestDeleteQueuesStableMarkedOrCurrentSelection(t *testing.T) {
 	for _, marked := range []bool{false, true} {
 		v := newPreviewView()
+		v.ownerWindow = 123
 		v.loader = &directoryLoader{requests: make(chan loadRequest, 3), results: make(chan loadResult, 3)}
 		p := &v.panels[0]
 		if !marked {
@@ -44,7 +45,7 @@ func TestDeleteQueuesStableMarkedOrCurrentSelection(t *testing.T) {
 		}
 		request := <-v.loader.requests
 		send(pressed(key.NameDownArrow), pressed(key.NameEscape))
-		if request.removal == nil || !reflect.DeepEqual(request.removal.names, want) || request.path != p.path {
+		if request.removal == nil || request.removal.owner != 123 || !reflect.DeepEqual(request.removal.names, want) || request.path != p.path {
 			t.Fatalf("selection snapshot changed: %+v, want %v", request.removal, want)
 		}
 		send(pressed(key.NameRightArrow), pressed(key.NameF2))
@@ -63,6 +64,63 @@ func TestDeleteQueuesStableMarkedOrCurrentSelection(t *testing.T) {
 	}
 }
 
+func TestIncompleteRemovalReconcilesSkippedDirectoryChildren(t *testing.T) {
+	for _, permanent := range []bool{false, true} {
+		root := t.TempDir()
+		folder := filepath.Join(root, "locked")
+		if err := os.Mkdir(folder, 0700); err != nil {
+			t.Fatal(err)
+		}
+		for _, path := range []string{filepath.Join(root, "removed"), filepath.Join(folder, "child removed"), filepath.Join(folder, "child kept")} {
+			if err := os.WriteFile(path, nil, 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		v := newBrowserView([]string{root, folder}, nil)
+		defer v.loader.close()
+		for pi := range v.panels {
+			waitLoaded(t, v, pi)
+		}
+		perform := func(directory string, names []string, owner uintptr) (browser.RemovalResult, error) {
+			if directory != root || owner != 123 {
+				t.Fatalf("wrong source or dialog owner: %s %d", directory, owner)
+			}
+			for _, path := range []string{filepath.Join(root, "removed"), filepath.Join(folder, "child removed")} {
+				if err := os.Remove(path); err != nil {
+					t.Fatal(err)
+				}
+			}
+			return browser.RemovalResult{Directory: root, Names: []string{"removed"}, Incomplete: true}, nil
+		}
+		v.loader.recycle, v.loader.delete = perform, perform
+		selectName(t, &v.panels[0], "locked")
+		v.panels[0].toggleMark(v.panels[0].selected)
+		v.submitRemoval(0, root, &removalRequest{names: []string{"locked", "removed"}, permanent: permanent, locations: []string{root, folder}, owner: 123})
+		waitLoaded(t, v, 0)
+		for _, tc := range []struct {
+			panel  int
+			absent string
+		}{{0, "removed"}, {1, "child removed"}} {
+			for _, entry := range v.panels[tc.panel].items {
+				if entry.file.Name == tc.absent {
+					t.Fatal("incomplete removal retained a deleted entry", tc)
+				}
+			}
+		}
+		p := &v.panels[0]
+		if p.items[p.selected].file.Name != "locked" || !p.marks[p.selected] || v.panels[1].path != folder || v.active != 0 {
+			t.Fatal("incomplete removal lost surviving selection, mark, location or focus")
+		}
+		outcome := "recycled"
+		if permanent {
+			outcome = "deleted"
+		}
+		if message := p.feedback.Current(); message == nil || message.Kind != feedback.Warning || message.Text != "1 "+outcome+"; 1 remaining" {
+			t.Fatal("incomplete removal was not reported accurately", message)
+		}
+	}
+}
+
 func TestRecycleWorkerPartialFailureUpdatesAliasListings(t *testing.T) {
 	root, unrelated := t.TempDir(), t.TempDir()
 	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
@@ -75,7 +133,7 @@ func TestRecycleWorkerPartialFailureUpdatesAliasListings(t *testing.T) {
 	for pi := range v.panels {
 		waitLoaded(t, v, pi)
 	}
-	v.loader.recycle = func(directory string, names []string) (browser.RemovalResult, error) {
+	v.loader.recycle = func(directory string, names []string, owner uintptr) (browser.RemovalResult, error) {
 		if directory != root || !reflect.DeepEqual(names, []string{"a.txt", "b.txt"}) {
 			t.Fatalf("wrong backend request: %q %v", directory, names)
 		}
