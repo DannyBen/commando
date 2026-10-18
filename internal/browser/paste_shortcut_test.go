@@ -9,7 +9,7 @@ import (
 )
 
 func TestShortcutBatchPreservesSourcesAndExistingDestinations(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedTempDir(t)
 	file, folder := filepath.Join(root, "notes.txt"), filepath.Join(root, "folder")
 	if err := os.WriteFile(file, []byte("original"), 0600); err != nil {
 		t.Fatal(err)
