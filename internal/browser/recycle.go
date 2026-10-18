@@ -70,3 +70,17 @@ func removeSelection(directory string, names []string, operation string, resolve
 	}
 	return result, err
 }
+
+// Recursive shell deletion can finish without a final root callback. Verify the
+// captured backing path after the native engine succeeds; never delete anything
+// here. Lstat keeps a surviving broken symlink from looking like a removed entry.
+func confirmDeletedPath(path string) error {
+	_, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return ErrDeleteUnconfirmed
+}

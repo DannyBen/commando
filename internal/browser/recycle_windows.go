@@ -42,7 +42,11 @@ func deletePaths(paths []string) (int, error) {
 	return removalPaths(paths, true)
 }
 
-func removalPaths(paths []string, permanent bool) (int, error) {
+func removalPaths(paths []string, permanent bool) (count int, err error) {
+	trace := beginRemovalTrace(paths, permanent)
+	defer func() {
+		trace.record("RemovalResult", map[string]any{"confirmed_count": count, "error": traceError(err)})
+	}()
 	major, minor, _ := windows.RtlGetNtVersionNumbers()
 	if major < 6 || major == 6 && minor < 2 {
 		if permanent {
@@ -57,17 +61,18 @@ func removalPaths(paths []string, permanent bool) (int, error) {
 	}
 	defer windows.CoUninitialize()
 	for i, path := range paths {
-		if err := removeShellItem(path, permanent); err != nil {
+		if err := removeShellItem(path, permanent, trace); err != nil {
 			return i, err
 		}
 	}
 	return len(paths), nil
 }
 
-func removeShellItem(path string, permanent bool) error {
+func removeShellItem(path string, permanent bool, trace *transferBatchTrace) error {
 	var operation *shellObject
 	hr, _, _ := coCreateInstance.Call(uintptr(unsafe.Pointer(&clsidFileOperation)), 0, 1,
 		uintptr(unsafe.Pointer(&iidFileOperation)), uintptr(unsafe.Pointer(&operation)))
+	trace.record("RemovalCreateOperation", map[string]any{"path": path, "hresult": traceHRESULT(uint32(hr))})
 	if err := shellHRESULT(uint32(hr)); err != nil {
 		return err
 	}
@@ -85,7 +90,9 @@ func removeShellItem(path string, permanent bool) error {
 	if !permanent {
 		flags |= fofxRecycleOnDelete | fofxAddUndoRecord
 	}
-	if err := shellHRESULT(operation.call(fileOpSetFlags, uintptr(flags))); err != nil {
+	flagsHR := operation.call(fileOpSetFlags, uintptr(flags))
+	trace.record("RemovalSetFlags", map[string]any{"flags": flags, "hresult": traceHRESULT(flagsHR)})
+	if err := shellHRESULT(flagsHR); err != nil {
 		return err
 	}
 	name, err := windows.UTF16PtrFromString(path)
@@ -95,20 +102,27 @@ func removeShellItem(path string, permanent bool) error {
 	var item *shellObject
 	hr, _, _ = createShellItem.Call(uintptr(unsafe.Pointer(name)), 0,
 		uintptr(unsafe.Pointer(&iidShellItem)), uintptr(unsafe.Pointer(&item)))
+	trace.record("RemovalCreateItem", traceHRESULT(uint32(hr)))
 	runtime.KeepAlive(name)
 	if err := shellHRESULT(uint32(hr)); err != nil {
 		return err
 	}
 	defer item.call(2)
-	sink = &removalSink{vtable: &removalSinkVtable, permanent: permanent}
+	sink = &removalSink{vtable: &removalSinkVtable, permanent: permanent, trace: trace}
 	sink.refs.Store(1)
-	if err := shellHRESULT(operation.call(fileOpDeleteItem, uintptr(unsafe.Pointer(item)), uintptr(unsafe.Pointer(sink)))); err != nil {
+	queueHR := operation.call(fileOpDeleteItem, uintptr(unsafe.Pointer(item)), uintptr(unsafe.Pointer(sink)))
+	trace.record("RemovalQueueItem", traceHRESULT(queueHR))
+	if err := shellHRESULT(queueHR); err != nil {
 		return err
 	}
-	performErr := shellHRESULT(operation.call(fileOpPerform))
+	performHR := operation.call(fileOpPerform)
+	trace.record("RemovalPerformOperations", traceHRESULT(performHR))
+	performErr := shellHRESULT(performHR)
 	var aborted int32
-	abortErr := shellHRESULT(operation.call(fileOpAborted, uintptr(unsafe.Pointer(&aborted))))
-	return sink.result(performErr, abortErr, aborted != 0)
+	abortHR := operation.call(fileOpAborted, uintptr(unsafe.Pointer(&aborted)))
+	trace.record("RemovalOperationsAborted", map[string]any{"aborted": aborted != 0, "hresult": traceHRESULT(abortHR)})
+	abortErr := shellHRESULT(abortHR)
+	return sink.finish(path, performErr, abortErr, aborted != 0)
 }
 
 type removalSink struct {
@@ -116,25 +130,37 @@ type removalSink struct {
 	refs                          atomic.Int32
 	mu                            sync.Mutex
 	refused, completed, confirmed bool
+	approved                      bool
 	permanent                     bool
+	trace                         *transferBatchTrace
 	err                           error
 }
 
 func (s *removalSink) preDelete(flags uint32) uintptr {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.trace.record("RemovalPreDelete", map[string]any{"flags": flags, "permanent": s.permanent, "refused": (flags&tsRecycle != 0) == s.permanent})
 	if (flags&tsRecycle != 0) == s.permanent {
 		s.refused = true
 		return eAbort
 	}
+	s.approved = true
 	return 0
 }
 
 func (s *removalSink) postDelete(flags, hr uint32, newItem uintptr) uintptr {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// DONT_PROCESS_CHILDREN is a completed shell operation (for example, moving
+	// a whole directory to the bin). NOT_HANDLED and PENDING remain informational.
+	completed := hr == 0 || hr == 0x00270008
+	if !completed && int32(hr) >= 0 {
+		s.trace.record("RemovalPostDelete", map[string]any{"flags": flags, "hresult": traceHRESULT(hr), "has_new_item": newItem != 0, "confirmed": s.confirmed})
+		return 0
+	}
 	s.completed, s.err = true, shellHRESULT(hr)
-	s.confirmed = hr == 0 && ((s.permanent && newItem == 0 && flags&tsRecycle == 0) || (!s.permanent && newItem != 0 && flags&tsRecycle != 0))
+	s.confirmed = completed && ((s.permanent && newItem == 0 && flags&tsRecycle == 0) || (!s.permanent && newItem != 0 && flags&tsRecycle != 0))
+	s.trace.record("RemovalPostDelete", map[string]any{"flags": flags, "hresult": traceHRESULT(hr), "has_new_item": newItem != 0, "confirmed": s.confirmed})
 	if s.err != nil || !s.confirmed {
 		return eAbort
 	}
@@ -170,6 +196,35 @@ func (s *removalSink) result(performErr, abortErr error, aborted bool) error {
 	return unconfirmed
 }
 
+func (s *removalSink) finish(path string, performErr, abortErr error, aborted bool) error {
+	result := s.result(performErr, abortErr, aborted)
+	if !s.permanent || result != nil && result != ErrDeleteUnconfirmed {
+		return result
+	}
+	// A successful child callback does not establish that the selected root
+	// disappeared. Require native success and verify that root after traversal.
+	if performErr != nil {
+		return performErr
+	}
+	if abortErr != nil {
+		return abortErr
+	}
+	if aborted {
+		return ErrDeleteUnavailable
+	}
+	if !s.approved {
+		return ErrDeleteUnconfirmed
+	}
+	err := confirmDeletedPath(path)
+	s.trace.record("RemovalVerifyDeletedPath", map[string]any{"path": path, "error": traceError(err)})
+	return err
+}
+
+func (s *removalSink) unexpected(event string, flags, hr uint32) uintptr {
+	s.trace.record("RemovalUnexpectedCallback", map[string]any{"callback": event, "flags": flags, "hresult": traceHRESULT(hr)})
+	return eAbort
+}
+
 // Static callbacks avoid allocating a new, never-freed Windows callback for
 // every operation. The complete IFileOperationProgressSink ABI is represented.
 var removalSinkVtable = [19]uintptr{
@@ -188,23 +243,37 @@ var removalSinkVtable = [19]uintptr{
 	}),
 	syscall.NewCallback(func(this *removalSink) uintptr { return uintptr(this.refs.Add(1)) }),
 	syscall.NewCallback(func(this *removalSink) uintptr { return uintptr(this.refs.Add(-1)) }),
-	syscall.NewCallback(func(this *removalSink) uintptr { return 0 }),                                 // StartOperations
-	syscall.NewCallback(func(this *removalSink, hr uintptr) uintptr { return 0 }),                     // FinishOperations
-	syscall.NewCallback(func(this *removalSink, flags, item, name uintptr) uintptr { return eAbort }), // PreRename
-	syscall.NewCallback(func(this *removalSink, flags, item, name, hr, created uintptr) uintptr { return eAbort }),
-	syscall.NewCallback(func(this *removalSink, flags, item, dest, name uintptr) uintptr { return eAbort }), // PreMove
-	syscall.NewCallback(func(this *removalSink, flags, item, dest, name, hr, created uintptr) uintptr { return eAbort }),
-	syscall.NewCallback(func(this *removalSink, flags, item, dest, name uintptr) uintptr { return eAbort }), // PreCopy
-	syscall.NewCallback(func(this *removalSink, flags, item, dest, name, hr, created uintptr) uintptr { return eAbort }),
+	syscall.NewCallback(func(this *removalSink) uintptr { return 0 }),             // StartOperations
+	syscall.NewCallback(func(this *removalSink, hr uintptr) uintptr { return 0 }), // FinishOperations
+	syscall.NewCallback(func(this *removalSink, flags, item, name uintptr) uintptr {
+		return this.unexpected("PreRename", uint32(flags), 0)
+	}),
+	syscall.NewCallback(func(this *removalSink, flags, item, name, hr, created uintptr) uintptr {
+		return this.unexpected("PostRename", uint32(flags), uint32(hr))
+	}),
+	syscall.NewCallback(func(this *removalSink, flags, item, dest, name uintptr) uintptr {
+		return this.unexpected("PreMove", uint32(flags), 0)
+	}),
+	syscall.NewCallback(func(this *removalSink, flags, item, dest, name, hr, created uintptr) uintptr {
+		return this.unexpected("PostMove", uint32(flags), uint32(hr))
+	}),
+	syscall.NewCallback(func(this *removalSink, flags, item, dest, name uintptr) uintptr {
+		return this.unexpected("PreCopy", uint32(flags), 0)
+	}),
+	syscall.NewCallback(func(this *removalSink, flags, item, dest, name, hr, created uintptr) uintptr {
+		return this.unexpected("PostCopy", uint32(flags), uint32(hr))
+	}),
 	syscall.NewCallback(func(this *removalSink, flags, item uintptr) uintptr {
 		return this.preDelete(uint32(flags))
 	}),
 	syscall.NewCallback(func(this *removalSink, flags, item, hr, created uintptr) uintptr {
 		return this.postDelete(uint32(flags), uint32(hr), created)
 	}),
-	syscall.NewCallback(func(this *removalSink, flags, dest, name uintptr) uintptr { return eAbort }), // PreNew
+	syscall.NewCallback(func(this *removalSink, flags, dest, name uintptr) uintptr {
+		return this.unexpected("PreNew", uint32(flags), 0)
+	}),
 	syscall.NewCallback(func(this *removalSink, flags, dest, name, template, attrs, hr, created uintptr) uintptr {
-		return eAbort
+		return this.unexpected("PostNew", uint32(flags), uint32(hr))
 	}),
 	syscall.NewCallback(func(this *removalSink, total, soFar uintptr) uintptr { return 0 }),
 	syscall.NewCallback(func(this *removalSink) uintptr { return 0 }), // ResetTimer

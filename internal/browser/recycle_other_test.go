@@ -39,3 +39,14 @@ func TestUnsupportedPermanentDeleteLeavesSourcesUntouched(t *testing.T) {
 		t.Fatal("unsupported deletion changed a source", err)
 	}
 }
+
+func TestConfirmDeletedPathDoesNotFollowBrokenSymlink(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "surviving-link")
+	if err := os.Symlink(filepath.Join(root, "missing-target"), path); err != nil {
+		t.Fatal(err)
+	}
+	if err := confirmDeletedPath(path); !errors.Is(err, ErrDeleteUnconfirmed) {
+		t.Fatal("surviving broken symlink was reported deleted", err)
+	}
+}

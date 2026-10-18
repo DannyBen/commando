@@ -97,3 +97,30 @@ func TestPermanentDeleteSharesPreflightAndReportsOnlyConfirmedNames(t *testing.T
 		t.Fatal("delete lost confirmed partial result", result, err)
 	}
 }
+
+func TestConfirmDeletedPathRequiresEntryToBeGone(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "folder with spaces")
+	if err := os.Mkdir(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	child := filepath.Join(path, "child.txt")
+	if err := os.WriteFile(child, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := confirmDeletedPath(path); !errors.Is(err, ErrDeleteUnconfirmed) {
+		t.Fatal("existing root was reported deleted", err)
+	}
+	if err := os.Remove(child); err != nil {
+		t.Fatal(err)
+	}
+	if err := confirmDeletedPath(path); !errors.Is(err, ErrDeleteUnconfirmed) {
+		t.Fatal("deleted child was mistaken for a deleted root", err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := confirmDeletedPath(path); err != nil {
+		t.Fatal("missing root was not confirmed", err)
+	}
+}

@@ -96,18 +96,64 @@ func TestPermanentDeleteSinkVetoesRecyclingAndRequiresActualCompletion(t *testin
 	}
 }
 
+func TestRemovalSinkLetsInformationalResultsReachFinalCompletion(t *testing.T) {
+	for _, permanent := range []bool{false, true} {
+		sink := &removalSink{vtable: &removalSinkVtable, permanent: permanent}
+		flags, newItem, unconfirmed := uintptr(tsRecycle), uintptr(1), ErrRecycleUnconfirmed
+		if permanent {
+			flags, newItem, unconfirmed = 514, 0, ErrDeleteUnconfirmed
+		}
+		this := uintptr(unsafe.Pointer(sink))
+		if hr, _, _ := syscall.SyscallN(sink.vtable[11], this, flags, 0); hr != 0 {
+			t.Fatal("pre-delete was refused")
+		}
+		for _, status := range []uintptr{0x00270003, 0x0027000b, 0x00270010} {
+			if hr, _, _ := syscall.SyscallN(sink.vtable[12], this, flags, 0, status, 0); hr != 0 {
+				t.Fatalf("informational status %#x aborted deletion: %#x", status, hr)
+			}
+			if err := sink.result(nil, nil, false); !errors.Is(err, unconfirmed) {
+				t.Fatal("informational status was mistaken for confirmed removal", status, err)
+			}
+		}
+		if hr, _, _ := syscall.SyscallN(sink.vtable[12], this, flags, 0, 0, newItem); hr != 0 {
+			t.Fatal("final completion was refused")
+		}
+		// A late informational notification must not erase a confirmed outcome.
+		syscall.SyscallN(sink.vtable[12], this, flags, 0, 0x00270003, 0)
+		if err := sink.result(nil, nil, false); err != nil {
+			t.Fatal("confirmed completion was lost", err)
+		}
+		runtime.KeepAlive(sink)
+	}
+}
+
 // Exercise the real shell only on disposable fixtures owned by this test.
 func TestPermanentDeleteRemovesFileAndFolderThroughShell(t *testing.T) {
 	root := t.TempDir()
-	if err := os.Mkdir(filepath.Join(root, "folder"), 0700); err != nil {
+	tracePath, stopTrace, err := EnableTransferTrace(t.TempDir())
+	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"file.txt", filepath.Join("folder", "child.txt")} {
+	defer stopTrace()
+	t.Cleanup(func() {
+		if t.Failed() {
+			data, err := os.ReadFile(tracePath)
+			if err != nil {
+				t.Log(err)
+				return
+			}
+			t.Logf("Native removal trace:\n%s", data)
+		}
+	})
+	if err := os.Mkdir(filepath.Join(root, "folder with spaces"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"file with spaces.txt", filepath.Join("folder with spaces", "child.txt")} {
 		if err := os.WriteFile(filepath.Join(root, name), []byte("disposable fixture"), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	result, err := Delete(root, []string{"file.txt", "folder"})
+	result, err := Delete(root, []string{"file with spaces.txt", "folder with spaces"})
 	if err != nil || len(result.Names) != 2 {
 		t.Fatal("shell did not confirm both deletions", result, err)
 	}
@@ -115,5 +161,58 @@ func TestPermanentDeleteRemovesFileAndFolderThroughShell(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(root, name)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatal("confirmed deletion left source behind", name, err)
 		}
+	}
+}
+
+func TestRemovalSinkRecognizesWholeItemCompletion(t *testing.T) {
+	// Replay the recycling result observed in the desktop trace: Windows moved
+	// the item to the bin and reports DONT_PROCESS_CHILDREN rather than S_OK.
+	sink := &removalSink{vtable: &removalSinkVtable}
+	this := uintptr(unsafe.Pointer(sink))
+	syscall.SyscallN(sink.vtable[11], this, 642, 0)
+	if hr, _, _ := syscall.SyscallN(sink.vtable[12], this, 642, 0, 0x00270008, 1); hr != 0 {
+		t.Fatal("completed recycling was aborted", hr)
+	}
+	if err := sink.finish("unused", nil, nil, false); err != nil {
+		t.Fatal("bin item was not recognized as recycled", err)
+	}
+	runtime.KeepAlive(sink)
+}
+
+func TestRecursivePermanentDeleteVerifiesSelectedRoot(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "selected folder")
+	if err := os.Mkdir(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	sink := &removalSink{vtable: &removalSinkVtable, permanent: true}
+	this := uintptr(unsafe.Pointer(sink))
+	// Replay a root NOT_HANDLED notification followed by completed child items.
+	syscall.SyscallN(sink.vtable[11], this, 514, 0)
+	if hr, _, _ := syscall.SyscallN(sink.vtable[12], this, 514, 0, 0x00270003, 0); hr != 0 {
+		t.Fatal("root notification aborted traversal")
+	}
+	syscall.SyscallN(sink.vtable[11], this, 2, 0)
+	if hr, _, _ := syscall.SyscallN(sink.vtable[12], this, 4098, 0, 0x00270008, 0); hr != 0 {
+		t.Fatal("child completion aborted traversal")
+	}
+	if err := sink.finish(path, nil, nil, false); !errors.Is(err, ErrDeleteUnconfirmed) {
+		t.Fatal("child completion falsely confirmed the surviving root", err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := sink.finish(path, nil, nil, false); err != nil {
+		t.Fatal("native success with absent root was not confirmed", err)
+	}
+	if err := sink.finish(path, os.ErrPermission, nil, false); !errors.Is(err, os.ErrPermission) {
+		t.Fatal("missing path hid native failure", err)
+	}
+	if err := sink.finish(path, nil, nil, true); !errors.Is(err, ErrDeleteUnavailable) {
+		t.Fatal("missing path hid cancellation", err)
+	}
+	runtime.KeepAlive(sink)
+	if err := (&removalSink{permanent: true}).finish(path, nil, nil, false); !errors.Is(err, ErrDeleteUnconfirmed) {
+		t.Fatal("missing path without an approved operation was called successful", err)
 	}
 }

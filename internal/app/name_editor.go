@@ -201,7 +201,7 @@ func (v *view) updateName(gtx layout.Context) {
 				progress = "Creating " + r.noun()
 			}
 			r.err, r.pending, v.nameEditor.ReadOnly = nil, true, true
-			v.panels[r.panel].feedback.Progress(progress)
+			v.operationProgress(r.panel, progress)
 			if !v.loader.submit(request) {
 				r.pending, v.nameEditor.ReadOnly = false, false
 				v.panels[r.panel].loading = false

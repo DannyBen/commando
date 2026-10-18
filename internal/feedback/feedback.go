@@ -110,6 +110,14 @@ func (c *Channel) ProgressAt(text string, notBefore time.Time) {
 	c.pending.progress = true
 }
 
+// QuietProgressAt delays transient status, then shows full, steady text without
+// a Started announcement. Result messages retain normal animation and sound.
+func (c *Channel) QuietProgressAt(text string, notBefore time.Time) {
+	c.ProgressAt(text, notBefore)
+	c.pending.Style = Immediate
+	c.pending.presented = true
+}
+
 // Complete clears visible or pending progress without erasing a result message.
 func (c *Channel) Complete() {
 	if c.message != nil && c.message.progress || c.pending != nil && c.pending.progress {

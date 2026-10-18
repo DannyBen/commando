@@ -80,6 +80,16 @@ func beginTransferTrace(request TransferRequest) *transferBatchTrace {
 	return b
 }
 
+func beginRemovalTrace(paths []string, permanent bool) *transferBatchTrace {
+	t := activeTransferTrace.Load()
+	if t == nil {
+		return nil
+	}
+	b := &transferBatchTrace{trace: t, id: t.batches.Add(1)}
+	b.record("RemovalRequested", map[string]any{"paths": paths, "permanent": permanent})
+	return b
+}
+
 func (t *transferTrace) record(batch uint64, event string, data any) {
 	t.mu.Lock()
 	defer t.mu.Unlock()

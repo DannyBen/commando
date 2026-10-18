@@ -81,7 +81,7 @@ func (v *view) submitRemoval(panel int, path string, request *removalRequest) {
 	if request.permanent {
 		progress = "Deleting"
 	}
-	p.feedback.Progress(progress)
+	v.operationProgress(panel, progress)
 	if !v.loader.submit(loadRequest{panel: panel, path: path, removal: request}) {
 		p.loading = false
 		p.feedback.Complete()

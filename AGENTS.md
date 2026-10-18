@@ -219,6 +219,9 @@ module/executable and `Commando` for the window title and data-folder name.
   completion, dismissal or replacement cancels them. Once visible, delayed
   progress uses normal Info sound, animation and edge styling. Manual refresh
   uses the same delayed progress; automatic refresh stays quiet.
+  File-operation footer progress uses the same delay, then full, steady text
+  without a notification tone through the shared channel. Fast completion cancels
+  pending progress; completion and error feedback keep normal animation and sound.
 - Location and name editors share EditorText and TextSelection colors.
   Support Shift+Insert paste through the native Insert bridge on Windows and
   through Gio key events elsewhere; keep browsing marks separate from editors.

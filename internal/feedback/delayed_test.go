@@ -82,3 +82,46 @@ func TestScheduledResultSurvivesCompletionAndStartsWhenPresented(t *testing.T) {
 		t.Fatal("redraw repeated the delayed message's start event")
 	}
 }
+
+func TestQuietProgressIsDelayedSteadyAndUnannounced(t *testing.T) {
+	var c Channel
+	due := time.Unix(1000, 0)
+	profiles := Animations{Enabled: true, Info: Animation{Enabled: true, CharacterDelay: 15 * time.Millisecond, Cursor: "█", CursorBlinkInterval: 350 * time.Millisecond, CursorBlinks: -1}, Success: Animation{Enabled: true, CharacterDelay: 15 * time.Millisecond, Cursor: "█"}}
+	c.QuietProgressAt("Copying", due)
+	before, owns := c.Frame(due.Add(-time.Nanosecond), profiles)
+	if owns || before.Started || before.Next != due || c.Current() != nil {
+		t.Fatal("pending progress became visible or announced itself", before)
+	}
+	for _, now := range []time.Time{due, due.Add(time.Millisecond), due.Add(time.Hour)} {
+		frame, owns := c.Frame(now, profiles)
+		if !owns || frame.Text != "Copying" || frame.Started || !frame.Next.IsZero() {
+			t.Fatal("visible progress typed, blinked or announced itself", frame)
+		}
+	}
+	c.Show(Success, "3 copied")
+	frame, owns := c.Frame(due.Add(2*time.Hour), profiles)
+	if !owns || !frame.Started || frame.Text != "█" || frame.Next.IsZero() {
+		t.Fatal("quiet progress suppressed completion animation or announcement", frame)
+	}
+}
+
+func TestFastQuietProgressNeverReplacesCompletionOrError(t *testing.T) {
+	for _, kind := range []Kind{Success, Error} {
+		var c Channel
+		due := time.Unix(1000, 0)
+		c.QuietProgressAt("Recycling", due)
+		c.Show(kind, "Result")
+		c.Complete()
+		frame, owns := c.Frame(due.Add(time.Hour), Animations{})
+		if !owns || frame.Text != "Result" || frame.Kind != kind || !frame.Started || !frame.Next.IsZero() {
+			t.Fatal("progress resurfaced or suppressed result", frame)
+		}
+	}
+	var c Channel
+	c.QuietProgressAt("Deleting", time.Unix(1000, 0))
+	c.Complete()
+	frame, owns := c.Frame(time.Unix(2000, 0), Animations{})
+	if owns || frame.Started || !frame.Next.IsZero() {
+		t.Fatal("cancelled quiet progress resurfaced", frame)
+	}
+}

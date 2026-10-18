@@ -72,7 +72,7 @@ type Theme struct {
 	OverlayMinWidth, OverlayMaxWidth unit.Dp
 	OverlayBackdropOpacity           float32 // Surface-color wash; 0 disables it, 1 is opaque.
 	Feedback                         feedback.Animations
-	FeedbackProgressDelay            time.Duration // Delay before showing directory-read progress.
+	FeedbackProgressDelay            time.Duration // Delay before showing read or file-operation progress.
 }
 
 type ThemeColors struct {

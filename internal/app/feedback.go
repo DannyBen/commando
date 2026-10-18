@@ -4,6 +4,7 @@ import (
 	"errors"
 	"image/color"
 	"io/fs"
+	"time"
 
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -15,6 +16,10 @@ import (
 
 func (v *view) showFeedback(index int, kind feedback.Kind, text string) {
 	v.panels[index].feedback.Show(kind, text)
+}
+
+func (v *view) operationProgress(index int, text string) {
+	v.panels[index].feedback.QuietProgressAt(text, time.Now().Add(v.appearance.FeedbackProgressDelay))
 }
 
 // Capture a mailbox rather than a panel index: panels can move or close while
