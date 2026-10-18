@@ -12,7 +12,7 @@ func TestChoiceHomeEndSelectFirstAndLastAcrossWidgets(t *testing.T) {
 	for _, tc := range []struct{ group, setting, first, last string }{
 		{"feedback.sounds", settingSoundProfile, "Errors only", "All sounds"},
 		{"appearance.font", settingFontFamily, "Alpha", "Zulu"},
-		{settingThemeSelect, settingThemeSelect, "Built-in Light", "Built-in Dark"},
+		{settingThemeSelect, settingThemeSelect, "Built-in Light", "Current theme"},
 		{settingThemeGenerator, settingThemeGenerator + ".mode", "Black", "White"},
 	} {
 		t.Run(tc.group, func(t *testing.T) {

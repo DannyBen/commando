@@ -129,14 +129,7 @@ func (v *view) acceptThemeLibrary(s *settingsSession, themes []themeSnapshot, er
 		s.themeLibraryResult = &loadResult{themes: themes, err: err}
 		return
 	}
-	s.themes, s.completion.candidates = themes, nil
-	s.themeName = ""
-	for _, theme := range themes {
-		s.completion.candidates = append(s.completion.candidates, theme.name)
-		if s.themeName == "" && theme.matches(v.settingsValues) {
-			s.themeName = theme.name
-		}
-	}
+	s.setThemeChoices(themes, *v.widgetValues())
 	if err != nil {
 		s.errorText = "Some themes could not load"
 	}

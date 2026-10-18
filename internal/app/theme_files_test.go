@@ -238,11 +238,11 @@ func TestThemeLibraryDefersChoicesDuringEditingAndRetainsSaveLock(t *testing.T) 
 	themes := append(slices.Clone(builtInThemes), themeSnapshot{name: "New theme", values: builtInThemes[0].values})
 	v.acceptThemeLibrary(s, themes, nil)
 	start, end := s.editor.Selection()
-	if !s.editing || s.editor.Text() != "unfinished draft" || start != 2 || end != 6 || len(s.completion.candidates) != 2 {
+	if !s.editing || s.editor.Text() != "unfinished draft" || start != 2 || end != 6 || len(s.completion.candidates) != 3 {
 		t.Fatal("arriving choices changed the editor or its completion list")
 	}
 	send(pressed(key.NameEscape))
-	if s.editing || len(s.completion.candidates) != 3 {
+	if s.editing || len(s.completion.candidates) != 4 {
 		t.Fatal("choices did not appear after editing closed")
 	}
 	s.pending = true // A submitted settings save must keep its existing lock.
@@ -276,7 +276,7 @@ func TestThemeSelectLoadsFilesCyclesAndSavesIndependentSnapshot(t *testing.T) {
 	before := v.settingsValues.Clone()
 	v.startSettingsWidget(settingThemeSelect)
 	waitThemeLibrary(t, v)
-	if got := v.settingsInteraction().completion.candidates; !reflect.DeepEqual(got, []string{"Built-in Light", "Built-in Dark", "Midnight"}) {
+	if got := v.settingsInteraction().completion.candidates; !reflect.DeepEqual(got, []string{"Built-in Light", "Built-in Dark", "Midnight", "Current theme"}) {
 		t.Fatal("theme file missing or extension displayed", got)
 	}
 	for range 3 {
@@ -367,19 +367,19 @@ func TestThemeLibraryNamesAndStaleCompletion(t *testing.T) {
 	v.startSettingsWidget(settingThemeSelect)
 	s := v.settingsInteraction()
 	v.acceptThemeLibrary(s, themes, nil)
-	for _, name := range []string{"Built-in Light (built-in)", "Built-in Light", "Current theme"} {
+	for _, name := range []string{"Built-in Light (built-in)", "Built-in Light", "Current theme (saved)", "Current theme"} {
 		if !slices.Contains(s.completion.candidates, name) {
 			t.Fatal("theme filename collided with a built-in label", name)
 		}
 	}
-	if err := v.selectTheme("Current theme"); err != nil || !builtInThemes[1].matches(v.settingsValues) {
+	if err := v.selectTheme("Current theme (saved)"); err != nil || !builtInThemes[1].matches(v.settingsValues) {
 		t.Fatal("reserved display label prevented selecting a theme file", err)
 	}
 	v.finishSettingsWidget(layout.Context{}, false)
 	v.startSettingsWidget(settingThemeSelect)
 	current := v.settingsInteraction()
 	v.acceptThemeLibrary(s, themes, errors.New("late failure"))
-	if current.pending || current.errorText != "" || len(current.completion.candidates) != 2 {
+	if current.pending || current.errorText != "" || len(current.completion.candidates) != 3 {
 		t.Fatal("stale library result changed a newer widget")
 	}
 }

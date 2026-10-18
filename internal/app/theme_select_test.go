@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -11,6 +12,58 @@ import (
 	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/settings"
 )
+
+func TestCurrentThemeChoiceSurvivesLibraryArrivalAndCanBeSaved(t *testing.T) {
+	v := newPreviewView()
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingLightness, settings.Value{Number: 63.2468})
+	v.applySettings()
+	before, palette := v.settingsValues.Clone(), v.appearance.Colors
+	v.startSettingsWidget(settingThemeSelect)
+	s := v.settingsInteraction()
+	v.adjustSetting(settingThemeSelect, 1)
+	if !builtInThemes[0].matches(v.settingsValues) {
+		t.Fatal("theme did not preview")
+	}
+	// A delayed library result must compare against the opening snapshot,
+	// rather than losing it because the preview now matches a known theme.
+	v.acceptThemeLibrary(s, builtInThemes, nil)
+	if !slices.Contains(s.completion.candidates, "Current theme") {
+		t.Fatal("library arrival lost opening theme")
+	}
+	v.adjustSetting(settingThemeSelect, -1)
+	if v.settingText(settingThemeSelect) != "Current theme" || !(themeSnapshot{values: before}).matches(v.settingsValues) || v.appearance.Colors != palette {
+		t.Fatal("cycling did not restore opening appearance")
+	}
+	dir := t.TempDir()
+	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
+		return func() (string, error) { return "", settings.Save(dir, values) }
+	}
+	v.finishSettingsWidget(layout.Context{}, true)
+	loaded, err := settings.Load(dir, settings.CatalogueDefault)
+	if err != nil || !(themeSnapshot{values: before}).matches(loaded) {
+		t.Fatal("could not save opening theme", err)
+	}
+}
+
+func TestCurrentThemeChoiceIsOmittedForKnownOpeningTheme(t *testing.T) {
+	for _, name := range []string{"Built-in Dark", "Saved theme"} {
+		v := newPreviewView()
+		v.settingsValues = builtInThemes[1].values.Clone()
+		v.startSettingsWidget(settingThemeSelect)
+		themes := slices.Clone(builtInThemes)
+		if name == "Saved theme" {
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingLightness, settings.Value{Number: 63.2468})
+			v.finishSettingsWidget(layout.Context{}, true)
+			v.startSettingsWidget(settingThemeSelect)
+			themes = append(themes, themeSnapshot{name: name, values: v.settingsValues.Clone()})
+		}
+		s := v.settingsInteraction()
+		v.acceptThemeLibrary(s, themes, nil)
+		if slices.Contains(s.completion.candidates, "Current theme") || v.settingText(settingThemeSelect) != name {
+			t.Fatal("known opening theme gained a redundant snapshot", name)
+		}
+	}
+}
 
 func TestThemeSelectCataloguePreviewCycleAndCancel(t *testing.T) {
 	v := newPreviewView()
@@ -42,12 +95,12 @@ func TestThemeSelectCataloguePreviewCycleAndCancel(t *testing.T) {
 	for _, step := range []struct {
 		key  key.Name
 		name string
-	}{{key.NameRightArrow, "Built-in Light"}, {key.NameRightArrow, "Built-in Dark"}, {key.NameRightArrow, "Built-in Light"}, {key.NameLeftArrow, "Built-in Dark"}} {
+	}{{key.NameRightArrow, "Built-in Light"}, {key.NameRightArrow, "Built-in Dark"}, {key.NameRightArrow, "Current theme"}, {key.NameRightArrow, "Built-in Light"}, {key.NameLeftArrow, "Current theme"}, {key.NameLeftArrow, "Built-in Dark"}} {
 		send(pressed(step.key))
 		if v.settingText(settingThemeSelect) != step.name || !s.dirty {
 			t.Fatal("theme did not cycle live", step.name)
 		}
-		for _, theme := range builtInThemes {
+		for _, theme := range s.themes {
 			if theme.name == step.name && !theme.matches(v.settingsValues) {
 				t.Fatal("incomplete theme preview")
 			}

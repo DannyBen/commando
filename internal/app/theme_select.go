@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/dannyben/commando/internal/settings"
@@ -104,8 +105,34 @@ func (v *view) selectTheme(name string) error {
 		*v.widgetValues() = values
 		return nil
 	}
-	if name == "Current theme" && s.themeName == "" {
-		return nil
-	}
+
 	return fmt.Errorf("unknown theme: %s", name)
+}
+
+// Reuse the transaction's opening snapshot as an ordinary session-only choice.
+// Check the opening appearance against the library, even after live cycling.
+func (s *settingsSession) setThemeChoices(themes []themeSnapshot, current settings.Values) {
+	s.themes = slices.Clone(themes)
+	if !slices.ContainsFunc(themes, func(t themeSnapshot) bool { return t.matches(s.before) }) {
+		// Keep a saved file with this name accessible alongside the opening snapshot.
+		for i, t := range s.themes {
+			if !strings.EqualFold(t.name, "Current theme") {
+				continue
+			}
+			name := "Current theme (saved)"
+			for slices.ContainsFunc(s.themes, func(t themeSnapshot) bool { return strings.EqualFold(t.name, name) }) {
+				name += " (saved)"
+			}
+			s.themes[i].name = name
+		}
+		s.themes = append(s.themes, themeSnapshot{name: "Current theme", values: s.before})
+	}
+	s.completion.candidates = nil
+	s.themeName = ""
+	for _, t := range s.themes {
+		s.completion.candidates = append(s.completion.candidates, t.name)
+		if s.themeName == "" && t.matches(current) {
+			s.themeName = t.name
+		}
+	}
 }

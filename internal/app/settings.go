@@ -266,13 +266,7 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 	}
 	if group == settingThemeSelect {
 		s.fields = []settings.Field{{Key: settingThemeSelect, Widget: settingThemeSelect, Label: "Theme", Control: "input"}}
-		s.themes = slices.Clone(builtInThemes)
-		for _, theme := range s.themes {
-			s.completion.candidates = append(s.completion.candidates, theme.name)
-			if theme.matches(v.settingsValues) {
-				s.themeName = theme.name
-			}
-		}
+		s.setThemeChoices(builtInThemes, v.settingsValues)
 	}
 	if isThemeColorWidget(group) {
 		s.title = "Appearance › Theme › Customize"
