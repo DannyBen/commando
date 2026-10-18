@@ -9,48 +9,86 @@ import (
 	"slices"
 	"strings"
 
+	"gioui.org/layout"
+
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
 )
 
-type recycleRequest struct {
+type removalRequest struct {
 	names     []string
+	permanent bool
 	locations []string // Snapshot for safely updating other alias listings.
 }
 
-func (v *view) recycleSelected() {
+func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 	p := &v.panels[v.active]
 	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || !v.actionAllowed(actionMutation) {
 		return
 	}
 	var names []string
+	hasDirectory := false
 	if len(p.marks) != 0 {
 		for row, item := range p.items {
 			if p.marks[row] && p.markable(row) {
 				names = append(names, item.file.Name)
+				hasDirectory = hasDirectory || item.file.Directory
 			}
 		}
 	} else if p.markable(p.selected) {
 		names = append(names, p.items[p.selected].file.Name)
+		hasDirectory = p.items[p.selected].file.Directory
 	}
 	if len(names) == 0 {
 		return
 	}
-	request := &recycleRequest{names: names, locations: make([]string, len(v.panels))}
+	request := &removalRequest{names: names, permanent: permanent, locations: make([]string, len(v.panels))}
 	for pi := range v.panels {
 		if !v.panels[pi].drives {
 			request.locations[pi] = v.panels[pi].path
 		}
 	}
+	panel, path := v.active, p.path
+	submit := func(layout.Context) { v.submitRemoval(panel, path, request) }
+	guard := v.removalGuard(permanent, len(names), hasDirectory)
+	if guard == guardOff {
+		submit(gtx)
+		return
+	}
+	action, verb := "Recycle", "Recycle"
+	if permanent {
+		action, verb = "Delete permanently", "Permanently delete"
+	}
+	entry := "entry"
+	if len(names) != 1 {
+		entry = "entries"
+	}
+	selected := 0
+	if guard == guardCancel {
+		selected = 1
+	}
+	v.startConfirmation(gtx, &confirmationSession{panel: panel, message: fmt.Sprintf("%s %d %s?", verb, len(names), entry), acceptLabel: action, selected: selected, accept: submit})
+}
+
+func (v *view) submitRemoval(panel int, path string, request *removalRequest) {
+	// The confirmation owns the captured sources; browsing never retargets it.
+	if !v.interaction.idle() || panel >= len(v.panels) || !samePath(v.panels[panel].path, path) || !v.actionAllowed(actionMutation) {
+		return
+	}
+	p := &v.panels[panel]
 	p.loading, p.prefix = true, ""
-	p.feedback.Progress("Recycling")
-	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, recycle: request}) {
+	progress := "Recycling"
+	if request.permanent {
+		progress = "Deleting"
+	}
+	p.feedback.Progress(progress)
+	if !v.loader.submit(loadRequest{panel: panel, path: path, removal: request}) {
 		p.loading = false
 		p.feedback.Complete()
 	}
 }
 
-func (v *view) acceptRecycle(result loadResult) {
+func (v *view) acceptRemoval(result loadResult) {
 	p := &v.panels[result.request.panel]
 	p.loading = false
 	for pi := range v.panels {
@@ -60,34 +98,41 @@ func (v *view) acceptRecycle(result loadResult) {
 		}
 		matches := samePath(other.path, result.request.path)
 		if pi < len(result.sameDirectory) && result.sameDirectory[pi] &&
-			pi < len(result.request.recycle.locations) && samePath(other.path, result.request.recycle.locations[pi]) {
+			pi < len(result.request.removal.locations) && samePath(other.path, result.request.removal.locations[pi]) {
 			matches = true
 		}
 		if matches {
-			other.removeEntries(result.recycled.Names)
+			other.removeEntries(result.removed.Names)
 		}
 		if pi < len(result.locations) && result.locations[pi] != "" &&
-			pi < len(result.request.recycle.locations) && samePath(other.path, result.request.recycle.locations[pi]) {
-			for _, name := range result.recycled.Names {
-				if _, inside := movedLocationSuffix(filepath.Join(result.recycled.Directory, name), result.locations[pi]); inside {
+			pi < len(result.request.removal.locations) && samePath(other.path, result.request.removal.locations[pi]) {
+			for _, name := range result.removed.Names {
+				if _, inside := movedLocationSuffix(filepath.Join(result.removed.Directory, name), result.locations[pi]); inside {
 					other.refreshNeeded = true
 					break
 				}
 			}
 		}
 	}
-	count := len(result.recycled.Names)
+	count := len(result.removed.Names)
+	outcome := "recycled"
+	if result.request.removal.permanent {
+		outcome = "deleted"
+	}
 	if result.err != nil {
 		message := recycleError(result.err)
+		if result.request.removal.permanent {
+			message = deleteError(result.err)
+		}
 		if count > 0 {
-			message = fmt.Sprintf("%d recycled; %s", count, message)
+			message = fmt.Sprintf("%d %s; %s", count, outcome, message)
 		}
 		v.showFeedback(result.request.panel, feedback.Error, message)
 		return
 	}
-	message := "Item recycled"
+	message := "Item " + outcome
 	if count != 1 {
-		message = fmt.Sprintf("%d items recycled", count)
+		message = fmt.Sprintf("%d items %s", count, outcome)
 	}
 	v.showFeedback(result.request.panel, feedback.Success, message)
 }
@@ -154,6 +199,20 @@ func recycleError(err error) string {
 		message = "Item not found"
 	case errors.Is(err, browser.ErrDriveMapping), errors.Is(err, browser.ErrDriveMappingCycle), errors.Is(err, browser.ErrPathIdentity):
 		message = "Backing path unavailable"
+	}
+	return message
+}
+
+func deleteError(err error) string {
+	switch {
+	case errors.Is(err, browser.ErrDeleteUnavailable):
+		return "Deletion unavailable"
+	case errors.Is(err, browser.ErrDeleteUnconfirmed):
+		return "Cannot confirm deletion"
+	}
+	message := recycleError(err)
+	if message == "Cannot recycle" || message == "Recycle Bin unavailable" || message == "Cannot confirm recycling" {
+		return "Cannot delete"
 	}
 	return message
 }

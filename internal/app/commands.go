@@ -69,6 +69,7 @@ func defaultCommands() []command {
 		cmd("entry.move_left", "Entry", "Move to left", "{", 0, func(v *view) bool { return panelTransferReady(v, -1) }),
 		cmd("entry.move_right", "Entry", "Move to right", "}", 0, func(v *view) bool { return panelTransferReady(v, 1) }),
 		cmd("entry.recycle", "Entry", "Recycle", key.NameDeleteForward, 0, selectedMutationReady),
+		cmd("entry.delete_permanently", "Entry", "Delete permanently", key.NameDeleteForward, key.ModShift, selectedMutationReady),
 		cmd("entry.new_file", "Entry", "New file", "N", key.ModCtrl, writableFolder),
 		cmd("entry.new_folder", "Entry", "New folder", "N", key.ModCtrl|key.ModShift, writableFolder),
 		cmd("entry.context_menu", "Entry", "Context menu", "/", key.ModAlt, func(v *view) bool { return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false) }),

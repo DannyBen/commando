@@ -1,6 +1,7 @@
 package app
 
 import (
+	"gioui.org/layout"
 	"os"
 	"path/filepath"
 	"testing"
@@ -50,14 +51,14 @@ func TestRecyclingRecoversNestedAndAliasPanelsWithoutNotifications(t *testing.T)
 		v.panels[pi].toggleMark(v.panels[pi].selected)
 	}
 	moved := filepath.Join(t.TempDir(), "recycled")
-	v.loader.recycle = func(directory string, names []string) (browser.RecycleResult, error) {
+	v.loader.recycle = func(directory string, names []string) (browser.RemovalResult, error) {
 		if err := os.Rename(folder, moved); err != nil {
-			return browser.RecycleResult{}, err
+			return browser.RemovalResult{}, err
 		}
-		return browser.RecycleResult{Directory: directory, Names: names}, nil
+		return browser.RemovalResult{Directory: directory, Names: names}, nil
 	}
 	selectName(t, &v.panels[0], "folder")
-	v.recycleSelected()
+	v.removeSelected(layout.Context{}, false)
 	waitLoaded(t, v, 0)
 	message := v.panels[0].feedback.Current()
 	runAutomaticRefresh(v, time.Now())
@@ -86,18 +87,18 @@ func TestRecyclingFromAliasUpdatesBackingListingAndRecoversDescendant(t *testing
 	selectName(t, &v.panels[2], "file")
 	v.panels[2].toggleMark(v.panels[2].selected)
 	moved := filepath.Join(t.TempDir(), "recycled")
-	v.loader.recycle = func(directory string, names []string) (browser.RecycleResult, error) {
+	v.loader.recycle = func(directory string, names []string) (browser.RemovalResult, error) {
 		if directory != alias {
 			t.Fatalf("recycle did not receive the source alias: %q", directory)
 		}
 		if err := os.Rename(folder, moved); err != nil {
-			return browser.RecycleResult{}, err
+			return browser.RemovalResult{}, err
 		}
 		// Like a Windows 8.3 path, this spelling differs from EvalSymlinks.
-		return browser.RecycleResult{Directory: directory, Names: names}, nil
+		return browser.RemovalResult{Directory: directory, Names: names}, nil
 	}
 	selectName(t, &v.panels[0], "folder")
-	v.recycleSelected()
+	v.removeSelected(layout.Context{}, false)
 	waitLoaded(t, v, 0)
 	for pi := 0; pi < 2; pi++ {
 		for _, item := range v.panels[pi].items {

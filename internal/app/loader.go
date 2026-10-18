@@ -26,7 +26,7 @@ type loadRequest struct {
 	rename           *renameRequest
 	create           *createRequest
 	duplicate        *duplicateRequest
-	recycle          *recycleRequest
+	removal          *removalRequest
 	clipboard        *fileClipboardRequest
 	transfer         *transferRequest
 	settingsSave     *settingsSaveRequest
@@ -43,7 +43,7 @@ type loadResult struct {
 	request           loadRequest
 	directory         browser.Directory
 	created           browser.Entry
-	recycled          browser.RecycleResult
+	removed           browser.RemovalResult
 	sameDirectory     []bool
 	err               error
 	clipboard         browser.FileClipboard
@@ -68,7 +68,8 @@ type directoryLoader struct {
 	requests             chan loadRequest
 	results              chan loadResult
 	done                 chan struct{}
-	recycle              func(string, []string) (browser.RecycleResult, error)
+	recycle              func(string, []string) (browser.RemovalResult, error)
+	delete               func(string, []string) (browser.RemovalResult, error)
 	readClipboard        func() (browser.FileClipboard, error)
 	writeClipboard       func([]string, bool) (browser.FileClipboard, error)
 	completeClipboard    func(browser.FileClipboard, []string) (browser.FileClipboard, error)
@@ -96,6 +97,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		results:              make(chan loadResult, count),
 		done:                 make(chan struct{}),
 		recycle:              browser.Recycle,
+		delete:               browser.Delete,
 		readClipboard:        browser.ReadFileClipboard,
 		writeClipboard:       browser.WriteFileClipboard,
 		completeClipboard:    browser.CompleteFileClipboard,
@@ -215,7 +217,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				}
 				var directory browser.Directory
 				var created browser.Entry
-				var recycled browser.RecycleResult
+				var removed browser.RemovalResult
 				var sameDirectory []bool
 				var err error
 				if resolveErr != nil {
@@ -231,22 +233,26 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 							directory, err = l.readDirectory(filepath.Join(request.path, filepath.Dir(request.create.name)))
 						}
 					}
-				} else if request.recycle != nil {
-					// Capture alias/backing locations before recycling can remove
+				} else if request.removal != nil {
+					// Capture alias/backing locations before removal can delete
 					// open descendants and make fresh identity resolution fail.
-					result.locations = resolveFileLocations(request.recycle.locations)
-					// Use the same canonical spelling for the recycled parent and
+					result.locations = resolveFileLocations(request.removal.locations)
+					// Use the same canonical spelling for the removed parent and
 					// captured panels. Windows temporary paths can contain 8.3
 					// names, and aliases may disappear during the operation.
 					parent, _ := resolveFileLocation(request.path)
-					recycled, err = l.recycle(request.path, request.recycle.names)
-					if parent != "" && len(recycled.Names) > 0 {
-						recycled.Directory = parent
+					if request.removal.permanent {
+						removed, err = l.delete(request.path, request.removal.names)
+					} else {
+						removed, err = l.recycle(request.path, request.removal.names)
 					}
-					sameDirectory = make([]bool, len(request.recycle.locations))
-					if len(recycled.Names) > 0 {
+					if parent != "" && len(removed.Names) > 0 {
+						removed.Directory = parent
+					}
+					sameDirectory = make([]bool, len(request.removal.locations))
+					if len(removed.Names) > 0 {
 						for pi, resolved := range result.locations {
-							sameDirectory[pi] = resolved != "" && samePath(filepath.Clean(resolved), recycled.Directory)
+							sameDirectory[pi] = resolved != "" && samePath(filepath.Clean(resolved), removed.Directory)
 						}
 					}
 				} else if request.fileDraft != nil {
@@ -266,7 +272,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				} else {
 					directory, err = l.readExistingParent(request.path)
 				}
-				result.directory, result.created, result.recycled = directory, created, recycled
+				result.directory, result.created, result.removed = directory, created, removed
 				result.sameDirectory, result.err = sameDirectory, err
 				l.results <- result
 				if invalidate != nil {

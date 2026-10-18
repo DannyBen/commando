@@ -145,8 +145,8 @@ func (v *view) acceptLoad(result loadResult) {
 		v.acceptFileOperation(result)
 		return
 	}
-	if result.request.recycle != nil {
-		v.acceptRecycle(result)
+	if result.request.removal != nil {
+		v.acceptRemoval(result)
 		return
 	}
 	if result.request.create != nil || result.request.rename != nil || result.request.duplicate != nil {

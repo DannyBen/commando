@@ -344,15 +344,28 @@ module/executable and `Commando` for the window title and data-folder name.
   updating alias listings through worker-resolved locations. Defer arriving
   name drafts behind editors and cancel if their pane has been left. Same-folder
   cut/paste is a no-op with Already in this folder feedback; retain the clipboard.
-- Delete recycles marked entries, otherwise the current file/folder, through the
-  single worker. Exclude parents and drives; keep Delete in editors and ignore
-  modifier variants. Resolve SUBST backing paths freshly and verify identity.
-  Use Windows IFileOperation with RECYCLEONDELETE and a pre-delete recycle veto;
-  never fall back to permanent deletion or a legacy undo-if-possible API. Only
-  confirmed recycled entries leave cached listings. Stop at the first failure
-  and report partial success in the existing footer. Preserve surviving marks,
-  current-item identity, scroll and focus in all panels showing the directory,
-  including aliases. Hold new name mutations while recycling is pending.
+- Delete recycles marked entries, otherwise the current file/folder; Shift+Delete
+  permanently deletes the same selection. Exclude parents and drives, keep these
+  keys in editors, and ignore other modifier variants. Both operations use the
+  single worker, freshly resolved SUBST backing paths and verified identity.
+  Recycling uses Windows IFileOperation with RECYCLEONDELETE and a pre-delete
+  veto; never fall back to permanent deletion or a legacy undo-if-possible API.
+  Permanent deletion explicitly omits recycle/undo flags and verifies per-item
+  shell completion. Only confirmed removals leave cached listings. Stop at the
+  first failure and report partial success in the existing footer. Preserve
+  surviving marks, current-item identity, scroll and focus in all panels showing
+  the directory, including aliases. Hold mutations until reconciliation finishes.
+  Linux refuses both operations.
+- Guards › Recycle confirmation and Delete confirmation each offer Single files,
+  Directories and Multiple entries, with OFF, ON and ON (Cancel default).
+  Directories matches any selection containing a directory; Single files matches
+  exactly one selected file, and Multiple entries matches two or more selected
+  sources without counting descendants. The strongest matching guard wins:
+  OFF < ON < ON (Cancel default). Recycling defaults to OFF for all guards;
+  permanent deletion defaults to ON (Cancel default) for all guards. Reuse the
+  shared confirmation session, capturing the selection before asking and owning
+  input until resolution. Cancel leaves the selection untouched. The invoking
+  key and its repeats must never accept the confirmation.
 
 - F4 and File › Edit use marked files, otherwise the current file; exclude
   folders, parents and drives. Programs › Editors provides New and saved-rule

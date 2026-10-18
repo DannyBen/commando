@@ -696,3 +696,50 @@ control = "toggle"
 [programs.editors.id]
 label = "ID"
 visible = false
+
+[guards]
+label = "Guards"
+
+[guards.recycle_confirmation]
+label = "Recycle confirmation"
+title = "Recycle confirmation"
+
+[guards.recycle_confirmation.single_files]
+label = "Single files"
+description = "Confirm a selection consisting of one file. The strongest matching guard wins."
+control = "choice"
+choices = ["OFF", "ON", "ON (Cancel default)"]
+
+[guards.recycle_confirmation.directories]
+label = "Directories"
+description = "Confirm any selection containing a directory. The strongest matching guard wins."
+control = "choice"
+choices = ["OFF", "ON", "ON (Cancel default)"]
+
+[guards.recycle_confirmation.multiple_entries]
+label = "Multiple entries"
+description = "Confirm selections of two or more entries. The strongest matching guard wins."
+control = "choice"
+choices = ["OFF", "ON", "ON (Cancel default)"]
+
+[guards.delete_confirmation]
+label = "Delete confirmation"
+title = "Delete confirmation"
+
+[guards.delete_confirmation.single_files]
+label = "Single files"
+description = "Confirm a selection consisting of one file. The strongest matching guard wins."
+control = "choice"
+choices = ["OFF", "ON", "ON (Cancel default)"]
+
+[guards.delete_confirmation.directories]
+label = "Directories"
+description = "Confirm any selection containing a directory. The strongest matching guard wins."
+control = "choice"
+choices = ["OFF", "ON", "ON (Cancel default)"]
+
+[guards.delete_confirmation.multiple_entries]
+label = "Multiple entries"
+description = "Confirm selections of two or more entries. The strongest matching guard wins."
+control = "choice"
+choices = ["OFF", "ON", "ON (Cancel default)"]

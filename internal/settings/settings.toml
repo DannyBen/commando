@@ -135,3 +135,14 @@ master_volume = 50
 
 [feedback.notifications]
 animation = true
+
+
+[guards.recycle_confirmation]
+single_files = "OFF"
+directories = "OFF"
+multiple_entries = "OFF"
+
+[guards.delete_confirmation]
+single_files = "ON (Cancel default)"
+directories = "ON (Cancel default)"
+multiple_entries = "ON (Cancel default)"

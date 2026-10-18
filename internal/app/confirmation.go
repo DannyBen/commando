@@ -23,6 +23,16 @@ func (s *confirmationSession) interactionPanel() int        { return s.panel }
 func (*confirmationSession) blocksPanels() bool             { return true }
 func (*confirmationSession) blocksMutations() bool          { return true }
 func (*confirmationSession) openingEvent() interactionEvent { return eventQuestionOpened }
+
+func (s *confirmationSession) holdKey(name key.Name) {
+	if name == key.NameEnter {
+		name = key.NameReturn
+	}
+	if s.held == nil {
+		s.held = make(map[key.Name]bool)
+	}
+	s.held[name] = true
+}
 func (v *view) confirmationInteraction() *confirmationSession {
 	s, _ := v.interaction.current.(*confirmationSession)
 	return s

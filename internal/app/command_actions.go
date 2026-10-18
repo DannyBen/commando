@@ -30,7 +30,9 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 	case "entry.copy_right", "entry.move_right":
 		v.transferToNeighbor(1, id == "entry.move_right")
 	case "entry.recycle":
-		v.recycleSelected()
+		v.removeSelected(gtx, false)
+	case "entry.delete_permanently":
+		v.removeSelected(gtx, true)
 	case "entry.new_file":
 		v.startName(gtx, nameCreateFile)
 	case "entry.new_folder":

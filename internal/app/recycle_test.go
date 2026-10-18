@@ -34,7 +34,7 @@ func TestDeleteQueuesStableMarkedOrCurrentSelection(t *testing.T) {
 			want = []string{p.items[p.selected].file.Name}
 		}
 		send, _ := panelInputFrames(v)
-		send(key.Event{Name: key.NameDeleteForward, State: key.Release}, modified(key.NameDeleteForward, key.ModShift), modified(key.NameDeleteForward, key.ModCtrl))
+		send(key.Event{Name: key.NameDeleteForward, State: key.Release}, modified(key.NameDeleteForward, key.ModCtrl))
 		if len(v.loader.requests) != 0 {
 			t.Fatal("modifier or release queued deletion")
 		}
@@ -44,14 +44,14 @@ func TestDeleteQueuesStableMarkedOrCurrentSelection(t *testing.T) {
 		}
 		request := <-v.loader.requests
 		send(pressed(key.NameDownArrow), pressed(key.NameEscape))
-		if request.recycle == nil || !reflect.DeepEqual(request.recycle.names, want) || request.path != p.path {
-			t.Fatalf("selection snapshot changed: %+v, want %v", request.recycle, want)
+		if request.removal == nil || !reflect.DeepEqual(request.removal.names, want) || request.path != p.path {
+			t.Fatalf("selection snapshot changed: %+v, want %v", request.removal, want)
 		}
 		send(pressed(key.NameRightArrow), pressed(key.NameF2))
 		if v.nameInteraction() != nil {
 			t.Fatal("name mutation started during pending recycling")
 		}
-		v.acceptLoad(loadResult{request: request, recycled: browser.RecycleResult{Names: want}})
+		v.acceptLoad(loadResult{request: request, removed: browser.RemovalResult{Names: want}})
 		send()
 		if p.loading || v.mutationsBusy() || v.active != 1 || v.panels[1].feedback.Current() != nil {
 			t.Fatal("completion retained busy state or stole focus/feedback")
@@ -75,11 +75,11 @@ func TestRecycleWorkerPartialFailureUpdatesAliasListings(t *testing.T) {
 	for pi := range v.panels {
 		waitLoaded(t, v, pi)
 	}
-	v.loader.recycle = func(directory string, names []string) (browser.RecycleResult, error) {
+	v.loader.recycle = func(directory string, names []string) (browser.RemovalResult, error) {
 		if directory != root || !reflect.DeepEqual(names, []string{"a.txt", "b.txt"}) {
 			t.Fatalf("wrong backend request: %q %v", directory, names)
 		}
-		return browser.RecycleResult{Directory: root, Names: []string{"a.txt"}}, &os.PathError{Op: "recycle", Path: "b.txt", Err: os.ErrPermission}
+		return browser.RemovalResult{Directory: root, Names: []string{"a.txt"}}, &os.PathError{Op: "recycle", Path: "b.txt", Err: os.ErrPermission}
 	}
 	p := &v.panels[0]
 	for _, name := range []string{"a.txt", "b.txt"} {
@@ -149,7 +149,7 @@ func TestRecycleCompletionPreservesLocationEditor(t *testing.T) {
 	send(modified("D", key.ModAlt))
 	v.location.SetText("draft path")
 	v.location.SetCaret(2, 6)
-	v.acceptLoad(loadResult{request: request, recycled: browser.RecycleResult{Names: request.recycle.names}})
+	v.acceptLoad(loadResult{request: request, removed: browser.RemovalResult{Names: request.removal.names}})
 	send()
 	first, last := v.location.Selection()
 	if !v.locationEditing() || v.location.Text() != "draft path" || first != 2 || last != 6 {
@@ -194,11 +194,11 @@ func TestRecycledRowsRetainCurrentIdentityAndViewport(t *testing.T) {
 	}
 }
 
-func TestRecycleResultIgnoresNavigatedAliasSnapshot(t *testing.T) {
+func TestRemovalResultIgnoresNavigatedAliasSnapshot(t *testing.T) {
 	v := newPreviewView()
 	before := slices.Clone(v.panels[1].items)
-	request := loadRequest{panel: 0, path: v.panels[0].path, recycle: &recycleRequest{locations: []string{v.panels[0].path, "previous path"}}}
-	v.acceptLoad(loadResult{request: request, recycled: browser.RecycleResult{Names: []string{v.panels[1].items[1].file.Name}}, sameDirectory: []bool{true, true}})
+	request := loadRequest{panel: 0, path: v.panels[0].path, removal: &removalRequest{locations: []string{v.panels[0].path, "previous path"}}}
+	v.acceptLoad(loadResult{request: request, removed: browser.RemovalResult{Names: []string{v.panels[1].items[1].file.Name}}, sameDirectory: []bool{true, true}})
 	if !slices.Equal(v.panels[1].items, before) {
 		t.Fatal("completion changed a panel that navigated away")
 	}

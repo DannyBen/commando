@@ -78,3 +78,22 @@ func TestRecycleMappingFailureNeverCallsBackend(t *testing.T) {
 		}
 	}
 }
+
+func TestPermanentDeleteSharesPreflightAndReportsOnlyConfirmedNames(t *testing.T) {
+	root := t.TempDir()
+	called := false
+	result, err := removeSelection(root, []string{"first", "missing"}, "delete", func(path string) (string, error) {
+		if filepath.Base(path) == "missing" {
+			return "", os.ErrNotExist
+		}
+		return path, nil
+	}, func([]string) (int, error) { called = true; return 0, nil })
+	if called || len(result.Names) != 0 || !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("delete bypassed whole-selection preflight")
+	}
+	result, err = removeSelection(root, []string{"first", "second"}, "delete", func(path string) (string, error) { return path, nil }, func([]string) (int, error) { return 1, os.ErrPermission })
+	var pathError *os.PathError
+	if !reflect.DeepEqual(result.Names, []string{"first"}) || !errors.As(err, &pathError) || pathError.Op != "delete" || pathError.Path != "second" {
+		t.Fatal("delete lost confirmed partial result", result, err)
+	}
+}

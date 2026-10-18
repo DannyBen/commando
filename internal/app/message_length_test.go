@@ -17,7 +17,7 @@ func TestOperationErrorsFitShortPanelFooter(t *testing.T) {
 		browser.ErrNoClipboardFiles, browser.ErrInvalidName, fs.ErrExist, fs.ErrPermission, fs.ErrNotExist,
 		browser.ErrTransferUnavailable,
 		browser.ErrDriveMapping, browser.ErrDriveMappingCycle, browser.ErrPathIdentity,
-		browser.ErrRecycleUnavailable, browser.ErrRecycleUnconfirmed, errors.ErrUnsupported, errors.New("other"),
+		browser.ErrRecycleUnavailable, browser.ErrRecycleUnconfirmed, browser.ErrDeleteUnavailable, browser.ErrDeleteUnconfirmed, errors.ErrUnsupported, errors.New("other"),
 	}
 	filename := "a very long filename with many words.txt"
 	for _, err := range errorsToReport {
@@ -33,11 +33,16 @@ func TestOperationErrorsFitShortPanelFooter(t *testing.T) {
 			assertBriefFooter(t, v.panels[0].feedback.Current().Text, filename)
 
 			v = newPreviewView()
-			result = loadResult{request: loadRequest{panel: 0, recycle: &recycleRequest{}}, err: wrapped}
+			result = loadResult{request: loadRequest{panel: 0, removal: &removalRequest{}}, err: wrapped}
 			if partial {
-				result.recycled.Names = []string{"completed.txt"}
+				result.removed.Names = []string{"completed.txt"}
 			}
-			v.acceptRecycle(result)
+			v.acceptRemoval(result)
+			assertBriefFooter(t, v.panels[0].feedback.Current().Text, filename)
+
+			v = newPreviewView()
+			result.request.removal.permanent = true
+			v.acceptRemoval(result)
 			assertBriefFooter(t, v.panels[0].feedback.Current().Text, filename)
 		}
 		for _, text := range []string{readError(err), renameError(err), createError(err, "folder"), createError(err, "file")} {

@@ -203,6 +203,9 @@ func (v *view) updatePalette(gtx layout.Context) {
 			return
 		case key.NameReturn, key.NameEnter:
 			v.choosePalette(gtx)
+			if decision := v.confirmationInteraction(); decision != nil {
+				decision.holdKey(ke.Name)
+			}
 			return
 		case key.NameUpArrow:
 			s.selected--

@@ -136,6 +136,9 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 			v.suppressSpaceText = true
 		}
 		v.executeCommand(gtx, command)
+		if decision := v.confirmationInteraction(); decision != nil {
+			decision.holdKey(ke.Name)
+		}
 		if command.id == "application.command_palette" {
 			if s := v.paletteInteraction(); s != nil {
 				s.openingBacktick = ke.Name == "`" && ke.Modifiers == 0

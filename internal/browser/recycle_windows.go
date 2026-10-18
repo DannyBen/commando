@@ -35,8 +35,19 @@ const (
 // All COM calls and synchronous callbacks stay on an STA thread. The directory
 // worker invokes this function; no shell work or dialogs run on the Gio thread.
 func recyclePaths(paths []string) (int, error) {
+	return removalPaths(paths, false)
+}
+
+func deletePaths(paths []string) (int, error) {
+	return removalPaths(paths, true)
+}
+
+func removalPaths(paths []string, permanent bool) (int, error) {
 	major, minor, _ := windows.RtlGetNtVersionNumbers()
 	if major < 6 || major == 6 && minor < 2 {
+		if permanent {
+			return 0, ErrDeleteUnavailable
+		}
 		return 0, ErrRecycleUnavailable // Never substitute the legacy undo-if-possible API.
 	}
 	runtime.LockOSThread()
@@ -46,21 +57,21 @@ func recyclePaths(paths []string) (int, error) {
 	}
 	defer windows.CoUninitialize()
 	for i, path := range paths {
-		if err := recycleShellItem(path); err != nil {
+		if err := removeShellItem(path, permanent); err != nil {
 			return i, err
 		}
 	}
 	return len(paths), nil
 }
 
-func recycleShellItem(path string) error {
+func removeShellItem(path string, permanent bool) error {
 	var operation *shellObject
 	hr, _, _ := coCreateInstance.Call(uintptr(unsafe.Pointer(&clsidFileOperation)), 0, 1,
 		uintptr(unsafe.Pointer(&iidFileOperation)), uintptr(unsafe.Pointer(&operation)))
 	if err := shellHRESULT(uint32(hr)); err != nil {
 		return err
 	}
-	var sink *recycleSink
+	var sink *removalSink
 	defer func() {
 		operation.call(2)
 		if sink != nil {
@@ -68,11 +79,12 @@ func recycleShellItem(path string) error {
 		}
 		runtime.KeepAlive(sink)
 	}()
-	// RECYCLEONDELETE requests recycling rather than destructive deletion.
-	// A pre-delete sink adds a veto when the shell isn't planning recycling.
-	// Disable shell forms/progress; existing contextual feedback owns results.
-	flags := fofxRecycleOnDelete | fofxEarlyFailure | fofxAddUndoRecord |
-		fofSilent | fofNoConfirmation | fofNoErrorUI | fofNoConnectedElements | fofNoRecurseReparse
+	// Set flags explicitly: permanent deletion must never inherit shell undo
+	// defaults. The sink vetoes an operation that disagrees with the chosen mode.
+	flags := fofxEarlyFailure | fofSilent | fofNoConfirmation | fofNoErrorUI | fofNoConnectedElements | fofNoRecurseReparse
+	if !permanent {
+		flags |= fofxRecycleOnDelete | fofxAddUndoRecord
+	}
 	if err := shellHRESULT(operation.call(fileOpSetFlags, uintptr(flags))); err != nil {
 		return err
 	}
@@ -88,7 +100,7 @@ func recycleShellItem(path string) error {
 		return err
 	}
 	defer item.call(2)
-	sink = &recycleSink{vtable: &recycleSinkVtable}
+	sink = &removalSink{vtable: &removalSinkVtable, permanent: permanent}
 	sink.refs.Store(1)
 	if err := shellHRESULT(operation.call(fileOpDeleteItem, uintptr(unsafe.Pointer(item)), uintptr(unsafe.Pointer(sink)))); err != nil {
 		return err
@@ -99,46 +111,51 @@ func recycleShellItem(path string) error {
 	return sink.result(performErr, abortErr, aborted != 0)
 }
 
-type recycleSink struct {
-	vtable                       *[19]uintptr
-	refs                         atomic.Int32
-	mu                           sync.Mutex
-	refused, completed, recycled bool
-	err                          error
+type removalSink struct {
+	vtable                        *[19]uintptr
+	refs                          atomic.Int32
+	mu                            sync.Mutex
+	refused, completed, confirmed bool
+	permanent                     bool
+	err                           error
 }
 
-func (s *recycleSink) preDelete(flags uint32) uintptr {
+func (s *removalSink) preDelete(flags uint32) uintptr {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if flags&tsRecycle == 0 {
+	if (flags&tsRecycle != 0) == s.permanent {
 		s.refused = true
 		return eAbort
 	}
 	return 0
 }
 
-func (s *recycleSink) postDelete(hr uint32, newItem uintptr) uintptr {
+func (s *removalSink) postDelete(flags, hr uint32, newItem uintptr) uintptr {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.completed, s.err = true, shellHRESULT(hr)
-	s.recycled = s.err == nil && newItem != 0
-	if s.err != nil || !s.recycled {
+	s.confirmed = hr == 0 && ((s.permanent && newItem == 0 && flags&tsRecycle == 0) || (!s.permanent && newItem != 0 && flags&tsRecycle != 0))
+	if s.err != nil || !s.confirmed {
 		return eAbort
 	}
 	return 0
 }
 
-func (s *recycleSink) result(performErr, abortErr error, aborted bool) error {
+func (s *removalSink) result(performErr, abortErr error, aborted bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	unavailable, unconfirmed := ErrRecycleUnavailable, ErrRecycleUnconfirmed
+	if s.permanent {
+		unavailable, unconfirmed = ErrDeleteUnavailable, ErrDeleteUnconfirmed
+	}
 	if s.refused {
-		return ErrRecycleUnavailable
+		return unavailable
 	}
 	if s.err != nil {
 		return s.err
 	}
-	// A queue/Perform success alone does not establish that the item was recycled.
-	if s.completed && s.recycled {
+	// Queue/Perform success alone does not establish an item's outcome.
+	if s.completed && s.confirmed {
 		return nil
 	}
 	if performErr != nil {
@@ -148,15 +165,15 @@ func (s *recycleSink) result(performErr, abortErr error, aborted bool) error {
 		return abortErr
 	}
 	if aborted {
-		return ErrRecycleUnavailable
+		return unavailable
 	}
-	return ErrRecycleUnconfirmed
+	return unconfirmed
 }
 
 // Static callbacks avoid allocating a new, never-freed Windows callback for
 // every operation. The complete IFileOperationProgressSink ABI is represented.
-var recycleSinkVtable = [19]uintptr{
-	syscall.NewCallback(func(this *recycleSink, iid *windows.GUID, out *unsafe.Pointer) uintptr {
+var removalSinkVtable = [19]uintptr{
+	syscall.NewCallback(func(this *removalSink, iid *windows.GUID, out *unsafe.Pointer) uintptr {
 		if out == nil || iid == nil {
 			return ePointer
 		}
@@ -169,28 +186,28 @@ var recycleSinkVtable = [19]uintptr{
 		this.refs.Add(1)
 		return 0
 	}),
-	syscall.NewCallback(func(this *recycleSink) uintptr { return uintptr(this.refs.Add(1)) }),
-	syscall.NewCallback(func(this *recycleSink) uintptr { return uintptr(this.refs.Add(-1)) }),
-	syscall.NewCallback(func(this *recycleSink) uintptr { return 0 }),                                 // StartOperations
-	syscall.NewCallback(func(this *recycleSink, hr uintptr) uintptr { return 0 }),                     // FinishOperations
-	syscall.NewCallback(func(this *recycleSink, flags, item, name uintptr) uintptr { return eAbort }), // PreRename
-	syscall.NewCallback(func(this *recycleSink, flags, item, name, hr, created uintptr) uintptr { return eAbort }),
-	syscall.NewCallback(func(this *recycleSink, flags, item, dest, name uintptr) uintptr { return eAbort }), // PreMove
-	syscall.NewCallback(func(this *recycleSink, flags, item, dest, name, hr, created uintptr) uintptr { return eAbort }),
-	syscall.NewCallback(func(this *recycleSink, flags, item, dest, name uintptr) uintptr { return eAbort }), // PreCopy
-	syscall.NewCallback(func(this *recycleSink, flags, item, dest, name, hr, created uintptr) uintptr { return eAbort }),
-	syscall.NewCallback(func(this *recycleSink, flags, item uintptr) uintptr {
+	syscall.NewCallback(func(this *removalSink) uintptr { return uintptr(this.refs.Add(1)) }),
+	syscall.NewCallback(func(this *removalSink) uintptr { return uintptr(this.refs.Add(-1)) }),
+	syscall.NewCallback(func(this *removalSink) uintptr { return 0 }),                                 // StartOperations
+	syscall.NewCallback(func(this *removalSink, hr uintptr) uintptr { return 0 }),                     // FinishOperations
+	syscall.NewCallback(func(this *removalSink, flags, item, name uintptr) uintptr { return eAbort }), // PreRename
+	syscall.NewCallback(func(this *removalSink, flags, item, name, hr, created uintptr) uintptr { return eAbort }),
+	syscall.NewCallback(func(this *removalSink, flags, item, dest, name uintptr) uintptr { return eAbort }), // PreMove
+	syscall.NewCallback(func(this *removalSink, flags, item, dest, name, hr, created uintptr) uintptr { return eAbort }),
+	syscall.NewCallback(func(this *removalSink, flags, item, dest, name uintptr) uintptr { return eAbort }), // PreCopy
+	syscall.NewCallback(func(this *removalSink, flags, item, dest, name, hr, created uintptr) uintptr { return eAbort }),
+	syscall.NewCallback(func(this *removalSink, flags, item uintptr) uintptr {
 		return this.preDelete(uint32(flags))
 	}),
-	syscall.NewCallback(func(this *recycleSink, flags, item, hr, created uintptr) uintptr {
-		return this.postDelete(uint32(hr), created)
+	syscall.NewCallback(func(this *removalSink, flags, item, hr, created uintptr) uintptr {
+		return this.postDelete(uint32(flags), uint32(hr), created)
 	}),
-	syscall.NewCallback(func(this *recycleSink, flags, dest, name uintptr) uintptr { return eAbort }), // PreNew
-	syscall.NewCallback(func(this *recycleSink, flags, dest, name, template, attrs, hr, created uintptr) uintptr {
+	syscall.NewCallback(func(this *removalSink, flags, dest, name uintptr) uintptr { return eAbort }), // PreNew
+	syscall.NewCallback(func(this *removalSink, flags, dest, name, template, attrs, hr, created uintptr) uintptr {
 		return eAbort
 	}),
-	syscall.NewCallback(func(this *recycleSink, total, soFar uintptr) uintptr { return 0 }),
-	syscall.NewCallback(func(this *recycleSink) uintptr { return 0 }), // ResetTimer
-	syscall.NewCallback(func(this *recycleSink) uintptr { return 0 }), // PauseTimer
-	syscall.NewCallback(func(this *recycleSink) uintptr { return 0 }), // ResumeTimer
+	syscall.NewCallback(func(this *removalSink, total, soFar uintptr) uintptr { return 0 }),
+	syscall.NewCallback(func(this *removalSink) uintptr { return 0 }), // ResetTimer
+	syscall.NewCallback(func(this *removalSink) uintptr { return 0 }), // PauseTimer
+	syscall.NewCallback(func(this *removalSink) uintptr { return 0 }), // ResumeTimer
 }

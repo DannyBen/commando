@@ -10,22 +10,34 @@ import (
 var (
 	ErrRecycleUnavailable = errors.New("Recycle Bin unavailable")
 	ErrRecycleUnconfirmed = errors.New("recycling was not confirmed")
+	ErrDeleteUnavailable  = errors.New("permanent deletion unavailable")
+	ErrDeleteUnconfirmed  = errors.New("deletion was not confirmed")
 )
 
-type RecycleResult struct {
+type RemovalResult struct {
 	Directory string   // Resolved backing directory, for updating alias listings.
-	Names     []string // Only entries confirmed to have reached the Recycle Bin.
+	Names     []string // Only entries confirmed removed by the requested operation.
 }
 
 // Recycle preflights all names and paths, then recycles in listing order and
 // stops at the first failure. Previously recycled entries are reported even
 // when a later item fails. There is no permanent-delete fallback.
-func Recycle(directory string, names []string) (RecycleResult, error) {
+func Recycle(directory string, names []string) (RemovalResult, error) {
 	return recycle(directory, names, ResolveOperationPath, recyclePaths)
 }
 
-func recycle(directory string, names []string, resolve func(string) (string, error), perform func([]string) (int, error)) (RecycleResult, error) {
-	var result RecycleResult
+// Delete permanently removes entries through the native shell. It shares the
+// whole-selection preflight and partial-result contract with recycling.
+func Delete(directory string, names []string) (RemovalResult, error) {
+	return removeSelection(directory, names, "delete", ResolveOperationPath, deletePaths)
+}
+
+func recycle(directory string, names []string, resolve func(string) (string, error), perform func([]string) (int, error)) (RemovalResult, error) {
+	return removeSelection(directory, names, "recycle", resolve, perform)
+}
+
+func removeSelection(directory string, names []string, operation string, resolve func(string) (string, error), perform func([]string) (int, error)) (RemovalResult, error) {
+	var result RemovalResult
 	if len(names) == 0 {
 		return result, nil
 	}
@@ -48,13 +60,13 @@ func recycle(directory string, names []string, resolve func(string) (string, err
 	for i, name := range names {
 		paths[i], err = resolve(filepath.Join(directory, name))
 		if err != nil {
-			return result, &os.PathError{Op: "recycle", Path: name, Err: err}
+			return result, &os.PathError{Op: operation, Path: name, Err: err}
 		}
 	}
 	count, err := perform(paths)
 	result.Names = append([]string(nil), names[:count]...)
 	if err != nil && count < len(names) {
-		err = &os.PathError{Op: "recycle", Path: names[count], Err: err}
+		err = &os.PathError{Op: operation, Path: names[count], Err: err}
 	}
 	return result, err
 }
