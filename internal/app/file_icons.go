@@ -64,7 +64,7 @@ func (v *view) withRowIcon(gtx layout.Context, p *panel, item entry, cut, sample
 		icon.used = v.fileIconClock
 		v.fileIcons[key] = icon
 	}
-	if !found && !item.file.Parent && !v.fileIconPending && v.loader != nil {
+	if !found && !v.fileIconPending && v.loader != nil {
 		v.wantFileIcon(key)
 	}
 	if found && icon.source != nil {
@@ -73,7 +73,7 @@ func (v *view) withRowIcon(gtx layout.Context, p *panel, item entry, cut, sample
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			padding := gtx.Dp(max(0, v.appearance.ContentPaddingHorizontal))
-			if found && icon.image.Size().X > 0 && !item.file.Parent {
+			if found && icon.image.Size().X > 0 {
 				defer op.Offset(image.Pt(padding, (gtx.Constraints.Min.Y-size)/2)).Push(gtx.Ops).Pop()
 				icon.image.Add(gtx.Ops)
 				paint.PaintOp{}.Add(gtx.Ops)

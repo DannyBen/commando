@@ -57,6 +57,44 @@ func TestFileIconsLoadWithoutChangingRowHeightAndReuseResults(t *testing.T) {
 	}
 }
 
+func TestParentIconsUseActualParentPathAndSharedCache(t *testing.T) {
+	folder := t.TempDir()
+	root := filepath.VolumeName(folder) + string(filepath.Separator)
+	for _, parent := range []string{folder, root} {
+		v := newPreviewView()
+		v.panels[0].path = filepath.Join(parent, "child")
+		v.loader = newDirectoryLoader(browser.ReadLocation, nil)
+		v.loader.readFileIcon = func(path string, size int) image.Image {
+			if path != parent {
+				t.Errorf("parent icon lookup = %q, want %q", path, parent)
+			}
+			return image.NewRGBA(image.Rect(0, 0, size, size))
+		}
+		var ops op.Ops
+		gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 24))}
+		item := entry{file: browser.Entry{Name: "..", Directory: true, Parent: true}}
+		row := func(gtx layout.Context) layout.Dimensions { return layout.Dimensions{Size: gtx.Constraints.Max} }
+		v.withFileIcon(gtx, &v.panels[0], item, false, row)
+		v.submitFileIcons()
+		select {
+		case result := <-v.loader.results:
+			if len(result.request.icons) != 1 || result.icons[0] == nil {
+				t.Fatal("parent icon did not use the directory worker")
+			}
+			v.acceptFileIcons(result)
+		case <-time.After(3 * time.Second):
+			v.loader.close()
+			t.Fatal("parent icon did not load")
+		}
+		v.fileIconWanted = nil
+		dims := v.withFileIcon(gtx, &v.panels[0], item, false, row)
+		if len(v.fileIconWanted) != 0 || dims.Size != image.Pt(400, 24) {
+			t.Fatal("parent icon bypassed the cache or changed row dimensions")
+		}
+		v.finishOperations()
+	}
+}
+
 func TestIconsSettingsDefaultToggleCancelAndSave(t *testing.T) {
 	v := newPreviewView()
 	if !v.settingsValues.Get(settings.CatalogueDefault, settingIconsEnabled).Bool {
