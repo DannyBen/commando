@@ -18,6 +18,7 @@ type fileRow struct {
 	dragCandidate bool
 	dragOrigin    image.Point
 	suppressClick bool
+	clicks        int // Completed clicks in Gio's current sequence, excluding drags.
 }
 
 func (r *fileRow) Layout(gtx layout.Context, contents layout.Widget) layout.Dimensions {
@@ -34,6 +35,7 @@ func (r *fileRow) updatePointer(gtx layout.Context) (clicked, dragged bool) {
 	enabled := r.enabled(gtx)
 	if !enabled {
 		r.pressed, r.dragCandidate = false, false
+		r.clicks = 0
 	}
 	for {
 		e, ok := gtx.Event(pointer.Filter{Target: &r.secondary, Kinds: pointer.Press | pointer.Release | pointer.Cancel | pointer.Move | pointer.Drag})
@@ -55,6 +57,7 @@ func (r *fileRow) updatePointer(gtx layout.Context) (clicked, dragged bool) {
 			threshold := gtx.Dp(6)
 			if r.dragCandidate && pe.Buttons == pointer.ButtonPrimary && delta.X*delta.X+delta.Y*delta.Y >= threshold*threshold {
 				dragged, r.dragCandidate, r.suppressClick = true, false, true
+				r.clicks = 0
 			}
 		case pointer.Release:
 			clicked = clicked || r.pressed && r.contains(pe.Position.Round())
@@ -68,5 +71,17 @@ func (r *fileRow) updatePointer(gtx layout.Context) (clicked, dragged bool) {
 
 func (r *fileRow) Update(gtx layout.Context) (widget.Click, bool) {
 	click, ok := r.clickTarget.Update(gtx)
-	return click, ok && !r.suppressClick
+	if !ok || r.suppressClick {
+		return click, false
+	}
+	// Gio owns timing. Count only completed, unmodified clicks so a drag or
+	// marking gesture cannot become the first half of an opening double-click.
+	if click.NumClicks == 1 || click.Modifiers != 0 {
+		r.clicks = 0
+	}
+	if click.Modifiers == 0 {
+		r.clicks++
+		click.NumClicks = r.clicks
+	}
+	return click, true
 }

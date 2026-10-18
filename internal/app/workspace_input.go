@@ -63,6 +63,12 @@ func (v *view) update(gtx layout.Context) {
 				p.prefix = ""
 				p.reveal, p.err = true, nil
 				gtx.Execute(key.FocusCmd{Tag: &v.focus})
+				if click.NumClicks == 2 && click.Modifiers == 0 {
+					if !v.chooseSettingsFile(gtx) {
+						v.activateSelected()
+					}
+					return // Opening may replace the listing and its row controls.
+				}
 			}
 		}
 	}
