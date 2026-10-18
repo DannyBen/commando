@@ -188,8 +188,8 @@ func TestShortcutNoOpAndRejectedEditsStaySilent(t *testing.T) {
 	send(pressed(key.NameReturn))
 	recorder.played = nil
 	send(modified("C", key.ModCtrl))
-	if len(recorder.played) != 0 || v.settingsInteraction().errorText != "Conflict: Copy" {
-		t.Fatal("rejected capture played a confirmation cue", recorder.played)
+	if !slices.Equal(recorder.played, []sound.Name{sound.Question}) || v.confirmationInteraction() == nil {
+		t.Fatal("conflicting capture did not announce its question once", recorder.played)
 	}
 }
 

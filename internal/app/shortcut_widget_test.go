@@ -134,13 +134,15 @@ func TestShortcutWidgetConflictsAndProtectedSlots(t *testing.T) {
 	_, s := openShortcutWidget(t, v, send, "Next metadata column")
 	send(pressed(key.NameReturn))
 	send(modified("C", key.ModCtrl))
-	if !s.capturing || s.errorText != "Conflict: Copy" || s.dirty || s.draft.Overridden(s.fields[0].Key) {
+	if v.confirmationInteraction() == nil || s.capturing || s.errorText != "" || s.dirty || s.draft.Overridden(s.fields[0].Key) {
 		t.Fatal("conflict changed a binding or was not identified", s.errorText)
 	}
+	send(pressed(key.NameEscape))
+	send(pressed(key.NameReturn))
 	send(modified("Y", key.ModCtrl))
 	send(pressed(key.NameTab), pressed(key.NameReturn))
 	send(modified("Y", key.ModCtrl))
-	if !s.capturing || s.errorText != "Conflict: Shortcut 1" || s.draft.Overridden(s.fields[1].Key) {
+	if v.confirmationInteraction() == nil || s.capturing || s.draft.Overridden(s.fields[1].Key) {
 		t.Fatal("duplicate slots were accepted or lost their conflict", s.errorText)
 	}
 	send(pressed(key.NameEscape))
@@ -176,9 +178,11 @@ func TestShortcutWidgetCapturesNativeInsertWithoutPasting(t *testing.T) {
 	send(pressed(key.NameReturn))
 	v.nativeKeys.push(modified(insertKey, key.ModShift))
 	send()
-	if !s.capturing || s.errorText != "Conflict: Paste" || v.transferPending {
+	if v.confirmationInteraction() == nil || s.capturing || v.transferPending {
 		t.Fatal("native Shift+Insert pasted or bypassed conflict checking")
 	}
+	send(pressed(key.NameEscape))
+	send(pressed(key.NameReturn))
 	v.nativeKeys.push(modified(insertKey, key.ModCtrl))
 	send()
 	if s.capturing || v.settingText(s.fields[0].Key) != "Ctrl+Insert" || v.transferPending || v.settingsValues.Overridden(s.fields[0].Key) {

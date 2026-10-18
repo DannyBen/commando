@@ -11,6 +11,7 @@ const (
 	eventValueChanged        interactionEvent = "value_changed"
 	eventPaletteOpened       interactionEvent = "palette_opened"
 	eventWidgetOpened        interactionEvent = "widget_opened"
+	eventQuestionOpened      interactionEvent = "question_opened"
 	eventEditStarted         interactionEvent = "edit_started"
 	eventEditConfirmed       interactionEvent = "edit_confirmed"
 	eventSettingsSaved       interactionEvent = "settings_saved"
@@ -32,6 +33,7 @@ var interactionSounds = map[interactionEvent]sound.Name{
 	eventValueChanged:        sound.Navigation,
 	eventPaletteOpened:       sound.Palette,
 	eventWidgetOpened:        sound.Settings,
+	eventQuestionOpened:      sound.Question,
 	eventEditStarted:         sound.Settings,
 	eventEditConfirmed:       sound.Settings,
 	eventSettingsSaved:       sound.Settings,

@@ -187,6 +187,7 @@ type settingsSession struct {
 	themeLibraryResult *loadResult // Choices arriving during text editing wait.
 	bindingCommand     *command
 	capturing          bool
+	returnHeld         bool
 }
 
 type settingsSaveRequest struct {
@@ -203,6 +204,9 @@ func (s *settingsSession) protectsListing() bool { return !s.selecting }
 func (s *settingsSession) holdsOperations() bool { return s.pending }
 func (s *settingsSession) blocksPanels() bool    { return s.pending }
 func (s *settingsSession) canSuspendFor(next interactionSession) bool {
+	if _, ok := next.(*confirmationSession); ok {
+		return !s.pending && !s.selecting && !s.capturing && !s.editing
+	}
 	if !s.selecting {
 		return false
 	}
@@ -556,6 +560,14 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 	}
 	if save && s.bindingCommand != nil {
 		if conflict := findBindingConflict(s.draft); conflict != nil {
+			if resolved, message, ok := reassignBindings(s.draft, s.bindingCommand.id, s.selected); ok {
+				v.startConfirmation(gtx, &confirmationSession{panel: s.panel, message: message, acceptLabel: "Save and reassign", held: map[key.Name]bool{key.NameReturn: s.returnHeld},
+					accept: func(gtx layout.Context) {
+						s.draft = resolved
+						v.finishSettingsWidget(gtx, true)
+					}})
+				return
+			}
 			s.errorText = shortcutConflictText(conflict, s.bindingCommand.id, s.selected)
 			return
 		}
@@ -776,8 +788,13 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		if !ok {
 			break
 		}
-		if ke, ok := e.(key.Event); ok && ke.State == key.Press {
-			keys = append(keys, ke)
+		if ke, ok := e.(key.Event); ok {
+			if ke.Name == key.NameReturn || ke.Name == key.NameEnter {
+				s.returnHeld = ke.State == key.Press
+			}
+			if ke.State == key.Press {
+				keys = append(keys, ke)
+			}
 		}
 	}
 	if s.editing {

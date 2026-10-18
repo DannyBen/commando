@@ -126,7 +126,9 @@ func (v *view) activeEditor() *widget.Editor {
 
 func (v *view) focusInteraction(gtx layout.Context) {
 	var target any = &v.focus
-	if editor := v.activeEditor(); editor != nil {
+	if s := v.confirmationInteraction(); s != nil {
+		target = s
+	} else if editor := v.activeEditor(); editor != nil {
 		target = editor
 	}
 	gtx.Execute(key.FocusCmd{Tag: target})
@@ -137,6 +139,8 @@ func (v *view) focusInteraction(gtx layout.Context) {
 // A submitted name mutation must finish before its editor can be left.
 func (v *view) cancelInteraction(gtx layout.Context) bool {
 	switch s := v.interaction.current.(type) {
+	case *confirmationSession:
+		return false // Only its explicit buttons and Escape resolve a decision.
 	case *settingsSession:
 		return s.selecting
 	case *filterSession:
@@ -162,6 +166,10 @@ func (v *view) cancelInteraction(gtx layout.Context) bool {
 // Escape uses the same session cancellation as other input routes, with one
 // semantic cue. Submitted name mutations remain protected until reconciliation.
 func (v *view) escape(gtx layout.Context) {
+	if s := v.confirmationInteraction(); s != nil {
+		v.finishConfirmation(gtx, s, false)
+		return
+	}
 	if s := v.settingsInteraction(); s != nil {
 		if s.pending {
 			return
@@ -221,6 +229,10 @@ func (v *view) escape(gtx layout.Context) {
 // Return true when a foreground session owns this key, even when the session
 // ignores it. Browsing shortcuts must not leak through an editor or choice.
 func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
+	if s := v.confirmationInteraction(); s != nil {
+		v.confirmationKey(gtx, s, ke)
+		return true
+	}
 	if s := v.settingsInteraction(); s != nil && s.capturing {
 		v.captureShortcutKey(gtx, ke)
 		return true
@@ -242,6 +254,10 @@ func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
 // Editors consume their events before ordinary browsing, preserving event
 // order and native text handling. True means editing is still active.
 func (v *view) updateInteraction(gtx layout.Context) bool {
+	if s := v.confirmationInteraction(); s != nil {
+		v.updateConfirmation(gtx, s)
+		return true
+	}
 	if s := v.settingsInteraction(); s != nil {
 		v.updateSettingsWidget(gtx)
 		return v.settingsInteraction() != s || !s.selecting

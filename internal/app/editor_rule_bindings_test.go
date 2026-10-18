@@ -73,9 +73,11 @@ func TestSavedEditorRuleShortcutWidgetUsesSharedSaveAndConflicts(t *testing.T) {
 	}
 	send(pressed(key.NameReturn))
 	send(modified("C", key.ModCtrl))
-	if s.errorText != "Conflict: Copy" || !s.capturing {
+	if v.confirmationInteraction() == nil || s.capturing {
 		t.Fatal("saved rule bypassed shared conflicts", s.errorText)
 	}
+	send(pressed(key.NameEscape))
+	send(pressed(key.NameReturn))
 	send(modified("Y", key.ModCtrl))
 	send(modified(key.NameReturn, key.ModCtrl))
 	waitEditorRuleSave(t, v, s)

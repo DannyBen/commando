@@ -98,8 +98,7 @@ func (v *view) updateShortcutCapture(gtx layout.Context) {
 				return
 			}
 		} else if edit, ok := e.(key.EditEvent); ok && utf8.RuneCountInString(edit.Text) == 1 && strings.TrimSpace(edit.Text) != "" {
-			if v.setShortcutDraft(edit.Text) {
-				v.finishShortcutCapture(gtx)
+			if v.captureShortcutDraft(gtx, edit.Text) {
 				return
 			}
 		}
@@ -107,6 +106,9 @@ func (v *view) updateShortcutCapture(gtx layout.Context) {
 }
 
 func (v *view) captureShortcutKey(gtx layout.Context, ke key.Event) {
+	if ke.Name == key.NameReturn || ke.Name == key.NameEnter {
+		v.settingsInteraction().returnHeld = ke.State == key.Press
+	}
 	if ke.State != key.Press {
 		return
 	}
@@ -128,9 +130,32 @@ func (v *view) captureShortcutKey(gtx layout.Context, ke key.Event) {
 	if name == key.NameEnter {
 		name = key.NameReturn
 	}
-	if v.setShortcutDraft((shortcut{Name: name, Modifiers: ke.Modifiers}).String()) {
+	v.captureShortcutDraft(gtx, (shortcut{Name: name, Modifiers: ke.Modifiers}).String())
+}
+
+func (v *view) captureShortcutDraft(gtx layout.Context, text string) bool {
+	if v.setShortcutDraft(text) {
 		v.finishShortcutCapture(gtx)
+		return true
 	}
+	s := v.settingsInteraction()
+	candidate := s.draft.Clone()
+	if err := candidate.Set(bindingSettingsCatalogue(), s.fields[s.selected].Key, settings.Value{Text: text}); err != nil {
+		return false
+	}
+	resolved, message, ok := reassignBindings(candidate, s.bindingCommand.id, s.selected)
+	if !ok {
+		return false
+	}
+	v.setShortcutCapture(s, false)
+	s.errorText = ""
+	assigned, _ := parseBindingOverride(text)
+	held := map[key.Name]bool{assigned.Shortcut.Name: true}
+	return v.startConfirmation(gtx, &confirmationSession{panel: s.panel, message: message, acceptLabel: "Reassign", held: held,
+		accept: func(gtx layout.Context) {
+			s.draft, s.dirty = resolved, true
+			v.announceInteraction(eventEditConfirmed)
+		}})
 }
 
 func (v *view) finishShortcutCapture(gtx layout.Context) {

@@ -16,6 +16,7 @@ const (
 	Cancel              Name = "cancel"
 	Palette             Name = "palette"
 	Settings            Name = "settings"
+	Question            Name = "question"
 	DirectoryNavigation Name = "directoryNavigation"
 	MessageInfo         Name = "messageInfo"
 	MessageSuccess      Name = "messageSuccess"

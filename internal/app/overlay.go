@@ -34,6 +34,10 @@ func (o *overlay) outsidePress(gtx layout.Context) bool {
 }
 
 func (o *overlay) layout(gtx layout.Context, top, preferredWidth int, colors ThemeColors, backdropOpacity float32, content layout.Widget) layout.Dimensions {
+	return o.layoutAt(gtx, top, top, preferredWidth, colors, backdropOpacity, content)
+}
+
+func (o *overlay) layoutAt(gtx layout.Context, top, backdropTop, preferredWidth int, colors ThemeColors, backdropOpacity float32, content layout.Widget) layout.Dimensions {
 	area := clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &o.barrier)
 	area.Pop()
@@ -42,7 +46,7 @@ func (o *overlay) layout(gtx layout.Context, top, preferredWidth int, colors The
 	top = max(0, min(top, gtx.Constraints.Max.Y))
 	backdrop := colors.Surface
 	backdrop.A = uint8(float32(backdrop.A) * max(0, min(1, backdropOpacity)))
-	paint.FillShape(gtx.Ops, backdrop, clip.Rect{Min: image.Pt(0, top), Max: gtx.Constraints.Max}.Op())
+	paint.FillShape(gtx.Ops, backdrop, clip.Rect{Min: image.Pt(0, backdropTop), Max: gtx.Constraints.Max}.Op())
 	position := op.Offset(image.Pt(x, top)).Push(gtx.Ops)
 	gtx.Constraints.Min = image.Pt(width, 0)
 	gtx.Constraints.Max.X = width

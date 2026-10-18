@@ -48,7 +48,14 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 		v.layoutPalette(gtx)
 	}
 	if v.settingsWidget() != nil {
-		v.layoutSettingsWidget(gtx)
+		settingsContext := gtx
+		if v.confirmationInteraction() != nil {
+			settingsContext.Source = settingsContext.Source.Disabled()
+		}
+		v.layoutSettingsWidget(settingsContext)
+	}
+	if v.confirmationInteraction() != nil {
+		v.layoutConfirmation(gtx)
 	}
 	return dims
 }
