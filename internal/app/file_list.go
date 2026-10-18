@@ -102,8 +102,11 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 						bg = v.appearance.Colors.NameRow
 					} else {
 						active = storedRow == p.selected && index == v.active && transient < 0 && !p.navigating
+						state := p.rows[row].state(gtx, active)
+						active = state.selectedAppearance()
 						cut = v.cutEntry(index, storedRow)
 						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, cut)
+						bg = state.background(bg)
 					}
 					edge := color.NRGBA{}
 					if naming && v.nameInteraction().draft() {

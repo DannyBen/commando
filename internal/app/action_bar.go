@@ -31,10 +31,12 @@ func (b *actionBar) layout(gtx layout.Context, labels []string, selected, height
 			size := image.Pt(gtx.Constraints.Max.X, height)
 			gtx.Constraints = layout.Exact(size)
 			return b.buttons[i].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				state := b.buttons[i].state(gtx, i == selected)
 				bg, fg := colors.Surface, colors.Foreground
-				if i == selected {
+				if state.selectedAppearance() {
 					bg, fg = colors.Selected, colors.SelectedName
 				}
+				bg = state.background(bg)
 				paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 				if i > 0 {
 					paint.FillShape(gtx.Ops, colors.Border, clip.Rect{Max: image.Pt(gtx.Dp(1), height)}.Op())

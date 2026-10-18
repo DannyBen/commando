@@ -429,6 +429,12 @@ Owners supply selection and disabled contexts through the interaction controller
 hover must never change focus or selection. Keep semantic activation in existing
 handlers. File rows extend the shared target for right-click and drag, including
 click suppression after dragging. New controls should reuse this foundation.
+Hover uses `targetState.background` on the actual normal or selected background,
+with the shared `hoverOpacity` in theme.go. A primary press inside the target
+uses its exact existing selection colors through `selectedAppearance`, without
+hover shading. File rows retain filename-derived selection colors. Activate on release through existing
+handlers; never delay dismissal to keep a pressed appearance visible. Resolve
+text against that resulting background. Passive previews and unavailable actions retain their normal styling.
 
 ## Diagnostics
 

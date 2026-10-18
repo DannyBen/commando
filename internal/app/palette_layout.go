@@ -87,15 +87,19 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 					}
 					return s.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						size := image.Pt(gtx.Constraints.Max.X, rowHeight)
+						state := s.rows[row].state(gtx, row == s.selected)
+						available := s.results[row].command.allowed(v)
+						state.Enabled = state.Enabled && available
 						bg, fg := v.appearance.Colors.Surface, v.appearance.Colors.Foreground
 						role := contrastPrimary
-						if row == s.selected {
+						if state.selectedAppearance() {
 							bg, fg = v.appearance.Colors.Selected, v.appearance.Colors.SelectedName
 						}
-						if row != s.selected && !s.results[row].command.allowed(v) {
+						if !state.selectedAppearance() && !available {
 							fg = v.appearance.Colors.Muted
 							role = contrastSecondary
 						}
+						bg = state.background(bg)
 						paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 						gtx.Constraints = layout.Exact(size)
 						return v.contentInset().Layout(gtx, v.textAs(role, v.textOn(bg, func(gtx layout.Context) layout.Dimensions {

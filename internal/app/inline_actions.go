@@ -168,14 +168,21 @@ func (v *view) inlineActionContents(gtx layout.Context, row, rowHeight int) layo
 	} else {
 		option := index - len(a.headers)
 		value = "  " + a.options[option]
+		state := targetState{Selected: option == a.selected}
+		if target := v.panels[a.panel].rows[row]; target != nil {
+			state = target.state(gtx, option == a.selected)
+		}
 		if option == a.selected {
 			value = "> " + a.options[option]
-			if v.active == a.panel {
+		}
+		if state.selectedAppearance() {
+			if v.active == a.panel || state.pressedInside() {
 				bg, fg = v.appearance.Colors.Selected, v.appearance.Colors.SelectedName
 			} else {
 				bg = v.appearance.Colors.InlineInactiveSelected
 			}
 		}
+		bg = state.background(bg)
 	}
 	size := image.Pt(gtx.Constraints.Max.X, rowHeight)
 	paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())

@@ -19,6 +19,9 @@ var themeFontFiles embed.FS
 
 var themeFont = bundledFonts(themeFontFiles)
 
+// Shared pointer feedback strength; independent of theme colors and selection.
+const hoverOpacity = 0.08
+
 type contrastRole uint8
 
 const (
