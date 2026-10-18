@@ -25,6 +25,7 @@ func (v *view) update(gtx layout.Context) {
 	}
 	for pi := range v.panels {
 		p := &v.panels[pi]
+		v.updateLocationBar(gtx, pi)
 		pointerContext := gtx
 		if v.interaction.panelsBlocked() {
 			pointerContext = gtx.Disabled()

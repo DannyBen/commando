@@ -9,7 +9,6 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/text"
 	"gioui.org/widget/material"
 	"github.com/dannyben/commando/internal/browser"
 )
@@ -22,17 +21,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.headerBand(gtx, v.locationBarHeight(gtx, textHeight), v.appearance.Colors.Header, func(gtx layout.Context) layout.Dimensions {
-				fg := v.appearance.Colors.Foreground
-				if index == v.active {
-					fg = v.appearance.Colors.ActiveLocation
-				}
-				if v.locationEditing() && index == v.active {
-					s := v.interaction.current.(*locationSession)
-					return v.completionEditor(gtx, &v.location, &s.completion, "Path")
-				}
-				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), v.appearance.TextSize, fg, text.Start)
-			}, index == v.active)
+			return v.layoutLocationBar(gtx, index, v.locationBarHeight(gtx, textHeight))
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
