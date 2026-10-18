@@ -9,6 +9,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/text"
 	"gioui.org/widget/material"
 	"github.com/dannyben/commando/internal/browser"
 )
@@ -41,6 +42,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			transient, extra := v.transientRows(index)
 			count := len(p.items) + extra
 			if count == 0 {
+				v.emptyFolderContents(gtx, index, rowHeight)
 				p.layoutEmptySpace(gtx, 0, gtx.Constraints.Max.X)
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
@@ -155,6 +157,44 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			return dims
 		}),
 	)
+}
+
+// A passive focus cue, never a file entry or an actionable row.
+func (v *view) emptyFolderContents(gtx layout.Context, index, rowHeight int) {
+	p := &v.panels[index]
+	label := p.emptyFolderLabel()
+	if label == "" {
+		return
+	}
+	background := v.appearance.Colors.Surface
+	if index == v.active {
+		background = v.appearance.Colors.Selected
+	}
+	v.fileRowSurface(gtx, image.Pt(gtx.Constraints.Max.X, min(rowHeight, gtx.Constraints.Max.Y)), background, color.NRGBA{}, func(gtx layout.Context) layout.Dimensions {
+		return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				gtx.Constraints.Min.Y = 0
+				return v.textAs(contrastDimmedFile, func(gtx layout.Context) layout.Dimensions {
+					return v.rawLabel(gtx, label, v.appearance.TextSize, v.hintColor(), text.Start)
+				})(gtx)
+			})
+		})
+	})
+}
+
+func (p *panel) emptyFolderLabel() string {
+	if p.showParentEntry || p.drives || p.loading || p.err != nil || p.path == "" || len(p.items) != 0 {
+		return ""
+	}
+	for _, file := range p.entries {
+		if !file.Parent {
+			if p.filter != "" {
+				return "No matching entries"
+			}
+			return "No visible entries"
+		}
+	}
+	return "Empty folder"
 }
 
 // Only the unused list area is a focus target. Rows, editors, transient actions,

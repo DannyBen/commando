@@ -6,6 +6,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"image/color"
 	"unicode"
 )
 
@@ -70,6 +71,11 @@ func (v *view) textEditor(editor *widget.Editor, hint string) material.EditorSty
 	style.TextSize = v.appearance.TextSize
 	style.Color = v.resolvedText(v.appearance.Colors.EditorText)
 	style.SelectionColor = v.resolvedTextSelection(style.Color, v.currentTextBackground())
-	style.HintColor = v.resolvedText(style.HintColor)
+	style.HintColor = v.hintColor()
 	return style
+}
+
+// Share Gio's editor-placeholder dimming with passive listing hints.
+func (v *view) hintColor() color.NRGBA {
+	return v.resolvedText(material.Editor(v.theme, nil, "").HintColor)
 }
