@@ -34,15 +34,10 @@ func (v *view) updateSettingsChoices(gtx layout.Context, s *settingsSession) {
 			if !row.buttons[choice].Clicked(gtx) {
 				continue
 			}
-			if s.editing && !v.applySettingDraft(gtx) {
-				v.focusInteraction(gtx)
-				return
-			}
-			if v.settingsInteraction() != s {
-				return
-			}
 			moved := s.selected != fieldIndex || s.actionsFocused
-			s.selected, s.actionsFocused, s.errorText = fieldIndex, false, ""
+			if !v.focusSettingsField(gtx, s, fieldIndex) {
+				return
+			}
 			d, _ := settings.CatalogueDefault.Definition(field.Key)
 			value := settings.Value{}
 			switch {

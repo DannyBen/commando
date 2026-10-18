@@ -45,6 +45,10 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 			d, _ := settings.CatalogueDefault.Definition(field.Key)
 			path := field.IsPath()
 			focused := i == s.selected && !s.selecting && !s.actionsFocused && v.settingsInteraction() == s
+			var target *valueTarget
+			if field.Control != "toggle" && field.Control != "choice" {
+				target = s.valueTarget(field.Key)
+			}
 
 			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, rowHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
@@ -79,7 +83,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 								value = "Enter a value"
 							}
 						}
-						if focused {
+						if focused || target != nil && target.state(gtx, false).pressedInside() {
 							return v.label(gtx, value, v.appearance.TextSize, v.appearance.Colors.SelectedName, text.Start)
 						}
 						return v.label(gtx, value, v.appearance.TextSize, v.appearance.Colors.Filename, text.Start)
@@ -92,13 +96,15 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 					return v.columnLayout(gtx, valueWidth, func(gtx layout.Context) layout.Dimensions {
 						return v.label(gtx, field.Label, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 					}, func(gtx layout.Context) layout.Dimensions {
-						valueControl := func(gtx layout.Context) layout.Dimensions {
-							if focused && !s.editing && field.Control != "toggle" && field.Control != "choice" {
-								paint.FillShape(gtx.Ops, v.appearance.Colors.Selected, clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, textHeight)}.Op())
-							}
+						drawValue := func(gtx layout.Context) layout.Dimensions {
 							background := v.appearance.Colors.Surface
-							if focused && !s.editing && field.Control != "toggle" && field.Control != "choice" {
-								background = v.appearance.Colors.Selected
+							if target != nil && !(s.editing && s.selected == i) {
+								state := target.state(gtx, focused)
+								if state.selectedAppearance() {
+									background = v.appearance.Colors.Selected
+								}
+								background = state.background(background)
+								paint.FillShape(gtx.Ops, background, clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, textHeight)}.Op())
 							}
 							dims := (layout.Inset{Left: 4, Right: 4}).Layout(gtx, v.textOn(background, control))
 							if field.Control == "stepper-progress" {
@@ -109,6 +115,16 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 								paint.FillShape(gtx.Ops, v.appearance.Colors.Filename, clip.Rect{Min: image.Pt(0, y), Max: image.Pt(int(float64(width)*ratio), y+gtx.Dp(1))}.Op())
 							}
 							return dims
+						}
+						valueControl := func(gtx layout.Context) layout.Dimensions {
+							if target == nil || s.editing && s.selected == i {
+								return drawValue(gtx)
+							}
+							if v.settingsInteraction() != s || s.pending || s.selecting || s.capturing || s.deleted || field.Control == "shortcut" && !shortcutFieldEditable(s, i) {
+								gtx = gtx.Disabled()
+							}
+							gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, textHeight))
+							return target.layout(gtx, !s.editing && settingsFieldSteps(field), drawValue)
 						}
 						if color, ok := v.settingSwatch(field.Key); ok {
 							return colorValueControl(gtx, textHeight, color, v.appearance.Colors.Border, valueControl)

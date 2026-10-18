@@ -172,6 +172,7 @@ type settingsSession struct {
 	palette            *paletteSession
 	actions            actionBar
 	choices            map[string]*settingsChoiceRow
+	values             map[string]*valueTarget
 	actionsFocused     bool
 	action             int
 	afterSave          func() // Optional navigation after a successful save.
@@ -770,6 +771,14 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	}
 	v.updateSettingsChoices(gtx, s)
 	if v.settingsInteraction() != s {
+		return
+	}
+	v.updateSettingsValues(gtx, s)
+	if v.settingsInteraction() != s {
+		return
+	}
+	if s.capturing {
+		v.updateShortcutCapture(gtx)
 		return
 	}
 
