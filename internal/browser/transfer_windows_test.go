@@ -9,6 +9,7 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/dannyben/commando/internal/diagnostics"
 	"golang.org/x/sys/windows"
 )
 
@@ -37,9 +38,13 @@ func TestWindowsTransferTraceRecordsConflictCallbacksAndFinalOutcome(t *testing.
 		t.Fatal(err)
 	}
 	defer folder.call(2)
-	var buf bytes.Buffer
+	tracePath, stopTrace, err := EnableTransferTrace(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stopTrace()
 	sink := newTransferSink(TransferRequest{Paths: []string{source}, Directory: target})
-	sink.trace = &transferBatchTrace{trace: &transferTrace{writer: &buf}, id: 1}
+	sink.trace = &transferBatchTrace{id: diagnostics.NextID()}
 	defer sink.releaseSources()
 	this, ptr, dest := uintptr(unsafe.Pointer(sink)), uintptr(unsafe.Pointer(item)), uintptr(unsafe.Pointer(folder))
 	for _, status := range []uint32{0x0027000b, 0x00270005} {
@@ -54,7 +59,11 @@ func TestWindowsTransferTraceRecordsConflictCallbacksAndFinalOutcome(t *testing.
 	if err != nil || summary.Skipped != 1 || summary.Completed != 0 || len(observations) != 0 {
 		t.Fatal("pending and final callbacks were not reduced to one skip")
 	}
-	records := decodeTransferTrace(t, &buf)
+	traceData, err := os.ReadFile(tracePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	records := decodeTransferTrace(t, bytes.NewReader(traceData))
 	if len(records) != 4 {
 		t.Fatalf("callback events: %+v", records)
 	}

@@ -39,6 +39,7 @@ type nodeMetadata struct {
 	Identity                             string
 	Title                                *string
 	Visible                              *bool
+	Live                                 *bool
 	Minimum                              *float64 `toml:"min"`
 	Maximum                              *float64 `toml:"max"`
 	Step                                 float64
@@ -303,7 +304,7 @@ func readMetadata(md *toml.MetaData, ui map[string]toml.Primitive, path []string
 
 func allowMetadata(known map[string]bool, key string, leaf bool) {
 	known[key] = true
-	for _, property := range []string{"label", "palette", "title", "visible", "description", "identity", "category", "preview"} {
+	for _, property := range []string{"label", "palette", "title", "visible", "description", "identity", "category", "preview", "live"} {
 		known[key+"."+property] = true
 	}
 	if leaf {
@@ -315,6 +316,9 @@ func allowMetadata(known map[string]bool, key string, leaf bool) {
 
 func (c *Catalogue) addWidget(key, parent, owner string, m nodeMetadata, visible, leaf bool) (string, error) {
 	if m.Title == nil {
+		if m.Live != nil {
+			return "", fmt.Errorf("live without widget title: %s", key)
+		}
 		if m.Preview != "" {
 			return "", fmt.Errorf("preview without widget title: %s", key)
 		}
@@ -346,7 +350,7 @@ func (c *Catalogue) addWidget(key, parent, owner string, m nodeMetadata, visible
 		}
 		parent = categoryKey
 	}
-	c.UI.Widgets = append(c.UI.Widgets, Widget{Key: key, Parent: parent, Label: label, Title: *m.Title, Preview: m.Preview, Visible: visible})
+	c.UI.Widgets = append(c.UI.Widgets, Widget{Key: key, Parent: parent, Label: label, Title: *m.Title, Preview: m.Preview, Visible: visible, Deferred: m.Live != nil && !*m.Live})
 	return key, nil
 }
 

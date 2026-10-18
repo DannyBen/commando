@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gioui.org/layout"
+	"github.com/dannyben/commando/internal/diagnostics"
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/windowshell"
 )
@@ -16,6 +17,7 @@ type nativeSession struct {
 	panel      int
 	request    shellRequest
 	dispatched bool
+	traceID    uint64
 }
 
 func (s *nativeSession) interactionPanel() int { return s.panel }
@@ -53,6 +55,8 @@ func (v *view) dispatchNative(invalidate func()) {
 		return
 	}
 	s.dispatched = true
+	s.traceID = diagnostics.NextID()
+	diagnostics.Record(diagnostics.Shell, s.traceID, "NativeRequested", map[string]any{"action": s.request.action, "paths": s.request.paths, "armed": s.request.armed})
 	request := s.request
 	if request.options.ClientPoint != nil {
 		anchor := v.panels[s.panel].selectionAnchor
@@ -71,9 +75,7 @@ func (v *view) completeNative(completion shellCompletion) bool {
 	if !v.interaction.finish(completion.session) {
 		return false
 	}
-	if completion.session.request.action == shellMenu && v.shellTrace != nil {
-		v.shellTrace(completion)
-	}
+	traceShellCompletion(completion)
 	if completion.err != nil {
 		message := "Cannot open context menu"
 		switch completion.session.request.action {

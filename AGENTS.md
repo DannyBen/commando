@@ -420,6 +420,18 @@ module/executable and `Commando` for the window title and data-folder name.
   use Windows association icons without creating files. Folder drafts show a
   folder icon. Reuse the same layout, recoloring, worker and bounded caches.
 
+## Diagnostics
+
+Production diagnostics are OFF by default. `--trace MASK` overrides the saved
+Debug › Trace mask for that run, including explicit 0, without persisting the
+CLI value. Its widget uses `live = false`: draft edits and Reset take effect only
+after a successful Save. Other widgets retain live preview unless their metadata
+also declares `live = false`. Bits are stable: File operations 1, UI 2, Shell 4, Browsing 8,
+Storage 16, Lifecycle 32, Feedback 64; ALL is 127. Use the shared
+`internal/diagnostics` recorder for new instrumentation. Append JSONL to
+`trace-log.jsonl` in the active data folder, with session and operation identities.
+Keep logging observational: record failures without changing operation results.
+
 ## Changes and Documentation
 
 - Do not edit any README file unless the user explicitly requests a README update.

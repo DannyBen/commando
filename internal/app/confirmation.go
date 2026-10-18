@@ -4,6 +4,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
+	"github.com/dannyben/commando/internal/diagnostics"
 )
 
 // A decision temporarily owns input while its originating interaction stays
@@ -49,6 +50,7 @@ func (v *view) finishConfirmation(gtx layout.Context, s *confirmationSession, ac
 	if !v.interaction.finish(s) {
 		return
 	}
+	diagnostics.Record(diagnostics.UI, 0, "ConfirmationResolved", map[string]any{"action": s.acceptLabel, "accepted": accept})
 	if accept {
 		if s.accept != nil {
 			s.accept(gtx)

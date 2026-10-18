@@ -231,17 +231,18 @@ func (r themeRecipe) generate(options themeGeneration, retained map[string]lshCo
 // Generator output becomes ordinary editable colors. Subsequent Customize
 // edits stay intact until another generator value is applied.
 func (v *view) generateTheme() {
+	values := v.widgetValues()
 	c := settings.CatalogueDefault
-	get := func(key string) settings.Value { return v.settingsValues.Get(c, settingThemeGenerator+"."+key) }
+	get := func(key string) settings.Value { return values.Get(c, settingThemeGenerator+"."+key) }
 	mode := get("mode").Text
 	colors := defaultThemeRecipe.generate(themeGeneration{
 		Mode: mode, Seed: uint64(get("seed").Number), Vibrance: get("vibrance").Number,
 		Dynamics: get("dynamics").Number, ColorShift: get("color_shift").Number,
-	}, themePalette(v.settingsValues))
+	}, themePalette(*values))
 	for name, value := range colors {
 		lsh := lshFromOKLCH(value)
 		for component, n := range map[string]float64{"lightness": lsh.l, "saturation": lsh.s, "hue": lsh.h} {
-			_ = v.settingsValues.Set(c, themeSettingPrefix+name+"."+component, settings.Value{Number: colorSettingNumber(n)})
+			_ = values.Set(c, themeSettingPrefix+name+"."+component, settings.Value{Number: colorSettingNumber(n)})
 		}
 	}
 
@@ -254,6 +255,6 @@ func (v *view) generateTheme() {
 		settingHiddenLightness:    -m.Direction * defaultThemeRecipe.Files.HiddenOffset,
 		settingDotfileLightness:   -m.Direction * defaultThemeRecipe.Files.DotfileOffset,
 	} {
-		_ = v.settingsValues.Set(c, key, settings.Value{Number: n})
+		_ = values.Set(c, key, settings.Value{Number: n})
 	}
 }

@@ -1,12 +1,14 @@
 package app
 
 import (
+	"github.com/dannyben/commando/internal/diagnostics"
 	"image"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/dannyben/commando/internal/browser"
 )
@@ -120,6 +122,16 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
+				group, name := request.traceKind()
+				id := diagnostics.NextID()
+				started := time.Now()
+				if diagnostics.Enabled(group) {
+					diagnostics.Record(group, id, "WorkerRequested", request.traceData(name))
+				}
+				publish := func(result loadResult) {
+					diagnostics.Record(group, id, "WorkerCompleted", map[string]any{"kind": name, "error": diagnostics.Error(result.err), "duration_ms": time.Since(started).Seconds() * 1000, "entries": len(result.directory.Entries)})
+					l.results <- result
+				}
 				if len(request.icons) > 0 {
 					icons := make([]image.Image, len(request.icons))
 					for i, key := range request.icons {
@@ -131,7 +143,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 							icons[i] = l.readFileIcon(key.path, key.size)
 						}
 					}
-					l.results <- loadResult{request: request, icons: icons}
+					publish(loadResult{request: request, icons: icons})
 					if invalidate != nil {
 						invalidate()
 					}
@@ -142,7 +154,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					if localCompletionPath(request.path) {
 						result.directory, result.err = l.readDirectory(request.path)
 					}
-					l.results <- result
+					publish(result)
 					if invalidate != nil {
 						invalidate()
 					}
@@ -150,14 +162,14 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				}
 				if request.themeLibrary != nil {
 					themes, err := readThemeLibrary(request.path)
-					l.results <- loadResult{request: request, themes: themes, err: err}
+					publish(loadResult{request: request, themes: themes, err: err})
 					if invalidate != nil {
 						invalidate()
 					}
 					continue
 				}
 				if request.fontFamilies {
-					l.results <- loadResult{request: request, fontFamilies: readFontFamilies()}
+					publish(loadResult{request: request, fontFamilies: readFontFamilies()})
 					if invalidate != nil {
 						invalidate()
 					}
@@ -165,7 +177,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				}
 				if request.terminal != nil {
 					result := loadResult{request: request, err: l.launchTerminal(request.path, request.terminal.admin, request.terminal.owner)}
-					l.results <- result
+					publish(result)
 					if invalidate != nil {
 						invalidate()
 					}
@@ -180,7 +192,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 						}
 						result.editorsStarted++
 					}
-					l.results <- result
+					publish(result)
 					if invalidate != nil {
 						invalidate()
 					}
@@ -188,7 +200,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				}
 				if request.settingsSave != nil {
 					message, err := request.settingsSave.run()
-					l.results <- loadResult{request: request, settingsMessage: message, err: err}
+					publish(loadResult{request: request, settingsMessage: message, err: err})
 					if invalidate != nil {
 						invalidate()
 					}
@@ -201,7 +213,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					} else {
 						result = l.fileOperation(request)
 					}
-					l.results <- result
+					publish(result)
 					if invalidate != nil {
 						invalidate()
 					}
@@ -274,7 +286,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				}
 				result.directory, result.created, result.removed = directory, created, removed
 				result.sameDirectory, result.err = sameDirectory, err
-				l.results <- result
+				publish(result)
 				if invalidate != nil {
 					invalidate()
 				}

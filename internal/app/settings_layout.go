@@ -8,6 +8,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
+	"github.com/dannyben/commando/internal/diagnostics"
 	"github.com/dannyben/commando/internal/settings"
 )
 
@@ -68,6 +69,9 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 							return v.settingsChoices(gtx, d.Choices, v.settingText(field.Key), focused, textHeight)
 						}
 						value := v.settingText(field.Key)
+						if field.Key == settingTraceMask {
+							value = diagnostics.Mask(v.widgetValues().Get(settings.CatalogueDefault, field.Key).Number).String()
+						}
 						if value == "" {
 							switch field.Control {
 							case "folder":
@@ -101,7 +105,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 							}
 							dims := (layout.Inset{Left: 4, Right: 4}).Layout(gtx, v.textOn(background, control))
 							if field.Control == "stepper-progress" {
-								ratio := (v.settingsValues.Get(settings.CatalogueDefault, field.Key).Number - d.Minimum) / (*d.Maximum - d.Minimum)
+								ratio := (v.widgetValues().Get(settings.CatalogueDefault, field.Key).Number - d.Minimum) / (*d.Maximum - d.Minimum)
 								y := textHeight - gtx.Dp(1)
 								width := gtx.Constraints.Max.X
 								paint.FillShape(gtx.Ops, v.appearance.Colors.Border, clip.Rect{Min: image.Pt(0, y), Max: image.Pt(width, y+gtx.Dp(1))}.Op())

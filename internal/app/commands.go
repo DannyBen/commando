@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/dannyben/commando/internal/diagnostics"
 	"strings"
 
 	"gioui.org/io/key"
@@ -205,6 +206,7 @@ func (c command) defaultShortcut(s shortcut) bool {
 
 // Palette and keyboard execution share actions, never synthetic key events.
 func (v *view) executeCommand(gtx layout.Context, c command) {
+	diagnostics.Record(diagnostics.UI, 0, "Command", map[string]any{"command": c.id, "panel": v.active, "allowed": c.allowed(v)})
 	// Opening and going up finish filename-prefix input even when no directory
 	// read can start (for example at a root or in a preview).
 	if c.id == "entry.open" || c.id == "navigation.parent_folder" || c.id == "navigation.drives" {

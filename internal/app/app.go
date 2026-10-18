@@ -15,6 +15,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/diagnostics"
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
@@ -25,9 +26,18 @@ const windowWidth, windowHeight = 800, 480
 // Run opens the native folder browser.
 func Run() error {
 	preview := flag.String("png", "", "render the workspace to a PNG and exit")
-	traceShell := flag.Bool("trace-shell", false, "record shell menu preparation timings")
-	traceTransfers := flag.Bool("trace-transfers", false, "record transfer diagnostics in the application data folder")
+	traceMask := flag.Int("trace", 0, "diagnostic trace mask (0–127)")
 	flag.Parse()
+	if *traceMask < 0 || *traceMask > int(diagnostics.All) {
+		return fmt.Errorf("trace mask must be 0 to %d", diagnostics.All)
+	}
+	var traceOverride *diagnostics.Mask
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "trace" {
+			m := diagnostics.Mask(*traceMask)
+			traceOverride = &m
+		}
+	})
 	if *preview != "" {
 		return renderPNG(*preview)
 	}
@@ -53,35 +63,25 @@ func Run() error {
 	if settingsErr != nil {
 		fmt.Fprintln(os.Stderr, "settings:", settingsErr)
 	}
-	saved, err := loadState(dataDir)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "cannot load state:", err)
+	saved, stateErr := loadState(dataDir)
+	if stateErr != nil {
+		fmt.Fprintln(os.Stderr, "cannot load state:", stateErr)
 	}
 	locations, err := startingLocations(flag.Args(), saved.Panels)
 	if err != nil {
 		return err
 	}
 
-	stopTrace := func() error { return nil }
-	if *traceTransfers {
-		var tracePath string
-		tracePath, stopTrace, err = browser.EnableTransferTrace(dataDir)
-		if err != nil {
-			return fmt.Errorf("cannot open transfer trace: %w", err)
-		}
-		fmt.Fprintln(os.Stderr, "Transfer trace:", tracePath)
+	mask := diagnostics.Mask(settingsValues.Get(settings.CatalogueDefault, settingTraceMask).Number)
+	if traceOverride != nil {
+		mask = *traceOverride
 	}
-	defer stopTrace()
-
-	var shellTrace func(shellCompletion)
-	stopShellTrace := func() error { return nil }
-	if *traceShell {
-		shellTrace, stopShellTrace, err = openShellTrace(dataDir)
-		if err != nil {
-			return fmt.Errorf("cannot open shell trace: %w", err)
-		}
+	if err := diagnostics.Configure(dataDir, mask); err != nil {
+		fmt.Fprintln(os.Stderr, "cannot open trace log:", err)
 	}
-	defer stopShellTrace()
+	defer diagnostics.Close()
+	diagnostics.Record(diagnostics.Storage, 0, "StartupStorage", map[string]any{"settings_error": diagnostics.Error(settingsErr), "state_error": diagnostics.Error(stateErr)})
+	diagnostics.Record(diagnostics.Lifecycle, 0, "Startup", map[string]any{"paths": locations, "data_folder": dataDir})
 
 	done := make(chan error, 1)
 	go func() {
@@ -97,6 +97,7 @@ func Run() error {
 		v.defaultDataFolder = baseDir
 		v.activeDataFolder = dataDir
 		store.restoreLocation(&settingsValues)
+		v.traceOverride = traceOverride
 		v.restoreSettings(settingsValues, settingsErr)
 		if folderErr != nil {
 			v.showFeedback(v.active, feedback.Error, "Cannot read data folder")
@@ -112,7 +113,6 @@ func Run() error {
 		v.nativeKeys = keys
 		v.updateNativeBindings()
 		v.shellExecutor = native.shellExecutor(w)
-		v.shellTrace = shellTrace
 		sounds := sound.NewPlayer()
 		defer sounds.Close()
 		v.sounds = sounds
@@ -128,14 +128,14 @@ func Run() error {
 			case gioapp.DestroyEvent:
 				v.finishOperations()
 				sounds.Close()
-				stopTrace()
-				stopShellTrace()
 				state := v.sessionState(tracker.snapshot())
 				state.PanelWidth = tracker.sizingSnapshot().baseWidth
 				result := e.Err
 				if err := saveState(dataDir, state); err != nil {
 					result = errors.Join(e.Err, fmt.Errorf("cannot save state: %w", err))
 				}
+				diagnostics.Record(diagnostics.Lifecycle, 0, "Shutdown", map[string]any{"error": diagnostics.Error(result)})
+				diagnostics.Close()
 				instance.close()
 				done <- result
 				return

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dannyben/commando/internal/diagnostics"
 	"os"
 	"path/filepath"
 	"sync"
@@ -61,7 +62,10 @@ func (s windowState) valid() bool {
 		s.X >= -1<<30 && s.X <= 1<<30 && s.Y >= -1<<30 && s.Y <= 1<<30
 }
 
-func loadState(dataDir string) (sessionState, error) {
+func loadState(dataDir string) (out sessionState, resultErr error) {
+	defer func() {
+		diagnostics.Record(diagnostics.Storage, 0, "StateLoad", map[string]any{"directory": dataDir, "error": diagnostics.Error(resultErr)})
+	}()
 	if dataDir == "" {
 		return sessionState{}, fmt.Errorf("data folder is empty")
 	}
@@ -85,7 +89,10 @@ func loadState(dataDir string) (sessionState, error) {
 	return state, nil
 }
 
-func saveState(dataDir string, state sessionState) error {
+func saveState(dataDir string, state sessionState) (resultErr error) {
+	defer func() {
+		diagnostics.Record(diagnostics.Storage, 0, "StateSave", map[string]any{"directory": dataDir, "error": diagnostics.Error(resultErr)})
+	}()
 	if dataDir == "" {
 		return fmt.Errorf("data folder is empty")
 	}

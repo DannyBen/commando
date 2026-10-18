@@ -9,6 +9,27 @@ import (
 	"testing"
 )
 
+func TestWidgetLiveMetadata(t *testing.T) {
+	for _, tc := range []struct {
+		property string
+		deferred bool
+	}{
+		{"", false}, {"live = true", false}, {"live = false", true},
+	} {
+		c, err := ParseCatalogue("sample.value = 0", "[sample]\nlabel = 'Sample'\ntitle = 'Sample'\n"+tc.property+"\n[sample.value]\nlabel = 'Value'\n")
+		if err != nil {
+			t.Fatal(err)
+		}
+		w, ok := c.Widget("sample")
+		if !ok || w.Deferred != tc.deferred {
+			t.Fatalf("live metadata: %+v", w)
+		}
+	}
+	if _, err := ParseCatalogue("sample.value = 0", "[sample]\nlabel = 'Sample'\nlive = false\n[sample.value]\nlabel = 'Value'\ntitle = 'Value'\n"); err == nil {
+		t.Fatal("live accepted outside a widget")
+	}
+}
+
 func TestWidgetNamesAndOwnershipIndependentOfFieldCount(t *testing.T) {
 	ui := `[appearance]
 label = "Appearance"

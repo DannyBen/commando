@@ -3,6 +3,7 @@ package settings
 import (
 	"bytes"
 	"fmt"
+	"github.com/dannyben/commando/internal/diagnostics"
 	"math"
 	"os"
 	"path/filepath"
@@ -20,7 +21,10 @@ func (c Catalogue) Save(dataDir string, v Values) error {
 	return save(dataDir, v, c)
 }
 
-func save(dataDir string, v Values, c Catalogue) error {
+func save(dataDir string, v Values, c Catalogue) (resultErr error) {
+	defer func() {
+		diagnostics.Record(diagnostics.Storage, 0, "SettingsSave", map[string]any{"directory": dataDir, "error": diagnostics.Error(resultErr)})
+	}()
 	if dataDir == "" {
 		return fmt.Errorf("data folder is empty")
 	}

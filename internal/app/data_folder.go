@@ -121,7 +121,7 @@ func copyDataFiles(source, destination string) error {
 		name := entry.Name()
 		// Only application-owned data, never unrelated files or the bootstrap
 		// pointer. Register new persisted data here when adding another store.
-		managed := name == "settings.toml" || name == "state.json" || name == "shell-menu.jsonl" ||
+		managed := name == "settings.toml" || name == "state.json" || name == "shell-menu.jsonl" || name == "trace-log.jsonl" ||
 			strings.HasPrefix(name, "transfer-trace-") && strings.HasSuffix(name, ".jsonl")
 		if !managed {
 			continue

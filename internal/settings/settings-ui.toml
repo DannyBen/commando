@@ -743,3 +743,19 @@ label = "Multiple entries"
 description = "Confirm selections of two or more entries. The strongest matching guard wins."
 control = "choice"
 choices = ["OFF", "ON", "ON (Cancel default)"]
+
+[debug]
+label = "Debug"
+
+[debug.trace]
+label = "Trace mask"
+title = "Trace mask"
+live = false
+
+[debug.trace.mask]
+label = "Trace mask"
+control = "stepper"
+min = 0.0
+max = 127.0
+step = 1.0
+integer = true

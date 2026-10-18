@@ -10,6 +10,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/diagnostics"
 	"github.com/dannyben/commando/internal/feedback"
 )
 
@@ -378,7 +379,11 @@ func (v *view) openPath(index int, path string) {
 	if open := v.openFile; open != nil {
 		post := v.backgroundFeedback(index)
 		go func() {
-			if err := open(path); err != nil {
+			id := diagnostics.NextID()
+			diagnostics.Record(diagnostics.Shell, id, "OpenRequested", map[string]any{"path": path})
+			err := open(path)
+			diagnostics.Record(diagnostics.Shell, id, "OpenCompleted", map[string]any{"error": diagnostics.Error(err)})
+			if err != nil {
 				post(feedback.Error, "Failed to open")
 			}
 		}()

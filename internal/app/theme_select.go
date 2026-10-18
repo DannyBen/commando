@@ -92,7 +92,7 @@ func (v *view) selectTheme(name string) error {
 		if !strings.EqualFold(name, theme.name) {
 			continue
 		}
-		values := v.settingsValues.Clone()
+		values := v.widgetValues().Clone()
 		for _, d := range settings.CatalogueDefault.Settings {
 			if themeSnapshotKey(d.Key) {
 				if err := values.Set(settings.CatalogueDefault, d.Key, theme.values.Get(settings.CatalogueDefault, d.Key)); err != nil {
@@ -101,7 +101,7 @@ func (v *view) selectTheme(name string) error {
 			}
 		}
 		s.themeName, s.dirty, s.errorText = theme.name, true, ""
-		v.settingsValues = values
+		*v.widgetValues() = values
 		return nil
 	}
 	if name == "Current theme" && s.themeName == "" {

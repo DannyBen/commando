@@ -9,6 +9,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/diagnostics"
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
@@ -96,7 +97,8 @@ type view struct {
 	pendingNameDraft  *loadResult
 	shellExecutor     func(shellRequest) shellCompletion
 	shellResults      chan shellCompletion
-	shellTrace        func(shellCompletion)
+	traceOverride     *diagnostics.Mask
+	traceError        string
 	sounds            interface {
 		Play(sound.Name, float64)
 		Stop()

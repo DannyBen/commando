@@ -3,6 +3,7 @@
 package feedback
 
 import (
+	"github.com/dannyben/commando/internal/diagnostics"
 	"strings"
 	"time"
 )
@@ -87,6 +88,7 @@ func (c *Channel) Show(kind Kind, text string) {
 func (c *Channel) ShowWithStyle(kind Kind, text string, style Style) {
 	c.Dismiss()
 	c.message = &Message{Text: text, Kind: kind, Style: style}
+	diagnostics.Record(diagnostics.Feedback, 0, "MessageShown", map[string]any{"kind": kind, "text": text, "style": style})
 }
 
 // ShowAt replaces the current message with one scheduled for notBefore.
@@ -96,6 +98,7 @@ func (c *Channel) ShowAt(kind Kind, text string, notBefore time.Time) {
 	c.Dismiss()
 	c.pending = &Message{Text: text, Kind: kind}
 	c.notBefore = notBefore
+	diagnostics.Record(diagnostics.Feedback, 0, "MessageScheduled", map[string]any{"kind": kind, "text": text, "not_before": notBefore})
 }
 
 func (c *Channel) Progress(text string) {
@@ -114,6 +117,7 @@ func (c *Channel) ProgressAt(text string, notBefore time.Time) {
 // a Started announcement. Result messages retain normal animation and sound.
 func (c *Channel) QuietProgressAt(text string, notBefore time.Time) {
 	c.ProgressAt(text, notBefore)
+	diagnostics.Record(diagnostics.Feedback, 0, "QuietProgressScheduled", map[string]any{"text": text, "not_before": notBefore})
 	c.pending.Style = Immediate
 	c.pending.presented = true
 }
@@ -125,7 +129,12 @@ func (c *Channel) Complete() {
 	}
 }
 
-func (c *Channel) Dismiss() { *c = Channel{} }
+func (c *Channel) Dismiss() {
+	if c.message != nil || c.pending != nil {
+		diagnostics.Record(diagnostics.Feedback, 0, "MessageDismissed", nil)
+	}
+	*c = Channel{}
+}
 
 // Current returns only visible feedback, never a scheduled message.
 func (c *Channel) Current() *Message { return c.message }
@@ -152,6 +161,7 @@ func (c *Channel) Frame(now time.Time, animations Animations) (Frame, bool) {
 		if now.Before(c.notBefore) {
 			return Frame{Next: c.notBefore}, false
 		}
+		diagnostics.Record(diagnostics.Feedback, 0, "ScheduledMessageShown", map[string]any{"text": c.pending.Text, "style": c.pending.Style})
 		c.message, c.pending = c.pending, nil
 		c.notBefore = time.Time{}
 	}

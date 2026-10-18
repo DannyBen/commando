@@ -3,6 +3,7 @@ package settings
 import (
 	"errors"
 	"fmt"
+	"github.com/dannyben/commando/internal/diagnostics"
 	"os"
 	"path/filepath"
 	"slices"
@@ -13,7 +14,10 @@ import (
 
 // Load accepts dotted keys and table sections alike. It returns only explicit
 // overrides, and no partial values on failure. It never modifies files.
-func Load(dataDir string, c Catalogue) (Values, error) {
+func Load(dataDir string, c Catalogue) (out Values, resultErr error) {
+	defer func() {
+		diagnostics.Record(diagnostics.Storage, 0, "SettingsLoad", map[string]any{"directory": dataDir, "error": diagnostics.Error(resultErr)})
+	}()
 	if dataDir == "" {
 		return Values{}, fmt.Errorf("data folder is empty")
 	}

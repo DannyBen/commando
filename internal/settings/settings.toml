@@ -146,3 +146,6 @@ multiple_entries = "OFF"
 single_files = "ON (Cancel default)"
 directories = "ON (Cancel default)"
 multiple_entries = "ON (Cancel default)"
+
+[debug.trace]
+mask = 0

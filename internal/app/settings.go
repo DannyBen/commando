@@ -52,6 +52,7 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 
 // Application bindings identify leaves; defaults and UI definitions live in TOML.
 const (
+	settingTraceMask             = "debug.trace.mask"
 	settingProtectedSystem       = "view.show_protected_system_files"
 	settingParentEntry           = "view.show_parent_entry"
 	settingNotificationAnimation = "feedback.notifications.animation"
@@ -178,6 +179,8 @@ type settingsSession struct {
 	collection         string
 	item               int
 	draft              settings.Values
+	commit             settings.Values
+	deferred           bool
 	deleted            bool
 	dirty              bool
 	completion         inlineCompletion
@@ -252,6 +255,10 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 	}
 	s := &settingsSession{panel: v.active, title: title, before: v.settingsValues.Clone(), editor: widget.Editor{SingleLine: true, Submit: true}}
 	s.preview = spec.Preview
+	s.deferred = spec.Deferred
+	if s.deferred {
+		s.draft = v.settingsValues.Clone()
+	}
 	for _, field := range settings.CatalogueDefault.UI.Fields {
 		if field.Widget == group && field.Visible {
 			s.fields = append(s.fields, field)
@@ -400,7 +407,7 @@ func (v *view) previewSettingValue(key string, value settings.Value) {
 	if v.setWidgetValue(key, value) == nil {
 		v.applySettings()
 		if v.widgetValues().Get(c, key) != before {
-			if v.previewSoundSetting(key) {
+			if s := v.settingsInteraction(); (s == nil || !s.deferred) && v.previewSoundSetting(key) {
 				return
 			}
 			v.announceInteraction(eventValueChanged)
@@ -408,6 +415,7 @@ func (v *view) previewSettingValue(key string, value settings.Value) {
 	}
 }
 func (v *view) applySettings() {
+	v.applyTraceSettings()
 	clear(v.textContrast)
 	v.updateNativeBindings()
 	c := settings.CatalogueDefault
@@ -596,19 +604,30 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 				rows[s.item] = row
 			}
 		}
-		v.settingsValues.SetCollection(s.collection, rows)
-		if err := settings.CatalogueDefault.NormalizeIdentities(&v.settingsValues); err != nil {
+		values := v.settingsValues.Clone()
+		values.SetCollection(s.collection, rows)
+		if err := settings.CatalogueDefault.NormalizeIdentities(&values); err != nil {
 			s.errorText = "Cannot identify rule"
 			return
 		}
-		pruneRuleBindings(&v.settingsValues)
+		pruneRuleBindings(&values)
+		if s.deferred {
+			s.commit = values
+		} else {
+			v.settingsValues = values
+		}
+	}
+	if save {
+		values := v.settingsValues
+		if s.bindingCommand != nil || s.deferred && s.collection == "" {
+			values = s.draft
+		} else if s.deferred {
+			values = s.commit
+		}
+		s.commit = values.Clone()
 	}
 	if save && v.prepareSettingsSave != nil {
-		values := v.settingsValues
-		if s.bindingCommand != nil {
-			values = s.draft
-		}
-		request := &settingsSaveRequest{session: s, run: v.prepareSettingsSave(values.Clone())}
+		request := &settingsSaveRequest{session: s, run: v.prepareSettingsSave(s.commit.Clone())}
 		s.pending = true
 		s.selecting = false
 		if v.loader != nil {
@@ -628,8 +647,8 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		if s.afterCancel != nil {
 			s.afterCancel()
 		}
-	} else if s.bindingCommand != nil {
-		v.settingsValues = s.draft.Clone()
+	} else if s.bindingCommand != nil || s.deferred {
+		v.settingsValues = s.commit.Clone()
 		v.applySettings()
 	}
 	v.interaction.finish(s)
@@ -656,8 +675,8 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 		s.errorText = settingsSaveError(err)
 		return
 	}
-	if s.bindingCommand != nil {
-		v.settingsValues = s.draft.Clone()
+	if s.bindingCommand != nil || s.deferred {
+		v.settingsValues = s.commit.Clone()
 		v.applySettings()
 	}
 	v.interaction.finish(s)
@@ -1057,7 +1076,7 @@ func (v *view) startCollectionWidget(collection string, index int, label string)
 	}
 }
 func (v *view) widgetValues() *settings.Values {
-	if s := v.settingsWidget(); s != nil && (s.collection != "" || s.bindingCommand != nil) {
+	if s := v.settingsWidget(); s != nil && (s.collection != "" || s.bindingCommand != nil || s.deferred) {
 		return &s.draft
 	}
 	return &v.settingsValues

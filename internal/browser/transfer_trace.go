@@ -1,110 +1,34 @@
 package browser
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"runtime"
-	"runtime/debug"
-	"sync"
-	"sync/atomic"
-	"time"
+	"github.com/dannyben/commando/internal/diagnostics"
 )
 
-// Transfer tracing is opt-in. It observes the shell and application outcomes;
-// logging failures never change callback return values or transfer decisions.
-var activeTransferTrace atomic.Pointer[transferTrace]
-
-type transferTrace struct {
-	mu       sync.Mutex
-	writer   io.Writer
-	sequence uint64
-	batches  atomic.Uint64
-}
-
-type transferBatchTrace struct {
-	trace *transferTrace
-	id    uint64
-}
-
-type transferTraceRecord struct {
-	Time     time.Time `json:"time"`
-	Sequence uint64    `json:"sequence"`
-	Batch    uint64    `json:"batch,omitempty"`
-	Event    string    `json:"event"`
-	Data     any       `json:"data,omitempty"`
-}
-
-// EnableTransferTrace opens a separate log for this application session in the
-// shared data folder. Stop tracing after the directory worker has drained.
-func EnableTransferTrace(dataDir string) (path string, stop func() error, err error) {
-	if err := os.MkdirAll(dataDir, 0700); err != nil {
-		return "", nil, err
-	}
-	f, err := os.CreateTemp(dataDir, "transfer-trace-*.jsonl")
-	if err != nil {
-		return "", nil, err
-	}
-	t := &transferTrace{writer: f}
-	activeTransferTrace.Store(t)
-	executable, _ := os.Executable()
-	build, _ := debug.ReadBuildInfo()
-	t.record(0, "SessionStarted", map[string]any{
-		"schema": 2, "pid": os.Getpid(), "executable": executable,
-		"go": runtime.Version(), "build": build,
-	})
-	var once sync.Once
-	var closeErr error
-	return filepath.Clean(f.Name()), func() error {
-		once.Do(func() {
-			activeTransferTrace.CompareAndSwap(t, nil)
-			t.record(0, "SessionEnded", nil)
-			t.mu.Lock()
-			defer t.mu.Unlock()
-			closeErr = f.Close()
-			t.writer = nil
-		})
-		return closeErr
-	}, nil
-}
+// Native callbacks and the resulting feedback retain one operation identity.
+type transferBatchTrace struct{ id uint64 }
 
 func beginTransferTrace(request TransferRequest) *transferBatchTrace {
-	t := activeTransferTrace.Load()
-	if t == nil {
+	if !diagnostics.Enabled(diagnostics.FileOperations) {
 		return nil
 	}
-	b := &transferBatchTrace{trace: t, id: t.batches.Add(1)}
+	b := &transferBatchTrace{id: diagnostics.NextID()}
 	b.record("Requested", map[string]any{"source_count": len(request.Paths), "request": request})
 	return b
 }
 
 func beginRemovalTrace(paths []string, permanent bool) *transferBatchTrace {
-	t := activeTransferTrace.Load()
-	if t == nil {
+	if !diagnostics.Enabled(diagnostics.FileOperations) {
 		return nil
 	}
-	b := &transferBatchTrace{trace: t, id: t.batches.Add(1)}
+	b := &transferBatchTrace{id: diagnostics.NextID()}
 	b.record("RemovalRequested", map[string]any{"paths": paths, "permanent": permanent})
 	return b
 }
 
-func (t *transferTrace) record(batch uint64, event string, data any) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if t.writer == nil {
-		return
-	}
-	t.sequence++
-	_ = json.NewEncoder(t.writer).Encode(transferTraceRecord{
-		Time: time.Now().UTC(), Sequence: t.sequence, Batch: batch, Event: event, Data: data,
-	})
-}
-
 func (b *transferBatchTrace) record(event string, data any) {
 	if b != nil {
-		b.trace.record(b.id, event, data)
+		diagnostics.Record(diagnostics.FileOperations, b.id, event, data)
 	}
 }
 

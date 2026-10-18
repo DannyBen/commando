@@ -52,6 +52,7 @@ type Widget struct {
 	Key, Parent, Label, Title string
 	Preview                   string
 	Visible                   bool
+	Deferred                  bool // Edits apply only after a successful Save.
 }
 type Field struct {
 	Key, Widget, Label, Description, Control string

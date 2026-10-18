@@ -1,10 +1,12 @@
 package app
 
 import (
+	"fmt"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/diagnostics"
 )
 
 // Foreground interaction has one owner. Background work and panel loading are
@@ -44,6 +46,7 @@ func (c *interactionController) begin(session interactionSession) bool {
 		c.suspended = c.current
 	}
 	c.current = session
+	diagnostics.Record(diagnostics.UI, 0, "InteractionStarted", map[string]any{"type": fmt.Sprintf("%T", session), "panel": session.interactionPanel()})
 	return true
 }
 
@@ -65,6 +68,7 @@ func (c *interactionController) finish(session interactionSession) bool {
 	if session == nil || c.current != session {
 		return false
 	}
+	diagnostics.Record(diagnostics.UI, 0, "InteractionFinished", map[string]any{"type": fmt.Sprintf("%T", session), "panel": session.interactionPanel()})
 	c.current, c.suspended = c.suspended, nil
 	return true
 }

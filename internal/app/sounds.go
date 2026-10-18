@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/dannyben/commando/internal/diagnostics"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
 )
@@ -33,7 +34,9 @@ func (v *view) applySoundSettings() {
 // Every semantic event shares this gate; profile names belong to settings UI.
 func (v *view) playSound(cue sound.Name) {
 	options := v.currentSoundSettings()
-	if v.sounds != nil && options.enabled && options.volume > 0 && sound.Allows(cue, options.profile) {
+	allowed := v.sounds != nil && options.enabled && options.volume > 0 && sound.Allows(cue, options.profile)
+	diagnostics.Record(diagnostics.Feedback, 0, "Sound", map[string]any{"cue": cue, "played": allowed, "profile": options.profile, "volume": options.volume})
+	if allowed {
 		v.sounds.Play(cue, options.volume)
 	}
 }
