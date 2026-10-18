@@ -86,9 +86,17 @@ func (q *nativeKeyInput) drain() []key.Event {
 	return events
 }
 
-// Ignore repeats and releases so holding Alt+Enter cannot oscillate window mode.
+// Ignore repeats, but retain releases so foreground sessions can track held keys.
+// Browsing actions only execute on the press.
 func (q *nativeKeyInput) altEnter(data uintptr, modifiers key.Modifiers) {
-	if q != nil && data&(1<<30|1<<31) == 0 {
-		q.push(key.Event{Name: key.NameReturn, Modifiers: modifiers, State: key.Press})
+	if q == nil {
+		return
 	}
+	state := key.Press
+	if data&(1<<31) != 0 {
+		state = key.Release
+	} else if data&(1<<30) != 0 {
+		return
+	}
+	q.push(key.Event{Name: key.NameReturn, Modifiers: modifiers, State: state})
 }

@@ -116,6 +116,9 @@ func (v *view) update(gtx layout.Context) {
 
 func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	if ke.State != key.Press {
+		// Native releases belong to the foreground session's held-key tracking;
+		// they must never execute a browsing command.
+		v.interactionKey(gtx, ke)
 		return
 	}
 	v.dismissFeedback()

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
@@ -39,12 +40,44 @@ func (v *view) confirmationInteraction() *confirmationSession {
 	return s
 }
 func (v *view) startConfirmation(gtx layout.Context, s *confirmationSession) bool {
+	var previousFocus any = &v.focus
+	if editor := v.activeEditor(); editor != nil {
+		previousFocus = editor
+	}
 	s.messageList.Axis = layout.Vertical
 	if !v.startInteraction(s) {
 		return false
 	}
+	s.releaseInvocationKeys(gtx, previousFocus)
 	v.focusInteraction(gtx)
 	return true
+}
+
+// A quick invocation can queue its release at the old focus before the dialog
+// opens. Consume that tail before focus moves, so the next press is not mistaken
+// for a repeat. Opening-key repeats remain suppressed until an actual release.
+func (s *confirmationSession) releaseInvocationKeys(gtx layout.Context, previousFocus any) {
+	for name, held := range s.held {
+		if !held {
+			continue
+		}
+		filter := func(name key.Name) event.Filter {
+			return key.Filter{Focus: previousFocus, Name: name, Optional: key.ModCtrl | key.ModShift | key.ModAlt | key.ModSuper | key.ModCommand}
+		}
+		filters := []event.Filter{filter(name)}
+		if name == key.NameReturn {
+			filters = append(filters, filter(key.NameEnter))
+		}
+		for {
+			e, ok := gtx.Event(filters...)
+			if !ok {
+				break
+			}
+			if ke, ok := e.(key.Event); ok && ke.State == key.Release {
+				delete(s.held, name)
+			}
+		}
+	}
 }
 func (v *view) finishConfirmation(gtx layout.Context, s *confirmationSession, accept bool) {
 	if !v.interaction.finish(s) {

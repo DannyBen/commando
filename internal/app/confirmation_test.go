@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"image"
 	"os"
 	"path/filepath"
@@ -16,6 +17,50 @@ import (
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/settings"
 )
+
+func TestReassignmentFirstEnterAfterQuickCapture(t *testing.T) {
+	for _, binding := range []shortcut{{Name: "V", Modifiers: key.ModCtrl}, {Name: key.NameReturn}, {Name: key.NameEnter}, {Name: key.NameReturn, Modifiers: key.ModAlt}} {
+		t.Run(binding.String(), func(t *testing.T) {
+			v := newPreviewView()
+			send, _ := panelInputFrames(v)
+			_, s := openShortcutWidget(t, v, send, "Next metadata column")
+			send(pressed(key.NameReturn), key.Event{Name: key.NameReturn, State: key.Release})
+			send(key.Event{Name: binding.Name, Modifiers: binding.Modifiers, State: key.Press}, key.Event{Name: binding.Name, Modifiers: binding.Modifiers, State: key.Release})
+			if v.confirmationInteraction() == nil {
+				t.Fatal("no reassignment question")
+			}
+			send(pressed(key.NameReturn))
+			if v.settingsInteraction() != s || !s.dirty {
+				t.Fatal("first Enter after releasing captured key did not accept")
+			}
+		})
+	}
+}
+
+func TestReassignmentFirstEnterAfterNativeAltEnter(t *testing.T) {
+	for _, releaseTogether := range []bool{false, true} {
+		t.Run(fmt.Sprint(releaseTogether), func(t *testing.T) {
+			v := newPreviewView()
+			v.nativeKeys = &nativeKeyInput{invalidate: func() {}}
+			send, _ := panelInputFrames(v)
+			_, s := openShortcutWidget(t, v, send, "Next metadata column")
+			send(pressed(key.NameReturn), key.Event{Name: key.NameReturn, State: key.Release})
+			v.nativeKeys.altEnter(1|1<<29, key.ModAlt)
+			if !releaseTogether {
+				send()
+			}
+			v.nativeKeys.altEnter(1|1<<29|1<<30|1<<31, key.ModAlt)
+			send()
+			if v.confirmationInteraction() == nil {
+				t.Fatal("no reassignment question")
+			}
+			send(pressed(key.NameReturn))
+			if v.settingsInteraction() != s || !s.dirty {
+				t.Fatal("first Enter after native Alt+Enter release did not accept")
+			}
+		})
+	}
+}
 
 func TestReassignmentStagesAndSavesBothCommands(t *testing.T) {
 	v := newPreviewView()

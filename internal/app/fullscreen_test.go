@@ -54,7 +54,7 @@ func TestFullScreenBindingsAndPalette(t *testing.T) {
 	}
 }
 
-func TestNativeAltEnterForwardsOnePress(t *testing.T) {
+func TestNativeAltEnterForwardsPressAndRelease(t *testing.T) {
 	q := &nativeKeyInput{invalidate: func() {}}
 	for _, extra := range []uintptr{0, 1 << 24} {
 		modifiers := key.ModAlt | key.ModShift
@@ -62,8 +62,23 @@ func TestNativeAltEnterForwardsOnePress(t *testing.T) {
 		q.altEnter(1|extra|1<<29|1<<30, modifiers)
 		q.altEnter(1|extra|1<<29|1<<30|1<<31, modifiers)
 		events := q.drain()
-		if len(events) != 1 || events[0] != (key.Event{Name: key.NameReturn, Modifiers: modifiers, State: key.Press}) {
+		if len(events) != 2 || events[0] != (key.Event{Name: key.NameReturn, Modifiers: modifiers, State: key.Press}) || events[1] != (key.Event{Name: key.NameReturn, Modifiers: modifiers, State: key.Release}) {
 			t.Fatalf("unexpected bridged events: %+v", events)
 		}
+	}
+}
+
+func TestNativeAltEnterTogglesFullScreenOnce(t *testing.T) {
+	v := newPreviewView()
+	v.nativeKeys = &nativeKeyInput{invalidate: func() {}}
+	calls := 0
+	v.toggleFullScreen = func() { calls++ }
+	send, _ := panelInputFrames(v)
+	for _, data := range []uintptr{1 | 1<<29, 1 | 1<<29 | 1<<30, 1 | 1<<29 | 1<<30 | 1<<31} {
+		v.nativeKeys.altEnter(data, key.ModAlt)
+		send()
+	}
+	if calls != 1 {
+		t.Fatalf("one native Alt+Enter toggled fullscreen %d times", calls)
 	}
 }
