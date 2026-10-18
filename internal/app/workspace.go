@@ -28,6 +28,7 @@ type panel struct {
 	items               []entry
 	entries             []browser.Entry // Complete listing; items is the currently visible projection.
 	rows                map[int]*fileRow
+	emptySpace          *clickTarget
 	list                widget.List
 	selected            int
 	selectionAnchor     image.Point

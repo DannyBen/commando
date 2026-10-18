@@ -6,6 +6,7 @@ import (
 	"image/color"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
@@ -51,6 +52,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			transient, extra := v.transientRows(index)
 			count := len(p.items) + extra
 			if count == 0 {
+				p.layoutEmptySpace(gtx, 0, gtx.Constraints.Max.X)
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
 			if p.reveal || v.inlineInteraction() != nil && v.inlineInteraction().panel == index {
@@ -136,6 +138,8 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				}
 				return p.rows[row].Layout(gtx, contents)
 			})
+			bottom := max(0, (count-p.list.Position.First)*rowHeight-p.list.Position.Offset)
+			p.layoutEmptySpace(gtx, bottom, max(0, dims.Size.X-gtx.Dp(list.Width())))
 			// Keyboard menus anchor beside the revealed current row in client pixels.
 			headerHeight := v.locationBarHeight(gtx, textHeight) + smallTextHeight + gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))
 			panelX := (v.frameSize.X + gtx.Dp(1)) * index / len(v.panels)
@@ -162,6 +166,22 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			return dims
 		}),
 	)
+}
+
+// Only the unused list area is a focus target. Rows, editors, transient actions,
+// headings, footers and the scrollbar retain their own input handling.
+func (p *panel) layoutEmptySpace(gtx layout.Context, top, width int) {
+	if top >= gtx.Constraints.Max.Y || width <= 0 {
+		return
+	}
+	if p.emptySpace == nil {
+		p.emptySpace = new(clickTarget)
+	}
+	defer op.Offset(image.Pt(0, top)).Push(gtx.Ops).Pop()
+	gtx.Constraints = layout.Exact(image.Pt(width, gtx.Constraints.Max.Y-top))
+	p.emptySpace.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	})
 }
 
 func (p *panel) positionLabel() string { return fmt.Sprintf("%d / %d", p.selected+1, len(p.items)) }

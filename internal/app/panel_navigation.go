@@ -23,6 +23,10 @@ func (v *view) switchPanel(direction int) {
 }
 
 func (v *view) switchPanelTo(target int) {
+	v.focusPanel(target, true)
+}
+
+func (v *view) focusPanel(target int, reveal bool) {
 	changed := target != v.active
 	if target != v.active && v.inlineInteraction() != nil {
 		v.cancelInlineActions()
@@ -30,7 +34,9 @@ func (v *view) switchPanelTo(target int) {
 	v.panels[v.active].prefix = ""
 	v.active = target
 	if changed {
-		v.panels[target].reveal = true
+		if reveal {
+			v.panels[target].reveal = true
+		}
 		v.announceInteraction(eventSelectionChanged)
 	}
 }

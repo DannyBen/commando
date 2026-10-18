@@ -25,6 +25,17 @@ func (v *view) update(gtx layout.Context) {
 	}
 	for pi := range v.panels {
 		p := &v.panels[pi]
+		pointerContext := gtx
+		if v.interaction.panelsBlocked() {
+			pointerContext = gtx.Disabled()
+		}
+		if p.emptySpace != nil && p.emptySpace.Clicked(pointerContext) {
+			if v.cancelInteraction(gtx) {
+				v.dismissFeedback()
+				v.focusPanel(pi, false)
+				v.focusInteraction(gtx)
+			}
+		}
 		for ri, row := range p.rows {
 			pointerContext := gtx
 			if v.interaction.panelsBlocked() {
