@@ -179,6 +179,14 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		next--
 	case key.NameDownArrow:
 		next++
+	case key.NameHome, key.NameEnd:
+		if ke.Modifiers != key.ModShift {
+			return
+		}
+		next = 0
+		if ke.Name == key.NameEnd {
+			next = len(p.items) - 1
+		}
 	default:
 		return
 	}

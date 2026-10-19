@@ -138,6 +138,9 @@ func findBindingConflict(values settings.Values) *bindingConflict {
 		used[shortcut{Name: name}] = bindingOwner{name: "Row navigation"}
 		used[shortcut{Name: name, Modifiers: key.ModShift}] = bindingOwner{name: "Range selection"}
 	}
+	for _, name := range []key.Name{key.NameHome, key.NameEnd} {
+		used[shortcut{Name: name, Modifiers: key.ModShift}] = bindingOwner{name: "Range selection"}
+	}
 	for _, c := range bindingCommands(values) {
 		c = v.resolveCommandBindings(c)
 		for slot := range c.bindings {

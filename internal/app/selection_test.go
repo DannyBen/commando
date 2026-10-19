@@ -106,6 +106,62 @@ func TestRangeSelectionShrinksWithoutLosingEarlierMarks(t *testing.T) {
 	assertMarks(t, p, 1, 5)
 }
 
+func TestShiftHomeEndExtendFromCurrentRow(t *testing.T) {
+	v := selectionView()
+	p := &v.panels[0]
+	p.selected = 3
+	p.toggleMark(1)
+	// Range selection is fixed even when the ordinary endpoint commands are unbound.
+	setTestShortcut(t, v, "navigation.first_entry", 0, "none")
+	setTestShortcut(t, v, "navigation.last_entry", 0, "none")
+	send, _ := panelInputFrames(v)
+	send(modified(key.NameEnd, key.ModShift))
+	assertMarks(t, p, 1, 3, 4, 5)
+	if p.selected != 5 {
+		t.Fatal("Shift+End did not reach the last row")
+	}
+	send(modified(key.NameHome, key.ModShift))
+	assertMarks(t, p, 1, 2, 3)
+	if p.selected != 0 {
+		t.Fatal("Shift+Home did not reach the parent without marking it")
+	}
+	send(modified(key.NameDownArrow, key.ModShift), modified(key.NameDownArrow, key.ModShift))
+	assertMarks(t, p, 1, 2, 3)
+	send(modified(key.NameEnd, key.ModShift))
+	assertMarks(t, p, 1, 3, 4, 5)
+	send(modified(key.NameEnd, key.ModShift), key.Event{Name: key.NameHome, Modifiers: key.ModShift, State: key.Release})
+	assertMarks(t, p, 1, 3, 4, 5)
+	assertMarks(t, &v.panels[1])
+}
+
+func TestShiftHomeEndStayInLocationEditor(t *testing.T) {
+	v := selectionView()
+	p := &v.panels[0]
+	p.toggleMark(1)
+	send, _ := panelInputFrames(v)
+	send(modified("D", key.ModAlt))
+	send(pressed(key.NameEnd), modified(key.NameHome, key.ModShift))
+	if v.location.SelectedText() != v.location.Text() || !v.locationEditing() {
+		t.Fatal("Shift+Home did not select editor text")
+	}
+	send(pressed(key.NameHome), modified(key.NameEnd, key.ModShift))
+	if v.location.SelectedText() != v.location.Text() || p.selected != 1 {
+		t.Fatal("Shift+End escaped the editor")
+	}
+	assertMarks(t, p, 1)
+}
+
+func TestShiftHomeEndCannotBeAssignedToCommands(t *testing.T) {
+	for _, name := range []string{"Home", "End"} {
+		v := selectionView()
+		setTestShortcut(t, v, "navigation.next_panel", 0, "Shift+"+name)
+		conflict := findBindingConflict(v.settingsValues)
+		if conflict == nil || conflict.first.name != "Range selection" {
+			t.Fatalf("Shift+%s was not reserved for range selection", name)
+		}
+	}
+}
+
 func TestSpaceInFilenamePrefixAndEscapePriority(t *testing.T) {
 	v := selectionView()
 	send, advance := panelInputFrames(v)
