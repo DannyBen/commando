@@ -35,7 +35,8 @@ func openReady(v *view) bool {
 		return false
 	}
 	p := &v.panels[v.active]
-	return p.nativeFolder() || p.drives || p.items[p.selected].file.Directory
+	return p.nativeFolder() || p.drives || p.items[p.selected].file.Directory ||
+		p.location().Capabilities().Read && v.loader != nil && v.canOfferInteraction(v.active, actionMutation)
 }
 
 // Adjacent-panel navigation and Enter use the same location transitions.

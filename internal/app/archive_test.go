@@ -122,14 +122,13 @@ func TestArchiveBlocksFilesystemOnlyOperations(t *testing.T) {
 		return shellCompletion{}
 	}
 	v.openFile = func(string) error { t.Error("archive item reached external opening"); return nil }
-	blocked := []string{"entry.open", "entry.copy", "entry.cut", "entry.copy_paths", "entry.paste", "entry.paste_shortcut", "entry.duplicate", "entry.move_to_panel", "entry.new_file", "entry.new_folder", "entry.context_menu", "entry.properties", "entry.arm_drag", "file.edit", "programs.terminal_here", "programs.terminal_here_admin"}
+	blocked := []string{"entry.copy", "entry.cut", "entry.copy_paths", "entry.paste", "entry.paste_shortcut", "entry.duplicate", "entry.move_to_panel", "entry.new_file", "entry.new_folder", "entry.context_menu", "entry.properties", "entry.arm_drag", "file.edit", "programs.terminal_here", "programs.terminal_here_admin"}
 	for _, c := range v.commandCatalogue() {
 		if slices.Contains(blocked, c.id) && c.allowed(v) {
 			t.Errorf("unsupported archive command is available: %s", c.id)
 		}
 	}
 	// Pointer/direct routes must be protected too, independently of the catalogue.
-	v.activateSelected()
 	v.startName(layout.Context{}, nameCreateFolder)
 	v.clipboardSelected(false)
 	v.pasteFiles()

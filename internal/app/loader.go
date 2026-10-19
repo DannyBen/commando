@@ -35,6 +35,7 @@ type loadRequest struct {
 	settingsSave     *settingsSaveRequest
 	terminal         *terminalRequest
 	editor           *editorRequest
+	archiveOpen      *archiveOpenRequest
 	fontFamilies     bool
 	completion       *locationSession
 	fileDraft        *fileDraftRequest
@@ -173,6 +174,14 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				}
 				if request.fontFamilies {
 					publish(loadResult{request: request, fontFamilies: readFontFamilies()})
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
+				if request.archiveOpen != nil {
+					err := browser.OpenArchive(browser.Location{Path: request.path, Folder: request.archiveFolder}, request.archiveOpen.name, request.archiveOpen.open)
+					publish(loadResult{request: request, err: err})
 					if invalidate != nil {
 						invalidate()
 					}

@@ -125,6 +125,10 @@ func (v *view) acceptLoad(result loadResult) {
 		}
 		return
 	}
+	if result.request.archiveOpen != nil {
+		v.acceptArchiveOpen(result)
+		return
+	}
 	if result.request.terminal != nil {
 		v.acceptTerminalLaunch(result)
 		return
@@ -261,6 +265,8 @@ func (v *view) activateSelected() {
 		if file.Directory {
 			location, selected := p.selectedLocation()
 			v.loadLocation(v.active, location, selected)
+		} else {
+			v.openArchiveSelected()
 		}
 		return
 	}
