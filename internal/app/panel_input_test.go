@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"gioui.org/f32"
 	"gioui.org/io/event"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
@@ -20,6 +21,17 @@ import (
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
 )
+
+// Existing mouse fixtures are positioned relative to the workspace bottom.
+func aboveHelpFooter(v *view, point f32.Point) f32.Point {
+	var ops op.Ops
+	dims := v.layoutHelpFooter(layout.Context{Ops: &ops,
+		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+		Constraints: layout.Constraints{Max: image.Pt(800, 480)},
+	})
+	point.Y -= float32(dims.Size.Y)
+	return point
+}
 
 func panelInputFrames(v *view) (send func(...event.Event), advance func(time.Duration)) {
 	var router input.Router

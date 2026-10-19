@@ -19,6 +19,7 @@ func (v *view) update(gtx layout.Context) {
 		v.interaction.focusPending = false
 	}
 	v.offerNameDraft(gtx)
+	v.updateHelpInput(gtx)
 	if !v.started {
 		v.focusInteraction(gtx)
 		v.started = gtx.Focused(&v.focus) || v.activeEditor() != nil && gtx.Focused(v.activeEditor())

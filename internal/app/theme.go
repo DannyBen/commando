@@ -21,10 +21,10 @@ var themeFont = bundledFonts(themeFontFiles)
 
 type contrastRole uint8
 
-const locationScrollDelay = time.Second
-const locationScrollSpeed = unit.Dp(30) // Logical pixels per second.
-const locationScrollEndPause = 5 * time.Second
-const locationScrollStartPause = 10 * time.Second
+const textScrollDelay = time.Second
+const textScrollSpeed = unit.Dp(30) // Logical pixels per second.
+const textScrollEndPause = 5 * time.Second
+const textScrollStartPause = 10 * time.Second
 
 const (
 	contrastPrimary contrastRole = iota

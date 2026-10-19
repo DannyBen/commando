@@ -96,6 +96,7 @@ func Run() error {
 			gioapp.MinSize(unit.Dp(minWindowWidth), unit.Dp(360)))
 		w.Option(native.options()...)
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate)
+		v.helpHidden = saved.HelpHidden
 		v.defaultDataFolder = baseDir
 		v.activeDataFolder = dataDir
 		store.restoreLocation(&settingsValues)
@@ -174,7 +175,11 @@ func renderPNG(path string) error {
 }
 
 func renderViewPNG(path string, view *view) error {
-	w, err := headless.NewWindow(windowWidth, windowHeight)
+	return renderSizedViewPNG(path, view, image.Pt(windowWidth, windowHeight))
+}
+
+func renderSizedViewPNG(path string, view *view, size image.Point) error {
+	w, err := headless.NewWindow(size.X, size.Y)
 	if err != nil {
 		return err
 	}
@@ -183,12 +188,12 @@ func renderViewPNG(path string, view *view) error {
 	view.layout(layout.Context{
 		Ops: &ops, Now: time.Now(),
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-		Constraints: layout.Exact(image.Pt(windowWidth, windowHeight)),
+		Constraints: layout.Exact(size),
 	})
 	if err := w.Frame(&ops); err != nil {
 		return err
 	}
-	img := image.NewRGBA(image.Rect(0, 0, windowWidth, windowHeight))
+	img := image.NewRGBA(image.Rectangle{Max: size})
 	if err := w.Screenshot(img); err != nil {
 		return err
 	}

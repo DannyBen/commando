@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"time"
 
 	"gioui.org/f32"
 	"gioui.org/layout"
@@ -43,7 +42,7 @@ func (v *view) updateLocationBar(gtx layout.Context, index int) {
 func (v *view) layoutLocationBar(gtx layout.Context, index, height int) layout.Dimensions {
 	p := &v.panels[index]
 	if index != v.active || v.locationEditing() {
-		p.locationScroll = locationMarquee{}
+		p.locationScroll = textMarquee{}
 	}
 	if v.locationEditing() && index == v.active {
 		s := v.interaction.current.(*locationSession)
@@ -78,46 +77,6 @@ func (v *view) layoutLocationBar(gtx layout.Context, index, height int) layout.D
 			)
 		}, index == v.active)
 	})
-}
-
-type locationMarquee struct {
-	path             string
-	width, fullWidth int
-	start            time.Time
-}
-
-func (m *locationMarquee) offset(gtx layout.Context, path string, width, fullWidth int) float32 {
-	if m.path != path || m.width != width || m.fullWidth != fullWidth {
-		*m = locationMarquee{path: path, width: width, fullWidth: fullWidth, start: gtx.Now}
-	}
-	if width <= 0 || fullWidth <= width {
-		return 0
-	}
-	due := m.start.Add(locationScrollDelay)
-	if gtx.Now.Before(due) {
-		gtx.Execute(op.InvalidateCmd{At: due})
-		return 0
-	}
-	end := float32(fullWidth - width)
-	travel := time.Duration(float64(fullWidth-width) * float64(time.Second) / float64(gtx.Dp(locationScrollSpeed)))
-	cycle := 2*travel + locationScrollEndPause + locationScrollStartPause
-	phase := gtx.Now.Sub(due) % cycle
-	next := gtx.Now.Add(time.Second / 60)
-	var offset float32
-	switch {
-	case phase < travel:
-		offset = end * float32(phase) / float32(travel)
-	case phase < travel+locationScrollEndPause:
-		offset = end
-		next = gtx.Now.Add(travel + locationScrollEndPause - phase)
-	case phase < 2*travel+locationScrollEndPause:
-		offset = end * (1 - float32(phase-travel-locationScrollEndPause)/float32(travel))
-	default:
-		next = gtx.Now.Add(cycle - phase)
-	}
-	// Pauses need just one future wake-up, rather than continuous redraws.
-	gtx.Execute(op.InvalidateCmd{At: next})
-	return offset
 }
 
 func (v *view) scrollingLocation(gtx layout.Context, p *panel, fg color.NRGBA) layout.Dimensions {

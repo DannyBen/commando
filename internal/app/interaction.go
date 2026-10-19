@@ -128,6 +128,81 @@ func (v *view) activeEditor() *widget.Editor {
 	}
 }
 
+// Help follows the foreground owner and its semantic focus, never hover or a
+// suspended widget. Candidates run from the focused element to its container.
+func (v *view) helpContextIDs() []string {
+	var ids []string
+	switch s := v.interaction.current.(type) {
+	case nil:
+		ids = append(ids, "browsing.introduction")
+	case *settingsSession:
+		if s.pending {
+			ids = append(ids, "settings.saving")
+		} else if s.selecting {
+			ids = append(ids, "settings.selecting")
+		} else if s.actionsFocused {
+			switch s.action {
+			case 0:
+				ids = append(ids, "settings.actions.save")
+			case 1:
+				ids = append(ids, "settings.actions.cancel")
+			case 2:
+				if s.collection != "" {
+					ids = append(ids, "settings.actions.delete")
+				} else {
+					ids = append(ids, "settings.actions.reset")
+				}
+			}
+			ids = append(ids, "settings.actions")
+		} else if s.capturing {
+			ids = append(ids, "settings.shortcuts.capture")
+		} else if s.selected >= 0 && s.selected < len(s.fields) {
+			field := "settings." + s.fields[s.selected].Key
+			if s.editing {
+				ids = append(ids, field+".editing")
+			}
+			ids = append(ids, field)
+			if s.bindingCommand != nil {
+				ids = append(ids, fmt.Sprintf("settings.shortcuts.shortcut_%d", s.selected+1))
+			}
+		}
+		if s.selected >= 0 && s.selected < len(s.fields) {
+			if widget := s.fields[s.selected].Widget; widget != "" {
+				ids = append(ids, "settings."+widget)
+			}
+		}
+		if s.bindingCommand != nil {
+			ids = append(ids, "settings.shortcuts")
+		}
+		ids = append(ids, "settings")
+	case *paletteSession:
+		if s.selected >= 0 && s.selected < len(s.results) {
+			c := s.results[s.selected].command
+			ids = append(ids, "palette."+c.id)
+			if family := paletteHelpID(c.id); family != "palette."+c.id {
+				ids = append(ids, family)
+			}
+		}
+		if s.settingsMode {
+			ids = append(ids, "palette.settings")
+		}
+		ids = append(ids, "palette")
+	case *locationSession:
+		ids = append(ids, "editing.location", "editing")
+	case *nameSession:
+		ids = append(ids, "editing.name", "editing")
+	case *filterSession:
+		ids = append(ids, "editing.filter", "editing")
+	case *inlineActionSession:
+		ids = append(ids, "actions")
+	case *confirmationSession:
+		ids = append(ids, "confirmation")
+	case *nativeSession:
+		ids = append(ids, "native")
+	}
+	return append(ids, "help")
+}
+
 func (v *view) focusInteraction(gtx layout.Context) {
 	var target any = &v.focus
 	if s := v.confirmationInteraction(); s != nil {

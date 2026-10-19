@@ -122,7 +122,7 @@ func TestSettingsWheelAndNativeEditingInDock(t *testing.T) {
 	s := v.settingsInteraction()
 	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
 	positions := []layout.Position{v.panels[0].list.Position, v.panels[1].list.Position, v.panels[2].list.Position}
-	point := f32.Pt(320, 303)
+	point := aboveHelpFooter(v, f32.Pt(320, 303))
 	send(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: point, Scroll: f32.Pt(0, -120)})
 	if v.settingText(seed) != "49" || s.selected != 1 || !router.Source().Focused(&v.focus) {
 		t.Fatal("wheel did not reach hovered dock value", v.settingText(seed), s.selected)

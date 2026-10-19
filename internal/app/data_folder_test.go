@@ -335,8 +335,9 @@ func TestSettingsSaveRestoresBrowsingKeyboardFocus(t *testing.T) {
 			}
 			switch mode {
 			case "mouse":
-				send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(240, 405)},
-					pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(240, 405)})
+				point := aboveHelpFooter(v, f32.Pt(240, 405))
+				send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: point},
+					pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: point})
 			case "action bar":
 				send(pressed(key.NameReturn))
 			default:

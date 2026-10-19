@@ -200,13 +200,14 @@ func TestCompactInlineActionsKeepSubjectAndChoicesVisible(t *testing.T) {
 		v.appearance.TextSize = size
 		v.startInlineActions(0, 4, "", "", []string{"Overwrite", "Cancel"}, nil, nil)
 		v.inlineInteraction().subjectRow = 3
+		height := 420 - int(aboveHelpFooter(v, f32.Point{}).Y)
 		var router input.Router
 		var ops op.Ops
 		frame := func() {
 			ops.Reset()
 			v.layout(layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Now: time.Now(),
-				// Leave room for three complete rows at 48sp with tall font metrics.
-				Source: router.Source(), Constraints: layout.Exact(image.Pt(720, 420))})
+				// Leave room for three complete rows at 48sp, plus the help footer.
+				Source: router.Source(), Constraints: layout.Exact(image.Pt(720, height))})
 			router.Frame(&ops)
 		}
 		frame()

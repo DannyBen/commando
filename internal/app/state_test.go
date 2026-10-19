@@ -23,6 +23,7 @@ func TestStateStoreRoundTrip(t *testing.T) {
 		Window:      windowState{X: -1200, Y: 42, Width: 960, Height: 540, Positioned: true, Maximized: true},
 		Panels:      []panelState{{Path: filepath.Join(t.TempDir(), "Å folder"), Metadata: "none"}, {Path: "/", Drives: true, Metadata: "modified"}},
 		ActivePanel: 1,
+		HelpHidden:  true,
 	}
 	for i := 0; i < 2; i++ {
 		if err := saveState(dataDir, want); err != nil {
@@ -34,6 +35,7 @@ func TestStateStoreRoundTrip(t *testing.T) {
 		}
 		want.Window.Maximized = false
 		want.ActivePanel = 0
+		want.HelpHidden = false
 	}
 	entries, err := os.ReadDir(dataDir)
 	if err != nil || len(entries) != 1 || entries[0].Name() != "state.json" {

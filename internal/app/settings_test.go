@@ -447,7 +447,8 @@ func TestSettingsDockBlocksOnlyItsOwnPointerArea(t *testing.T) {
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameRightArrow))
 	before := v.panels[1].selected
-	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(400, 375)}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(400, 375)})
+	point := aboveHelpFooter(v, f32.Pt(400, 375))
+	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: point}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: point})
 	if v.panels[1].selected != before {
 		t.Fatal("widget click reached underlying file row")
 	}
@@ -634,7 +635,8 @@ func TestSettingsActionBarMouse(t *testing.T) {
 	send(key.EditEvent{Text: "@application"})
 	send(pressed(key.NameReturn))
 	click := func(x float32) {
-		send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(x, 405)}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(x, 405)})
+		point := aboveHelpFooter(v, f32.Pt(x, 405))
+		send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: point}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: point})
 	}
 	click(550)
 	if v.settingsInteraction() == nil || v.settingsValues.Overridden(settingDataFolder) {
@@ -660,7 +662,8 @@ func TestSettingsSaveClickKeepsInvalidDraftEditable(t *testing.T) {
 	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
 	send(key.EditEvent{Range: key.Range{Start: 0, End: 4}, Text: "200"})
-	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(240, 405)}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(240, 405)})
+	point := aboveHelpFooter(v, f32.Pt(240, 405))
+	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: point}, pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: point})
 	s := v.settingsInteraction()
 	if s == nil || !s.editing || s.actionsFocused || s.errorText == "" {
 		t.Fatal("failed Save did not return focus to invalid input")

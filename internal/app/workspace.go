@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"time"
 
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -31,7 +32,7 @@ type panel struct {
 	rows                map[int]*fileRow
 	emptySpace          *clickTarget
 	locationBar         *clickTarget
-	locationScroll      locationMarquee
+	locationScroll      textMarquee
 	list                widget.List
 	selected            int
 	selectionAnchor     image.Point
@@ -74,6 +75,10 @@ type view struct {
 	active            int
 	focus             bool
 	frameSize         image.Point
+	helpHidden        bool
+	helpHeld          map[key.Name]bool
+	helpScrollID      string
+	helpScroll        [2]textMarquee
 	started           bool
 	loader            *directoryLoader
 	monitor           *directoryMonitor

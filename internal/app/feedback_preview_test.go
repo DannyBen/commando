@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/f32"
 	"gioui.org/gpu/headless"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -47,7 +48,8 @@ func TestFeedbackPreview(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, y := range []int{450, 451} {
-			if color.NRGBAModel.Convert(img.At(10, y)) != v.feedbackColor(feedback.Success) {
+			point := aboveHelpFooter(v, f32.Pt(10, float32(y)))
+			if color.NRGBAModel.Convert(img.At(10, int(point.Y))) != v.feedbackColor(feedback.Success) {
 				t.Fatal("message edge was not two pixels high across animation states")
 			}
 		}
@@ -127,7 +129,8 @@ func TestDelayedFeedbackPreview(t *testing.T) {
 			want = v.feedbackColor(feedback.Info)
 		}
 		for _, y := range []int{450, 451} {
-			if color.NRGBAModel.Convert(img.At(10, y)) != want {
+			point := aboveHelpFooter(v, f32.Pt(10, float32(y)))
+			if color.NRGBAModel.Convert(img.At(10, int(point.Y))) != want {
 				t.Fatalf("%s: footer edge appeared early or did not follow visible progress", tc.name)
 			}
 		}

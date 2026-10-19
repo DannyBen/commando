@@ -17,6 +17,7 @@ type sessionState struct {
 	Window      windowState  `json:"window"`
 	Panels      []panelState `json:"panels"`
 	ActivePanel int          `json:"activePanel"`
+	HelpHidden  bool         `json:"helpHidden,omitempty"`
 }
 
 type panelState struct {
@@ -158,7 +159,7 @@ func startingLocations(args []string, saved []panelState) ([]panelState, error) 
 }
 
 func (v *view) sessionState(window windowState) sessionState {
-	state := sessionState{Window: window, ActivePanel: v.active, Panels: make([]panelState, len(v.panels))}
+	state := sessionState{Window: window, ActivePanel: v.active, Panels: make([]panelState, len(v.panels)), HelpHidden: v.helpHidden}
 	for i, p := range v.panels {
 		state.Panels[i] = panelState{Path: p.path, Drives: p.drives, Metadata: p.metadata.stateName(), Visibility: p.visibility.stateName(), SortByMetadata: p.sortByMetadata}
 		state.Panels[i].SizeRatio = p.sizeRatio

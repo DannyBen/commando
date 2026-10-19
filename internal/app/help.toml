@@ -1,0 +1,931 @@
+# One or two lines per context. Quoted dotted IDs are flat catalogue keys.
+# [key:command.id] displays the command's first assigned shortcut in key style.
+# Ordinary brackets are literal text. Edit and rebuild to change this catalogue.
+# Context candidates are supplied by helpContextIDs in interaction.go.
+# Missing entries fall back to the enclosing context, then to "help".
+
+["help"]
+lines = [
+  "Help follows the current control or interaction.",
+  "Commands and shortcuts are listed in the command palette.",
+]
+
+["browsing.introduction"]
+lines = [
+  "This is the help panel. Press [key:application.toggle_help] to toggle it.",
+  "To see commands and shortcuts, press [key:application.command_palette].",
+]
+
+["palette"]
+lines = [
+  "Type to find a command.",
+  "Start your search with @ to find settings.",
+]
+
+["palette.settings"]
+lines = [
+  "Search settings by name or category.",
+  "Choose a result to open its controls.",
+]
+
+["settings"]
+lines = [
+  "Adjust the focused control to configure Commando.",
+  "Save keeps your changes; Cancel discards them.",
+]
+
+["palette.settings.appearance.theme.generator"]
+lines = [
+  "Generate a random color theme with a few controls",
+]
+
+["settings.appearance.theme.generator"]
+lines = [
+  "Generate a theme by adjusting these controls.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.generator.mode"]
+lines = [
+  "Choose the overall lightness of the theme.",
+  "Black and White keep backgrounds near either extreme.",
+]
+
+["settings.appearance.theme.generator.seed"]
+lines = [
+  "Choose a repeatable set of random colors.",
+  "Other controls adjust that set without reshuffling it.",
+]
+
+["settings.appearance.theme.generator.vibrance"]
+lines = [
+  "Adjust color intensity across the generated theme.",
+  "0 is grayscale; higher values make colors more vivid.",
+]
+
+["settings.appearance.theme.generator.dynamics"]
+lines = [
+  "Control how far colors can vary from their starting values.",
+  "Higher values allow more variety; lower values keep it restrained.",
+]
+
+["settings.appearance.theme.generator.color_shift"]
+lines = [
+  "Rotate the theme through different hues.",
+  "Lightness and color intensity stay the same.",
+]
+
+["palette.settings.appearance.autocolor"]
+lines = [
+  "Give filenames consistent colors by file type",
+]
+
+["palette.settings.appearance.autocolor.selection"]
+lines = [
+  "Adjust selected and cut entry colors",
+]
+
+["palette.settings.appearance.autocolor.special_files"]
+lines = [
+  "Adjust colors for hidden entries and dotfiles",
+]
+
+["palette.settings.appearance.contrast_guard"]
+lines = [
+  "Keep text and controls readable against their backgrounds",
+]
+
+["palette.settings.appearance.font"]
+lines = [
+  "Choose the font, text sizes and weights",
+]
+
+["palette.settings.appearance.icons"]
+lines = [
+  "Show Windows file icons and adjust their colors",
+]
+
+["palette.settings.appearance.padding.horizontal"]
+lines = [
+  "Adjust space on the left and right of content",
+]
+
+["palette.settings.appearance.padding.vertical"]
+lines = [
+  "Adjust space above and below rows and controls",
+]
+
+["palette.settings.appearance.theme.customize"]
+lines = [
+  "Adjust individual theme colors",
+]
+
+["palette.settings.appearance.theme.effects"]
+lines = [
+  "Adjust dimming, hover feedback and overlay backdrops",
+]
+
+["palette.settings.appearance.theme.save"]
+lines = [
+  "Save the current colors as a reusable theme file",
+]
+
+["palette.settings.appearance.theme.select"]
+lines = [
+  "Preview and choose a built-in or saved theme",
+]
+
+["palette.settings.application.data_folder"]
+lines = [
+  "Choose where Commando stores its settings and state",
+]
+
+["palette.settings.debug.trace"]
+lines = [
+  "Choose which diagnostic events to record",
+]
+
+["palette.settings.feedback.notifications"]
+lines = [
+  "Adjust notification animation",
+]
+
+["palette.settings.feedback.sounds"]
+lines = [
+  "Choose which sounds play and how loud they are",
+]
+
+["palette.settings.guards.delete_confirmation"]
+lines = [
+  "Choose when permanent deletion asks for confirmation",
+]
+
+["palette.settings.guards.recycle_confirmation"]
+lines = [
+  "Choose when recycling asks for confirmation",
+]
+
+["palette.settings.programs.editors.new"]
+lines = [
+  "Add an editor and the file types it should open",
+]
+
+["palette.settings.programs.editors.rules"]
+lines = [
+  "Change or remove this editor rule",
+]
+
+["palette.settings.view.metadata_columns"]
+lines = [
+  "Choose which file details are available beside filenames",
+]
+
+["palette.settings.view.show_parent_entry"]
+lines = [
+  "Show a .. entry for navigating to the parent folder",
+]
+
+["palette.settings.view.show_protected_system_files"]
+lines = [
+  "Include entries with both hidden and system attributes",
+]
+
+["settings.appearance.contrast_guard"]
+lines = [
+  "Keep text and controls readable against their backgrounds.",
+  "Display adjustments leave your saved theme colors intact.",
+]
+
+["settings.appearance.contrast_guard.enabled"]
+lines = [
+  "Adjust display colors to maintain contrast.",
+  "Turn off to see your theme colors without these adjustments.",
+]
+
+["settings.appearance.icons"]
+lines = [
+  "Show Windows file icons beside filenames.",
+  "Blend their colors into your theme or keep their original appearance.",
+]
+
+["settings.appearance.icons.enabled"]
+lines = [
+  "Show Windows file icons beside filenames.",
+]
+
+["settings.appearance.icons.original_color"]
+lines = [
+  "Choose how closely icons keep their original Windows colors.",
+  "0 uses subdued file colors; 100 keeps the original colors.",
+]
+
+["settings.appearance.autocolor"]
+lines = [
+  "Give filenames consistent colors by file type.",
+  "Folders share a color; files with the same extension share a color.",
+]
+
+["settings.appearance.autocolor.enabled"]
+lines = [
+  "Use generated file and selection colors.",
+  "Turn off to use the theme's text and selection colors.",
+]
+
+["settings.appearance.autocolor.lsh.lightness"]
+lines = [
+  "Make generated filename colors lighter or darker.",
+  "Contrast guard may adjust the displayed result for readability.",
+]
+
+["settings.appearance.autocolor.lsh.saturation"]
+lines = [
+  "Adjust color intensity across generated filename colors.",
+  "0 is gray; higher values make file types easier to distinguish.",
+]
+
+["settings.appearance.autocolor.salt"]
+lines = [
+  "Choose a different, repeatable set of file colors.",
+  "Lightness and saturation stay the same.",
+]
+
+["settings.appearance.autocolor.selection"]
+lines = [
+  "Adjust how selected and cut entries stand out.",
+  "Offsets change lightness relative to the entry's normal color.",
+]
+
+["settings.appearance.autocolor.selection.lightness_points"]
+lines = [
+  "Adjust selection background lightness relative to its file color.",
+  "Positive values lighten it; negative values darken it.",
+]
+
+["settings.appearance.autocolor.selection.cut_lightness_points"]
+lines = [
+  "Adjust the lightness of entries marked for cutting.",
+  "Also applies when File colors is off; negative values darken them.",
+]
+
+["settings.appearance.autocolor.special_files"]
+lines = [
+  "Give hidden entries and dotfiles a different appearance.",
+  "An entry can receive both adjustments.",
+]
+
+["settings.appearance.autocolor.special_files.hidden_lightness_points"]
+lines = [
+  "Adjust lightness for entries with the Windows hidden attribute.",
+  "Positive values lighten them; negative values darken them.",
+]
+
+["settings.appearance.autocolor.special_files.hidden_saturation_multiplier"]
+lines = [
+  "Reduce color intensity for entries with the Windows hidden attribute.",
+  "0 removes color; 1 keeps the normal saturation.",
+]
+
+["settings.appearance.autocolor.special_files.dotfile_lightness_points"]
+lines = [
+  "Adjust lightness for entries whose names start with a dot.",
+  "Positive values lighten them; negative values darken them.",
+]
+
+["settings.appearance.autocolor.special_files.dotfile_saturation_multiplier"]
+lines = [
+  "Reduce color intensity for entries whose names start with a dot.",
+  "0 removes color; 1 keeps the normal saturation.",
+]
+
+["settings.appearance.theme.effects"]
+lines = [
+  "Adjust visual emphasis without changing your theme colors.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.effects.dimmed_text_opacity"]
+lines = [
+  "Adjust the visibility of hints and unavailable choices.",
+  "Lower values fade them; contrast guard retains minimum readability.",
+]
+
+["settings.appearance.theme.effects.hover_strength"]
+lines = [
+  "Adjust background feedback when pointing at clickable controls.",
+  "Higher values make hover feedback more prominent.",
+]
+
+["settings.appearance.theme.effects.backdrop_wash"]
+lines = [
+  "Fade background panels behind palettes and confirmations.",
+  "Higher values wash them more strongly with the surface color.",
+]
+
+["settings.appearance.theme.select"]
+lines = [
+  "Preview a built-in or saved theme.",
+  "Save keeps the chosen colors; Cancel restores your previous colors.",
+]
+
+["settings.appearance.theme.colors.element"]
+lines = [
+  "Choose the theme element you want to change.",
+  "The controls below adjust its lightness, saturation and hue.",
+]
+
+["settings.appearance.theme.colors.background"]
+lines = [
+  "Color the main surfaces of file lists, editors and overlays.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.background.lightness"]
+lines = [
+  "Make the main background lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.background.saturation"]
+lines = [
+  "Adjust color intensity for the main background.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.background.hue"]
+lines = [
+  "Choose the color family for the main background.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.alt_background"]
+lines = [
+  "Color headers, footers and inline action surfaces.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.alt_background.lightness"]
+lines = [
+  "Make the alternate background lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.alt_background.saturation"]
+lines = [
+  "Adjust color intensity for the alternate background.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.alt_background.hue"]
+lines = [
+  "Choose the color family for the alternate background.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.border"]
+lines = [
+  "Color panel borders and scrollbars.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.border.lightness"]
+lines = [
+  "Make the border lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.border.saturation"]
+lines = [
+  "Adjust color intensity for the border.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.border.hue"]
+lines = [
+  "Choose the color family for the border.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.edge"]
+lines = [
+  "Color the active location and emphasized edges.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.edge.lightness"]
+lines = [
+  "Make the accent lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.edge.saturation"]
+lines = [
+  "Adjust color intensity for the accent.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.edge.hue"]
+lines = [
+  "Choose the color family for the accent.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.text"]
+lines = [
+  "Color ordinary text and filenames when File colors is off.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.text.lightness"]
+lines = [
+  "Make the main text lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.text.saturation"]
+lines = [
+  "Adjust color intensity for the main text.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.text.hue"]
+lines = [
+  "Choose the color family for the main text.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.secondary_text"]
+lines = [
+  "Color metadata and supporting text.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.secondary_text.lightness"]
+lines = [
+  "Make the secondary text lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.secondary_text.saturation"]
+lines = [
+  "Adjust color intensity for the secondary text.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.secondary_text.hue"]
+lines = [
+  "Choose the color family for the secondary text.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.text_selection"]
+lines = [
+  "Color the highlight behind selected text in editors.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.text_selection.lightness"]
+lines = [
+  "Make the text selection background lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.text_selection.saturation"]
+lines = [
+  "Adjust color intensity for the text selection background.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.text_selection.hue"]
+lines = [
+  "Choose the color family for the text selection background.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.selection"]
+lines = [
+  "Color selected file rows when File colors is off.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.selection.lightness"]
+lines = [
+  "Make the row selection background lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.selection.saturation"]
+lines = [
+  "Adjust color intensity for the row selection background.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.selection.hue"]
+lines = [
+  "Choose the color family for the row selection background.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.error"]
+lines = [
+  "Color messages reporting a failed operation.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.error.lightness"]
+lines = [
+  "Make the error text lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.error.saturation"]
+lines = [
+  "Adjust color intensity for the error text.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.error.hue"]
+lines = [
+  "Choose the color family for the error text.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.info"]
+lines = [
+  "Color informational messages.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.info.lightness"]
+lines = [
+  "Make the information text lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.info.saturation"]
+lines = [
+  "Adjust color intensity for the information text.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.info.hue"]
+lines = [
+  "Choose the color family for the information text.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.success"]
+lines = [
+  "Color messages reporting a successful operation.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.success.lightness"]
+lines = [
+  "Make the success text lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.success.saturation"]
+lines = [
+  "Adjust color intensity for the success text.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.success.hue"]
+lines = [
+  "Choose the color family for the success text.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.theme.colors.warning"]
+lines = [
+  "Color warning messages.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.theme.colors.warning.lightness"]
+lines = [
+  "Make the warning text lighter or darker.",
+  "0 is black; 100 is white. Contrast guard may adjust the display.",
+]
+
+["settings.appearance.theme.colors.warning.saturation"]
+lines = [
+  "Adjust color intensity for the warning text.",
+  "0 is gray; higher values add more color.",
+]
+
+["settings.appearance.theme.colors.warning.hue"]
+lines = [
+  "Choose the color family for the warning text.",
+  "Add saturation if changing hue has no visible effect.",
+]
+
+["settings.appearance.font"]
+lines = [
+  "Choose a readable font and comfortable text sizes.",
+  "Changes preview immediately, including in this help panel.",
+]
+
+["settings.appearance.font.family"]
+lines = [
+  "Enter an installed font family, such as Arial.",
+  "Unavailable families use the bundled font.",
+]
+
+["settings.appearance.font.text_size"]
+lines = [
+  "Set the size of file rows, paths, controls and help text.",
+  "Increase this if the help panel is tiring to read.",
+]
+
+["settings.appearance.font.small_text_size"]
+lines = [
+  "Set the size of column headings and panel status text.",
+  "Help text uses the main Text size setting.",
+]
+
+["settings.appearance.font.weight"]
+lines = [
+  "Set the weight of ordinary text: 400 is regular; 700 is bold.",
+  "Uses the closest weight available in the chosen font.",
+]
+
+["settings.appearance.font.bold_weight"]
+lines = [
+  "Set the weight used for emphasis, including directory names.",
+  "Uses the closest weight available in the chosen font.",
+]
+
+["settings.appearance.padding.vertical"]
+lines = [
+  "Adjust space above and below rows and controls.",
+  "Larger values make the interface roomier; smaller values fit more content.",
+]
+
+["settings.appearance.padding.horizontal"]
+lines = [
+  "Adjust space on the left and right of content.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.appearance.padding.vertical.rows"]
+lines = [
+  "Add space above and below file rows, settings controls and palette results.",
+  "Measured per side in display-independent pixels.",
+]
+
+["settings.appearance.padding.vertical.headers_footers"]
+lines = [
+  "Add space above and below column headings and footers.",
+  "Measured per side in display-independent pixels.",
+]
+
+["settings.appearance.padding.vertical.location"]
+lines = [
+  "Add space above and below the location-bar text.",
+  "Measured per side in display-independent pixels.",
+]
+
+["settings.appearance.padding.vertical.search"]
+lines = [
+  "Add space above and below the palette-search text.",
+  "Measured per side in display-independent pixels.",
+]
+
+["settings.appearance.padding.horizontal.content"]
+lines = [
+  "Add space on each side of rows, headers, footers and controls.",
+  "Measured per side in display-independent pixels.",
+]
+
+["settings.view.metadata_columns"]
+lines = [
+  "Choose which file details you can cycle through in each panel.",
+  "Each panel shows one metadata column at a time.",
+]
+
+["settings.view.metadata_columns.extension"]
+lines = [
+  "Include file extensions when cycling metadata columns.",
+  "Each panel keeps its own choice of column.",
+]
+
+["settings.view.metadata_columns.size"]
+lines = [
+  "Include file sizes when cycling metadata columns.",
+  "Each panel keeps its own choice of column.",
+]
+
+["settings.view.metadata_columns.modified"]
+lines = [
+  "Include last modification times when cycling metadata columns.",
+  "Each panel keeps its own choice of column.",
+]
+
+["settings.view.metadata_columns.created"]
+lines = [
+  "Include creation times when cycling metadata columns.",
+  "Each panel keeps its own choice of column.",
+]
+
+["settings.view.show_protected_system_files"]
+lines = [
+  "Include entries with both hidden and system attributes.",
+  "When enabled, these appear even if ordinary hidden entries are hidden.",
+]
+
+["settings.view.show_parent_entry"]
+lines = [
+  "Show a .. entry that opens the parent folder.",
+  "You can still use the Parent folder command when this is off.",
+]
+
+["settings.application.data_folder"]
+lines = [
+  "Choose where Commando stores its settings and state.",
+  "The new location takes effect after restarting Commando.",
+]
+
+["settings.application.data_folder.path"]
+lines = [
+  "Copy application data here without replacing existing files.",
+  "Restart Commando to use this folder; the old folder is retained.",
+]
+
+["settings.programs.editors"]
+lines = [
+  "Choose an editor for a set of file extensions.",
+  "Specific extension rules take priority over the * fallback rule.",
+]
+
+["settings.programs.editors.ext"]
+lines = [
+  "Enter space-separated extensions, such as txt md.",
+  "Use * on its own for the fallback editor.",
+]
+
+["settings.programs.editors.path"]
+lines = [
+  "Choose the executable to launch for matching files.",
+]
+
+["settings.programs.editors.args"]
+lines = [
+  "Use %SelectedFiles% once as a whole argument.",
+  "Each matching file is passed separately; quote other arguments with spaces.",
+]
+
+["settings.feedback.sounds"]
+lines = [
+  "Choose which sound cues play and how loud they are.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.feedback.sounds.enabled"]
+lines = [
+  "Play sound cues using the chosen profile and volume.",
+  "Turn off to silence all Commando sounds.",
+]
+
+["settings.feedback.sounds.profile"]
+lines = [
+  "Choose how much sound to play.",
+  "Each profile includes the levels below it, from errors to navigation.",
+]
+
+["settings.feedback.sounds.master_volume"]
+lines = [
+  "Scale all sound cues by this percentage.",
+  "0 is silent; 100 keeps each cue's original volume.",
+]
+
+["settings.feedback.notifications"]
+lines = [
+  "Adjust how notification messages appear.",
+]
+
+["settings.feedback.notifications.animation"]
+lines = [
+  "Animate notification text and its cursor.",
+  "Turn off to show notification text immediately.",
+]
+
+["settings.guards.recycle_confirmation"]
+lines = [
+  "Choose when recycling asks for confirmation.",
+  "ON (Cancel default) starts with Cancel selected; the strongest guard wins.",
+]
+
+["settings.guards.recycle_confirmation.single_files"]
+lines = [
+  "Require confirmation for exactly one file.",
+  "If several guards match, the strongest setting wins.",
+]
+
+["settings.guards.recycle_confirmation.directories"]
+lines = [
+  "Require confirmation for any selection containing a folder.",
+  "If several guards match, the strongest setting wins.",
+]
+
+["settings.guards.recycle_confirmation.multiple_entries"]
+lines = [
+  "Require confirmation for two or more entries.",
+  "If several guards match, the strongest setting wins.",
+]
+
+["settings.guards.delete_confirmation"]
+lines = [
+  "Choose when permanently deleting asks for confirmation.",
+  "ON (Cancel default) starts with Cancel selected; the strongest guard wins.",
+]
+
+["settings.guards.delete_confirmation.single_files"]
+lines = [
+  "Require confirmation for exactly one file.",
+  "If several guards match, the strongest setting wins.",
+]
+
+["settings.guards.delete_confirmation.directories"]
+lines = [
+  "Require confirmation for any selection containing a folder.",
+  "If several guards match, the strongest setting wins.",
+]
+
+["settings.guards.delete_confirmation.multiple_entries"]
+lines = [
+  "Require confirmation for two or more entries.",
+  "If several guards match, the strongest setting wins.",
+]
+
+["settings.debug.trace"]
+lines = [
+  "Record selected diagnostic events for troubleshooting.",
+  "Changes apply on Save; 0 is off and 127 enables every category.",
+]
+
+["settings.debug.trace.mask"]
+lines = [
+  "Add category values to combine them; 0 disables tracing.",
+  "1 Files, 2 UI, 4 Shell, 8 Browsing, 16 Storage, 32 Lifecycle, 64 Feedback.",
+]
+
+["settings.actions.save"]
+lines = [
+  "Keep these settings and close the widget.",
+]
+
+["settings.actions.cancel"]
+lines = [
+  "Discard changes made in this widget.",
+  "Live previews return to their previous values.",
+]
+
+["settings.actions.reset"]
+lines = [
+  "Preview the default values for this widget.",
+  "Save to keep them, or Cancel to restore your previous settings.",
+]
+
+["settings.actions.delete"]
+lines = [
+  "Remove this editor rule when you save.",
+  "Cancel keeps the rule.",
+]
+
+["settings.saving"]
+lines = [
+  "Saving your settings.",
+  "This widget stays open until saving finishes.",
+]
+
+["settings.selecting"]
+lines = [
+  "Choose a folder or file from the panels.",
+  "Confirm your choice to return to the settings widget.",
+]
+
+["settings.shortcuts"]
+lines = [
+  "Assign shortcuts to this command.",
+  "Changes take effect after you save.",
+]
+
+["settings.shortcuts.capture"]
+lines = [
+  "Press the key combination you want to assign.",
+  "Escape cancels capture.",
+]
+
+["settings.shortcuts.shortcut_1"]
+lines = [
+  "Choose the primary shortcut for this command.",
+  "Protected shortcuts cannot be changed.",
+]
+
+["settings.shortcuts.shortcut_2"]
+lines = [
+  "Choose an optional second shortcut for this command.",
+  "Leave it unassigned if one shortcut is enough.",
+]

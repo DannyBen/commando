@@ -16,6 +16,7 @@ import (
 )
 
 func (v *view) layout(gtx layout.Context) layout.Dimensions {
+	frame := gtx
 	v.frameSize = gtx.Constraints.Max
 	v.update(gtx)
 	v.offerNameDraft(gtx) // Replace action floaters before drawing this frame.
@@ -42,13 +43,21 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 			return dims
 		}))
 	}
-	dims := layout.Flex{}.Layout(gtx, children...)
+	workspace := gtx
+	dims := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			workspace = gtx
+			return layout.Flex{}.Layout(gtx, children...)
+		}),
+		layout.Rigid(v.layoutHelpFooter),
+	)
 	v.submitFileIcons()
 	area := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
 	pass := pointer.PassOp{}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &v.feedbackPointer)
 	pass.Pop()
 	area.Pop()
+	gtx = workspace // Keep palette and settings surfaces above the help footer.
 	if v.paletteInteraction() != nil {
 		v.layoutPalette(gtx)
 	}
@@ -60,7 +69,7 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 		v.layoutSettingsWidget(settingsContext)
 	}
 	if v.confirmationInteraction() != nil {
-		v.layoutConfirmation(gtx)
+		v.layoutConfirmation(frame)
 	}
 	return dims
 }
