@@ -9,11 +9,6 @@ import (
 	"github.com/dannyben/commando/internal/settings"
 )
 
-// Add an area here when its catalogue is complete. All future additions in that
-// area then need their own help to pass ordinary tests and CI. Until then, use
-// op help-audit [AREA] as the red/green writing queue; fallbacks never count.
-var completedHelpAreas = []string{"foundation", "settings", "palette.settings", "palette.commands"}
-
 type helpRequirement struct{ area, id string }
 
 func helpRequirements(c settings.Catalogue, paletteCommands, paletteSettings []command) []helpRequirement {
@@ -49,7 +44,7 @@ func helpRequirements(c settings.Catalogue, paletteCommands, paletteSettings []c
 		"settings.actions.save", "settings.actions.cancel", "settings.actions.reset", "settings.actions.delete",
 		"settings.saving", "settings.selecting",
 		"settings.shortcuts", "settings.shortcuts.capture", "settings.shortcuts.shortcut_1", "settings.shortcuts.shortcut_2",
-		"editing.location", "editing.name", "editing.filter", "actions", "confirmation", "native",
+		"editing.location", "editing.name", "editing.filter", "actions", "actions.target_panel", "actions.target_panel.choices", "confirmation",
 	} {
 		add("interactions", id)
 	}
@@ -86,7 +81,9 @@ func missingHelp(requirements []helpRequirement, catalogue helpCatalogue, scope 
 func TestHelpCoverage(t *testing.T) {
 	v := newPreviewView()
 	requirements := helpRequirements(settings.CatalogueDefault, v.commandCatalogue(), v.settingsCatalogue())
-	scopes := completedHelpAreas
+	// Every inventoried context requires its own entry in ordinary tests and CI.
+	// The audit can also focus on one area; runtime fallbacks never count.
+	scopes := []string{""}
 	if os.Getenv("COMMANDO_HELP_AUDIT") == "1" {
 		scopes = []string{os.Getenv("COMMANDO_HELP_AREA")}
 	}

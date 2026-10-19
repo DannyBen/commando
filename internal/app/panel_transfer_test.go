@@ -56,6 +56,9 @@ func TestPanelTransferDefaultDestinationNavigationAndCancellation(t *testing.T) 
 				}
 				forbidTransferClipboard(t, v)
 				send(pressed(shortcut))
+				if id, _ := defaultHelp.resolve(v.helpContextIDs()...); id != "actions.target_panel" {
+					t.Fatal("panel transfer did not explain target-panel navigation", id)
+				}
 				initial := source + 1
 				if source == 2 {
 					initial = 1

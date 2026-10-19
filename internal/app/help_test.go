@@ -2,6 +2,7 @@ package app
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -9,7 +10,31 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/settings"
+	"github.com/dannyben/commando/internal/sound"
 )
+
+func TestHelpSoundsFollowTransitionsThroughKeyboardAndPalette(t *testing.T) {
+	v := newPreviewView()
+	recorder := &recordedSounds{}
+	v.sounds = recorder
+	send, _ := panelInputFrames(v)
+	if len(recorder.played) != 0 {
+		t.Fatal("initial help visibility played a toggle sound", recorder.played)
+	}
+	send(pressed(key.NameF1))
+	send(pressed(key.NameF1), key.Event{Name: key.NameF1, State: key.Release})
+	send(pressed(key.NameF1), key.Event{Name: key.NameF1, State: key.Release})
+	if !slices.Equal(recorder.played, []sound.Name{sound.HelpClosed, sound.HelpOpened}) {
+		t.Fatal("help transitions, repeats or releases played the wrong sounds", recorder.played)
+	}
+	send(pressed("`"))
+	send(replacePalette(v, "Toggle help"))
+	recorder.played = nil
+	send(pressed(key.NameReturn))
+	if !v.helpHidden || !slices.Equal(recorder.played, []sound.Name{sound.HelpClosed}) {
+		t.Fatal("palette help toggle did not use the shared transition sound", recorder.played)
+	}
+}
 
 func TestHelpToggleInputAndPersistence(t *testing.T) {
 	v := newPreviewView()

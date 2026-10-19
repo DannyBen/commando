@@ -184,7 +184,14 @@ func defaultCommands() []command {
 		case "application.command_palette":
 			c.bindings[1].Default = shortcut{Name: "P", Modifiers: key.ModCtrl | key.ModShift}
 		case helpCommandID:
-			c.execute = func(v *view) { v.helpHidden = !v.helpHidden }
+			c.execute = func(v *view) {
+				v.helpHidden = !v.helpHidden
+				if v.helpHidden {
+					v.announceInteraction(eventHelpClosed)
+				} else {
+					v.announceInteraction(eventHelpOpened)
+				}
+			}
 		case "selection.clear_filter_or_marks":
 			c.bindings[0].Protected = true
 		}

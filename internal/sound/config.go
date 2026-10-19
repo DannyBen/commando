@@ -17,6 +17,8 @@ const (
 	Palette             Name = "palette"
 	Settings            Name = "settings"
 	Question            Name = "question"
+	HelpOpened          Name = "helpOpened"
+	HelpClosed          Name = "helpClosed"
 	DirectoryNavigation Name = "directoryNavigation"
 	MessageInfo         Name = "messageInfo"
 	MessageSuccess      Name = "messageSuccess"

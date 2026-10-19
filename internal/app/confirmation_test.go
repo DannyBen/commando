@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"gioui.org/f32"
+	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
@@ -137,6 +138,25 @@ func TestReassignmentCancellationAndFailedSaveKeepAssignments(t *testing.T) {
 	send(pressed(key.NameReturn))
 	if v.settingsValues.Overridden(s.fields[0].Key) || v.settingsValues.Overridden(bindingSettingKey("entry.copy", 0)) {
 		t.Fatal("Cancel retained part of the reassignment")
+	}
+}
+
+func TestConfirmationReceivesNativeTabEvents(t *testing.T) {
+	for _, modifiers := range []key.Modifiers{0, key.ModShift} {
+		v := newPreviewView()
+		send, _ := panelInputFrames(v)
+		q := &confirmationSession{message: "Continue?", acceptLabel: "Continue"}
+		v.startConfirmation(layout.Context{}, q)
+		send()
+		for _, want := range []int{1, 0} {
+			// The window wraps Tab presses as system events. Catch-all key
+			// filters accept ordinary test events but miss this native path.
+			send(input.SystemEvent{Event: key.Event{Name: key.NameTab, Modifiers: modifiers, State: key.Press}})
+			if q.selected != want || v.confirmationInteraction() != q || v.active != 0 {
+				t.Fatalf("modifiers %v: Tab selected %d, want %d", modifiers, q.selected, want)
+			}
+			send(key.Event{Name: key.NameTab, Modifiers: modifiers, State: key.Release})
+		}
 	}
 }
 

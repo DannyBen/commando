@@ -13,7 +13,7 @@ lines = [
 ["browsing.introduction"]
 lines = [
   "This is the help panel. Press [key:application.toggle_help] to toggle it.",
-  "To see commands and shortcuts, press [key:application.command_palette].",
+  "Press [key:application.command_palette] for commands and shortcuts; search @font for text size.",
 ]
 
 ["palette"]
@@ -732,7 +732,7 @@ lines = [
 ["settings.view.show_protected_system_files"]
 lines = [
   "Include entries with both hidden and system attributes.",
-  "These appear even when [key:view.hidden_files] hides ordinary hidden entries.",
+  "Hidden-file visibility ([key:view.hidden_files]) also controls whether these appear.",
 ]
 
 ["settings.view.show_parent_entry"]
@@ -1289,4 +1289,45 @@ lines = [
 ["palette.view.toggle_protected_system_files"]
 lines = [
   "Show or hide entries with both hidden and system attributes",
+]
+
+["editing.location"]
+lines = [
+  "Enter a folder path; relative paths such as .. and ..\\other also work.",
+  "Enter opens the path; Escape keeps the current folder.",
+]
+
+["editing.name"]
+lines = [
+  "Enter a name for this file or folder.",
+  "Enter applies the name; Escape cancels editing.",
+]
+
+["editing.filter"]
+lines = [
+  "Show only filenames containing this text, ignoring letter case.",
+  "Enter keeps the filter and returns to browsing; Escape clears it.",
+]
+
+["actions"]
+lines = [
+  "Choose one of the actions shown in the file list.",
+  "Up/Down selects; Enter continues; Escape cancels.",
+]
+
+["confirmation"]
+lines = [
+  "Tab or Left/Right changes buttons.",
+]
+
+["actions.target_panel"]
+lines = [
+  "Choose a target panel with Left/Right.",
+  "Enter confirms; Escape cancels.",
+]
+
+["actions.target_panel.choices"]
+lines = [
+  "Choose a target panel with Left/Right.",
+  "Up/Down chooses an action; Enter confirms; Escape cancels.",
 ]

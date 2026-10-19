@@ -141,7 +141,13 @@ func (v *view) updateConfirmation(gtx layout.Context, s *confirmationSession) {
 		return
 	}
 	for {
-		e, ok := gtx.Event(key.FocusFilter{Target: s}, key.Filter{Focus: s, Optional: key.ModCtrl | key.ModShift | key.ModAlt | key.ModSuper | key.ModCommand})
+		e, ok := gtx.Event(
+			key.FocusFilter{Target: s},
+			// Gio reserves native Tab presses for focus navigation unless an
+			// explicit named filter claims their system-event delivery.
+			key.Filter{Focus: s, Name: key.NameTab, Optional: key.ModShift},
+			key.Filter{Focus: s, Optional: key.ModCtrl | key.ModShift | key.ModAlt | key.ModSuper | key.ModCommand},
+		)
 		if !ok {
 			return
 		}

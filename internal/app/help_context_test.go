@@ -74,7 +74,7 @@ func TestHelpFollowsPaletteWidgetAndFocusedControl(t *testing.T) {
 		t.Fatal("confirmation did not suspend the widget")
 	}
 	send()
-	wantHelp("help") // Missing confirmation help must not describe the suspended field.
+	wantHelp("confirmation") // The question must not describe the suspended field.
 	send(pressed(key.NameEscape), key.Event{Name: key.NameEscape, State: key.Release})
 	wantHelp(dynamicsID)
 	if v.settingsInteraction() != s {
@@ -119,8 +119,10 @@ func TestHelpContextFallbackOrder(t *testing.T) {
 		{"name", &nameSession{}, "editing.name"},
 		{"filter", &filterSession{}, "editing.filter"},
 		{"inline action", &inlineActionSession{}, "actions"},
+		{"target panel", &inlineActionSession{navigate: func(int, bool) {}}, "actions.target_panel"},
+		{"target panel choices", &inlineActionSession{navigate: func(int, bool) {}, options: []string{"Here", "New folder"}}, "actions.target_panel.choices"},
 		{"confirmation", &confirmationSession{}, "confirmation"},
-		{"native", &nativeSession{}, "native"},
+		{"native", &nativeSession{}, "browsing.introduction"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			v := newPreviewView()
@@ -157,12 +159,23 @@ func TestHelpContextPreview(t *testing.T) {
 		"metadata":   {"view.metadata_columns", "modified"},
 		"text-color": {"appearance.theme.colors.text", "lightness"},
 	}
-	for _, context := range []string{"palette", "palette-generator", "generator", "seed", "vibrance", "dynamics", "color-shift", "font", "sounds", "effects", "metadata", "text-color"} {
+	for _, context := range []string{"palette", "palette-generator", "generator", "seed", "vibrance", "dynamics", "color-shift", "font", "sounds", "effects", "metadata", "text-color", "location", "name", "filter", "actions", "confirmation"} {
 		v := newPreviewView()
 		if context == "palette" {
 			v.startPalette(layout.Context{})
 		} else if context == "palette-generator" {
 			v.openPaletteQuery(layout.Context{}, "@generator")
+		} else if context == "location" {
+			v.startLocation(layout.Context{})
+		} else if context == "name" {
+			v.startName(layout.Context{}, nameRename)
+		} else if context == "filter" {
+			v.startFilter(layout.Context{})
+		} else if context == "actions" {
+			v.startInlineActions(0, 4, "", "", []string{"Copy here"}, nil, nil)
+			v.inlineInteraction().navigate = func(int, bool) {}
+		} else if context == "confirmation" {
+			v.startConfirmation(layout.Context{}, &confirmationSession{message: "Continue?", acceptLabel: "Continue"})
 		} else {
 			control, ok := controls[context]
 			if !ok {

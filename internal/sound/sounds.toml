@@ -39,6 +39,22 @@ length_ms = 75
 waveform = "triangle"
 volume = 32
 
+[sounds.helpOpened]
+level = 4
+notes = [440, 587.33]
+length_ms = 35
+spacing_ms = 30
+waveform = "triangle"
+volume = 24
+
+[sounds.helpClosed]
+level = 4
+notes = [587.33, 440]
+length_ms = 35
+spacing_ms = 30
+waveform = "triangle"
+volume = 24
+
 [sounds.question]
 level = 4
 notes = [392, 493.88]

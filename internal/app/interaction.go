@@ -133,7 +133,7 @@ func (v *view) activeEditor() *widget.Editor {
 func (v *view) helpContextIDs() []string {
 	var ids []string
 	switch s := v.interaction.current.(type) {
-	case nil:
+	case nil, *nativeSession:
 		ids = append(ids, "browsing.introduction")
 	case *settingsSession:
 		if s.pending {
@@ -194,11 +194,15 @@ func (v *view) helpContextIDs() []string {
 	case *filterSession:
 		ids = append(ids, "editing.filter", "editing")
 	case *inlineActionSession:
+		if s.navigate != nil {
+			if len(s.options) > 1 {
+				ids = append(ids, "actions.target_panel.choices")
+			}
+			ids = append(ids, "actions.target_panel")
+		}
 		ids = append(ids, "actions")
 	case *confirmationSession:
 		ids = append(ids, "confirmation")
-	case *nativeSession:
-		ids = append(ids, "native")
 	}
 	return append(ids, "help")
 }
