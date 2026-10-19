@@ -9,7 +9,7 @@ import (
 )
 
 func (v *view) dragAvailable(index, row int, armed bool) bool {
-	return v.nativeItemsAvailable(index, row, !armed)
+	return v.nativeItemsAvailable(index, row, !armed, shellDrag)
 }
 
 func (v *view) startDrag(gtx layout.Context, index, row int, armed bool) {

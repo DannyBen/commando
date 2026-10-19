@@ -135,11 +135,14 @@ func (v *view) finishNative() {
 	}
 }
 
-func (v *view) nativeItemsAvailable(index, row int, mouse bool) bool {
+func (v *view) nativeItemsAvailable(index, row int, mouse bool, action shellAction) bool {
 	if v.shellExecutor == nil || !v.canOfferInteraction(index, actionMutation) {
 		return false
 	}
 	p := &v.panels[index]
+	if p.drives {
+		return action == shellProperties && row >= 0 && row < len(p.items) && p.items[row].file.Path != ""
+	}
 	if p.path == "" || !p.nativeFolder() {
 		return false
 	}

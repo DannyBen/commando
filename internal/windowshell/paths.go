@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func siblingPaths(paths []string) ([]string, error) {
+func siblingPaths(paths []string, allowRoot bool) ([]string, error) {
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("no files selected")
 	}
@@ -20,7 +20,7 @@ func siblingPaths(paths []string) ([]string, error) {
 			return nil, fmt.Errorf("shell paths must be absolute")
 		}
 		cleaned[i] = filepath.Clean(path)
-		if filepath.Dir(cleaned[i]) == cleaned[i] {
+		if filepath.Dir(cleaned[i]) == cleaned[i] && !(allowRoot && len(paths) == 1) {
 			return nil, fmt.Errorf("select files or folders, not a drive root")
 		}
 		if i > 0 && !strings.EqualFold(filepath.Dir(cleaned[0]), filepath.Dir(cleaned[i])) {

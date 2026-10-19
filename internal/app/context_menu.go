@@ -15,12 +15,14 @@ func (v *view) startContextMenu(gtx layout.Context, index, row int, mouse bool) 
 }
 
 func (v *view) startItemShellAction(gtx layout.Context, index, row int, mouse bool, action shellAction) {
-	if !v.canStartInteraction(index, actionMutation) || !v.nativeItemsAvailable(index, row, mouse) {
+	if !v.canStartInteraction(index, actionMutation) || !v.nativeItemsAvailable(index, row, mouse, action) {
 		return
 	}
 	p := &v.panels[index]
 	paths := p.selectedPaths()
-	if mouse {
+	if p.drives {
+		paths = []string{p.items[row].file.Path}
+	} else if mouse {
 		paths = []string{filepath.Join(p.path, p.items[row].file.Name)}
 	}
 	if len(paths) == 0 {

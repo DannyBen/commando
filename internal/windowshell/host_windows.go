@@ -157,7 +157,7 @@ func (h *Host) ContextMenu(paths []string, options MenuOptions) (Result, error) 
 	if err != nil {
 		return r, err
 	}
-	menu, err := timedShellObject(h.hwnd, paths, &iidMenu, &r.Timings)
+	menu, err := timedShellObject(h.hwnd, paths, &iidMenu, &r.Timings, false)
 	if err != nil {
 		return r, err
 	}
@@ -227,7 +227,7 @@ func (h *Host) ContextMenu(paths []string, options MenuOptions) (Result, error) 
 	return r, hresult(uintptr(menu.call(4, uintptr(unsafe.Pointer(&info)))))
 }
 
-// Properties invokes the canonical shell verb for the whole sibling selection.
+// Properties invokes the canonical shell verb for siblings or one drive root.
 func (h *Host) Properties(paths []string, options MenuOptions) (Result, error) {
 	r := Result{Action: "properties", ThreadID: h.thread}
 	if err := h.begin(); err != nil {
@@ -238,7 +238,7 @@ func (h *Host) Properties(paths []string, options MenuOptions) (Result, error) {
 	if err != nil {
 		return r, err
 	}
-	menu, err := shellObject(h.hwnd, paths, &iidMenu)
+	menu, err := timedShellObject(h.hwnd, paths, &iidMenu, nil, true)
 	if err != nil {
 		return r, err
 	}
@@ -298,12 +298,12 @@ func (o *object) query(iid *windows.GUID) *object {
 }
 
 func shellObject(hwnd uintptr, paths []string, iid *windows.GUID) (*object, error) {
-	return timedShellObject(hwnd, paths, iid, nil)
+	return timedShellObject(hwnd, paths, iid, nil, false)
 }
 
-func timedShellObject(hwnd uintptr, paths []string, iid *windows.GUID, timings *MenuTimings) (*object, error) {
+func timedShellObject(hwnd uintptr, paths []string, iid *windows.GUID, timings *MenuTimings, allowRoot bool) (*object, error) {
 	start := time.Now()
-	paths, err := siblingPaths(paths)
+	paths, err := siblingPaths(paths, allowRoot)
 	if err != nil {
 		return nil, err
 	}

@@ -2,11 +2,46 @@ package app
 
 import (
 	"errors"
+	"path/filepath"
 	"reflect"
 	"testing"
 
 	"gioui.org/io/key"
+	"github.com/dannyben/commando/internal/browser"
 )
+
+func TestDrivePropertiesUsesExistingCommandAndNativeSession(t *testing.T) {
+	for _, palette := range []bool{false, true} {
+		v := menuTestView()
+		p := &v.panels[0]
+		root := filepath.VolumeName(t.TempDir()) + string(filepath.Separator)
+		p.path, p.drives = "", true
+		p.items = []entry{{name: root, file: browser.Entry{Name: root, Path: root, Directory: true}}}
+		p.selected = 0
+		p.clearMarks()
+		send, _ := panelInputFrames(v)
+		if v.nativeItemsAvailable(0, 0, false, shellMenu) || v.dragAvailable(0, 0, true) {
+			t.Fatal("drive Properties enabled other shell actions")
+		}
+		if palette {
+			send(pressed("`"))
+			send(replacePalette(v, "Entry Properties"), pressed(key.NameReturn))
+		} else {
+			send(pressed(key.NameF12))
+		}
+		s, ok := v.interaction.current.(*nativeSession)
+		if !ok || s.request.action != shellProperties || !reflect.DeepEqual(s.request.paths, []string{root}) || s.request.options.ClientPoint == nil {
+			t.Fatalf("palette=%v: drive did not enter shared Properties session: %+v", palette, s)
+		}
+		if v.requestClose() || v.actionAllowed(actionMutation) {
+			t.Fatal("drive Properties bypassed native busy policy")
+		}
+		v.completeNative(shellCompletion{session: s})
+		if !v.interaction.idle() || !p.drives || p.selected != 0 {
+			t.Fatal("Properties completion changed drive selection")
+		}
+	}
+}
 
 func TestPropertiesUsesSelectionAndSharedNativeSession(t *testing.T) {
 	for _, marked := range []bool{false, true} {

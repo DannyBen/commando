@@ -94,9 +94,13 @@ func defaultCommands() []command {
 		}),
 		cmd("entry.new_file", "Entry", "New file", "N", key.ModCtrl, createReady),
 		cmd("entry.new_folder", "Entry", "New folder", "N", key.ModCtrl|key.ModShift, createReady),
-		cmd("entry.context_menu", "Entry", "Context menu", "/", key.ModAlt, func(v *view) bool { return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false) }),
+		cmd("entry.context_menu", "Entry", "Context menu", "/", key.ModAlt, func(v *view) bool {
+			return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false, shellMenu)
+		}),
 
-		cmd("entry.properties", "Entry", "Properties", key.NameF12, 0, func(v *view) bool { return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false) }),
+		cmd("entry.properties", "Entry", "Properties", key.NameF12, 0, func(v *view) bool {
+			return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false, shellProperties)
+		}),
 
 		cmd("entry.arm_drag", "Entry", "Arm drag", "D", key.ModCtrl|key.ModShift, func(v *view) bool { return v.dragAvailable(v.active, v.panels[v.active].selected, true) }),
 
