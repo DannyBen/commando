@@ -26,6 +26,11 @@ func (l *directoryLoader) archiveRemovalOperation(request loadRequest) loadResul
 	if result.err != nil {
 		return result
 	}
+	l.refreshArchivePanels(&result, locations, original)
+	return result
+}
+
+func (l *directoryLoader) refreshArchivePanels(result *loadResult, locations []browser.Location, original string) {
 	result.panelUpdates = make([]transferPanelUpdate, len(locations))
 	for i, location := range locations {
 		if location.Path == "" || result.locations[i] == "" {
@@ -33,6 +38,9 @@ func (l *directoryLoader) archiveRemovalOperation(request loadRequest) loadResul
 		}
 		update := transferPanelUpdate{needed: true}
 		if location.InArchive() && samePath(result.locations[i], original) {
+			if result.request.rename != nil {
+				location.Folder = renamedArchiveFolder(location.Folder, result.request)
+			}
 			for {
 				update.directory, update.err = browser.ReadArchive(location)
 				if !errors.Is(update.err, fs.ErrNotExist) || location.Folder == "." {
@@ -47,11 +55,9 @@ func (l *directoryLoader) archiveRemovalOperation(request loadRequest) loadResul
 		}
 		result.panelUpdates[i] = update
 	}
-	return result
 }
 
-func (v *view) applyArchiveRemovalPanels(result loadResult) (failed bool) {
-	locations := result.request.removal.archiveLocations
+func (v *view) applyArchivePanels(result loadResult, locations []browser.Location) (failed bool) {
 	for i, location := range locations {
 		if i >= len(v.panels) || i >= len(result.panelUpdates) {
 			continue
@@ -60,12 +66,35 @@ func (v *view) applyArchiveRemovalPanels(result loadResult) (failed bool) {
 		if !update.needed || p.drives || !samePath(p.path, location.Path) || p.archiveFolder != location.Folder {
 			continue
 		}
+		prefix, prefixAt := p.prefix, p.prefixAt
+		if rename := result.request.rename; rename != nil && location.InArchive() && i < len(result.locations) && samePath(result.locations[i], result.mutationDirectory) {
+			if p.archiveFolder == result.request.archiveFolder {
+				p.renameEntry(rename.oldName, rename.newName)
+			}
+			p.archiveFolder = renamedArchiveFolder(p.archiveFolder, result.request)
+		}
 		if update.err != nil {
+			p.prefix, p.prefixAt = prefix, prefixAt
+			p.refreshNeeded = true
 			failed = true
 			continue
 		}
+		unchanged := p.sameLocation(update.directory)
 		p.reconcileDirectoryListing(update.directory)
+		if unchanged {
+			p.prefix, p.prefixAt = prefix, prefixAt
+		}
 		p.refreshNeeded = false
 	}
 	return failed
+}
+
+func (v *view) archiveOperationLocations() []browser.Location {
+	locations := make([]browser.Location, len(v.panels))
+	for i := range v.panels {
+		if !v.panels[i].drives {
+			locations[i] = v.panels[i].location()
+		}
+	}
+	return locations
 }

@@ -154,7 +154,7 @@ func TestArchiveRemovalStaleResultAndCaseSensitiveIdentity(t *testing.T) {
 	p := &v.panels[0]
 	before := slices.Clone(p.items)
 	result := loadResult{request: loadRequest{removal: &removalRequest{archiveLocations: []browser.Location{{Path: filename, Folder: "folder"}}}}, panelUpdates: []transferPanelUpdate{{needed: true, directory: browser.Directory{Path: filename, ArchiveFolder: "folder"}}}}
-	v.applyArchiveRemovalPanels(result)
+	v.applyArchivePanels(result, result.request.removal.archiveLocations)
 	if !slices.Equal(p.items, before) || p.archiveFolder != "." {
 		t.Fatal("stale folder result replaced current ZIP location")
 	}

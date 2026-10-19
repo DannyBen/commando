@@ -30,6 +30,7 @@ type nameSession struct {
 	kind              nameOperation
 	panel, row        int
 	path, oldName     string
+	archiveFolder     string
 	pending, finished bool
 	focused           bool
 	err               error
@@ -58,10 +59,10 @@ func (n *nameSession) draft() bool { return n.kind != nameRename && !n.finished 
 
 func (v *view) startName(gtx layout.Context, kind nameOperation) {
 	p := &v.panels[v.active]
-	if p.loading || !p.nativeFolder() || !v.interaction.idle() || !v.actionAllowed(actionMutation) {
+	if p.loading || !p.nativeFolder() && (kind != nameRename || !p.location().Capabilities().Rename) || !v.interaction.idle() || !v.actionAllowed(actionMutation) {
 		return
 	}
-	r := &nameSession{kind: kind, panel: v.active, path: p.path, row: p.selected,
+	r := &nameSession{kind: kind, panel: v.active, path: p.path, archiveFolder: p.archiveFolder, row: p.selected,
 		previousPosition: p.list.Position, previousReveal: p.reveal}
 	if kind == nameRename {
 		if !p.markable(p.selected) || p.items[p.selected].file.Name == "" {
@@ -189,10 +190,13 @@ func (v *view) updateName(gtx layout.Context) {
 				v.showFeedback(r.panel, feedback.Error, r.errorText(r.err))
 				continue
 			}
-			request := loadRequest{panel: r.panel, path: r.path, locations: v.fileOperationLocations()}
+			request := loadRequest{panel: r.panel, path: r.path, archiveFolder: r.archiveFolder, locations: v.fileOperationLocations()}
 			progress := "Renaming"
 			if r.kind == nameRename {
 				request.rename = &renameRequest{oldName: r.oldName, newName: e.Text}
+				if r.archiveFolder != "" {
+					request.rename.archiveLocations = v.archiveOperationLocations()
+				}
 			} else if r.kind == nameDuplicate {
 				request.duplicate = &duplicateRequest{plan: r.duplicate, name: e.Text, locations: v.fileOperationLocations(), owner: v.ownerWindow}
 				progress = "Copying"
@@ -255,6 +259,16 @@ func (v *view) acceptName(result loadResult) {
 	}
 	success := "Renamed"
 	if request := result.request.rename; request != nil {
+		if result.request.archiveFolder != "" {
+			failed := v.applyArchivePanels(result, request.archiveLocations)
+			r.finished = true
+			if failed {
+				v.showFeedback(r.panel, feedback.Warning, "Renamed; refresh failed")
+			} else {
+				v.showFeedback(r.panel, feedback.Success, success)
+			}
+			return
+		}
 		v.applyRename(result, request.oldName, request.newName)
 	} else if result.request.duplicate != nil {
 		v.applyDuplicate(result)

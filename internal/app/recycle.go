@@ -53,12 +53,7 @@ func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 		}
 	}
 	if p.archiveFolder != "" {
-		request.archiveLocations = make([]browser.Location, len(v.panels))
-		for i := range v.panels {
-			if !v.panels[i].drives {
-				request.archiveLocations[i] = v.panels[i].location()
-			}
-		}
+		request.archiveLocations = v.archiveOperationLocations()
 	}
 	panel, path := v.active, p.path
 	submit := func(layout.Context) { v.submitRemoval(panel, path, request) }
@@ -108,7 +103,7 @@ func (v *view) acceptRemoval(result loadResult) {
 	p.loading = false
 	refreshFailed := false
 	if result.request.removal.archiveFolder != "" {
-		refreshFailed = v.applyArchiveRemovalPanels(result)
+		refreshFailed = v.applyArchivePanels(result, result.request.removal.archiveLocations)
 	} else {
 		for pi := range v.panels {
 			other := &v.panels[pi]

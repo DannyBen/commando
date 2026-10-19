@@ -67,7 +67,7 @@ func defaultCommands() []command {
 		cmd("file.edit", "File", "Edit", key.NameF4, 0, editorReady),
 		cmd("entry.open", "Entry", "Open", key.NameReturn, 0, openReady),
 		cmd("entry.rename", "Entry", "Rename", key.NameF2, 0, func(v *view) bool {
-			return selectedReady(v) && v.panels[v.active].nativeFolder() && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)
+			return selectedReady(v) && v.panels[v.active].location().Capabilities().Rename && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)
 		}),
 		cmd("entry.copy", "Entry", "Copy", "C", key.ModCtrl, clipboardReady),
 		cmd("entry.copy_paths", "Entry", "Copy paths", "C", key.ModCtrl|key.ModShift, textClipboardReady),

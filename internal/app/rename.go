@@ -11,7 +11,10 @@ import (
 	"github.com/dannyben/commando/internal/browser"
 )
 
-type renameRequest struct{ oldName, newName string }
+type renameRequest struct {
+	oldName, newName string
+	archiveLocations []browser.Location
+}
 
 // Update cached listings in place, retaining marks and selection by identity.
 // The single filesystem worker orders pending directory reads before/after rename.
@@ -23,55 +26,7 @@ func (v *view) applyRename(result loadResult, oldName, newName string) {
 			continue
 		}
 		if samePath(result.locations[pi], result.mutationDirectory) {
-			p.ensureEntries()
-			for i := range p.entries {
-				if p.entries[i].Name == oldName {
-					p.entries[i].Name = newName
-				}
-			}
-			slices.SortFunc(p.entries, browser.CompareEntries)
-			firstName := ""
-			if first := p.list.Position.First; first >= 0 && first < len(p.items) {
-				firstName = p.items[first].name
-				if firstName == oldName {
-					firstName = newName
-				}
-			}
-			selectedName := ""
-			if p.selected >= 0 && p.selected < len(p.items) {
-				selectedName = p.items[p.selected].name
-			}
-			marked := make(map[string]bool, len(p.marks))
-			for row := range p.marks {
-				name := p.items[row].name
-				if name == oldName {
-					name = newName
-				}
-				marked[name] = true
-			}
-			for i := range p.items {
-				if p.items[i].file.Name == oldName {
-					p.items[i].name, p.items[i].file.Name = newName, newName
-				}
-			}
-			if selectedName == oldName {
-				selectedName = newName
-			}
-			slices.SortFunc(p.items, func(a, b entry) int { return p.compareEntries(a.file, b.file) })
-			p.marks, p.markRange = make(map[int]bool, len(marked)), nil
-			for row, item := range p.items {
-				if item.name == firstName {
-					p.list.Position.First = row
-				}
-				if item.name == selectedName {
-					p.selected = row
-				}
-				if marked[item.name] {
-					p.marks[row] = true
-				}
-			}
-			p.rows = make(map[int]*fileRow)
-			p.refilter()
+			p.renameEntry(oldName, newName)
 			if pi == v.active {
 				p.reveal = true
 			}
@@ -88,6 +43,58 @@ func (v *view) applyRename(result loadResult, oldName, newName string) {
 	}
 }
 
+func (p *panel) renameEntry(oldName, newName string) {
+	p.ensureEntries()
+	for i := range p.entries {
+		if p.entries[i].Name == oldName {
+			p.entries[i].Name = newName
+		}
+	}
+	slices.SortFunc(p.entries, browser.CompareEntries)
+	firstName := ""
+	if first := p.list.Position.First; first >= 0 && first < len(p.items) {
+		firstName = p.items[first].name
+		if firstName == oldName {
+			firstName = newName
+		}
+	}
+	selectedName := ""
+	if p.selected >= 0 && p.selected < len(p.items) {
+		selectedName = p.items[p.selected].name
+	}
+	marked := make(map[string]bool, len(p.marks))
+	for row := range p.marks {
+		name := p.items[row].name
+		if name == oldName {
+			name = newName
+		}
+		marked[name] = true
+	}
+	for i := range p.items {
+		if p.items[i].file.Name == oldName {
+			p.items[i].name, p.items[i].file.Name = newName, newName
+		}
+	}
+	if selectedName == oldName {
+		selectedName = newName
+	}
+	slices.SortFunc(p.items, func(a, b entry) int { return p.compareEntries(a.file, b.file) })
+	p.marks, p.markRange = make(map[int]bool, len(marked)), nil
+	for row, item := range p.items {
+		if item.name == firstName {
+			p.list.Position.First = row
+		}
+		if item.name == selectedName {
+			p.selected = row
+		}
+		if marked[item.name] {
+			p.marks[row] = true
+		}
+	}
+	p.rows = make(map[int]*fileRow)
+	p.refilter()
+}
+
 func samePath(a, b string) bool {
 	if runtime.GOOS == "windows" {
 		return strings.EqualFold(a, b)
@@ -97,6 +104,10 @@ func samePath(a, b string) bool {
 
 func renameError(err error) string {
 	switch {
+	case errors.Is(err, browser.ErrArchiveEncoding):
+		return "Unsupported name encoding"
+	case errors.Is(err, browser.ErrArchiveChanged), errors.Is(err, browser.ErrArchiveRecovery), errors.Is(err, browser.ErrInvalidArchive), errors.Is(err, errors.ErrUnsupported):
+		return deleteError(err)
 	case errors.Is(err, browser.ErrInvalidName):
 		return "Invalid filename"
 	case errors.Is(err, fs.ErrExist):
