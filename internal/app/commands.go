@@ -293,7 +293,7 @@ func clipboardReady(v *view) bool {
 }
 
 func textClipboardReady(v *view) bool {
-	return folderReady(v) && v.actionAllowed(actionClipboard) && len(v.panels[v.active].selectedPaths()) > 0
+	return folderReady(v) && v.actionAllowed(actionClipboard) && len(v.panels[v.active].selectedNames()) > 0
 }
 
 func panelsCanSwap(v *view) bool {

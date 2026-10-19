@@ -5,10 +5,78 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"gioui.org/io/key"
 	"github.com/dannyben/commando/internal/browser"
 )
+
+func TestArchiveCopyPathsAndLocationRoundTrip(t *testing.T) {
+	for _, tc := range []struct {
+		folder, current string
+		marks           []string
+		palette         bool
+	}{
+		{".", "a2.txt", nil, false},
+		{".", "a10.txt", []string{"docs", "a2.txt"}, true},
+		{"docs", "sub", nil, false},
+		{"docs/sub", "report.txt", nil, true},
+	} {
+		t.Run(tc.folder+"/"+tc.current, func(t *testing.T) {
+			v, archive := archiveView(t)
+			v.loadLocation(0, browser.Location{Path: archive, Folder: tc.folder}, tc.current)
+			waitLoaded(t, v, 0)
+			p := &v.panels[0]
+			for _, name := range tc.marks {
+				selectName(t, p, name)
+				p.toggleMark(p.selected)
+			}
+			selectName(t, p, tc.current)
+			marks, selected := maps.Clone(p.marks), p.selected
+			names := tc.marks
+			if len(names) == 0 {
+				names = []string{tc.current}
+			}
+			want := make([]string, len(names))
+			for i, name := range names {
+				want[i] = filepath.Join(archive, filepath.FromSlash(tc.folder), name)
+			}
+			router, send := clipboardFrames(v)
+			if tc.palette {
+				send(pressed("`"))
+				send(replacePalette(v, "Entry Copy paths"))
+				send(pressed(key.NameReturn))
+			} else {
+				send(modified("C", key.ModCtrl|key.ModShift))
+			}
+			mime, data, ok := router.WriteClipboard()
+			if !ok || mime != "application/text" || string(data) != strings.Join(want, "\n") {
+				t.Fatalf("clipboard=%q %q, want %q", mime, data, want)
+			}
+			if p.selected != selected || !maps.Equal(p.marks, marks) || !v.interaction.idle() {
+				t.Fatal("Copy paths changed archive selection")
+			}
+			// Feed the actual copied text back through the location editor.
+			for _, copied := range strings.Split(string(data), "\n") {
+				send(modified("D", key.ModAlt))
+				send(key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.location.Text())}, Text: copied})
+				send(pressed(key.NameReturn))
+				waitLoaded(t, v, 0)
+				send()
+				if p.path != archive || p.err != nil || v.locationEditing() {
+					t.Fatal("copied archive path did not navigate", p.err)
+				}
+				if filepath.Base(copied) == "docs" || filepath.Base(copied) == "sub" {
+					if p.location().String() != copied {
+						t.Fatal("copied folder path opened the wrong location")
+					}
+				} else if p.archiveFolder != tc.folder || p.items[p.selected].file.Name != filepath.Base(copied) {
+					t.Fatal("copied file path did not select the file")
+				}
+			}
+		})
+	}
+}
 
 func TestCopyPathsCurrentMarksAndPalette(t *testing.T) {
 	for _, marked := range []bool{false, true} {

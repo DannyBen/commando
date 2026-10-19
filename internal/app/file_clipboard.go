@@ -15,7 +15,12 @@ func (v *view) copySelectedPaths(gtx layout.Context) {
 	if !v.interaction.idle() || !textClipboardReady(v) {
 		return
 	}
-	paths := v.panels[v.active].selectedPaths()
+	p := &v.panels[v.active]
+	names := p.selectedNames()
+	paths := make([]string, len(names))
+	for i, name := range names {
+		paths[i] = p.location().Child(name).String()
+	}
 	gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(strings.Join(paths, "\n")))})
 	message := "Path copied"
 	if len(paths) > 1 {

@@ -361,6 +361,16 @@ func (l *directoryLoader) readExistingParent(path string) (browser.Directory, er
 func (l *directoryLoader) readExplicitPath(path, suggestedPath string) (browser.Directory, string, bool, error) {
 	if location, ok := browser.ResolveArchiveLocation(path); ok {
 		directory, err := browser.ReadArchive(location)
+		if browser.IsMissingDirectory(err) && location.Folder != "." {
+			parent, name := location.Parent()
+			if containing, parentErr := browser.ReadArchive(parent); parentErr == nil {
+				for _, entry := range containing.Entries {
+					if entry.Name == name && !entry.Directory {
+						return containing, name, false, nil
+					}
+				}
+			}
+		}
 		return directory, "", false, err
 	}
 	directory, err := l.readDirectory(path)
