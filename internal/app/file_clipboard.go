@@ -41,7 +41,7 @@ type transferRequest struct {
 func (v *view) fileOperationLocations() []string {
 	paths := make([]string, len(v.panels))
 	for i := range v.panels {
-		if !v.panels[i].drives {
+		if v.panels[i].nativeFolder() {
 			paths[i] = v.panels[i].path
 		}
 	}
@@ -50,7 +50,7 @@ func (v *view) fileOperationLocations() []string {
 
 func (v *view) clipboardSelected(move bool) {
 	p := &v.panels[v.active]
-	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionClipboard) {
+	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || p.path == "" || !v.actionAllowed(actionClipboard) {
 		return
 	}
 	paths := p.selectedPaths()
@@ -73,7 +73,7 @@ func (v *view) pasteShortcuts() {
 
 func (v *view) pasteClipboard(shortcuts bool) {
 	p := &v.panels[v.active]
-	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || p.path == "" || !v.actionAllowed(actionMutation) {
 		return
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true

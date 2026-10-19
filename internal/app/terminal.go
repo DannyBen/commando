@@ -14,7 +14,7 @@ type terminalRequest struct {
 }
 
 func terminalReady(v *view) bool {
-	return folderReady(v) && v.loader != nil && v.canOfferInteraction(v.active, actionMutation)
+	return folderReady(v) && v.panels[v.active].nativeFolder() && v.loader != nil && v.canOfferInteraction(v.active, actionMutation)
 }
 
 func (v *view) openTerminal(admin bool) {

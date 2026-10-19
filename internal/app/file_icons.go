@@ -50,7 +50,7 @@ func (v *view) withRowIcon(gtx layout.Context, p *panel, item entry, cut, sample
 	}
 	size := max(1, min(gtx.Dp(16), v.textHeight(gtx, v.appearance.TextSize)))
 	key := fileIconKey{path: filepath.Join(p.path, item.file.Name), size: size}
-	if sample {
+	if sample || p.archiveFolder != "" {
 		key = sampleFileIconKey(item.file, size)
 	} else if item.file.Path != "" {
 		key.path = item.file.Path

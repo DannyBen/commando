@@ -24,7 +24,7 @@ type removalRequest struct {
 
 func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 	p := &v.panels[v.active]
-	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || !v.actionAllowed(actionMutation) {
 		return
 	}
 	var names []string
@@ -45,7 +45,7 @@ func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 	}
 	request := &removalRequest{names: names, permanent: permanent, locations: make([]string, len(v.panels)), owner: v.ownerWindow}
 	for pi := range v.panels {
-		if !v.panels[pi].drives {
+		if v.panels[pi].nativeFolder() {
 			request.locations[pi] = v.panels[pi].path
 		}
 	}

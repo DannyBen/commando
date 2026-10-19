@@ -18,6 +18,9 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 	panels := make([]panel, len(locations))
 	for i, location := range locations {
 		panels[i].path, panels[i].drives, panels[i].selected = location.Path, location.Drives, -1
+		if !location.Drives {
+			panels[i].archiveFolder = location.ArchiveFolder
+		}
 	}
 	v := newView(panels)
 	if active >= 0 && active < len(panels) {
@@ -37,7 +40,7 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 		if location.Drives {
 			v.load(i, "", location.Path)
 		} else {
-			v.queueLoad(loadRequest{panel: i, path: location.Path})
+			v.queueLoad(loadRequest{panel: i, path: location.Path, archiveFolder: location.ArchiveFolder})
 		}
 	}
 	return v
@@ -56,7 +59,7 @@ func (v *view) refreshPanel() {
 	if p.drives {
 		path = ""
 	}
-	v.queueLoad(loadRequest{panel: v.active, path: path, refresh: true})
+	v.queueLoad(loadRequest{panel: v.active, path: path, archiveFolder: p.archiveFolder, refresh: true})
 }
 
 func (v *view) queueLoad(request loadRequest) {
@@ -172,12 +175,11 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	p.feedback.Complete()
-	refresh := result.request.refresh && p.drives == result.directory.Drives &&
-		(p.drives || samePath(filepath.Clean(p.path), filepath.Clean(result.directory.Path)))
-	if p.drives != result.directory.Drives || !samePath(p.path, result.directory.Path) {
+	refresh := result.request.refresh && p.sameLocation(result.directory)
+	if !p.sameLocation(result.directory) {
 		p.refreshNeeded = false
 	}
-	if result.request.refresh && v.monitor != nil && !result.directory.Drives {
+	if result.request.refresh && v.monitor != nil && !result.directory.Drives && result.directory.ArchiveFolder == "" {
 		v.monitor.retry(result.directory.Path)
 	}
 	previousRow := p.selected
@@ -191,6 +193,7 @@ func (v *view) acceptLoad(result loadResult) {
 	p.clearMarks()
 	p.prefix = ""
 	p.drives = result.directory.Drives
+	p.archiveFolder = result.directory.ArchiveFolder
 	if !p.drives {
 		p.path = result.directory.Path
 	}
@@ -254,13 +257,22 @@ func (v *view) activateSelected() {
 		return
 	}
 	file := p.items[p.selected].file
+	if p.archiveFolder != "" {
+		if file.Directory {
+			location, selected := p.selectedLocation()
+			v.loadLocation(v.active, location, selected)
+		}
+		return
+	}
 	if !file.Directory {
 		if v.settingsSelecting() {
 			return
 		}
 		if file.Name != "" {
 			path := filepath.Join(p.path, file.Name)
-			if strings.EqualFold(filepath.Ext(path), ".lnk") && v.loader != nil {
+			if browser.ArchiveFormat(path) != nil {
+				v.loadLocation(v.active, browser.Location{Path: path, Folder: "."}, "")
+			} else if strings.EqualFold(filepath.Ext(path), ".lnk") && v.loader != nil {
 				v.queueLoad(loadRequest{panel: v.active, path: path, shortcut: true})
 			} else {
 				v.openPath(v.active, path)
@@ -280,6 +292,11 @@ func (v *view) activateSelected() {
 func (v *view) parentFolder() {
 	p := &v.panels[v.active]
 	if p.loading || p.drives {
+		return
+	}
+	if p.archiveFolder != "" {
+		parent, selected := p.location().Parent()
+		v.loadLocation(v.active, parent, selected)
 		return
 	}
 	parent := filepath.Dir(p.path)
@@ -307,15 +324,7 @@ func (v *view) openAdjacent(direction int) {
 	if p.loading || p.selected < 0 || p.selected >= len(p.items) {
 		return
 	}
-	file := p.items[p.selected].file
-	path := file.Path
-	if path == "" {
-		path = filepath.Join(p.path, file.Name)
-	}
-	selectName := ""
-	if !file.Directory {
-		path, selectName = filepath.Dir(path), filepath.Base(path)
-	}
+	location, selectName := p.selectedLocation()
 	if target < 0 || target >= len(v.panels) {
 		if !v.addPanel(direction) {
 			return
@@ -323,7 +332,7 @@ func (v *view) openAdjacent(direction int) {
 	} else {
 		v.switchPanel(direction)
 	}
-	v.load(v.active, path, selectName)
+	v.loadLocation(v.active, location, selectName)
 	v.panels[v.active].prefix = ""
 }
 
@@ -366,14 +375,14 @@ func (p *panel) locationLabel() string {
 	if p.drives {
 		return "Drives"
 	}
-	return p.path
+	return p.location().String()
 }
 
 func (p *panel) locationPath() string {
 	if p.drives && p.selected >= 0 && p.selected < len(p.items) {
 		return p.items[p.selected].file.Path
 	}
-	return p.path
+	return p.location().String()
 }
 
 func (v *view) openPath(index int, path string) {

@@ -70,6 +70,9 @@ func (r loadRequest) traceKind() (diagnostics.Mask, string) {
 
 func (r loadRequest) traceData(kind string) map[string]any {
 	data := map[string]any{"kind": kind, "path": r.path, "panel": r.panel, "refresh": r.refresh, "automatic": r.autoRefresh}
+	if r.archiveFolder != "" {
+		data["archive_folder"] = r.archiveFolder
+	}
 	if r.rename != nil {
 		data["old_name"], data["new_name"] = r.rename.oldName, r.rename.newName
 	}

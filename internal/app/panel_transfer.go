@@ -11,7 +11,7 @@ import (
 func (v *view) startPanelTransfer(move bool) {
 	source := v.active
 	p := &v.panels[source]
-	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || p.path == "" || !v.actionAllowed(actionMutation) {
 		return
 	}
 	snapshot := browser.FileClipboard{Paths: p.selectedPaths(), Move: move}
@@ -79,6 +79,8 @@ func panelTransferReady(v *view, direction int) bool {
 func (v *view) panelTransferError(target int) string {
 	p := &v.panels[target]
 	switch {
+	case p.archiveFolder != "":
+		return "Archive is read-only"
 	case p.drives || p.path == "":
 		return "Select a folder"
 	case p.loading:
@@ -90,6 +92,10 @@ func (v *view) panelTransferError(target int) string {
 }
 
 func (v *view) submitPanelTransfer(target, resultPanel int, snapshot browser.FileClipboard) {
+	if message := v.panelTransferError(target); message != "" {
+		v.showFeedback(target, feedback.Info, message)
+		return
+	}
 	p := &v.panels[resultPanel]
 	p.loading, p.prefix, v.transferPending = true, "", true
 	if !v.loader.submit(loadRequest{panel: resultPanel, path: v.panels[target].path, transfer: &transferRequest{

@@ -24,6 +24,7 @@ type panel struct {
 	showProtectedSystem bool
 	showParentEntry     bool
 	path                string // Last physical directory, retained while displaying drives.
+	archiveFolder       string // Empty for filesystem locations; "." is an archive root.
 	drives              bool
 	items               []entry
 	entries             []browser.Entry // Complete listing; items is the currently visible projection.

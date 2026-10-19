@@ -16,6 +16,7 @@ import (
 type loadRequest struct {
 	panel            int
 	path, selectName string
+	archiveFolder    string
 	suggestedPath    string // Visible location completion captured at submission.
 	successMessage   string
 	refresh          bool
@@ -285,6 +286,8 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					} else {
 						directory, err = l.readExistingParent(target)
 					}
+				} else if request.archiveFolder != "" {
+					directory, err = browser.ReadArchive(browser.Location{Path: request.path, Folder: request.archiveFolder})
 				} else if request.explicitPath {
 					directory, result.request.selectName, result.pathMissing, err = l.readExplicitPath(request.path, request.suggestedPath)
 				} else {
@@ -330,6 +333,10 @@ func (l *directoryLoader) readExistingParent(path string) (browser.Directory, er
 // ancestry, stopping at permission errors or an unavailable root. All reads and
 // file probing stay on the worker, independently of UI input and rendering.
 func (l *directoryLoader) readExplicitPath(path, suggestedPath string) (browser.Directory, string, bool, error) {
+	if location, ok := browser.ResolveArchiveLocation(path); ok {
+		directory, err := browser.ReadArchive(location)
+		return directory, "", false, err
+	}
 	directory, err := l.readDirectory(path)
 	if !browser.IsMissingDirectory(err) {
 		return directory, "", false, err

@@ -21,9 +21,10 @@ type Entry struct {
 }
 
 type Directory struct {
-	Drives  bool
-	Path    string
-	Entries []Entry
+	ArchiveFolder string // Empty for physical folders; otherwise an archive-relative location.
+	Drives        bool
+	Path          string
+	Entries       []Entry
 }
 
 // ReadDirectory reads one directory, including metadata, without recursing.

@@ -21,7 +21,13 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 	}
 	var paths []string
 	if v.monitor != nil {
-		v.monitor.sync(v.fileOperationLocations())
+		watched := v.fileOperationLocations()
+		for i, p := range v.panels {
+			if p.archiveFolder != "" {
+				watched[i] = filepath.Dir(p.path)
+			}
+		}
+		v.monitor.sync(watched)
 		var next time.Time
 		paths, next = v.monitor.take(gtx.Now)
 		if !next.IsZero() {
@@ -31,7 +37,11 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 	for pi := range v.panels {
 		p := &v.panels[pi]
 		for _, path := range paths {
-			if !p.drives && samePath(p.path, path) {
+			watched := p.path
+			if p.archiveFolder != "" {
+				watched = filepath.Dir(p.path)
+			}
+			if !p.drives && samePath(watched, path) {
 				p.refreshNeeded = true
 			}
 		}
@@ -43,7 +53,7 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 		// This is a background read, not a mutation. Use a nonblocking enqueue so
 		// automatic work never holds the UI while the worker's queue is full.
 		select {
-		case v.loader.requests <- loadRequest{panel: pi, path: p.path, autoRefresh: true, action: actionBrowse}:
+		case v.loader.requests <- loadRequest{panel: pi, path: p.path, archiveFolder: p.archiveFolder, autoRefresh: true, action: actionBrowse}:
 			p.refreshing, p.refreshNeeded = true, false
 		default:
 		}
@@ -53,7 +63,7 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 func (v *view) acceptAutoRefresh(result loadResult) {
 	p := &v.panels[result.request.panel]
 	p.refreshing = false
-	if p.drives || !samePath(p.path, result.request.path) {
+	if p.drives || !samePath(p.path, result.request.path) || p.archiveFolder != result.request.archiveFolder {
 		return // Navigation or a confirmed folder move changed the location.
 	}
 	if p.loading || v.interaction.protectsListing(result.request.panel) || !v.actionAllowed(actionMutation) {
@@ -79,7 +89,7 @@ func (v *view) acceptAutoRefresh(result loadResult) {
 	// Reuse the preservation rules used after transfers. Automatic refresh must
 	// not clear operation feedback or interrupt a filename prefix being typed.
 	prefix, prefixAt := p.prefix, p.prefixAt
-	unchanged := !result.directory.Drives && samePath(filepath.Clean(p.path), filepath.Clean(result.directory.Path))
+	unchanged := p.sameLocation(result.directory)
 	p.reconcileDirectoryListing(result.directory)
 	if unchanged {
 		p.prefix, p.prefixAt = prefix, prefixAt

@@ -11,6 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
+	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
 )
 
@@ -144,6 +145,8 @@ func (v *view) playFeedbackSound(frame feedback.Frame) {
 
 func readError(err error) string {
 	switch {
+	case errors.Is(err, browser.ErrInvalidArchive):
+		return "Invalid archive"
 	case errors.Is(err, fs.ErrPermission):
 		return "Access denied"
 	case errors.Is(err, fs.ErrNotExist):

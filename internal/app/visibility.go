@@ -117,7 +117,7 @@ func (p *panel) refilter() {
 	if row := p.list.Position.First; row >= 0 && row < len(p.items) {
 		first = p.items[row].file
 	}
-	p.reconcileDirectoryListing(browser.Directory{Path: p.path, Drives: p.drives, Entries: p.entries})
+	p.reconcileDirectoryListing(browser.Directory{Path: p.path, ArchiveFolder: p.archiveFolder, Drives: p.drives, Entries: p.entries})
 	nearest := func(file browser.Entry) int {
 		row := sort.Search(len(p.items), func(i int) bool { return p.compareEntries(p.items[i].file, file) >= 0 })
 		return min(row, len(p.items)-1)

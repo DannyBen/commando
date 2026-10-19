@@ -1,7 +1,6 @@
 package app
 
 import (
-	"path/filepath"
 	"slices"
 
 	"gioui.org/layout"
@@ -12,7 +11,7 @@ import (
 // Reconcile refreshed entries by identity only while the location stays the
 // same. A recovered ancestor is a new listing, even when names happen to match.
 func (p *panel) reconcileDirectoryListing(directory browser.Directory) {
-	if p.drives != directory.Drives || !directory.Drives && !samePath(filepath.Clean(p.path), filepath.Clean(directory.Path)) {
+	if !p.sameLocation(directory) {
 		p.filter = ""
 		p.clearMarks()
 		p.items, p.entries, p.selected = nil, nil, -1
@@ -20,6 +19,7 @@ func (p *panel) reconcileDirectoryListing(directory browser.Directory) {
 		p.refreshNeeded = false
 	}
 	p.drives = directory.Drives
+	p.archiveFolder = directory.ArchiveFolder
 	if !p.drives {
 		p.path = directory.Path
 	}
@@ -34,7 +34,7 @@ func (p *panel) reconcileDirectoryListing(directory browser.Directory) {
 	marked := make(map[string]bool)
 	for row := range p.marks {
 		if p.markable(row) {
-			marked[transferNameKey(p.items[row].file.Name)] = true
+			marked[p.entryKey(p.items[row].file.Name)] = true
 		}
 	}
 	p.entries = slices.Clone(directory.Entries)
@@ -55,13 +55,13 @@ func (p *panel) reconcileDirectoryListing(directory browser.Directory) {
 			size = formatSize(file.Bytes)
 		}
 		p.items[row] = entry{name: file.Name, size: size, file: file}
-		if marked[transferNameKey(file.Name)] && !file.Parent {
+		if marked[p.entryKey(file.Name)] && !file.Parent {
 			p.marks[row] = true
 		}
-		if samePath(file.Name, selectedName) {
+		if p.entryKey(file.Name) == p.entryKey(selectedName) {
 			p.selected, selectedSurvives = row, true
 		}
-		if samePath(file.Name, firstName) {
+		if p.entryKey(file.Name) == p.entryKey(firstName) {
 			p.list.Position.First = row
 		}
 	}

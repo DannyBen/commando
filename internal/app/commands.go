@@ -54,9 +54,9 @@ var commands = defaultCommands()
 func defaultCommands() []command {
 	catalogue := []command{
 		cmd("file.edit", "File", "Edit", key.NameF4, 0, editorReady),
-		cmd("entry.open", "Entry", "Open", key.NameReturn, 0, selectedReady),
+		cmd("entry.open", "Entry", "Open", key.NameReturn, 0, openReady),
 		cmd("entry.rename", "Entry", "Rename", key.NameF2, 0, func(v *view) bool {
-			return selectedReady(v) && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)
+			return selectedReady(v) && v.panels[v.active].nativeFolder() && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)
 		}),
 		cmd("entry.copy", "Entry", "Copy", "C", key.ModCtrl, clipboardReady),
 		cmd("entry.copy_paths", "Entry", "Copy paths", "C", key.ModCtrl|key.ModShift, textClipboardReady),
@@ -246,7 +246,9 @@ func selectedReady(v *view) bool {
 	return panelReady(v) && p.selected >= 0 && p.selected < len(p.items)
 }
 
-func writableFolder(v *view) bool { return folderReady(v) && v.actionAllowed(actionMutation) }
+func writableFolder(v *view) bool {
+	return folderReady(v) && v.panels[v.active].nativeFolder() && v.actionAllowed(actionMutation)
+}
 
 func mutationReady(v *view) bool { return writableFolder(v) && v.loader != nil }
 

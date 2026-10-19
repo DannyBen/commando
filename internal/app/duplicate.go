@@ -16,6 +16,9 @@ type duplicateRequest struct {
 }
 
 func (p *panel) selectedPaths() []string {
+	if !p.nativeFolder() {
+		return nil
+	}
 	var paths []string
 	if len(p.marks) > 0 {
 		for row, item := range p.items {
@@ -31,7 +34,7 @@ func (p *panel) selectedPaths() []string {
 
 func (v *view) duplicateSelected() {
 	p := &v.panels[v.active]
-	if !v.interaction.idle() || v.loader == nil || p.loading || p.drives || p.path == "" || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || p.path == "" || !v.actionAllowed(actionMutation) {
 		return
 	}
 	paths := p.selectedPaths()

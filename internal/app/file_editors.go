@@ -16,6 +16,9 @@ type editorRequest struct {
 }
 
 func (p *panel) selectedEditorFiles() []string {
+	if !p.nativeFolder() {
+		return nil
+	}
 	var files []string
 	marked := len(p.marks) > 0
 	for i, item := range p.items {

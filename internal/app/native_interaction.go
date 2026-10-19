@@ -140,7 +140,7 @@ func (v *view) nativeItemsAvailable(index, row int, mouse bool) bool {
 		return false
 	}
 	p := &v.panels[index]
-	if p.path == "" || p.drives {
+	if p.path == "" || !p.nativeFolder() {
 		return false
 	}
 	if mouse {

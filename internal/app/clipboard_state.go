@@ -30,7 +30,7 @@ func (v *view) updateCutClipboard(gtx layout.Context) {
 
 func (v *view) cutEntry(panel, row int) bool {
 	p := &v.panels[panel]
-	if !p.markable(row) || !v.cutClipboard.Move {
+	if !p.nativeFolder() || !p.markable(row) || !v.cutClipboard.Move {
 		return false
 	}
 	path := p.path

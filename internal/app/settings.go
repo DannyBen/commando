@@ -724,7 +724,7 @@ func (v *view) chooseSettingsFile(gtx layout.Context) bool {
 		return false
 	}
 	p := &v.panels[v.active]
-	if p.loading || p.drives || p.path == "" || p.selected < 0 || p.selected >= len(p.items) {
+	if p.loading || !p.nativeFolder() || p.path == "" || p.selected < 0 || p.selected >= len(p.items) {
 		return false
 	}
 	file := p.items[p.selected].file
