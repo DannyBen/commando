@@ -65,4 +65,4 @@ searchable place—part command launcher, part help, all within reach.
 
 ---
 
-![repocard](https://repocard.dannyben.com/svg/bashly.svg)
+![repocard](https://repocard.dannyben.com/svg/commando.svg)
