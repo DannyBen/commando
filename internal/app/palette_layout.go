@@ -95,11 +95,11 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 						if state.selectedAppearance() {
 							bg, fg = v.appearance.Colors.Selected, v.appearance.Colors.SelectedName
 						}
-						if !state.selectedAppearance() && !available {
-							fg = v.appearance.Colors.Muted
-							role = contrastSecondary
+						if !available {
+							fg = v.dimmedColor(fg)
+							role = contrastDimmedText
 						}
-						bg = state.background(bg)
+						bg = state.background(bg, v.appearance.HoverStrength)
 						paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 						gtx.Constraints = layout.Exact(size)
 						return v.contentInset().Layout(gtx, v.textAs(role, v.textOn(bg, func(gtx layout.Context) layout.Dimensions {

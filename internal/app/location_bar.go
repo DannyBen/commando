@@ -54,7 +54,7 @@ func (v *view) layoutLocationBar(gtx layout.Context, index, height int) layout.D
 		if state.pressedInside() {
 			bg, fg = v.appearance.Colors.Selected, v.appearance.Colors.SelectedName
 		}
-		bg = state.background(bg)
+		bg = state.background(bg, v.appearance.HoverStrength)
 		return v.headerBand(gtx, height, bg, func(gtx layout.Context) layout.Dimensions {
 			return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), v.appearance.TextSize, fg, text.Start)
 		}, index == v.active)

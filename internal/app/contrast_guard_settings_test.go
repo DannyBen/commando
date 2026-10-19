@@ -31,7 +31,7 @@ func TestContrastGuardToggleBypassesCorrectionsAndCancelRestores(t *testing.T) {
 	assertGuard(true)
 	found := false
 	for _, cmd := range v.settingsCatalogue() {
-		if cmd.label() == "Appearance › Contrast guard" {
+		if cmd.label() == "Theme › Contrast guard" {
 			cmd.execute(v)
 			found = true
 			break

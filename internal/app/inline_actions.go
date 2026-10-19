@@ -182,7 +182,7 @@ func (v *view) inlineActionContents(gtx layout.Context, row, rowHeight int) layo
 				bg = v.appearance.Colors.InlineInactiveSelected
 			}
 		}
-		bg = state.background(bg)
+		bg = state.background(bg, v.appearance.HoverStrength)
 	}
 	size := image.Pt(gtx.Constraints.Max.X, rowHeight)
 	paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())

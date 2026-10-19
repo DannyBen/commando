@@ -19,7 +19,7 @@ func TestThemeGeneratorLiveControlsAndCancel(t *testing.T) {
 	selected := v.panels[0].selected
 	v.startSettingsWidget(settingThemeGenerator)
 	s := v.settingsInteraction()
-	if s == nil || s.fields[0].Key != settingThemeGenerator+".mode" || s.fields[1].Key != settingThemeGenerator+".seed" || s.title != "Appearance › Theme › Generator" || len(s.fields) != 5 || isThemeWidget(s) {
+	if s == nil || s.fields[0].Key != settingThemeGenerator+".mode" || s.fields[1].Key != settingThemeGenerator+".seed" || s.title != "Theme › Generator" || len(s.fields) != 5 || isThemeWidget(s) {
 		t.Fatal("Generator did not open its own five-field widget")
 	}
 	if !reflect.DeepEqual(v.settingsValues.Clone(), before) || s.dirty {

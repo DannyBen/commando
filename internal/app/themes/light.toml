@@ -1,5 +1,10 @@
 # Built-in Light: complete color snapshot, independent of generator settings.
 
+[appearance.theme.effects]
+dimmed_text_opacity = 70
+hover_strength = 8
+backdrop_wash = 15
+
 [appearance.theme.colors.background]
 lightness = 97.8511
 saturation = 20.9739

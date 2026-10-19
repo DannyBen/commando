@@ -141,10 +141,10 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	s := v.paletteInteraction()
-	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 22 {
+	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 23 {
 		t.Fatal("@ did not open settings-only palette")
 	}
-	for i, label := range []string{"Appearance › Auto color", "Appearance › Auto color › Selection", "Appearance › Auto color › Special files", "Appearance › Contrast guard", "Appearance › Font", "Appearance › Icons", "Appearance › Padding › Horizontal", "Appearance › Padding › Vertical", "Appearance › Theme › Customize", "Appearance › Theme › Generator", "Appearance › Theme › Save", "Appearance › Theme › Select", "Application › Data folder", "Debug › Trace mask", "Feedback › Notifications", "Feedback › Sounds", "Guards › Delete confirmation", "Guards › Recycle confirmation", "Programs › Editors › New", "View › Metadata columns", "View › Parent entry", "View › System files"} {
+	for i, label := range []string{"Appearance › Font", "Appearance › Icons", "Appearance › Padding › Horizontal", "Appearance › Padding › Vertical", "Application › Data folder", "Debug › Trace mask", "Feedback › Notifications", "Feedback › Sounds", "Guards › Delete confirmation", "Guards › Recycle confirmation", "Programs › Editors › New", "Theme › Contrast guard", "Theme › Customize colors", "Theme › Effects", "Theme › File colors", "Theme › File colors › Selection", "Theme › File colors › Special files", "Theme › Generator", "Theme › Save", "Theme › Select", "View › Metadata columns", "View › Parent entry", "View › System files"} {
 		if got := s.results[i].command.label(); got != label {
 			t.Fatalf("settings result %d = %q; want %q", i, got, label)
 		}
@@ -154,15 +154,15 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 			t.Fatal("settings listed as browsing commands")
 		}
 	}
-	send(key.EditEvent{Range: key.Range{Start: 1, End: 1}, Text: "appearance autocolor"})
-	if len(s.results) != 3 || s.results[0].command.label() != "Appearance › Auto color" {
+	send(key.EditEvent{Range: key.Range{Start: 1, End: 1}, Text: "theme file colors"})
+	if len(s.results) != 3 || s.results[0].command.label() != "Theme › File colors" {
 		t.Fatal("settings search did not use existing fuzzy matching")
 	}
 	send(pressed(key.NameReturn))
 	if v.paletteInteraction() != nil || v.settingsInteraction() == nil || len(v.settingsInteraction().fields) != 4 {
 		t.Fatal("palette did not open color widget")
 	}
-	if widget := v.settingsInteraction(); widget.title != "Appearance › Auto color" || widget.fields[0].Label != "Enabled" {
+	if widget := v.settingsInteraction(); widget.title != "Theme › File colors" || widget.fields[0].Label != "Enabled" {
 		t.Fatal("widget did not use its metadata title and option labels")
 	}
 	send(pressed(key.NameEscape))
@@ -184,7 +184,7 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@"})
+	send(key.EditEvent{Text: "@file colors"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameTab))
 	send(pressed(key.NameRightArrow))
@@ -202,7 +202,7 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 		t.Fatal("Cancel did not restore inherited original values")
 	}
 	send(pressed(key.NameEscape))
-	send(key.EditEvent{Text: "@"})
+	send(key.EditEvent{Text: "@file colors"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameTab))
 	send(pressed(key.NameRightArrow))
@@ -210,7 +210,7 @@ func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
 	if !v.interaction.idle() || v.settingText(settingLightness) != "37" {
 		t.Fatal("Ctrl+Enter did not commit and close")
 	}
-	send(key.EditEvent{Text: "@"})
+	send(key.EditEvent{Text: "@file colors"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameTab))
 	send(pressed(key.NameRightArrow))
@@ -256,7 +256,7 @@ func TestSaltStepperAndWholeNumberInput(t *testing.T) {
 func TestSettingsWidgetDirectValueInput(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@"})
+	send(key.EditEvent{Text: "@file colors"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
@@ -271,7 +271,7 @@ func TestSettingsWidgetDirectValueInput(t *testing.T) {
 	if !v.interaction.idle() || v.appearance.FilenameColors.filenameLightness != 0.5 {
 		t.Fatal("typed number did not save and close")
 	}
-	send(key.EditEvent{Text: "@"})
+	send(key.EditEvent{Text: "@file colors"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))
@@ -480,7 +480,7 @@ func TestSettingsAdjustmentsTickOnlyWhenValueChanges(t *testing.T) {
 		initial            settings.Value
 		keys               []key.Event
 	}{
-		{"slider", "@autocolor", settingLightness, settings.Value{Number: 100}, []key.Event{
+		{"slider", "@file colors", settingLightness, settings.Value{Number: 100}, []key.Event{
 			pressed(key.NameRightArrow), pressed(key.NameLeftArrow), pressed(key.NameRightArrow), pressed(key.NameRightArrow),
 		}},
 		{"boolean", "@system", settingProtectedSystem, settings.Value{Bool: false}, []key.Event{
@@ -590,7 +590,7 @@ func TestSettingsBooleanChoicesUseArrowDirection(t *testing.T) {
 func TestSettingsActionBarKeyboardFocus(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@"})
+	send(key.EditEvent{Text: "@file colors"})
 	send(pressed(key.NameReturn))
 	s := v.settingsInteraction()
 	send(pressed(key.NameTab))
@@ -655,7 +655,7 @@ func TestSettingsActionBarMouse(t *testing.T) {
 func TestSettingsSaveClickKeepsInvalidDraftEditable(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@"})
+	send(key.EditEvent{Text: "@file colors"})
 	send(pressed(key.NameReturn))
 	send(pressed(key.NameTab))
 	send(pressed(key.NameReturn))

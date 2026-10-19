@@ -127,8 +127,8 @@ func defaultCommands() []command {
 		cmd("programs.terminal_here_admin", "Programs", "Terminal here (Admin)", "", 0, terminalReady),
 
 		toggleSettingCommand("appearance.toggle_icons", "Appearance", "icons", settingIconsEnabled),
-		toggleSettingCommand("appearance.toggle_auto_color", "Appearance", "auto color", settingAutoColorEnabled),
-		toggleSettingCommand("appearance.toggle_contrast_guard", "Appearance", "contrast guard", settingContrastGuard),
+		toggleSettingCommand("appearance.toggle_auto_color", "Theme", "file colors", settingAutoColorEnabled),
+		toggleSettingCommand("appearance.toggle_contrast_guard", "Theme", "contrast guard", settingContrastGuard),
 
 		toggleSettingCommand("feedback.toggle_sound", "Feedback", "sound", settingSoundEnabled),
 		toggleSettingCommand("feedback.toggle_notification_animation", "Feedback", "notification animation", settingNotificationAnimation),

@@ -1,5 +1,10 @@
 # Built-in Dark: complete color snapshot, independent of generator settings.
 
+[appearance.theme.effects]
+dimmed_text_opacity = 70
+hover_strength = 8
+backdrop_wash = 15
+
 [appearance.theme.colors.background]
 lightness = 8.4757
 saturation = 6.2167

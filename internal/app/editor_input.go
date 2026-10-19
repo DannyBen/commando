@@ -75,7 +75,7 @@ func (v *view) textEditor(editor *widget.Editor, hint string) material.EditorSty
 	return style
 }
 
-// Share Gio's editor-placeholder dimming with passive listing hints.
+// Editor placeholders and passive listing hints share theme de-emphasis.
 func (v *view) hintColor() color.NRGBA {
-	return v.resolvedText(material.Editor(v.theme, nil, "").HintColor)
+	return v.resolvedTextFor(contrastDimmedText, v.dimmedColor(v.appearance.Colors.EditorText), v.currentTextBackground())
 }

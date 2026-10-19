@@ -88,8 +88,15 @@ const (
 func settingsGroupLabel(key string) string {
 	for _, group := range settings.CatalogueDefault.UI.Groups {
 		if group.Key == key {
-			if group.Parent != "" {
-				return settingsGroupLabel(group.Parent) + " › " + group.Label
+			parent := group.Parent
+			switch group.Key {
+			case "appearance.theme":
+				parent = ""
+			case "appearance.autocolor", "appearance.contrast_guard":
+				parent = "appearance.theme"
+			}
+			if parent != "" {
+				return settingsGroupLabel(parent) + " › " + group.Label
 			}
 			return group.Label
 		}
@@ -105,6 +112,9 @@ func (v *view) settingsCatalogue() []command {
 			continue
 		}
 		key := widget.Key
+		if key == "appearance.autocolor" || key == "appearance.contrast_guard" {
+			widget.Parent = "appearance.theme"
+		}
 		if key == settingThemeSave {
 			catalogue = append(catalogue, v.resolveCommandBindings(command{id: "settings." + key,
 				group: settingsGroupLabel(widget.Parent), name: widget.Label,
@@ -120,7 +130,7 @@ func (v *view) settingsCatalogue() []command {
 			}
 			themeAdded = true
 			key = settingThemeCustomize
-			widget.Parent, widget.Label = "appearance.theme", "Customize"
+			widget.Parent, widget.Label = "appearance.theme", "Customize colors"
 		}
 		if slices.Contains(settings.CatalogueDefault.Collections, key) {
 			group := settingsGroupLabel(widget.Parent) + " › " + widget.Label
@@ -251,6 +261,9 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 		return nil
 	}
 
+	if group == "appearance.autocolor" || group == "appearance.contrast_guard" {
+		spec.Parent = "appearance.theme"
+	}
 	title := spec.Title
 	if parent := settingsGroupLabel(spec.Parent); parent != "" {
 		title = parent + " › " + title
@@ -271,7 +284,7 @@ func (v *view) newSettingsWidget(group string) *settingsSession {
 		s.setThemeChoices(builtInThemes, v.settingsValues)
 	}
 	if isThemeColorWidget(group) {
-		s.title = "Appearance › Theme › Customize"
+		s.title = "Theme › Customize colors"
 		s.fields = append([]settings.Field{{Key: settingThemeElement, Label: "Element", Control: "input"}}, s.fields...)
 		s.completion.candidates = themeElementNames()
 	}
@@ -416,6 +429,7 @@ func (v *view) applySettings() {
 	v.updateNativeBindings()
 	c := settings.CatalogueDefault
 	v.appearance.Colors = themeColorsFromSettings(v.settingsValues)
+	v.applyThemeEffects()
 	v.theme.Fg, v.theme.Bg = v.appearance.Colors.Foreground, v.appearance.Colors.Surface
 	v.theme.ContrastBg, v.theme.ContrastFg = v.appearance.Colors.Selected, v.appearance.Colors.SelectedName
 	v.applyFontSettings()

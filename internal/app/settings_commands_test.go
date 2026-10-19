@@ -12,8 +12,8 @@ func TestBooleanToggleCommandsApplyPersistAndBind(t *testing.T) {
 		{"view.toggle_parent_entry", "View › Toggle parent entry", settingParentEntry},
 		{"view.toggle_protected_system_files", "View › Toggle protected system files", settingProtectedSystem},
 		{"appearance.toggle_icons", "Appearance › Toggle icons", settingIconsEnabled},
-		{"appearance.toggle_auto_color", "Appearance › Toggle auto color", settingAutoColorEnabled},
-		{"appearance.toggle_contrast_guard", "Appearance › Toggle contrast guard", settingContrastGuard},
+		{"appearance.toggle_auto_color", "Theme › Toggle file colors", settingAutoColorEnabled},
+		{"appearance.toggle_contrast_guard", "Theme › Toggle contrast guard", settingContrastGuard},
 		{"feedback.toggle_notification_animation", "Feedback › Toggle notification animation", settingNotificationAnimation},
 	} {
 		t.Run(tc.id, func(t *testing.T) {

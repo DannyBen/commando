@@ -99,7 +99,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 						active = state.selectedAppearance()
 						cut = v.cutEntry(index, storedRow)
 						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, cut)
-						bg = state.background(bg)
+						bg = state.background(bg, v.appearance.HoverStrength)
 					}
 					edge := color.NRGBA{}
 					if naming && v.nameInteraction().draft() {
@@ -173,9 +173,7 @@ func (v *view) emptyFolderContents(gtx layout.Context, index, rowHeight int) {
 		return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.Y = 0
-				return v.textAs(contrastDimmedFile, func(gtx layout.Context) layout.Dimensions {
-					return v.rawLabel(gtx, label, v.appearance.TextSize, v.hintColor(), text.Start)
-				})(gtx)
+				return v.rawLabel(gtx, label, v.appearance.TextSize, v.hintColor(), text.Start)
 			})
 		})
 	})

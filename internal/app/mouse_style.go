@@ -12,7 +12,7 @@ func (s targetState) selectedAppearance() bool { return s.Selected || s.pressedI
 
 // Shift the actual background, including selection colors. Blending neutral
 // channels keeps the effect visible even on pure black and white surfaces.
-func (s targetState) background(base color.NRGBA) color.NRGBA {
+func (s targetState) background(base color.NRGBA, strength float64) color.NRGBA {
 	if !s.Enabled || !s.Hovered || s.Pressed {
 		return base
 	}
@@ -21,7 +21,7 @@ func (s targetState) background(base color.NRGBA) color.NRGBA {
 		tone = 0
 	}
 	shift := func(channel uint8) uint8 {
-		return uint8(math.Round(float64(channel)*(1-hoverOpacity) + tone*hoverOpacity))
+		return uint8(math.Round(float64(channel)*(1-strength) + tone*strength))
 	}
 	return color.NRGBA{R: shift(base.R), G: shift(base.G), B: shift(base.B), A: base.A}
 }

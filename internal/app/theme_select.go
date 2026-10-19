@@ -26,7 +26,7 @@ type themeSnapshot struct {
 var builtInThemes = mustBuiltInThemes()
 
 func themeSnapshotKey(key string) bool {
-	return strings.HasPrefix(key, themeSettingPrefix) || strings.HasPrefix(key, "appearance.autocolor.")
+	return strings.HasPrefix(key, themeSettingPrefix) || strings.HasPrefix(key, "appearance.autocolor.") || strings.HasPrefix(key, settingThemeEffects+".")
 }
 
 func parseThemeSnapshot(data []byte) (settings.Values, error) {

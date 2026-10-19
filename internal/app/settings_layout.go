@@ -15,6 +15,9 @@ import (
 func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	s := v.settingsWidget()
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
+	if len(s.fields) > 0 && s.fields[0].Widget == settingThemeEffects {
+		paintOverlayBackdrop(gtx, v.locationBarHeight(gtx, textHeight), v.appearance.Colors, v.appearance.OverlayBackdropOpacity)
+	}
 	smallHeight := v.textHeight(gtx, v.appearance.SmallTextSize)
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
 	headerHeight := rowHeight + gtx.Dp(2)
@@ -103,7 +106,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 								if state.selectedAppearance() {
 									background = v.appearance.Colors.Selected
 								}
-								background = state.background(background)
+								background = state.background(background, v.appearance.HoverStrength)
 								paint.FillShape(gtx.Ops, background, clip.Rect{Max: image.Pt(gtx.Constraints.Max.X, textHeight)}.Op())
 							}
 							dims := (layout.Inset{Left: 4, Right: 4}).Layout(gtx, v.textOn(background, control))
@@ -158,7 +161,7 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 			if v.settingsInteraction() != s || s.pending {
 				gtx.Source = gtx.Source.Disabled()
 			}
-			return s.actions.layout(gtx, s.actionLabels(), selected, rowHeight, v.appearance.Colors,
+			return s.actions.layout(gtx, s.actionLabels(), selected, rowHeight, v.appearance,
 				func(gtx layout.Context, label string, fg, bg color.NRGBA) layout.Dimensions {
 					return v.rawLabel(gtx, label, v.appearance.TextSize, v.resolvedTextOn(fg, bg), text.Middle)
 				})
@@ -285,15 +288,14 @@ func (v *view) settingsChoice(gtx layout.Context, button *clickTarget, label str
 		if state.selectedAppearance() {
 			fg = v.appearance.Colors.SelectedName
 		} else if !focused && !selected {
-			role = contrastSecondary
-			fg = v.appearance.Colors.Muted
-			fg.A = uint8(uint16(fg.A) * 4 / 5)
+			role = contrastDimmedText
+			fg = v.dimmedColor(v.appearance.Colors.Muted)
 		}
 		background := v.currentTextBackground()
 		if state.selectedAppearance() {
 			background = v.appearance.Colors.Selected
 		}
-		background = state.background(background)
+		background = state.background(background, v.appearance.HoverStrength)
 		paint.FillShape(gtx.Ops, background, clip.Rect{Max: image.Pt(width, height)}.Op())
 		fg = v.resolvedTextFor(role, fg, background)
 		dims := v.rawLabel(gtx, label, v.appearance.TextSize, fg, text.Start)

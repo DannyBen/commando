@@ -76,7 +76,7 @@ func TestThemeSelectCataloguePreviewCycleAndCancel(t *testing.T) {
 	found := false
 	for _, cmd := range v.settingsCatalogue() {
 		if cmd.id == "settings."+settingThemeSelect {
-			if cmd.label() != "Appearance › Theme › Select" {
+			if cmd.label() != "Theme › Select" {
 				t.Fatal(cmd.label())
 			}
 			cmd.execute(v)
@@ -85,7 +85,7 @@ func TestThemeSelectCataloguePreviewCycleAndCancel(t *testing.T) {
 		}
 	}
 	s := v.settingsInteraction()
-	if !found || s == nil || s.title != "Appearance › Theme › Select" || len(s.fields) != 1 || s.dirty || !reflect.DeepEqual(before, v.settingsValues) {
+	if !found || s == nil || s.title != "Theme › Select" || len(s.fields) != 1 || s.dirty || !reflect.DeepEqual(before, v.settingsValues) {
 		t.Fatal("opening theme selector changed the appearance or failed to open")
 	}
 	if v.settingText(settingThemeSelect) != "Current theme" || !reflect.DeepEqual(s.actionLabels(), []string{"Save", "Cancel"}) {

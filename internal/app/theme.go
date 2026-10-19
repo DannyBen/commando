@@ -19,9 +19,6 @@ var themeFontFiles embed.FS
 
 var themeFont = bundledFonts(themeFontFiles)
 
-// Shared pointer feedback strength; independent of theme colors and selection.
-const hoverOpacity = 0.08
-
 type contrastRole uint8
 
 const (
@@ -29,6 +26,7 @@ const (
 	contrastSecondary
 	contrastTextSelection
 	contrastDimmedFile
+	contrastDimmedText
 )
 
 type contrastAdjustment uint8
@@ -50,6 +48,7 @@ type contrastRule struct {
 var themeContrastRules = map[contrastRole]contrastRule{
 	contrastPrimary:       {targetLc: 75, adjust: adjustForeground},
 	contrastDimmedFile:    {targetLc: 30, adjust: adjustForeground},
+	contrastDimmedText:    {targetLc: 30, adjust: adjustForeground},
 	contrastSecondary:     {targetLc: 60, adjust: adjustForeground},
 	contrastTextSelection: {targetLc: 60, adjust: adjustBackground, minLightnessGap: 8},
 }
@@ -74,6 +73,8 @@ type Theme struct {
 	ContentPaddingHorizontal         unit.Dp
 	OverlayMinWidth, OverlayMaxWidth unit.Dp
 	OverlayBackdropOpacity           float32 // Surface-color wash; 0 disables it, 1 is opaque.
+	DimmedTextOpacity                float64
+	HoverStrength                    float64
 	Feedback                         feedback.Animations
 	FeedbackProgressDelay            time.Duration // Delay before showing read or file-operation progress.
 }
@@ -121,6 +122,8 @@ var defaultTheme = Theme{
 	OverlayMinWidth:             480,
 	OverlayMaxWidth:             720,
 	OverlayBackdropOpacity:      0.15,
+	DimmedTextOpacity:           0.70,
+	HoverStrength:               0.08,
 	FeedbackProgressDelay:       500 * time.Millisecond,
 	Feedback: feedback.Animations{
 		Enabled: true,

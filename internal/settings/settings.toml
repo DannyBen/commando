@@ -2,6 +2,11 @@
 [appearance.contrast_guard]
 enabled = true
 
+[appearance.theme.effects]
+dimmed_text_opacity = 70
+hover_strength = 8
+backdrop_wash = 15
+
 [appearance.icons]
 enabled = true
 original_color = 80

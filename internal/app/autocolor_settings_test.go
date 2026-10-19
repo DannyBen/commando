@@ -46,7 +46,7 @@ func TestAutoColorChildWidgetsLiveCancelResetAndSave(t *testing.T) {
 			change := func() {
 				v.startSettingsWidget(tc.widget)
 				s := v.settingsInteraction()
-				if s.title != "Appearance › Auto color › "+tc.title || len(s.fields) != len(tc.keys) {
+				if s.title != "Theme › File colors › "+tc.title || len(s.fields) != len(tc.keys) {
 					t.Fatalf("incorrect child widget: %#v", s)
 				}
 				for i, key := range tc.keys {

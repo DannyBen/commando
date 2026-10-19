@@ -26,6 +26,12 @@ func (v *view) settingsPreviewItems(kind string) previewSamples {
 		return previewSamples{{label: label, foreground: fg, background: bg}}
 	}
 	switch kind {
+	case "effects":
+		hover := (targetState{Enabled: true, Hovered: true}).background(c.Surface, v.appearance.HoverStrength)
+		return previewSamples{
+			{label: "Dimmed", foreground: v.dimmedColor(c.Foreground), background: c.Surface, role: contrastDimmedText},
+			{label: "Hover", foreground: c.Foreground, background: hover},
+		}
 	case "notifications":
 		return previewSamples{
 			{"Info", c.Info, c.Footer, color.NRGBA{}, false, contrastPrimary},

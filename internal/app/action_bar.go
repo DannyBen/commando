@@ -21,7 +21,8 @@ func (b *actionBar) update(gtx layout.Context) (int, bool) {
 	}
 	return 0, false
 }
-func (b *actionBar) layout(gtx layout.Context, labels []string, selected, height int, colors ThemeColors, label func(layout.Context, string, color.NRGBA, color.NRGBA) layout.Dimensions) layout.Dimensions {
+func (b *actionBar) layout(gtx layout.Context, labels []string, selected, height int, theme Theme, label func(layout.Context, string, color.NRGBA, color.NRGBA) layout.Dimensions) layout.Dimensions {
+	colors := theme.Colors
 	if len(b.buttons) != len(labels) {
 		b.buttons = make([]clickTarget, len(labels))
 	}
@@ -36,7 +37,7 @@ func (b *actionBar) layout(gtx layout.Context, labels []string, selected, height
 				if state.selectedAppearance() {
 					bg, fg = colors.Selected, colors.SelectedName
 				}
-				bg = state.background(bg)
+				bg = state.background(bg, theme.HoverStrength)
 				paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())
 				if i > 0 {
 					paint.FillShape(gtx.Ops, colors.Border, clip.Rect{Max: image.Pt(gtx.Dp(1), height)}.Op())

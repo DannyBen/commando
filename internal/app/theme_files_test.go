@@ -51,7 +51,7 @@ func TestThemeSaveUsesDataFolderDraftAndCollisionRetry(t *testing.T) {
 	router, send := clipboardFrames(v)
 	found := false
 	for _, cmd := range v.settingsCatalogue() {
-		if cmd.label() == "Appearance › Theme › Save" {
+		if cmd.label() == "Theme › Save" {
 			if !cmd.allowed(v) {
 				t.Fatal("theme save unavailable")
 			}

@@ -32,8 +32,8 @@ step = 1.0
 integer = true
 
 [appearance.autocolor]
-label = "Auto color"
-title = "Auto color"
+label = "File colors"
+title = "File colors"
 
 [appearance.autocolor.enabled]
 label = "Enabled"
@@ -81,7 +81,7 @@ step = 1.0
 
 [appearance.autocolor.selection.cut_lightness_points]
 label = "Cut entries lightness offset"
-description = "Adjust cut entries relative to their normal color, including when Auto color is disabled."
+description = "Adjust cut entries relative to their normal color, including when File colors is disabled."
 control = "stepper-progress"
 min = -100.0
 max = 100.0
@@ -128,6 +128,38 @@ label = "Theme"
 
 [appearance.theme.colors]
 label = "Colors"
+
+[appearance.theme.effects]
+label = "Effects"
+title = "Effects"
+preview = "effects"
+
+[appearance.theme.effects.dimmed_text_opacity]
+label = "Dimmed text opacity"
+description = "De-emphasize hints, unavailable commands and unfocused choices. Contrast guard retains minimum readability."
+control = "stepper-progress"
+min = 0.0
+max = 100.0
+step = 1.0
+integer = true
+
+[appearance.theme.effects.hover_strength]
+label = "Hover strength"
+description = "Adjust background feedback when hovering over clickable controls."
+control = "stepper-progress"
+min = 0.0
+max = 100.0
+step = 1.0
+integer = true
+
+[appearance.theme.effects.backdrop_wash]
+label = "Backdrop wash"
+description = "Wash background panels with the surface color behind palettes and confirmations."
+control = "stepper-progress"
+min = 0.0
+max = 100.0
+step = 1.0
+integer = true
 
 [appearance.theme.generator]
 label = "Generator"

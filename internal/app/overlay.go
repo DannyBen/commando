@@ -44,9 +44,7 @@ func (o *overlay) layoutAt(gtx layout.Context, top, backdropTop, preferredWidth 
 	width := min(gtx.Constraints.Max.X, max(0, preferredWidth))
 	x := (gtx.Constraints.Max.X - width) / 2
 	top = max(0, min(top, gtx.Constraints.Max.Y))
-	backdrop := colors.Surface
-	backdrop.A = uint8(float32(backdrop.A) * max(0, min(1, backdropOpacity)))
-	paint.FillShape(gtx.Ops, backdrop, clip.Rect{Min: image.Pt(0, backdropTop), Max: gtx.Constraints.Max}.Op())
+	paintOverlayBackdrop(gtx, backdropTop, colors, backdropOpacity)
 	position := op.Offset(image.Pt(x, top)).Push(gtx.Ops)
 	gtx.Constraints.Min = image.Pt(width, 0)
 	gtx.Constraints.Max.X = width
@@ -59,4 +57,10 @@ func (o *overlay) layoutAt(gtx layout.Context, top, backdropTop, preferredWidth 
 	position.Pop()
 	o.bounds = image.Rectangle{Min: image.Pt(x, top), Max: image.Pt(x+width, top+dims.Size.Y)}
 	return dims
+}
+
+func paintOverlayBackdrop(gtx layout.Context, top int, colors ThemeColors, opacity float32) {
+	backdrop := colors.Surface
+	backdrop.A = uint8(float32(backdrop.A) * max(0, min(1, opacity)))
+	paint.FillShape(gtx.Ops, backdrop, clip.Rect{Min: image.Pt(0, top), Max: gtx.Constraints.Max}.Op())
 }

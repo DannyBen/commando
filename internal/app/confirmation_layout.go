@@ -50,7 +50,7 @@ func (v *view) layoutConfirmation(gtx layout.Context) layout.Dimensions {
 				}, true)
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return s.actions.layout(gtx, []string{s.acceptLabel, "Cancel"}, s.selected, actionHeight, v.appearance.Colors, func(gtx layout.Context, label string, fg, bg color.NRGBA) layout.Dimensions {
+				return s.actions.layout(gtx, []string{s.acceptLabel, "Cancel"}, s.selected, actionHeight, v.appearance, func(gtx layout.Context, label string, fg, bg color.NRGBA) layout.Dimensions {
 					return v.rawLabel(gtx, label, v.appearance.TextSize, v.resolvedTextOn(fg, bg), text.Middle)
 				})
 			}),
