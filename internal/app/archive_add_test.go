@@ -193,7 +193,7 @@ func TestArchiveCopyInCollisionAndMoveRefusal(t *testing.T) {
 	}
 	v.active = 0
 	for _, command := range v.commandCatalogue() {
-		if slices.Contains([]string{"entry.cut", "entry.duplicate", "entry.new_file", "entry.new_folder"}, command.id) && command.allowed(v) {
+		if slices.Contains([]string{"entry.cut"}, command.id) && command.allowed(v) {
 			t.Fatal("copy-in enabled a separately planned action", command.id)
 		}
 	}

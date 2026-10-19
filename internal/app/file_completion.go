@@ -33,6 +33,7 @@ func (v *view) acceptFileOperation(result loadResult) {
 		return
 	}
 	if result.duplicatePlan != nil || len(result.clipboard.ImagePNG) > 0 && len(result.clipboard.Paths) == 0 {
+		p.feedback.Complete()
 		v.transferPending = true
 		v.pendingNameDraft = &result
 		return

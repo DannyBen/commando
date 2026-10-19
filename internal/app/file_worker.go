@@ -62,6 +62,9 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	if result.err != nil {
 		return result
 	}
+	if transfer.duplicate && transfer.archive != nil {
+		return l.archiveDuplicateOperation(operation, result)
+	}
 	if snapshot.Archive != nil {
 		if snapshot.Move || transfer.shortcuts {
 			result.err = errors.ErrUnsupported

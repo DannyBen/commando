@@ -19,6 +19,8 @@ type ArchiveAdapter interface {
 	Delete(Location, []string) (RemovalResult, error)
 	Rename(Location, string, string) error
 	Add(Location, []string) error
+	Create(Location, string, bool, []byte) (Location, Entry, error)
+	Duplicate(Location, []string, []string) error
 }
 
 func ArchiveFormat(filename string) ArchiveAdapter {

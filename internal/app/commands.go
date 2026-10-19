@@ -74,7 +74,7 @@ func defaultCommands() []command {
 		cmd("entry.cut", "Entry", "Cut", "X", key.ModCtrl, clipboardReady),
 		cmd("entry.paste", "Entry", "Paste", "V", key.ModCtrl, pasteReady),
 		cmd("entry.paste_shortcut", "Entry", "Paste shortcut", "V", key.ModCtrl|key.ModShift, mutationReady),
-		cmd("entry.duplicate", "Entry", "Duplicate", "D", key.ModCtrl, selectedMutationReady),
+		cmd("entry.duplicate", "Entry", "Duplicate", "D", key.ModCtrl, duplicateReady),
 		cmd("entry.copy_to_panel", "Entry", "Copy to panel", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, false) }),
 		cmd("entry.move_to_panel", "Entry", "Move to panel", key.NameF6, 0, func(v *view) bool { return len(v.panels) > 1 && selectedMutationReady(v) }),
 		cmd("entry.copy_left", "Entry", "Copy to left", "[", 0, func(v *view) bool { return panelTransferReady(v, -1, false) }),
@@ -90,8 +90,8 @@ func defaultCommands() []command {
 		cmd("entry.delete_permanently", "Entry", "Delete permanently", key.NameDeleteForward, key.ModShift, removalReady).withPresentation(func(v *view) commandPresentation {
 			return commandPresentation{hidden: v.panels[v.active].archiveFolder != ""}
 		}),
-		cmd("entry.new_file", "Entry", "New file", "N", key.ModCtrl, writableFolder),
-		cmd("entry.new_folder", "Entry", "New folder", "N", key.ModCtrl|key.ModShift, writableFolder),
+		cmd("entry.new_file", "Entry", "New file", "N", key.ModCtrl, createReady),
+		cmd("entry.new_folder", "Entry", "New folder", "N", key.ModCtrl|key.ModShift, createReady),
 		cmd("entry.context_menu", "Entry", "Context menu", "/", key.ModAlt, func(v *view) bool { return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false) }),
 
 		cmd("entry.properties", "Entry", "Properties", key.NameF12, 0, func(v *view) bool { return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false) }),
@@ -326,4 +326,14 @@ func copyReady(v *view) bool {
 func pasteReady(v *view) bool {
 	p := &v.panels[v.active]
 	return mutationReady(v) || folderReady(v) && v.loader != nil && v.actionAllowed(actionMutation) && p.archiveFolder != "" && p.location().Capabilities().Add
+}
+
+func createReady(v *view) bool {
+	p := &v.panels[v.active]
+	return writableFolder(v) || folderReady(v) && p.archiveFolder != "" && p.location().Capabilities().Add && v.actionAllowed(actionMutation)
+}
+
+func duplicateReady(v *view) bool {
+	p := &v.panels[v.active]
+	return selectedMutationReady(v) || createReady(v) && v.loader != nil && p.archiveFolder != "" && p.location().Capabilities().Read && len(p.selectedNames()) > 0
 }

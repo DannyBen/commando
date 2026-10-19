@@ -59,7 +59,17 @@ func (n *nameSession) draft() bool { return n.kind != nameRename && !n.finished 
 
 func (v *view) startName(gtx layout.Context, kind nameOperation) {
 	p := &v.panels[v.active]
-	if p.loading || !p.nativeFolder() && (kind != nameRename || !p.location().Capabilities().Rename) || !v.interaction.idle() || !v.actionAllowed(actionMutation) {
+	supported := p.nativeFolder()
+	if p.archiveFolder != "" {
+		capabilities := p.location().Capabilities()
+		switch kind {
+		case nameRename:
+			supported = capabilities.Rename
+		case nameCreateFile, nameCreateFolder:
+			supported = capabilities.Add
+		}
+	}
+	if p.loading || !supported || !v.interaction.idle() || !v.actionAllowed(actionMutation) {
 		return
 	}
 	r := &nameSession{kind: kind, panel: v.active, path: p.path, archiveFolder: p.archiveFolder, row: p.selected,
@@ -199,9 +209,15 @@ func (v *view) updateName(gtx layout.Context) {
 				}
 			} else if r.kind == nameDuplicate {
 				request.duplicate = &duplicateRequest{plan: r.duplicate, name: e.Text, locations: v.fileOperationLocations(), owner: v.ownerWindow}
+				if r.archiveFolder != "" {
+					request.duplicate.archiveLocations = v.archiveOperationLocations()
+				}
 				progress = "Copying"
 			} else {
 				request.create = &createRequest{name: name, folder: r.kind == nameCreateFolder, data: r.data}
+				if r.archiveFolder != "" {
+					request.create.archiveLocations = v.archiveOperationLocations()
+				}
 				progress = "Creating " + r.noun()
 			}
 			r.err, r.pending, v.nameEditor.ReadOnly = nil, true, true
@@ -221,7 +237,7 @@ func (v *view) acceptName(result loadResult) {
 		return
 	}
 	r.pending, r.err, v.nameEditor.ReadOnly = false, result.err, false
-	if result.request.create != nil && filepath.Dir(result.request.create.name) != "." {
+	if result.request.create != nil && result.request.archiveFolder == "" && filepath.Dir(result.request.create.name) != "." {
 		// A failed attempt retains its stationary draft. Reconcile its partial
 		// parent directories after the editor closes, without disturbing input.
 		if result.err != nil && result.created.Name == "" {
@@ -243,7 +259,12 @@ func (v *view) acceptName(result loadResult) {
 		}
 	}
 	if result.request.duplicate != nil && result.transferred.Attempted {
-		refreshFailed := v.applyTransferPanels(result, result.request.duplicate.locations)
+		refreshFailed := false
+		if result.request.archiveFolder != "" {
+			refreshFailed = v.applyArchivePanels(result, result.request.duplicate.archiveLocations)
+		} else {
+			refreshFailed = v.applyTransferPanels(result, result.request.duplicate.locations)
+		}
 		r.finished = true
 		if result.created.Name != "" {
 			v.applyDuplicate(result)
@@ -255,6 +276,10 @@ func (v *view) acceptName(result loadResult) {
 		v.showFeedback(r.panel, feedback.Error, r.errorText(result.err))
 		v.panels[r.panel].reveal = true
 		r.focused = false
+		return
+	}
+	if result.request.create != nil && result.request.archiveFolder != "" {
+		v.acceptArchiveCreate(result, r)
 		return
 	}
 	success := "Renamed"

@@ -48,18 +48,12 @@ func (zipAdapter) Rename(location Location, oldName, newName string) error {
 		}
 		for _, file := range reader.File {
 			if file.Name == oldPath || strings.HasPrefix(file.Name, oldPath+"/") {
-				changed := *file
-				changed.Name = newPath + strings.TrimPrefix(file.Name, oldPath)
-				// A stale Unicode Path extra field can override the new header name in
-				// other readers. The UTF-8 flag describes the newly written name instead.
-				changed.Extra = withoutUnicodePath(file.Extra)
-				if utf8.ValidString(changed.Name) && utf8.ValidString(changed.Comment) {
-					changed.Flags |= 0x800
-					changed.NonUTF8 = false
-				} else if strings.IndexFunc(newName, func(r rune) bool { return r > 127 }) >= 0 {
-					return ErrArchiveEncoding // Avoid introducing mixed legacy/UTF-8 encodings.
+
+				changed, err := renamedZIPMember(file, newPath+strings.TrimPrefix(file.Name, oldPath), newName)
+				if err != nil {
+					return err
 				}
-				if err := writer.Copy(&changed); err != nil {
+				if err := writer.Copy(changed); err != nil {
 					return err
 				}
 			} else if err := writer.Copy(file); err != nil {
@@ -83,4 +77,19 @@ func withoutUnicodePath(extra []byte) []byte {
 		extra = extra[size:]
 	}
 	return append(kept, extra...)
+}
+
+// A stale Unicode Path extra field can override the new header name in other
+// readers. Both rename and duplicate share this header/encoding treatment.
+func renamedZIPMember(file *zip.File, name, replacement string) (*zip.File, error) {
+	changed := *file
+	changed.Name = name
+	changed.Extra = withoutUnicodePath(file.Extra)
+	if utf8.ValidString(changed.Name) && utf8.ValidString(changed.Comment) {
+		changed.Flags |= 0x800
+		changed.NonUTF8 = false
+	} else if strings.IndexFunc(replacement, func(r rune) bool { return r > 127 }) >= 0 {
+		return nil, ErrArchiveEncoding
+	}
+	return &changed, nil
 }

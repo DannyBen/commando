@@ -10,9 +10,10 @@ import (
 )
 
 type createRequest struct {
-	name   string
-	folder bool
-	data   []byte
+	archiveLocations []browser.Location
+	name             string
+	folder           bool
+	data             []byte
 }
 
 // Add the entry to panels displaying this directory without losing their marks
@@ -115,6 +116,8 @@ func (p *panel) shiftRows(row, delta int) {
 
 func createError(err error, noun string) string {
 	switch {
+	case errors.Is(err, browser.ErrArchiveChanged), errors.Is(err, browser.ErrArchiveRecovery), errors.Is(err, browser.ErrInvalidArchive):
+		return deleteError(err)
 	case errors.Is(err, browser.ErrInvalidName):
 		return "Invalid " + noun + " name"
 	case errors.Is(err, fs.ErrExist):

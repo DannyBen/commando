@@ -223,10 +223,12 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					}
 					continue
 				}
-				if request.clipboard != nil || request.transfer != nil || request.duplicate != nil || (request.removal != nil || request.rename != nil) && request.archiveFolder != "" {
+				if request.clipboard != nil || request.transfer != nil || request.duplicate != nil || (request.removal != nil || request.rename != nil || request.create != nil) && request.archiveFolder != "" {
 					var result loadResult
 					if request.rename != nil {
 						result = l.archiveRenameOperation(request)
+					} else if request.create != nil {
+						result = l.archiveCreateOperation(request)
 					} else if request.removal != nil {
 						result = l.archiveRemovalOperation(request)
 					} else if request.duplicate != nil {

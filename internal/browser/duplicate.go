@@ -46,8 +46,9 @@ func SourcesInDirectory(paths []string, directory string) (bool, error) {
 }
 
 // DuplicatePlan retains the selection and name suggestions for the inline
-// editor. All copying is delegated to the native transfer backend.
+// editor. Filesystem copies use the native backend; archives use their adapter.
 type DuplicatePlan struct {
+	Archive   *ArchiveClipboard // Deferred in-archive duplication; never native paths.
 	Directory string
 	Paths     []string
 	Names     []string
@@ -71,19 +72,8 @@ func PlanDuplicate(paths []string, directory string) (*DuplicatePlan, error) {
 }
 
 func availableCopyName(directory, name string, folder bool, reserved map[string]bool) (string, error) {
-	ext := ""
-	if !folder {
-		ext = filepath.Ext(name)
-		if ext == name {
-			ext = ""
-		}
-	}
-	base := strings.TrimSuffix(name, ext) + " - Copy"
 	for number := 1; ; number++ {
-		candidate := base + ext
-		if number > 1 {
-			candidate = fmt.Sprintf("%s (%d)%s", base, number, ext)
-		}
+		candidate := copyName(name, folder, number)
 		if reserved[strings.ToUpper(candidate)] {
 			continue
 		}
@@ -96,14 +86,14 @@ func availableCopyName(directory, name string, folder bool, reserved map[string]
 }
 
 func (plan *DuplicatePlan) DuplicateSubject() (Entry, string) {
-	if plan == nil || len(plan.Paths) != 1 {
+	if plan == nil || len(plan.Names) != 1 {
 		return Entry{}, ""
 	}
 	return plan.subject, plan.Names[0]
 }
 
 func (plan *DuplicatePlan) Request(name string, owner uintptr) (TransferRequest, error) {
-	if plan == nil || len(plan.Paths) != 1 {
+	if plan == nil || plan.Archive != nil || len(plan.Paths) != 1 {
 		return TransferRequest{}, fs.ErrInvalid
 	}
 	if err := ValidateName(name); err != nil {
@@ -116,4 +106,19 @@ func (plan *DuplicatePlan) Request(name string, owner uintptr) (TransferRequest,
 		return TransferRequest{}, err
 	}
 	return TransferRequest{Paths: plan.Paths, Directory: plan.Directory, Names: []string{name}, Duplicate: true, Owner: owner}, nil
+}
+
+func copyName(name string, folder bool, number int) string {
+	ext := ""
+	if !folder {
+		ext = filepath.Ext(name)
+		if ext == name {
+			ext = ""
+		}
+	}
+	base := strings.TrimSuffix(name, ext) + " - Copy"
+	if number > 1 {
+		return fmt.Sprintf("%s (%d)%s", base, number, ext)
+	}
+	return base + ext
 }

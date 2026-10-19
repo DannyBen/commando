@@ -9,10 +9,11 @@ import (
 )
 
 type duplicateRequest struct {
-	plan      *browser.DuplicatePlan
-	name      string
-	locations []string
-	owner     uintptr
+	archiveLocations []browser.Location
+	plan             *browser.DuplicatePlan
+	name             string
+	locations        []string
+	owner            uintptr
 }
 
 func (p *panel) selectedPaths() []string {
@@ -43,18 +44,23 @@ func (p *panel) selectedNames() []string {
 
 func (v *view) duplicateSelected() {
 	p := &v.panels[v.active]
-	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || p.path == "" || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || !duplicateReady(v) {
 		return
 	}
 	paths := p.selectedPaths()
-	if len(paths) == 0 {
-		return
+	var archive *archiveSelection
+	var locations []browser.Location
+	if p.archiveFolder != "" {
+		archive = &archiveSelection{location: p.location(), names: p.selectedNames()}
+		locations = v.archiveOperationLocations()
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true
 	snapshot := browser.FileClipboard{Paths: paths}
-	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{
-		locations: v.fileOperationLocations(), snapshot: &snapshot, duplicate: true, owner: v.ownerWindow}}) {
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, archiveFolder: p.archiveFolder, transfer: &transferRequest{
+		locations: v.fileOperationLocations(), archiveLocations: locations, archive: archive, snapshot: &snapshot, duplicate: true, owner: v.ownerWindow}}) {
 		p.loading, v.transferPending = false, false
+	} else if archive != nil {
+		v.operationProgress(v.active, "Copying archive entries")
 	}
 }
 
@@ -92,21 +98,26 @@ func (v *view) offerNameDraft(gtx layout.Context) {
 	}
 	source, name := result.duplicatePlan.DuplicateSubject()
 	// Anchor to the copied source even when a different row is highlighted.
-	p.applyTransferredEntry(browser.TransferredItem{Entry: source, Replaced: true})
+	if p.nativeFolder() {
+		p.applyTransferredEntry(browser.TransferredItem{Entry: source, Replaced: true})
+	}
 	row := p.selected + 1
 	for index, item := range p.items {
-		if samePath(item.file.Name, source.Name) {
+		if p.entryKey(item.file.Name) == p.entryKey(source.Name) {
 			row = index + 1
 			break
 		}
 	}
-	r := &nameSession{kind: nameDuplicate, panel: panel, row: row, path: p.path, folder: source.Directory,
+	r := &nameSession{kind: nameDuplicate, panel: panel, row: row, path: p.path, archiveFolder: p.archiveFolder, folder: source.Directory,
 		duplicate: result.duplicatePlan, previousPosition: p.list.Position, previousReveal: p.reveal}
 	v.beginName(gtx, r, name, source.Directory)
 }
 
 func (l *directoryLoader) duplicateOperation(request loadRequest) loadResult {
 	r := request.duplicate
+	if r.plan != nil && r.plan.Archive != nil {
+		return l.archiveDuplicateOperation(request, loadResult{request: request})
+	}
 	result := loadResult{request: request, locations: resolveFileLocations(r.locations)}
 	nativeRequest, err := r.plan.Request(r.name, r.owner)
 	if err != nil {
@@ -127,7 +138,7 @@ func (l *directoryLoader) duplicateOperation(request loadRequest) loadResult {
 func (v *view) applyDuplicate(result loadResult) {
 	p := &v.panels[result.request.panel]
 	for row, item := range p.items {
-		if samePath(item.file.Name, result.created.Name) {
+		if p.entryKey(item.file.Name) == p.entryKey(result.created.Name) {
 			p.selected, p.reveal = row, true
 			break
 		}

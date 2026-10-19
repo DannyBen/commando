@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"gioui.org/io/key"
-	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
 )
@@ -149,10 +148,5 @@ func TestArchiveRenameCancelAndCaseOnlyNames(t *testing.T) {
 	send()
 	if !slices.Equal(visibleNames(p), []string{"..", "a.txt", "B.txt"}) {
 		t.Fatal("rename conflated case-sensitive ZIP names", visibleNames(p))
-	}
-	// Creation remains unsupported; enabling rename must not enable new files.
-	v.startName(layout.Context{}, nameCreateFile)
-	if !v.interaction.idle() {
-		t.Fatal("rename capability accidentally enabled creation")
 	}
 }
