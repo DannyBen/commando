@@ -15,7 +15,7 @@ type shortcut struct {
 }
 
 func (s shortcut) textTrigger() string {
-	if s.Modifiers == 0 && (s.Name == "/" || s.Name == "@" || s.Name == "`" || s.Name == "[" || s.Name == "]" || s.Name == "{" || s.Name == "}") {
+	if s.Modifiers == 0 && (s.Name == "/" || s.Name == "@" || s.Name == "`" || s.Name == "[" || s.Name == "]" || s.Name == "{" || s.Name == "}" || s.Name == "+" || s.Name == "=" || s.Name == "-") {
 		return string(s.Name)
 	}
 	return ""
@@ -104,7 +104,9 @@ func (s shortcut) String() string {
 	case contextMenuKey:
 		name = "Menu"
 	case "+":
-		name = "Plus"
+		if s.Modifiers != 0 {
+			name = "Plus"
+		}
 	}
 	var parts []string
 	for _, modifier := range []struct {

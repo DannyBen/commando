@@ -92,6 +92,12 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		v.toggleMetadataColumn()
 	case "panel.move_left":
 		v.swapPanel(-1)
+	case "panel.increase_size":
+		v.resizePanel(1)
+	case "panel.decrease_size":
+		v.resizePanel(-1)
+	case "panel.reset_size":
+		v.resizePanel(0)
 	case "panel.move_right":
 		v.swapPanel(1)
 	case "panel.add_left":

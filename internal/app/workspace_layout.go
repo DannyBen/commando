@@ -22,6 +22,7 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 	paint.Fill(gtx.Ops, v.appearance.Colors.Surface)
 	event.Op(gtx.Ops, &v.focus)
 	children := make([]layout.FlexChild, 0, len(v.panels)*2-1)
+	panelX := 0
 	for i := range v.panels {
 		if i > 0 {
 			children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -30,11 +31,14 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 				return layout.Dimensions{Size: size}
 			}))
 		}
-		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+		children = append(children, layout.Flexed(float32(v.panels[i].sizeRatio), func(gtx layout.Context) layout.Dimensions {
 			if v.interaction.panelsBlocked() {
 				gtx.Source = gtx.Source.Disabled()
 			}
-			return v.panel(gtx, i)
+			dims := v.panel(gtx, i)
+			v.panels[i].selectionAnchor.X += panelX
+			panelX += dims.Size.X + gtx.Dp(1)
+			return dims
 		}))
 	}
 	dims := layout.Flex{}.Layout(gtx, children...)

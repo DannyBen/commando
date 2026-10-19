@@ -20,12 +20,13 @@ type sessionState struct {
 }
 
 type panelState struct {
-	Path           string `json:"path"`
-	Drives         bool   `json:"drives,omitempty"`
-	Metadata       string `json:"metadata,omitempty"`
-	LastMetadata   string `json:"lastMetadata,omitempty"`
-	SortByMetadata bool   `json:"sortByMetadata,omitempty"`
-	Visibility     string `json:"visibility,omitempty"`
+	SizeRatio      float64 `json:"sizeRatio,omitempty"`
+	Path           string  `json:"path"`
+	Drives         bool    `json:"drives,omitempty"`
+	Metadata       string  `json:"metadata,omitempty"`
+	LastMetadata   string  `json:"lastMetadata,omitempty"`
+	SortByMetadata bool    `json:"sortByMetadata,omitempty"`
+	Visibility     string  `json:"visibility,omitempty"`
 }
 
 type windowState struct {
@@ -146,6 +147,7 @@ func startingLocations(args []string, saved []panelState) ([]panelState, error) 
 			locations[i].LastMetadata = saved[i].LastMetadata
 			locations[i].SortByMetadata = saved[i].SortByMetadata
 			locations[i].Visibility = saved[i].Visibility
+			locations[i].SizeRatio = saved[i].SizeRatio
 		}
 		if len(args) == 0 && i < len(saved) && filepath.IsAbs(saved[i].Path) {
 			locations[i] = saved[i]
@@ -158,6 +160,7 @@ func (v *view) sessionState(window windowState) sessionState {
 	state := sessionState{Window: window, ActivePanel: v.active, Panels: make([]panelState, len(v.panels))}
 	for i, p := range v.panels {
 		state.Panels[i] = panelState{Path: p.path, Drives: p.drives, Metadata: p.metadata.stateName(), Visibility: p.visibility.stateName(), SortByMetadata: p.sortByMetadata}
+		state.Panels[i].SizeRatio = p.sizeRatio
 		if p.metadata == metadataNone && p.lastMetadata != metadataNone {
 			state.Panels[i].LastMetadata = p.lastMetadata.stateName()
 		}

@@ -76,7 +76,7 @@ func TestShortcutMatchingUsesExactModifiersAndPresses(t *testing.T) {
 }
 
 func TestBindingOverrideParsingAndRoundTrip(t *testing.T) {
-	for _, text := range []string{"Ctrl+Y", "Ctrl+Shift+Y", "F12", "Ctrl+Plus", "Alt+Right", "Shift+Insert", "Menu", "Ctrl+Enter", "Ctrl+Space", "Super+Q"} {
+	for _, text := range []string{"+", "-", "=", "Ctrl+Y", "Ctrl+Shift+Y", "F12", "Ctrl+Plus", "Alt+Right", "Shift+Insert", "Menu", "Ctrl+Enter", "Ctrl+Space", "Super+Q"} {
 		override, err := parseBindingOverride(text)
 		if err != nil || override.Mode != bindingAssigned || override.Shortcut.String() != text {
 			t.Fatalf("%q did not round-trip: %+v, %v", text, override, err)

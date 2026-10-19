@@ -16,6 +16,11 @@ func parseBindingOverride(text string) (bindingOverride, error) {
 	if strings.EqualFold(text, "none") {
 		return bindingOverride{Mode: bindingUnassigned}, nil
 	}
+	// Capture supplies the literal symbol; inside combinations Plus keeps the
+	// separator unambiguous (for example Ctrl+Plus).
+	if text == "+" {
+		text = "Plus"
+	}
 	parts := strings.Split(text, "+")
 	var s shortcut
 	for _, part := range parts[:len(parts)-1] {

@@ -133,9 +133,8 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			p.layoutEmptySpace(gtx, bottom, max(0, dims.Size.X-gtx.Dp(list.Width())))
 			// Keyboard menus anchor beside the revealed current row in client pixels.
 			headerHeight := v.locationBarHeight(gtx, textHeight) + smallTextHeight + gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))
-			panelX := (v.frameSize.X + gtx.Dp(1)) * index / len(v.panels)
 			y := (p.selected-p.list.Position.First)*rowHeight - p.list.Position.Offset
-			p.selectionAnchor = image.Pt(panelX+gtx.Dp(max(0, v.appearance.ContentPaddingHorizontal)), headerHeight+max(0, min(y+rowHeight, dims.Size.Y)))
+			p.selectionAnchor = image.Pt(gtx.Dp(max(0, v.appearance.ContentPaddingHorizontal)), headerHeight+max(0, min(y+rowHeight, dims.Size.Y)))
 			// Keep row widgets only around the visible viewport.
 			for row := range p.rows {
 				if row < p.list.Position.First-1 || row > p.list.Position.First+p.list.Position.Count {

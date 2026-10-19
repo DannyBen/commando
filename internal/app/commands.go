@@ -107,6 +107,9 @@ func defaultCommands() []command {
 
 		cmd("panel.move_left", "Panel", "Move left", key.NameLeftArrow, key.ModShift, func(v *view) bool { return v.active > 0 && panelsCanSwap(v) }),
 		cmd("panel.move_right", "Panel", "Move right", key.NameRightArrow, key.ModShift, func(v *view) bool { return v.active+1 < len(v.panels) && panelsCanSwap(v) }),
+		cmd("panel.increase_size", "Panel", "Increase size", "+", 0, panelSizingReady),
+		cmd("panel.decrease_size", "Panel", "Decrease size", "-", 0, panelSizingReady),
+		cmd("panel.reset_size", "Panel", "Reset size", "0", key.ModCtrl, panelSizingReady),
 
 		cmd("panel.add_left", "Panel", "Add left", key.NameLeftArrow, key.ModAlt, panelsCanChange),
 		cmd("panel.add_right", "Panel", "Add right", key.NameRightArrow, key.ModAlt, panelsCanChange),
@@ -144,6 +147,8 @@ func defaultCommands() []command {
 	for i := range catalogue {
 		c := &catalogue[i]
 		switch c.id {
+		case "panel.increase_size":
+			c.bindings[1].Default = shortcut{Name: "="}
 		case "entry.paste":
 			c.bindings[1].Default = shortcut{Name: insertKey, Modifiers: key.ModShift}
 		case "entry.context_menu":

@@ -32,6 +32,7 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 		v.panels[i].metadata = metadataFromState(location.Metadata)
 		v.panels[i].lastMetadata = metadataFromState(location.LastMetadata)
 		v.panels[i].sortByMetadata = location.SortByMetadata
+		v.panels[i].sizeRatio = panelSizeRatio(location.SizeRatio)
 		v.panels[i].visibility = visibilityFromState(location.Visibility)
 		if location.Drives {
 			v.load(i, "", location.Path)

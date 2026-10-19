@@ -33,6 +33,51 @@ func openShortcutWidget(t *testing.T, v *view, send func(...event.Event), query 
 	return p, s
 }
 
+func TestShortcutCaptureSharesMainAndNumpadSizingKeys(t *testing.T) {
+	for _, tc := range []struct {
+		name, symbol, command, query string
+		capture                      key.Event
+		want                         float64
+	}{
+		{"main plus", "+", "panel.increase_size", "Panel Increase size", modified("+", key.ModShift), 1.2},
+		{"numpad plus", "+", "panel.increase_size", "Panel Increase size", pressed("+"), 1.2},
+		{"main minus", "-", "panel.decrease_size", "Panel Decrease size", pressed("-"), 0.8},
+		{"numpad minus", "-", "panel.decrease_size", "Panel Decrease size", pressed("-"), 0.8},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := newPreviewView()
+			// Replace the defaults first so only the newly captured binding can run.
+			setTestShortcut(t, v, tc.command, 0, "Ctrl+I")
+			setTestShortcut(t, v, tc.command, 1, "none")
+			send, _ := panelInputFrames(v)
+			_, s := openShortcutWidget(t, v, send, tc.query)
+			send(pressed(key.NameReturn), key.Event{Name: key.NameReturn, State: key.Release})
+			send(tc.capture, key.EditEvent{Text: tc.symbol})
+			send(key.Event{Name: tc.capture.Name, Modifiers: tc.capture.Modifiers, State: key.Release})
+			if s.capturing || v.settingText(s.fields[0].Key) != tc.symbol || s.errorText != "" {
+				t.Fatalf("capture failed: capturing=%v value=%q error=%q", s.capturing, v.settingText(s.fields[0].Key), s.errorText)
+			}
+			send(modified(key.NameReturn, key.ModCtrl))
+			send(pressed(key.NameEscape)) // Return from the palette to browsing.
+			if !v.interaction.idle() {
+				t.Fatal("saved capture did not return to browsing")
+			}
+			mainKey := pressed(key.Name(tc.symbol))
+			if tc.symbol == "+" {
+				mainKey.Modifiers = key.ModShift
+			}
+			for _, press := range []key.Event{mainKey, pressed(key.Name(tc.symbol))} {
+				v.panels[0].sizeRatio = 1
+				send(press, key.EditEvent{Text: tc.symbol})
+				send(key.Event{Name: press.Name, Modifiers: press.Modifiers, State: key.Release})
+				if v.panels[0].sizeRatio != tc.want {
+					t.Fatalf("captured binding resized to %g, want %g", v.panels[0].sizeRatio, tc.want)
+				}
+			}
+		})
+	}
+}
+
 func TestShortcutWidgetSavesThroughWorkerAndRestoresPalette(t *testing.T) {
 	v := newPreviewView()
 	v.active = 1

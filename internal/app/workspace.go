@@ -38,6 +38,7 @@ type panel struct {
 	metadata            metadataColumn
 	lastMetadata        metadataColumn // Last visible column, retained while metadata is None.
 	sortByMetadata      bool
+	sizeRatio           float64 // Relative to a normal panel; follows the pane model.
 	visibility          visibilityMode
 	reveal              bool
 	loading             bool
@@ -137,6 +138,7 @@ func newView(panels []panel) *view {
 		p.rows = make(map[int]*fileRow)
 		p.list.Axis = layout.Vertical
 		p.metadata = metadataSize
+		p.sizeRatio = panelSizeRatio(p.sizeRatio)
 	}
 	return v
 }
