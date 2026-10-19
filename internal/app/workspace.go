@@ -31,6 +31,7 @@ type panel struct {
 	rows                map[int]*fileRow
 	emptySpace          *clickTarget
 	locationBar         *clickTarget
+	locationScroll      locationMarquee
 	list                widget.List
 	selected            int
 	selectionAnchor     image.Point

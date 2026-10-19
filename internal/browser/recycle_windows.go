@@ -158,14 +158,14 @@ type removalSink struct {
 }
 
 func (s *removalSink) preDelete(flags uint32) uintptr {
-	return s.preDeleteItem(flags, 0)
+	return s.preDeleteItem(flags, nil)
 }
 
-func (s *removalSink) preDeleteItem(flags uint32, item uintptr) uintptr {
+func (s *removalSink) preDeleteItem(flags uint32, item *shellObject) uintptr {
 	var validationErr error
 	if s.validate != nil {
 		var path string
-		path, validationErr = shellItemPath((*shellObject)(unsafe.Pointer(item)))
+		path, validationErr = shellItemPath(item)
 		if validationErr == nil {
 			validationErr = s.validate(path)
 		}
@@ -308,7 +308,7 @@ var removalSinkVtable = [19]uintptr{
 	syscall.NewCallback(func(this *removalSink, flags, item, dest, name, hr, created uintptr) uintptr {
 		return this.unexpected("PostCopy", uint32(flags), uint32(hr))
 	}),
-	syscall.NewCallback(func(this *removalSink, flags, item uintptr) uintptr {
+	syscall.NewCallback(func(this *removalSink, flags uintptr, item *shellObject) uintptr {
 		return this.preDeleteItem(uint32(flags), item)
 	}),
 	syscall.NewCallback(func(this *removalSink, flags, item, hr, created uintptr) uintptr {
