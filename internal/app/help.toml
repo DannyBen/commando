@@ -263,14 +263,14 @@ lines = [
 
 ["settings.appearance.autocolor.selection.cut_lightness_points"]
 lines = [
-  "Adjust the lightness of entries marked for cutting.",
+  "Adjust the lightness of entries cut with [key:entry.cut].",
   "Also applies when File colors is off; negative values darken them.",
 ]
 
 ["settings.appearance.autocolor.special_files"]
 lines = [
   "Give hidden entries and dotfiles a different appearance.",
-  "An entry can receive both adjustments.",
+  "Show or hide ordinary hidden entries with [key:view.hidden_files].",
 ]
 
 ["settings.appearance.autocolor.special_files.hidden_lightness_points"]
@@ -455,7 +455,7 @@ lines = [
 
 ["settings.appearance.theme.colors.secondary_text"]
 lines = [
-  "Color metadata and supporting text.",
+  "Color file details, such as sizes, and supporting text.",
   "Changes preview immediately; Save keeps them.",
 ]
 
@@ -701,44 +701,44 @@ lines = [
 
 ["settings.view.metadata_columns"]
 lines = [
-  "Choose which file details you can cycle through in each panel.",
-  "Each panel shows one metadata column at a time.",
+  "Choose which file details can appear beside filenames.",
+  "Switch the detail column with [key:view.next_metadata_column]; each panel keeps its choice.",
 ]
 
 ["settings.view.metadata_columns.extension"]
 lines = [
-  "Include file extensions when cycling metadata columns.",
-  "Each panel keeps its own choice of column.",
+  "Include file extensions in the column beside filenames.",
+  "Switch details with [key:view.next_metadata_column]; each panel keeps its choice.",
 ]
 
 ["settings.view.metadata_columns.size"]
 lines = [
-  "Include file sizes when cycling metadata columns.",
-  "Each panel keeps its own choice of column.",
+  "Include file sizes in the column beside filenames.",
+  "Switch details with [key:view.next_metadata_column]; each panel keeps its choice.",
 ]
 
 ["settings.view.metadata_columns.modified"]
 lines = [
-  "Include last modification times when cycling metadata columns.",
-  "Each panel keeps its own choice of column.",
+  "Include last modification times in the column beside filenames.",
+  "Switch details with [key:view.next_metadata_column]; each panel keeps its choice.",
 ]
 
 ["settings.view.metadata_columns.created"]
 lines = [
-  "Include creation times when cycling metadata columns.",
-  "Each panel keeps its own choice of column.",
+  "Include creation times in the column beside filenames.",
+  "Switch details with [key:view.next_metadata_column]; each panel keeps its choice.",
 ]
 
 ["settings.view.show_protected_system_files"]
 lines = [
   "Include entries with both hidden and system attributes.",
-  "When enabled, these appear even if ordinary hidden entries are hidden.",
+  "These appear even when [key:view.hidden_files] hides ordinary hidden entries.",
 ]
 
 ["settings.view.show_parent_entry"]
 lines = [
   "Show a .. entry that opens the parent folder.",
-  "You can still use the Parent folder command when this is off.",
+  "You can also go to the parent folder with [key:navigation.parent_folder].",
 ]
 
 ["settings.application.data_folder"]
@@ -755,24 +755,25 @@ lines = [
 
 ["settings.programs.editors"]
 lines = [
-  "Choose an editor for a set of file extensions.",
+  "Choose which editor opens files with [key:file.edit].",
   "Specific extension rules take priority over the * fallback rule.",
 ]
 
 ["settings.programs.editors.ext"]
 lines = [
-  "Enter space-separated extensions, such as txt md.",
+  "File types opened by [key:file.edit]: space-separated extensions, such as txt md.",
   "Use * on its own for the fallback editor.",
 ]
 
 ["settings.programs.editors.path"]
 lines = [
-  "Choose the executable to launch for matching files.",
+  "Choose the editor executable for matching files.",
+  "Open files in this editor with [key:file.edit].",
 ]
 
 ["settings.programs.editors.args"]
 lines = [
-  "Use %SelectedFiles% once as a whole argument.",
+  "For [key:file.edit], use %SelectedFiles% once as a whole argument.",
   "Each matching file is passed separately; quote other arguments with spaces.",
 ]
 
@@ -791,7 +792,7 @@ lines = [
 ["settings.feedback.sounds.profile"]
 lines = [
   "Choose how much sound to play.",
-  "Each profile includes the levels below it, from errors to navigation.",
+  "For example, Notifications also plays errors and warnings.",
 ]
 
 ["settings.feedback.sounds.master_volume"]
@@ -813,50 +814,50 @@ lines = [
 
 ["settings.guards.recycle_confirmation"]
 lines = [
-  "Choose when recycling asks for confirmation.",
+  "Choose when recycling with [key:entry.recycle] asks for confirmation.",
   "ON (Cancel default) starts with Cancel selected; the strongest guard wins.",
 ]
 
 ["settings.guards.recycle_confirmation.single_files"]
 lines = [
-  "Require confirmation for exactly one file.",
-  "If several guards match, the strongest setting wins.",
+  "Ask before recycling exactly one file with [key:entry.recycle].",
+  "ON (Cancel default) overrides ON; ON overrides OFF.",
 ]
 
 ["settings.guards.recycle_confirmation.directories"]
 lines = [
-  "Require confirmation for any selection containing a folder.",
-  "If several guards match, the strongest setting wins.",
+  "Ask before recycling a selection containing a folder with [key:entry.recycle].",
+  "ON (Cancel default) overrides ON; ON overrides OFF.",
 ]
 
 ["settings.guards.recycle_confirmation.multiple_entries"]
 lines = [
-  "Require confirmation for two or more entries.",
-  "If several guards match, the strongest setting wins.",
+  "Ask before recycling two or more entries with [key:entry.recycle].",
+  "ON (Cancel default) overrides ON; ON overrides OFF.",
 ]
 
 ["settings.guards.delete_confirmation"]
 lines = [
-  "Choose when permanently deleting asks for confirmation.",
+  "Choose when permanently deleting with [key:entry.delete_permanently] asks for confirmation.",
   "ON (Cancel default) starts with Cancel selected; the strongest guard wins.",
 ]
 
 ["settings.guards.delete_confirmation.single_files"]
 lines = [
-  "Require confirmation for exactly one file.",
-  "If several guards match, the strongest setting wins.",
+  "Ask before permanently deleting exactly one file with [key:entry.delete_permanently].",
+  "ON (Cancel default) overrides ON; ON overrides OFF.",
 ]
 
 ["settings.guards.delete_confirmation.directories"]
 lines = [
-  "Require confirmation for any selection containing a folder.",
-  "If several guards match, the strongest setting wins.",
+  "Ask before permanently deleting a selection containing a folder with [key:entry.delete_permanently].",
+  "ON (Cancel default) overrides ON; ON overrides OFF.",
 ]
 
 ["settings.guards.delete_confirmation.multiple_entries"]
 lines = [
-  "Require confirmation for two or more entries.",
-  "If several guards match, the strongest setting wins.",
+  "Ask before permanently deleting two or more entries with [key:entry.delete_permanently].",
+  "ON (Cancel default) overrides ON; ON overrides OFF.",
 ]
 
 ["settings.debug.trace"]
