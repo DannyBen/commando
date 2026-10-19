@@ -19,17 +19,26 @@ func (p *panel) selectedPaths() []string {
 	if !p.nativeFolder() {
 		return nil
 	}
-	var paths []string
+	names := p.selectedNames()
+	paths := make([]string, 0, len(names))
+	for _, name := range names {
+		paths = append(paths, filepath.Join(p.path, name))
+	}
+	return paths
+}
+
+func (p *panel) selectedNames() []string {
+	var names []string
 	if len(p.marks) > 0 {
 		for row, item := range p.items {
 			if p.marks[row] && p.markable(row) {
-				paths = append(paths, filepath.Join(p.path, item.file.Name))
+				names = append(names, item.file.Name)
 			}
 		}
 	} else if p.markable(p.selected) {
-		paths = append(paths, filepath.Join(p.path, p.items[p.selected].file.Name))
+		names = append(names, p.items[p.selected].file.Name)
 	}
-	return paths
+	return names
 }
 
 func (v *view) duplicateSelected() {

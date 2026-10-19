@@ -67,6 +67,9 @@ func (s *paletteSession) filter(query string) {
 		needle = strings.TrimSpace(query[1:])
 	}
 	for _, command := range catalogue {
+		if command.mask.hidden {
+			continue
+		}
 		if match, ok := fuzzy.Match(needle, command.label()); ok {
 			s.results = append(s.results, commandMatch{command: command, match: match})
 		}

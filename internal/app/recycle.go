@@ -16,15 +16,17 @@ import (
 )
 
 type removalRequest struct {
-	names     []string
-	permanent bool
-	locations []string // Snapshot for safely updating other alias listings.
-	owner     uintptr
+	archiveFolder    string
+	archiveLocations []browser.Location
+	names            []string
+	permanent        bool
+	locations        []string // Snapshot for safely updating other alias listings.
+	owner            uintptr
 }
 
 func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 	p := &v.panels[v.active]
-	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || !removalReady(v) {
 		return
 	}
 	var names []string
@@ -43,10 +45,19 @@ func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 	if len(names) == 0 {
 		return
 	}
-	request := &removalRequest{names: names, permanent: permanent, locations: make([]string, len(v.panels)), owner: v.ownerWindow}
+	permanent = permanent || p.archiveFolder != ""
+	request := &removalRequest{archiveFolder: p.archiveFolder, names: names, permanent: permanent, locations: make([]string, len(v.panels)), owner: v.ownerWindow}
 	for pi := range v.panels {
 		if v.panels[pi].nativeFolder() {
 			request.locations[pi] = v.panels[pi].path
+		}
+	}
+	if p.archiveFolder != "" {
+		request.archiveLocations = make([]browser.Location, len(v.panels))
+		for i := range v.panels {
+			if !v.panels[i].drives {
+				request.archiveLocations[i] = v.panels[i].location()
+			}
 		}
 	}
 	panel, path := v.active, p.path
@@ -59,6 +70,9 @@ func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 	action, verb := "Recycle", "Recycle"
 	if permanent {
 		action, verb = "Delete permanently", "Permanently delete"
+	}
+	if p.archiveFolder != "" {
+		action = "Delete from archive"
 	}
 	entry := "entry"
 	if len(names) != 1 {
@@ -73,7 +87,7 @@ func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 
 func (v *view) submitRemoval(panel int, path string, request *removalRequest) {
 	// The confirmation owns the captured sources; browsing never retargets it.
-	if !v.interaction.idle() || panel >= len(v.panels) || !samePath(v.panels[panel].path, path) || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || panel >= len(v.panels) || !samePath(v.panels[panel].path, path) || v.panels[panel].archiveFolder != request.archiveFolder || !v.actionAllowed(actionMutation) {
 		return
 	}
 	p := &v.panels[panel]
@@ -83,7 +97,7 @@ func (v *view) submitRemoval(panel int, path string, request *removalRequest) {
 		progress = "Deleting"
 	}
 	v.operationProgress(panel, progress)
-	if !v.loader.submit(loadRequest{panel: panel, path: path, removal: request}) {
+	if !v.loader.submit(loadRequest{panel: panel, path: path, archiveFolder: request.archiveFolder, removal: request}) {
 		p.loading = false
 		p.feedback.Complete()
 	}
@@ -92,30 +106,35 @@ func (v *view) submitRemoval(panel int, path string, request *removalRequest) {
 func (v *view) acceptRemoval(result loadResult) {
 	p := &v.panels[result.request.panel]
 	p.loading = false
-	for pi := range v.panels {
-		other := &v.panels[pi]
-		if other.drives {
-			continue
-		}
-		matches := samePath(other.path, result.request.path)
-		if pi < len(result.sameDirectory) && result.sameDirectory[pi] &&
-			pi < len(result.request.removal.locations) && samePath(other.path, result.request.removal.locations[pi]) {
-			matches = true
-		}
-		if matches {
-			other.removeEntries(result.removed.Names)
-		}
-		if pi < len(result.locations) && result.locations[pi] != "" &&
-			pi < len(result.request.removal.locations) && samePath(other.path, result.request.removal.locations[pi]) {
-			for _, name := range result.removed.Names {
-				if _, inside := movedLocationSuffix(filepath.Join(result.removed.Directory, name), result.locations[pi]); inside {
-					other.refreshNeeded = true
-					break
+	refreshFailed := false
+	if result.request.removal.archiveFolder != "" {
+		refreshFailed = v.applyArchiveRemovalPanels(result)
+	} else {
+		for pi := range v.panels {
+			other := &v.panels[pi]
+			if other.drives {
+				continue
+			}
+			matches := samePath(other.path, result.request.path)
+			if pi < len(result.sameDirectory) && result.sameDirectory[pi] &&
+				pi < len(result.request.removal.locations) && samePath(other.path, result.request.removal.locations[pi]) {
+				matches = true
+			}
+			if matches {
+				other.removeEntries(result.removed.Names)
+			}
+			if pi < len(result.locations) && result.locations[pi] != "" &&
+				pi < len(result.request.removal.locations) && samePath(other.path, result.request.removal.locations[pi]) {
+				for _, name := range result.removed.Names {
+					if _, inside := movedLocationSuffix(filepath.Join(result.removed.Directory, name), result.locations[pi]); inside {
+						other.refreshNeeded = true
+						break
+					}
 				}
 			}
 		}
+		refreshFailed = v.applyTransferPanels(result, result.request.removal.locations)
 	}
-	refreshFailed := v.applyTransferPanels(result, result.request.removal.locations)
 	count := len(result.removed.Names)
 	outcome := "recycled"
 	if result.request.removal.permanent {
@@ -215,6 +234,14 @@ func recycleError(err error) string {
 
 func deleteError(err error) string {
 	switch {
+	case errors.Is(err, browser.ErrArchiveRecovery):
+		return "Archive recovery needed"
+	case errors.Is(err, browser.ErrArchiveChanged):
+		return "Archive changed; retry"
+	case errors.Is(err, browser.ErrInvalidArchive):
+		return "Invalid archive"
+	case errors.Is(err, errors.ErrUnsupported):
+		return "Unsupported archive type"
 	case errors.Is(err, browser.ErrDeleteUnavailable):
 		return "Deletion unavailable"
 	case errors.Is(err, browser.ErrDeleteUnconfirmed):

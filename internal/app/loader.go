@@ -209,9 +209,11 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					}
 					continue
 				}
-				if request.clipboard != nil || request.transfer != nil || request.duplicate != nil {
+				if request.clipboard != nil || request.transfer != nil || request.duplicate != nil || request.removal != nil && request.archiveFolder != "" {
 					var result loadResult
-					if request.duplicate != nil {
+					if request.removal != nil {
+						result = l.archiveRemovalOperation(request)
+					} else if request.duplicate != nil {
 						result = l.duplicateOperation(request)
 					} else {
 						result = l.fileOperation(request)

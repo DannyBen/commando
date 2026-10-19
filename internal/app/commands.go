@@ -8,9 +8,17 @@ import (
 	"gioui.org/layout"
 )
 
+// Presentation changes palette discovery without changing global command identity.
+type commandPresentation struct {
+	name   string
+	hidden bool // Palette visibility does not affect bindings or execution.
+}
+
 // IDs are persistent identities, independent of labels and catalogue order.
 // Availability is checked at execution for both palette and keyboard routes.
 type command struct {
+	presentation  func(*view) commandPresentation
+	mask          commandPresentation
 	id            string
 	group         string
 	name          string
@@ -27,6 +35,9 @@ type command struct {
 func (v *view) commandCatalogue() []command {
 	catalogue := make([]command, 0, len(commands)+len(v.panels))
 	for i, c := range commands {
+		if c.presentation != nil {
+			c.mask = c.presentation(v)
+		}
 		catalogue = append(catalogue, v.resolveCommandBindings(c))
 		if c.group == "Panel" && (i == len(commands)-1 || commands[i+1].group != "Panel") {
 			for index := range v.panels {
@@ -64,14 +75,21 @@ func defaultCommands() []command {
 		cmd("entry.paste", "Entry", "Paste", "V", key.ModCtrl, mutationReady),
 		cmd("entry.paste_shortcut", "Entry", "Paste shortcut", "V", key.ModCtrl|key.ModShift, mutationReady),
 		cmd("entry.duplicate", "Entry", "Duplicate", "D", key.ModCtrl, selectedMutationReady),
-		cmd("entry.copy_to_panel", "Entry", "Copy to panel", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && selectedMutationReady(v) }),
+		cmd("entry.copy_to_panel", "Entry", "Copy to panel", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, false) }),
 		cmd("entry.move_to_panel", "Entry", "Move to panel", key.NameF6, 0, func(v *view) bool { return len(v.panels) > 1 && selectedMutationReady(v) }),
-		cmd("entry.copy_left", "Entry", "Copy to left", "[", 0, func(v *view) bool { return panelTransferReady(v, -1) }),
-		cmd("entry.copy_right", "Entry", "Copy to right", "]", 0, func(v *view) bool { return panelTransferReady(v, 1) }),
-		cmd("entry.move_left", "Entry", "Move to left", "{", 0, func(v *view) bool { return panelTransferReady(v, -1) }),
-		cmd("entry.move_right", "Entry", "Move to right", "}", 0, func(v *view) bool { return panelTransferReady(v, 1) }),
-		cmd("entry.recycle", "Entry", "Recycle", key.NameDeleteForward, 0, selectedMutationReady),
-		cmd("entry.delete_permanently", "Entry", "Delete permanently", key.NameDeleteForward, key.ModShift, selectedMutationReady),
+		cmd("entry.copy_left", "Entry", "Copy to left", "[", 0, func(v *view) bool { return panelTransferReady(v, -1, false) }),
+		cmd("entry.copy_right", "Entry", "Copy to right", "]", 0, func(v *view) bool { return panelTransferReady(v, 1, false) }),
+		cmd("entry.move_left", "Entry", "Move to left", "{", 0, func(v *view) bool { return panelTransferReady(v, -1, true) }),
+		cmd("entry.move_right", "Entry", "Move to right", "}", 0, func(v *view) bool { return panelTransferReady(v, 1, true) }),
+		cmd("entry.recycle", "Entry", "Recycle", key.NameDeleteForward, 0, removalReady).withPresentation(func(v *view) commandPresentation {
+			if v.panels[v.active].archiveFolder != "" {
+				return commandPresentation{name: "Delete from archive"}
+			}
+			return commandPresentation{}
+		}),
+		cmd("entry.delete_permanently", "Entry", "Delete permanently", key.NameDeleteForward, key.ModShift, removalReady).withPresentation(func(v *view) commandPresentation {
+			return commandPresentation{hidden: v.panels[v.active].archiveFolder != ""}
+		}),
 		cmd("entry.new_file", "Entry", "New file", "N", key.ModCtrl, writableFolder),
 		cmd("entry.new_folder", "Entry", "New folder", "N", key.ModCtrl|key.ModShift, writableFolder),
 		cmd("entry.context_menu", "Entry", "Context menu", "/", key.ModAlt, func(v *view) bool { return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false) }),
@@ -165,7 +183,20 @@ func defaultCommands() []command {
 	return catalogue
 }
 
+func (c command) withPresentation(presentation func(*view) commandPresentation) command {
+	c.presentation = presentation
+	return c
+}
+
 func (c command) label() string {
+	if c.mask.name != "" {
+		c.name = c.mask.name
+	}
+	return c.originalLabel()
+}
+
+// Shortcut editors name the global command, independently of its palette mask.
+func (c command) originalLabel() string {
 	if c.group == "" {
 		return c.name
 	}
@@ -280,4 +311,9 @@ func adjacentReady(v *view, direction int) bool {
 	target := v.active + direction
 	return selectedReady(v) &&
 		v.loader != nil && (target >= 0 && target < len(v.panels) && !v.panels[target].loading || (target < 0 || target >= len(v.panels)) && panelsCanChange(v))
+}
+
+func removalReady(v *view) bool {
+	p := &v.panels[v.active]
+	return folderReady(v) && v.loader != nil && v.actionAllowed(actionMutation) && p.location().Capabilities().Delete && len(p.selectedNames()) > 0
 }

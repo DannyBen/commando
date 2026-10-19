@@ -27,6 +27,9 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 		catalogue = s.settingsCommands
 	}
 	for _, command := range catalogue {
+		if command.mask.hidden {
+			continue
+		}
 		labelWidth = max(labelWidth, v.textWidth(gtx, command.label(), v.appearance.TextSize))
 		shortcutWidth = max(shortcutWidth, v.textWidth(gtx, command.shortcut(), v.appearance.SmallTextSize))
 	}

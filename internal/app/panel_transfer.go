@@ -11,11 +11,11 @@ import (
 func (v *view) startPanelTransfer(move bool) {
 	source := v.active
 	p := &v.panels[source]
-	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || p.path == "" || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || !panelSourceReady(v, move) {
 		return
 	}
-	snapshot := browser.FileClipboard{Paths: p.selectedPaths(), Move: move}
-	if len(snapshot.Paths) == 0 {
+	snapshot, archive := p.panelTransferSelection(move)
+	if len(snapshot.Paths) == 0 && archive == nil {
 		return
 	}
 	target := source + 1
@@ -34,7 +34,7 @@ func (v *view) startPanelTransfer(move bool) {
 	offer = func(target int) {
 		p := &v.panels[target]
 		v.startInlineActions(target, p.selected+1, "", "", []string{verb + " here"}, func(int) {
-			v.submitPanelTransfer(target, target, snapshot)
+			v.submitPanelTransfer(target, target, snapshot, archive)
 		}, func() { v.active = source })
 		v.inlineInteraction().canChoose = func() bool {
 			message := v.panelTransferError(target)
@@ -61,26 +61,26 @@ func (v *view) startPanelTransfer(move bool) {
 // Direct transfers keep their source as the result context. In particular,
 // same-folder copies can use the existing duplicate-name editor there.
 func (v *view) transferToNeighbor(direction int, move bool) {
-	if !v.interaction.idle() || !panelTransferReady(v, direction) {
+	if !v.interaction.idle() || !panelTransferReady(v, direction, move) {
 		return
 	}
 	source := v.active
 	p := &v.panels[source]
-	snapshot := browser.FileClipboard{Paths: p.selectedPaths(), Move: move}
+	snapshot, archive := p.panelTransferSelection(move)
 	p.prefix = ""
-	v.submitPanelTransfer(source+direction, source, snapshot)
+	v.submitPanelTransfer(source+direction, source, snapshot, archive)
 }
 
-func panelTransferReady(v *view, direction int) bool {
+func panelTransferReady(v *view, direction int, move bool) bool {
 	target := v.active + direction
-	return target >= 0 && target < len(v.panels) && selectedMutationReady(v) && v.panelTransferError(target) == ""
+	return target >= 0 && target < len(v.panels) && panelSourceReady(v, move) && v.panelTransferError(target) == ""
 }
 
 func (v *view) panelTransferError(target int) string {
 	p := &v.panels[target]
 	switch {
 	case p.archiveFolder != "":
-		return "Archive is read-only"
+		return "Cannot transfer into archive"
 	case p.drives || p.path == "":
 		return "Select a folder"
 	case p.loading:
@@ -91,7 +91,7 @@ func (v *view) panelTransferError(target int) string {
 	return ""
 }
 
-func (v *view) submitPanelTransfer(target, resultPanel int, snapshot browser.FileClipboard) {
+func (v *view) submitPanelTransfer(target, resultPanel int, snapshot browser.FileClipboard, archive *archiveSelection) {
 	if message := v.panelTransferError(target); message != "" {
 		v.showFeedback(target, feedback.Info, message)
 		return
@@ -99,8 +99,28 @@ func (v *view) submitPanelTransfer(target, resultPanel int, snapshot browser.Fil
 	p := &v.panels[resultPanel]
 	p.loading, p.prefix, v.transferPending = true, "", true
 	if !v.loader.submit(loadRequest{panel: resultPanel, path: v.panels[target].path, transfer: &transferRequest{
-		locations: v.fileOperationLocations(), snapshot: &snapshot, owner: v.ownerWindow}}) {
+		locations: v.fileOperationLocations(), snapshot: &snapshot, archive: archive, owner: v.ownerWindow}}) {
 		p.loading, v.transferPending = false, false
 		v.showFeedback(resultPanel, feedback.Info, "File operation in progress")
+	} else if archive != nil {
+		v.operationProgress(resultPanel, "Extracting archive")
 	}
+}
+
+func panelSourceReady(v *view, move bool) bool {
+	p := &v.panels[v.active]
+	if !folderReady(v) || v.loader == nil || !v.actionAllowed(actionMutation) || len(p.selectedNames()) == 0 {
+		return false
+	}
+	if p.nativeFolder() {
+		return true
+	}
+	return !move && p.location().Capabilities().Read
+}
+
+func (p *panel) panelTransferSelection(move bool) (browser.FileClipboard, *archiveSelection) {
+	if p.archiveFolder != "" {
+		return browser.FileClipboard{}, &archiveSelection{location: p.location(), names: p.selectedNames()}
+	}
+	return browser.FileClipboard{Paths: p.selectedPaths(), Move: move}, nil
 }

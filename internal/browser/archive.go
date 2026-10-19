@@ -11,10 +11,12 @@ import (
 )
 
 // ArchiveAdapter keeps format details out of panel navigation and commands.
-// Reading member contents and mutations can extend this boundary when supported.
+// Extract writes selected children into a private, empty staging directory.
 type ArchiveAdapter interface {
 	Capabilities() Capabilities
 	ReadDirectory(Location) (Directory, error)
+	Extract(Location, []string, string) error
+	Delete(Location, []string) (RemovalResult, error)
 }
 
 func ArchiveFormat(filename string) ArchiveAdapter {
@@ -38,7 +40,9 @@ var ErrInvalidArchive = zip.ErrFormat
 
 type zipAdapter struct{}
 
-func (zipAdapter) Capabilities() Capabilities { return Capabilities{Browse: true} }
+func (zipAdapter) Capabilities() Capabilities {
+	return Capabilities{Browse: true, Read: true, Delete: true}
+}
 
 func (zipAdapter) ReadDirectory(location Location) (Directory, error) {
 	r, err := zip.OpenReader(location.Path)

@@ -30,7 +30,13 @@ type fileClipboardRequest struct {
 	locations []string
 }
 
+type archiveSelection struct {
+	location browser.Location
+	names    []string
+}
+
 type transferRequest struct {
+	archive   *archiveSelection
 	locations []string
 	duplicate bool                   // Direct duplication does not read or change the clipboard.
 	shortcuts bool                   // Create shell links instead of transferring clipboard sources.

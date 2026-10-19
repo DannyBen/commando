@@ -33,6 +33,9 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 		result.clipboard, result.err = l.writeClipboard(paths, capture.move)
 		return result
 	}
+	if request.transfer.archive != nil {
+		return l.archiveCopyOperation(request, result)
+	}
 	var snapshot browser.FileClipboard
 	if request.transfer.snapshot != nil {
 		snapshot = *request.transfer.snapshot
@@ -86,6 +89,25 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	if len(moved) > 0 && request.transfer.snapshot == nil {
 		result.clipboard, result.clipboardErr = l.completeClipboard(snapshot, moved)
 	}
+	if result.transferred.Attempted {
+		l.refreshTransferPanels(&result)
+	}
+	return result
+}
+
+func (l *directoryLoader) archiveCopyOperation(request loadRequest, result loadResult) loadResult {
+	selection := request.transfer.archive
+	stage, err := browser.StageArchive(selection.location, selection.names)
+	if err != nil {
+		result.err = err
+		return result
+	}
+	result.transferred, result.err = l.transfer(browser.TransferRequest{
+		Paths: stage.Paths, Directory: request.path, Owner: request.transfer.owner, OpenFolders: result.locations,
+	})
+	// Remove temporary sources before reading open folders: the destination may
+	// itself be the system temporary directory.
+	stage.Close()
 	if result.transferred.Attempted {
 		l.refreshTransferPanels(&result)
 	}

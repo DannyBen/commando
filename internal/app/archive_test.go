@@ -122,7 +122,7 @@ func TestArchiveBlocksFilesystemOnlyOperations(t *testing.T) {
 		return shellCompletion{}
 	}
 	v.openFile = func(string) error { t.Error("archive item reached external opening"); return nil }
-	blocked := []string{"entry.open", "entry.rename", "entry.copy", "entry.cut", "entry.copy_paths", "entry.paste", "entry.paste_shortcut", "entry.duplicate", "entry.copy_to_panel", "entry.move_to_panel", "entry.copy_left", "entry.copy_right", "entry.recycle", "entry.delete_permanently", "entry.new_file", "entry.new_folder", "entry.context_menu", "entry.properties", "entry.arm_drag", "file.edit", "programs.terminal_here", "programs.terminal_here_admin"}
+	blocked := []string{"entry.open", "entry.rename", "entry.copy", "entry.cut", "entry.copy_paths", "entry.paste", "entry.paste_shortcut", "entry.duplicate", "entry.move_to_panel", "entry.new_file", "entry.new_folder", "entry.context_menu", "entry.properties", "entry.arm_drag", "file.edit", "programs.terminal_here", "programs.terminal_here_admin"}
 	for _, c := range v.commandCatalogue() {
 		if slices.Contains(blocked, c.id) && c.allowed(v) {
 			t.Errorf("unsupported archive command is available: %s", c.id)
@@ -132,12 +132,9 @@ func TestArchiveBlocksFilesystemOnlyOperations(t *testing.T) {
 	v.activateSelected()
 	v.startName(layout.Context{}, nameRename)
 	v.startName(layout.Context{}, nameCreateFolder)
-	v.removeSelected(layout.Context{}, false)
-	v.removeSelected(layout.Context{}, true)
 	v.clipboardSelected(false)
 	v.pasteFiles()
 	v.duplicateSelected()
-	v.startPanelTransfer(false)
 	v.startContextMenu(layout.Context{}, 0, p.selected, true)
 	v.startDrag(layout.Context{}, 0, p.selected, false)
 	if p.loading || !v.interaction.idle() || len(v.loader.requests) != 0 || len(p.selectedPaths()) != 0 || v.fileOperationLocations()[0] != "" {

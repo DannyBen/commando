@@ -35,7 +35,7 @@ func (v *view) startShortcutWidget(gtx layout.Context) {
 	if !v.canEditShortcuts(c) {
 		return
 	}
-	s := &settingsSession{panel: p.panel, title: c.label() + " › Shortcuts", palette: p,
+	s := &settingsSession{panel: p.panel, title: c.originalLabel() + " › Shortcuts", palette: p,
 		before: v.settingsValues.Clone(), draft: v.settingsValues.Clone(), bindingCommand: &c}
 	for slot := range c.bindings {
 		s.fields = append(s.fields, settings.Field{Key: bindingSettingKey(c.id, slot),
