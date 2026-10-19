@@ -76,6 +76,7 @@ func defaultCommands() []command {
 		cmd("entry.paste_shortcut", "Entry", "Paste shortcut", "V", key.ModCtrl|key.ModShift, mutationReady),
 		cmd("entry.duplicate", "Entry", "Duplicate", "D", key.ModCtrl, duplicateReady),
 		cmd("entry.pack_zip", "Entry", "Pack to ZIP", key.NameF5, key.ModAlt, packReady),
+		cmd("entry.unpack_zip", "Entry", "Unpack ZIP", key.NameF6, key.ModAlt, unpackReady),
 		cmd("entry.copy_to_panel", "Entry", "Copy to panel", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, false) }),
 		cmd("entry.move_to_panel", "Entry", "Move to panel", key.NameF6, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, true) }),
 		cmd("entry.copy_left", "Entry", "Copy to left", "[", 0, func(v *view) bool { return panelTransferReady(v, -1, false) }),

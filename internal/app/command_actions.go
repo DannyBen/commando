@@ -27,6 +27,8 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		v.duplicateSelected()
 	case "entry.pack_zip":
 		v.startPack()
+	case "entry.unpack_zip":
+		v.startUnpack()
 	case "entry.copy_to_panel", "entry.move_to_panel":
 		v.startPanelTransfer(id == "entry.move_to_panel")
 	case "entry.copy_left", "entry.move_left":

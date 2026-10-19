@@ -125,6 +125,35 @@ func TestInlineSingleActionUsesSameListInteraction(t *testing.T) {
 	}
 }
 
+func TestInlineActionReplacesItselfWithNameDraftInSameFrame(t *testing.T) {
+	v := newPreviewView()
+	v.panels[0].selected = 3
+	v.startInlineActions(0, 4, "", "", []string{"Extract here", "Extract to folder"}, func(int) {
+		v.transferPending = true
+		v.pendingNameDraft = &loadResult{request: loadRequest{panel: 0,
+			fileDraft: &fileDraftRequest{name: "extracted", unpackArchive: "archive.zip"}}}
+	}, nil)
+	v.inlineInteraction().selected = 1
+	var router input.Router
+	var ops op.Ops
+	frame := func() {
+		ops.Reset()
+		v.layout(layout.Context{Ops: &ops, Source: router.Source(), Now: time.Now(),
+			Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(800, 480))})
+		router.Frame(&ops)
+	}
+	frame()
+	frame()
+	router.Queue(pressed(key.NameReturn))
+	frame() // Check the actual first rendered frame, before another update.
+	if n := v.nameInteraction(); n == nil || n.kind != nameUnpack || n.row != 4 {
+		t.Fatal("floater disappeared for a frame before its name draft appeared")
+	}
+	if v.pendingNameDraft != nil || v.inlineInteraction() != nil || v.transferPending || v.nameEditor.Text() != "extracted" {
+		t.Fatal("floater did not finish transitioning into its naming control")
+	}
+}
+
 func TestInlineActionsStayOpenWhenPanelSwitchHitsOuterEdge(t *testing.T) {
 	for _, tc := range []struct {
 		panel int

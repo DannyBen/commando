@@ -27,6 +27,8 @@ func (v *view) applyTraceSettings() {
 
 func (r loadRequest) traceKind() (diagnostics.Mask, string) {
 	switch {
+	case r.unpack != nil:
+		return diagnostics.FileOperations, "unpack_zip"
 	case r.rename != nil:
 		return diagnostics.FileOperations, "rename"
 	case r.create != nil:

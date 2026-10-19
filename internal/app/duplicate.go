@@ -89,7 +89,11 @@ func (v *view) offerNameDraft(gtx layout.Context) {
 	p := &v.panels[panel]
 	if draft := result.request.fileDraft; draft != nil {
 		v.transferPending = false
-		if len(draft.packPaths) > 0 {
+		if draft.unpackArchive != "" {
+			r := &nameSession{kind: nameUnpack, panel: panel, path: p.path, row: max(0, min(p.selected+1, len(p.items))), folder: true,
+				unpackArchive: draft.unpackArchive, previousPosition: p.list.Position, previousReveal: p.reveal}
+			v.beginName(gtx, r, draft.name, true)
+		} else if len(draft.packPaths) > 0 {
 			r := &nameSession{kind: namePack, panel: panel, path: p.path, row: max(0, min(p.selected+1, len(p.items))),
 				packPaths: draft.packPaths, previousPosition: p.list.Position, previousReveal: p.reveal}
 			v.beginName(gtx, r, draft.name, false)

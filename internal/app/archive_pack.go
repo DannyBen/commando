@@ -37,12 +37,12 @@ func (v *view) startPack() {
 		target = max(0, source-1)
 	}
 	p.prefix = ""
-	v.choosePanelDestination(source, target, -1, "Pack here", func(target int) string {
+	v.choosePanelDestination(source, target, -1, []string{"Pack here"}, func(target int) string {
 		if !v.panels[target].nativeFolder() {
 			return "Select a filesystem folder"
 		}
 		return v.panelTransferError(target, false)
-	}, func(target int) {
+	}, func(target, _ int) {
 		v.transferPending = true
 		v.pendingNameDraft = &loadResult{request: loadRequest{panel: target, fileDraft: &fileDraftRequest{name: name, packPaths: paths}}}
 	})

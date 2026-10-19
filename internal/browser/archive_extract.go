@@ -65,11 +65,26 @@ func (zipAdapter) Extract(location Location, names []string, directory string) e
 		return err
 	}
 	defer r.Close()
+	members, tops, err := planZIPExtraction(&r.Reader, location, names)
+	if err != nil {
+		return err
+	}
 	root, err := os.OpenRoot(directory)
 	if err != nil {
 		return err
 	}
 	defer root.Close()
+	return extractZIPMembers(root, members, tops)
+}
+
+type zipExtractMember struct {
+	file *zip.File
+	name string
+}
+
+// Validate the complete selection before writing any output. A nil selection
+// means the entire archive, including entries hidden from ordinary browsing.
+func planZIPExtraction(reader *zip.Reader, location Location, names []string) ([]zipExtractMember, map[string]bool, error) {
 	selected := map[string]bool{}
 	for _, name := range names {
 		selected[name] = false
@@ -78,55 +93,93 @@ func (zipAdapter) Extract(location Location, names []string, directory string) e
 	if location.Folder != "." {
 		prefix = location.Folder + "/"
 	}
-	// Track every component, including implied directories, with Windows identity
-	// rules even on development hosts. Never merge case-distinct archive names.
 	spellings := map[string]string{}
-	for _, member := range r.File {
+	directories := map[string]bool{}
+	explicit := map[string]bool{}
+	tops := map[string]bool{}
+	var members []zipExtractMember
+	for _, member := range reader.File {
 		if !strings.HasPrefix(member.Name, prefix) {
 			continue
 		}
 		relative := strings.TrimSuffix(strings.TrimPrefix(member.Name, prefix), "/")
 		child, _, _ := strings.Cut(relative, "/")
-		if _, ok := selected[child]; !ok {
-			continue
+		if names != nil {
+			if _, ok := selected[child]; !ok {
+				continue
+			}
 		}
 		if !fs.ValidPath(relative) || relative == "." {
-			return ErrInvalidName
-		}
-		components := strings.Split(relative, "/")
-		for i, component := range components {
-			if err := ValidateName(component); err != nil {
-				return err
-			}
-			name := strings.Join(components[:i+1], "/")
-			key := strings.ToUpper(name)
-			if previous, ok := spellings[key]; ok && previous != name {
-				return fs.ErrExist
-			}
-			spellings[key] = name
+			return nil, nil, ErrInvalidName
 		}
 		mode := member.Mode()
 		if !mode.IsRegular() && !mode.IsDir() {
-			return errors.ErrUnsupported
+			return nil, nil, errors.ErrUnsupported
+		}
+		if explicit[relative] {
+			return nil, nil, fs.ErrExist
+		}
+		explicit[relative] = true
+		components := strings.Split(relative, "/")
+		for i, component := range components {
+			if err := ValidateName(component); err != nil {
+				return nil, nil, err
+			}
+			name := strings.Join(components[:i+1], "/")
+			key := strings.ToUpper(name)
+			directory := i < len(components)-1 || mode.IsDir()
+			if previous, ok := spellings[key]; ok && (previous != name || directories[key] != directory) {
+				return nil, nil, fs.ErrExist
+			}
+			spellings[key], directories[key] = name, directory
 		}
 		selected[child] = true
-		native := filepath.FromSlash(relative)
-		if mode.IsDir() {
-			if err := root.MkdirAll(native, 0700); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := root.MkdirAll(filepath.Dir(native), 0700); err != nil {
-			return err
-		}
-		if err := extractZipFile(root, native, member); err != nil {
-			return err
-		}
+		tops[child] = len(components) > 1 || mode.IsDir()
+		members = append(members, zipExtractMember{member, filepath.FromSlash(relative)})
 	}
 	for _, found := range selected {
 		if !found {
-			return fs.ErrNotExist
+			return nil, nil, fs.ErrNotExist
+		}
+	}
+	return members, tops, nil
+}
+
+func extractZIPMembers(root *os.Root, members []zipExtractMember, tops map[string]bool) error {
+	// Refuse existing roots, including case variants on development hosts. Never
+	// merge an archive directory into an existing filesystem directory.
+	entries, err := fs.ReadDir(root.FS(), ".")
+	if err != nil {
+		return err
+	}
+	existing := make(map[string]bool, len(entries))
+	for _, entry := range entries {
+		existing[strings.ToUpper(entry.Name())] = true
+	}
+	for name := range tops {
+		if existing[strings.ToUpper(name)] {
+			return fs.ErrExist
+		}
+	}
+	for name, directory := range tops {
+		if directory {
+			if err := root.Mkdir(name, 0700); err != nil {
+				return err
+			}
+		}
+	}
+	for _, member := range members {
+		if member.file.Mode().IsDir() {
+			if err := root.MkdirAll(member.name, 0700); err != nil {
+				return err
+			}
+		} else {
+			if err := root.MkdirAll(filepath.Dir(member.name), 0700); err != nil {
+				return err
+			}
+			if err := extractZipFile(root, member.name, member.file); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

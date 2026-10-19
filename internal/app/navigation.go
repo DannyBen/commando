@@ -133,6 +133,10 @@ func (v *view) acceptLoad(result loadResult) {
 		v.acceptArchiveOpen(result)
 		return
 	}
+	if result.request.unpack != nil {
+		v.acceptUnpack(result)
+		return
+	}
 	if result.request.terminal != nil {
 		v.acceptTerminalLaunch(result)
 		return

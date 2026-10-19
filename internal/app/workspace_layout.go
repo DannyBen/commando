@@ -18,6 +18,7 @@ import (
 func (v *view) layout(gtx layout.Context) layout.Dimensions {
 	v.frameSize = gtx.Constraints.Max
 	v.update(gtx)
+	v.offerNameDraft(gtx) // Replace action floaters before drawing this frame.
 	v.fileIconWanted = v.fileIconWanted[:0]
 	paint.Fill(gtx.Ops, v.appearance.Colors.Surface)
 	event.Op(gtx.Ops, &v.focus)

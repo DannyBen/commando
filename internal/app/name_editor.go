@@ -24,6 +24,7 @@ const (
 	nameCreateFile
 	nameDuplicate
 	namePack
+	nameUnpack
 )
 
 // One inline file-list editor handles existing names and temporary draft rows.
@@ -38,6 +39,7 @@ type nameSession struct {
 	duplicate         *browser.DuplicatePlan
 	data              []byte // Captured contents for a new file.
 	packPaths         []string
+	unpackArchive     string
 	folder            bool
 	previousPosition  layout.Position
 	previousReveal    bool
@@ -45,9 +47,10 @@ type nameSession struct {
 
 // Captured contents use the same draft and exclusive creation as an empty file.
 type fileDraftRequest struct {
-	name      string
-	data      []byte
-	packPaths []string
+	name          string
+	data          []byte
+	packPaths     []string
+	unpackArchive string
 }
 
 func (v *view) beginFileDraft(gtx layout.Context, panel int, name string, data []byte) {
@@ -205,7 +208,10 @@ func (v *view) updateName(gtx layout.Context) {
 			}
 			request := loadRequest{panel: r.panel, path: r.path, archiveFolder: r.archiveFolder, locations: v.fileOperationLocations()}
 			progress := "Renaming"
-			if r.kind == nameRename {
+			if r.kind == nameUnpack {
+				request.unpack = &unpackRequest{archive: r.unpackArchive, name: name}
+				progress = "Extracting ZIP"
+			} else if r.kind == nameRename {
 				request.rename = &renameRequest{oldName: r.oldName, newName: e.Text}
 				if r.archiveFolder != "" {
 					request.rename.archiveLocations = v.archiveOperationLocations()
@@ -328,13 +334,16 @@ func (v *view) acceptName(result loadResult) {
 }
 
 func (n *nameSession) noun() string {
-	if n.kind == nameCreateFolder || n.kind == nameDuplicate && n.folder {
+	if n.kind == nameCreateFolder || n.kind == nameUnpack || n.kind == nameDuplicate && n.folder {
 		return "folder"
 	}
 	return "file"
 }
 
 func (n *nameSession) errorText(err error) string {
+	if n.kind == nameUnpack {
+		return unpackError(err)
+	}
 	if n.kind == namePack {
 		if message := fileTransferError(err); message != "Cannot transfer" {
 			return message

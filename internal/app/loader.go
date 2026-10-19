@@ -36,6 +36,7 @@ type loadRequest struct {
 	terminal         *terminalRequest
 	editor           *editorRequest
 	archiveOpen      *archiveOpenRequest
+	unpack           *unpackRequest
 	fontFamilies     bool
 	completion       *locationSession
 	fileDraft        *fileDraftRequest
@@ -229,9 +230,11 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					}
 					continue
 				}
-				if request.clipboard != nil || request.transfer != nil || request.duplicate != nil || (request.removal != nil || request.rename != nil || request.create != nil) && request.archiveFolder != "" {
+				if request.unpack != nil || request.clipboard != nil || request.transfer != nil || request.duplicate != nil || (request.removal != nil || request.rename != nil || request.create != nil) && request.archiveFolder != "" {
 					var result loadResult
-					if request.rename != nil {
+					if request.unpack != nil {
+						result = l.unpackOperation(request)
+					} else if request.rename != nil {
 						result = l.archiveRenameOperation(request)
 					} else if request.create != nil {
 						result = l.archiveCreateOperation(request)

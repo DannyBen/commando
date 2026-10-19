@@ -30,20 +30,22 @@ func (v *view) startPanelTransfer(move bool) {
 	if move {
 		verb = "Move"
 	}
-	v.choosePanelDestination(source, target, source, verb+" here", func(target int) string {
+	v.choosePanelDestination(source, target, source, []string{verb + " here"}, func(target int) string {
 		return v.panelTransferError(target, snapshot.Move)
-	}, func(target int) { v.submitPanelTransfer(target, target, snapshot, archive) })
+	}, func(target, _ int) { v.submitPanelTransfer(target, target, snapshot, archive) })
 }
 
 // The same destination floater serves transfers and archive creation. Excluding
 // -1 includes every panel, allowing Pack to target its source or a single panel.
-func (v *view) choosePanelDestination(source, target, excluded int, label string, check func(int) string, choose func(int)) {
+func (v *view) choosePanelDestination(source, target, excluded int, options []string, check func(int) string, choose func(int, int)) {
+	selected := 0
 	var offer func(int)
 	offer = func(target int) {
 		p := &v.panels[target]
-		v.startInlineActions(target, p.selected+1, "", "", []string{label}, func(int) {
-			choose(target)
+		v.startInlineActions(target, p.selected+1, "", "", options, func(choice int) {
+			choose(target, choice)
 		}, func() { v.active = source })
+		v.inlineInteraction().selected = selected
 		v.inlineInteraction().canChoose = func() bool {
 			message := check(target)
 			if message != "" {
@@ -57,6 +59,7 @@ func (v *view) choosePanelDestination(source, target, excluded int, label string
 			if next == target {
 				return
 			}
+			selected = v.inlineInteraction().selected
 			v.stopInlineActions()
 			v.active = next
 			offer(next)
