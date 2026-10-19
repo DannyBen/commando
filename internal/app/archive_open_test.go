@@ -36,7 +36,15 @@ func TestArchiveOpenUsesCurrentFileAcrossInputRoutes(t *testing.T) {
 				before, _ := os.ReadFile(filename)
 				marks, selected := maps.Clone(p.marks), p.selected
 				opened := make(chan string, 1)
-				v.openFile = func(path string) error { opened <- path; return nil }
+				release := make(chan struct{})
+				t.Cleanup(func() {
+					select {
+					case <-release:
+					default:
+						close(release)
+					}
+				})
+				v.openFile = func(path string) error { opened <- path; <-release; return nil }
 				send, _ := panelInputFrames(v)
 				position := p.list.Position
 				switch route {
@@ -54,6 +62,7 @@ func TestArchiveOpenUsesCurrentFileAcrossInputRoutes(t *testing.T) {
 				if !p.loading || !v.mutationsBusy() {
 					t.Fatal("opening bypassed worker busy policy")
 				}
+				close(release)
 				v.active = 1
 				waitLoaded(t, v, 0)
 				var path string

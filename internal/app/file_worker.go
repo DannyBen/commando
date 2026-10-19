@@ -18,15 +18,13 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	result.locations = resolveFileLocations(locations)
 	if capture := request.clipboard; capture != nil {
 		if capture.archive != nil {
-			if capture.move {
-				result.err = errors.ErrUnsupported
-				return result
-			}
+
 			reference, err := browser.CaptureArchiveClipboard(capture.archive.location, capture.archive.names)
 			if err != nil {
 				result.err = err
 				return result
 			}
+			reference.Move = capture.move
 			result.clipboard, result.err = l.writeArchiveClipboard(reference)
 			return result
 		}
@@ -66,12 +64,20 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 		return l.archiveDuplicateOperation(operation, result)
 	}
 	if snapshot.Archive != nil {
-		if snapshot.Move || transfer.shortcuts {
+		if transfer.shortcuts {
 			result.err = errors.ErrUnsupported
 			return result
 		}
 		transfer.archive = &archiveSelection{location: snapshot.Archive.Location, names: snapshot.Archive.Names, reference: snapshot.Archive}
 		result.clipboard = snapshot
+	}
+	if snapshot.Move && (request.archiveFolder != "" || transfer.archive != nil) {
+		result.clipboard = snapshot
+		if request.archiveFolder != "" {
+			return l.moveIntoArchive(operation, result, snapshot)
+		}
+		l.reportArchiveProgress(request, "Moving archive entries")
+		return l.moveArchiveOut(operation, result, snapshot)
 	}
 	if request.archiveFolder != "" {
 		if len(snapshot.Paths) > 0 {
@@ -81,12 +87,7 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 		return l.archiveAddOperation(operation, result)
 	}
 	if transfer.archive != nil {
-		if request.transfer.snapshot == nil && l.results != nil {
-			l.results <- loadResult{request: request, progress: "Extracting archive"}
-			if l.invalidate != nil {
-				l.invalidate()
-			}
-		}
+		l.reportArchiveProgress(request, "Extracting archive")
 		return l.archiveCopyOperation(operation, result)
 	}
 	if !request.transfer.shortcuts && len(snapshot.ImagePNG) > 0 && len(snapshot.Paths) == 0 {

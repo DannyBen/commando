@@ -104,7 +104,7 @@ func TestArchiveCopyUsesSharedPanelFlowAndNativeTransfer(t *testing.T) {
 	}
 }
 
-func TestArchiveCopyCancellationAndMoveBlocking(t *testing.T) {
+func TestArchiveCopyAndMoveCancellation(t *testing.T) {
 	v, _ := archiveView(t)
 	p := &v.panels[0]
 	selectName(t, p, "docs")
@@ -119,16 +119,11 @@ func TestArchiveCopyCancellationAndMoveBlocking(t *testing.T) {
 		if slices.Contains([]string{"entry.copy_to_panel", "entry.copy_right"}, c.id) && !c.allowed(v) {
 			t.Fatal("readable archive copy unavailable", c.id)
 		}
-		if slices.Contains([]string{"entry.move_to_panel", "entry.move_left", "entry.move_right"}, c.id) && c.allowed(v) {
-			t.Fatal("read-only archive move available", c.id)
-		}
 	}
 	send(pressed(key.NameF6))
-	v.transferToNeighbor(1, true)
-	if !v.interaction.idle() || v.transferPending || p.loading {
-		t.Fatal("move started on read-only archive")
-	}
-	send(pressed(key.NameF5), pressed(key.NameEscape))
+	send(pressed(key.NameEscape))
+	send(pressed(key.NameF5))
+	send(pressed(key.NameEscape))
 	if v.active != 0 || !v.interaction.idle() || !p.marks[p.selected] || v.transferPending {
 		t.Fatal("copy targeting cancellation changed source state")
 	}

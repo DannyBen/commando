@@ -14,6 +14,23 @@ import (
 )
 
 // Callback tests exercise the native ABI without deleting files.
+func TestRemovalSinkCOMLayout(t *testing.T) {
+	sink := &removalSink{vtable: &removalSinkVtable, validate: func(string) error { return nil }}
+	if unsafe.Offsetof(sink.vtable) != 0 {
+		t.Fatal("COM vtable must be the first word of the removal sink")
+	}
+	// Dispatch through the object address, as Windows does, rather than the Go field.
+	object := (*shellObject)(unsafe.Pointer(sink))
+	sink.refs.Store(1)
+	if refs := object.call(1); refs != 2 {
+		t.Fatalf("COM AddRef returned %d, want 2", refs)
+	}
+	if refs := object.call(2); refs != 1 {
+		t.Fatalf("COM Release returned %d, want 1", refs)
+	}
+	runtime.KeepAlive(sink)
+}
+
 func TestRecycleSinkVetoesPermanentDelete(t *testing.T) {
 	sink := &removalSink{vtable: &removalSinkVtable}
 	hr, _, _ := syscall.SyscallN(sink.vtable[11], uintptr(unsafe.Pointer(sink)), 0, 0)

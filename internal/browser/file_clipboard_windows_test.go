@@ -153,3 +153,43 @@ func TestWindowsArchiveClipboardIsPrivateAndReplaceable(t *testing.T) {
 		t.Fatal("regular copy did not replace archive references", replaced, err)
 	}
 }
+
+func TestWindowsArchiveCutPartialCompletionAndReplacement(t *testing.T) {
+	if os.Getenv("COMMANDO_TEST_CLIPBOARD") != "1" {
+		t.Skip("requires COMMANDO_TEST_CLIPBOARD=1 on a Windows desktop; replaces clipboard")
+	}
+	reference, err := CaptureArchiveClipboard(Location{Path: archiveFixture(t), Folder: "."}, []string{"a2.txt", "folder"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reference.Move = true
+	snapshot, err := WriteArchiveClipboard(reference)
+	if err != nil {
+		t.Fatal(err)
+	}
+	captured, err := ReadFileClipboard()
+	if err != nil || !captured.Move || captured.Archive == nil {
+		t.Fatal("archive cut not rendered", captured, err)
+	}
+	if err := reference.Remove([]string{"a2.txt"}); err != nil {
+		t.Fatal(err)
+	}
+	remaining, err := CompleteFileClipboard(snapshot, []string{"a2.txt"})
+	if err != nil || !remaining.Move || remaining.Archive == nil || !reflect.DeepEqual(remaining.Archive.Names, []string{"folder"}) {
+		t.Fatal("partial cut not refreshed", remaining, err)
+	}
+	if err := remaining.Archive.check(); err != nil {
+		t.Fatal("remaining cut became stale", err)
+	}
+	newer, err := WriteFileClipboard([]string{filepath.Join(t.TempDir(), "new.txt")}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompleteFileClipboard(remaining, []string{"folder"}); err != nil {
+		t.Fatal(err)
+	}
+	current, err := ReadFileClipboard()
+	if err != nil || !reflect.DeepEqual(current, newer) {
+		t.Fatal("completion replaced newer clipboard", current, err)
+	}
+}

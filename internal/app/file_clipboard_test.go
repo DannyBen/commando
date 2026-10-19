@@ -44,6 +44,14 @@ func (c *testFileClipboard) complete(snapshot browser.FileClipboard, moved []str
 	if c.data.Sequence != snapshot.Sequence {
 		return c.data, nil
 	}
+	if snapshot.Archive != nil {
+		remaining, err := snapshot.Archive.Remaining(moved)
+		if err != nil {
+			return snapshot, err
+		}
+		c.data = browser.FileClipboard{Archive: remaining, Move: remaining != nil, Sequence: snapshot.Sequence + 1}
+		return c.data, nil
+	}
 	var remaining []string
 	for _, path := range snapshot.Paths {
 		if !slices.Contains(moved, path) {
@@ -425,6 +433,6 @@ func (c *testFileClipboard) writeArchive(reference *browser.ArchiveClipboard) (b
 	defer c.Unlock()
 	captured := *reference
 	captured.Names = slices.Clone(reference.Names)
-	c.data = browser.FileClipboard{Archive: &captured, Sequence: c.data.Sequence + 1}
+	c.data = browser.FileClipboard{Archive: &captured, Move: reference.Move, Sequence: c.data.Sequence + 1}
 	return c.data, nil
 }

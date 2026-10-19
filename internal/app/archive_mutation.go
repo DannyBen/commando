@@ -79,6 +79,9 @@ func (v *view) applyArchivePanels(result loadResult, locations []browser.Locatio
 			failed = true
 			continue
 		}
+		if update.followed {
+			p.path, p.archiveFolder, p.drives = update.directory.Path, update.directory.ArchiveFolder, update.directory.Drives
+		}
 		unchanged := p.sameLocation(update.directory)
 		p.reconcileDirectoryListing(update.directory)
 		if unchanged {

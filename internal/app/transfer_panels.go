@@ -9,6 +9,7 @@ import (
 )
 
 type transferPanelUpdate struct {
+	followed  bool
 	needed    bool
 	path      string
 	directory browser.Directory

@@ -77,7 +77,7 @@ func ReadFileClipboard() (snapshot FileClipboard, err error) {
 			return err
 		}
 		if reference != nil {
-			snapshot.Archive, snapshot.Sequence = reference, FileClipboardSequence()
+			snapshot.Archive, snapshot.Move, snapshot.Sequence = reference, reference.Move, FileClipboardSequence()
 			return nil
 		}
 		hdrop, _, _ := getClipboardData.Call(fileDropFormat)
@@ -214,6 +214,16 @@ func CompleteFileClipboard(snapshot FileClipboard, moved []string) (updated File
 	if !snapshot.Move || len(moved) == 0 {
 		return
 	}
+	var remaining *ArchiveClipboard
+	if snapshot.Archive != nil {
+		if FileClipboardSequence() != snapshot.Sequence {
+			return FileClipboard{}, nil
+		}
+		remaining, err = snapshot.Archive.Remaining(moved)
+		if err != nil {
+			return updated, err
+		}
+	}
 	err = withFileClipboard(true, func() error {
 		// The lock makes sequence check and replacement atomic relative to other
 		// clipboard users. Never clear a newer selection or text clipboard.
@@ -222,7 +232,11 @@ func CompleteFileClipboard(snapshot FileClipboard, moved []string) (updated File
 			return nil
 		}
 		var err error
-		updated, err = writeFileClipboardLocked(remainingClipboardPaths(snapshot, moved), true)
+		if snapshot.Archive != nil {
+			updated, err = writeArchiveClipboardLocked(remaining)
+		} else {
+			updated, err = writeFileClipboardLocked(remainingClipboardPaths(snapshot, moved), true)
+		}
 		return err
 	})
 	return

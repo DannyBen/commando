@@ -122,7 +122,7 @@ func TestArchiveBlocksFilesystemOnlyOperations(t *testing.T) {
 		return shellCompletion{}
 	}
 	v.openFile = func(string) error { t.Error("archive item reached external opening"); return nil }
-	blocked := []string{"entry.cut", "entry.copy_paths", "entry.paste_shortcut", "entry.move_to_panel", "entry.context_menu", "entry.properties", "entry.arm_drag", "file.edit", "programs.terminal_here", "programs.terminal_here_admin"}
+	blocked := []string{"entry.copy_paths", "entry.paste_shortcut", "entry.context_menu", "entry.properties", "entry.arm_drag", "file.edit", "programs.terminal_here", "programs.terminal_here_admin"}
 	for _, c := range v.commandCatalogue() {
 		if slices.Contains(blocked, c.id) && c.allowed(v) {
 			t.Errorf("unsupported archive command is available: %s", c.id)
@@ -134,9 +134,7 @@ func TestArchiveBlocksFilesystemOnlyOperations(t *testing.T) {
 	if p.loading || !v.interaction.idle() || len(v.loader.requests) != 0 || len(p.selectedPaths()) != 0 || v.fileOperationLocations()[0] != "" {
 		t.Fatal("an unsupported operation queued work or opened an interaction")
 	}
-	if v.panelTransferError(0, true) == "" {
-		t.Fatal("archive accepted an unsupported move destination")
-	}
+
 	if info, err := os.Stat(filename); err != nil || info.IsDir() {
 		t.Fatal("archive container changed", err)
 	}

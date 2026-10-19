@@ -47,7 +47,15 @@ func CompleteFileClipboard(snapshot FileClipboard, moved []string) (FileClipboar
 	if !snapshot.Move || len(moved) == 0 || developmentClipboard.data.Sequence != snapshot.Sequence {
 		return developmentClipboard.data, nil
 	}
-	developmentClipboard.data = FileClipboard{Paths: remainingClipboardPaths(snapshot, moved), Move: true, Sequence: snapshot.Sequence + 1}
+	if snapshot.Archive != nil {
+		remaining, err := snapshot.Archive.Remaining(moved)
+		if err != nil {
+			return snapshot, err
+		}
+		developmentClipboard.data = FileClipboard{Archive: remaining, Move: remaining != nil, Sequence: snapshot.Sequence + 1}
+	} else {
+		developmentClipboard.data = FileClipboard{Paths: remainingClipboardPaths(snapshot, moved), Move: true, Sequence: snapshot.Sequence + 1}
+	}
 	return developmentClipboard.data, nil
 }
 
@@ -62,6 +70,6 @@ func WriteArchiveClipboard(reference *ArchiveClipboard) (FileClipboard, error) {
 	}
 	developmentClipboard.Lock()
 	defer developmentClipboard.Unlock()
-	developmentClipboard.data = FileClipboard{Archive: copied, Sequence: developmentClipboard.data.Sequence + 1}
-	return FileClipboard{Archive: reference, Sequence: developmentClipboard.data.Sequence}, nil
+	developmentClipboard.data = FileClipboard{Archive: copied, Move: reference.Move, Sequence: developmentClipboard.data.Sequence + 1}
+	return FileClipboard{Archive: reference, Move: reference.Move, Sequence: developmentClipboard.data.Sequence}, nil
 }

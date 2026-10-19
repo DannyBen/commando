@@ -44,32 +44,37 @@ type loadRequest struct {
 }
 
 type loadResult struct {
-	progress          string // Intermediate worker feedback; does not complete the request.
-	request           loadRequest
-	directory         browser.Directory
-	created           browser.Entry
-	removed           browser.RemovalResult
-	sameDirectory     []bool
-	err               error
-	clipboard         browser.FileClipboard
-	transferred       browser.TransferResult
-	locations         []string
-	clipboardErr      error
-	transferMove      bool
-	duplicatePlan     *browser.DuplicatePlan
-	alreadyHere       bool
-	panelUpdates      []transferPanelUpdate
-	mutationDirectory string
-	settingsMessage   string
-	editorsStarted    int
-	externalOpen      bool
-	fontFamilies      []string
-	pathMissing       bool
-	themes            []themeSnapshot
-	icons             []image.Image
+	archiveReconciled        bool
+	archiveMoves             []archivePanelMove
+	movedNames, movedSources []string
+	retainedCopies           int
+	progress                 string // Intermediate worker feedback; does not complete the request.
+	request                  loadRequest
+	directory                browser.Directory
+	created                  browser.Entry
+	removed                  browser.RemovalResult
+	sameDirectory            []bool
+	err                      error
+	clipboard                browser.FileClipboard
+	transferred              browser.TransferResult
+	locations                []string
+	clipboardErr             error
+	transferMove             bool
+	duplicatePlan            *browser.DuplicatePlan
+	alreadyHere              bool
+	panelUpdates             []transferPanelUpdate
+	mutationDirectory        string
+	settingsMessage          string
+	editorsStarted           int
+	externalOpen             bool
+	fontFamilies             []string
+	pathMissing              bool
+	themes                   []themeSnapshot
+	icons                    []image.Image
 }
 
 type directoryLoader struct {
+	removeArchiveSources  func(*browser.ArchiveSources, uintptr) ([]string, error)
 	invalidate            func()
 	requests              chan loadRequest
 	results               chan loadResult
@@ -101,6 +106,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		count = max(1, panelCount[0])
 	}
 	l := &directoryLoader{
+		removeArchiveSources:  browser.RemoveArchiveSources,
 		requests:              make(chan loadRequest, 2*count),
 		results:               make(chan loadResult, count),
 		done:                  make(chan struct{}),

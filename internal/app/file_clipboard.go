@@ -67,8 +67,16 @@ func (v *view) clipboardSelected(move bool) {
 	if p.archiveFolder != "" {
 		archive = &archiveSelection{location: p.location(), names: p.selectedNames()}
 	}
+	locations := v.fileOperationLocations()
+	if archive != nil {
+		for i, panel := range v.panels {
+			if !panel.drives {
+				locations[i] = panel.path
+			}
+		}
+	}
 	p.loading, p.prefix = true, ""
-	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, action: actionClipboard, clipboard: &fileClipboardRequest{paths: paths, archive: archive, move: move, locations: v.fileOperationLocations()}}) {
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, action: actionClipboard, clipboard: &fileClipboardRequest{paths: paths, archive: archive, move: move, locations: locations}}) {
 		p.loading = false
 	}
 }
@@ -88,10 +96,7 @@ func (v *view) pasteClipboard(shortcuts bool) {
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true
 	// Capture the open destination, including archive subfolders.
-	var archiveLocations []browser.Location
-	if p.archiveFolder != "" {
-		archiveLocations = v.archiveOperationLocations()
-	}
+	archiveLocations := v.archiveOperationLocations()
 	// Windows owns the native transfer UI, including progress and cancellation.
 	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, archiveFolder: p.archiveFolder, transfer: &transferRequest{archiveLocations: archiveLocations, locations: v.fileOperationLocations(), owner: v.ownerWindow, shortcuts: shortcuts}}) {
 		p.loading, v.transferPending = false, false

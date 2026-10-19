@@ -40,7 +40,15 @@ func deletePaths(paths []string, owner uintptr) (removalBatch, error) {
 	return removalPaths(paths, true, owner)
 }
 
-func removalPaths(paths []string, permanent bool, owner uintptr) (batch removalBatch, err error) {
+func removalPaths(paths []string, permanent bool, owner uintptr) (removalBatch, error) {
+	return removalVerifiedPaths(paths, permanent, owner, nil)
+}
+
+func deleteVerifiedPaths(paths []string, owner uintptr, validate func(string) error) (removalBatch, error) {
+	return removalVerifiedPaths(paths, true, owner, validate)
+}
+
+func removalVerifiedPaths(paths []string, permanent bool, owner uintptr, validate func(string) error) (batch removalBatch, err error) {
 	trace := beginRemovalTrace(paths, permanent)
 	defer func() {
 		trace.record("RemovalResult", map[string]any{"completed": batch.completed, "error": traceError(err)})
@@ -92,7 +100,7 @@ func removalPaths(paths []string, permanent bool, owner uintptr) (batch removalB
 		if err != nil {
 			return batch, err
 		}
-		sink := &removalSink{vtable: &removalSinkVtable, permanent: permanent, trace: trace}
+		sink := &removalSink{vtable: &removalSinkVtable, permanent: permanent, trace: trace, validate: validate}
 		sink.refs.Store(1)
 		sinks = append(sinks, sink)
 		queueHR := operation.call(fileOpDeleteItem, uintptr(unsafe.Pointer(item)), uintptr(unsafe.Pointer(sink)))
@@ -137,7 +145,9 @@ func finishRemoval(paths []string, sinks []*removalSink) (removalBatch, error) {
 }
 
 type removalSink struct {
+	// COM reads the vtable pointer from the first word of the object.
 	vtable                        *[19]uintptr
+	validate                      func(string) error
 	refs                          atomic.Int32
 	mu                            sync.Mutex
 	refused, completed, confirmed bool
@@ -148,11 +158,27 @@ type removalSink struct {
 }
 
 func (s *removalSink) preDelete(flags uint32) uintptr {
+	return s.preDeleteItem(flags, 0)
+}
+
+func (s *removalSink) preDeleteItem(flags uint32, item uintptr) uintptr {
+	var validationErr error
+	if s.validate != nil {
+		var path string
+		path, validationErr = shellItemPath((*shellObject)(unsafe.Pointer(item)))
+		if validationErr == nil {
+			validationErr = s.validate(path)
+		}
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.trace.record("RemovalPreDelete", map[string]any{"flags": flags, "permanent": s.permanent, "refused": (flags&tsRecycle != 0) == s.permanent})
 	if (flags&tsRecycle != 0) == s.permanent {
 		s.refused = true
+		return eAbort
+	}
+	if validationErr != nil {
+		s.refused, s.err = true, validationErr
 		return eAbort
 	}
 	s.approved = true
@@ -185,6 +211,9 @@ func (s *removalSink) result(performErr, abortErr error, aborted bool) error {
 		unavailable, unconfirmed = ErrDeleteUnavailable, ErrDeleteUnconfirmed
 	}
 	if s.refused {
+		if s.err != nil {
+			return s.err
+		}
 		return unavailable
 	}
 	if s.err != nil {
@@ -280,7 +309,7 @@ var removalSinkVtable = [19]uintptr{
 		return this.unexpected("PostCopy", uint32(flags), uint32(hr))
 	}),
 	syscall.NewCallback(func(this *removalSink, flags, item uintptr) uintptr {
-		return this.preDelete(uint32(flags))
+		return this.preDeleteItem(uint32(flags), item)
 	}),
 	syscall.NewCallback(func(this *removalSink, flags, item, hr, created uintptr) uintptr {
 		return this.postDelete(uint32(flags), uint32(hr), created)

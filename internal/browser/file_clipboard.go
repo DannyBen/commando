@@ -46,16 +46,13 @@ func encodeFileDrop(paths []string) ([]byte, error) {
 }
 
 func remainingClipboardPaths(snapshot FileClipboard, moved []string) []string {
+	removed := make(map[string]bool, len(moved))
+	for _, path := range moved {
+		removed[path] = true
+	}
 	var remaining []string
 	for _, path := range snapshot.Paths {
-		removed := false
-		for _, completed := range moved {
-			if path == completed {
-				removed = true
-				break
-			}
-		}
-		if !removed {
+		if !removed[path] {
 			remaining = append(remaining, path)
 		}
 	}

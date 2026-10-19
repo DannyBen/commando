@@ -79,8 +79,6 @@ func panelTransferReady(v *view, direction int, move bool) bool {
 func (v *view) panelTransferError(target int, move bool) string {
 	p := &v.panels[target]
 	switch {
-	case p.archiveFolder != "" && move:
-		return "Cannot move into archive"
 	case p.archiveFolder != "" && !p.location().Capabilities().Add:
 		return "Cannot transfer into archive"
 	case p.drives || p.path == "":
@@ -100,7 +98,7 @@ func (v *view) submitPanelTransfer(target, resultPanel int, snapshot browser.Fil
 	}
 	destination := v.panels[target].location()
 	var archiveLocations []browser.Location
-	if destination.InArchive() {
+	if destination.InArchive() || archive != nil {
 		archiveLocations = v.archiveOperationLocations()
 	}
 	p := &v.panels[resultPanel]
@@ -109,7 +107,7 @@ func (v *view) submitPanelTransfer(target, resultPanel int, snapshot browser.Fil
 		locations: v.fileOperationLocations(), snapshot: &snapshot, archive: archive, archiveLocations: archiveLocations, owner: v.ownerWindow}}) {
 		p.loading, v.transferPending = false, false
 		v.showFeedback(resultPanel, feedback.Info, "File operation in progress")
-	} else if destination.InArchive() {
+	} else if destination.InArchive() || archive != nil {
 		v.operationProgress(resultPanel, "Updating archive")
 	} else if archive != nil {
 		v.operationProgress(resultPanel, "Extracting archive")
@@ -124,12 +122,12 @@ func panelSourceReady(v *view, move bool) bool {
 	if p.nativeFolder() {
 		return true
 	}
-	return !move && p.location().Capabilities().Read
+	return p.location().Capabilities().Read && (!move || p.location().Capabilities().Delete)
 }
 
 func (p *panel) panelTransferSelection(move bool) (browser.FileClipboard, *archiveSelection) {
 	if p.archiveFolder != "" {
-		return browser.FileClipboard{}, &archiveSelection{location: p.location(), names: p.selectedNames()}
+		return browser.FileClipboard{Move: move}, &archiveSelection{location: p.location(), names: p.selectedNames()}
 	}
 	return browser.FileClipboard{Paths: p.selectedPaths(), Move: move}, nil
 }

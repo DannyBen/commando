@@ -14,12 +14,13 @@ var ErrTransferUnavailable = errors.New("file transfers require Windows")
 // TransferRequest dispatches a selection to the Windows shell. Names is used
 // for duplication; ordinary copy/move lets Windows resolve destination names.
 type TransferRequest struct {
-	OpenFolders     []string // Resolved UI locations needing descendant move tracking.
-	Paths           []string
-	Directory       string
-	Names           []string
-	Move, Duplicate bool
-	Owner           uintptr
+	TemporarySources bool     // Archive staging sources must not enter shell Undo history.
+	OpenFolders      []string // Resolved UI locations needing descendant move tracking.
+	Paths            []string
+	Directory        string
+	Names            []string
+	Move, Duplicate  bool
+	Owner            uintptr
 }
 
 type TransferredItem struct {

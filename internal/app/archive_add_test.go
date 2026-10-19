@@ -158,7 +158,7 @@ func TestArchiveCopyIntoAnotherArchiveAndItsCurrentSubfolder(t *testing.T) {
 	}
 }
 
-func TestArchiveCopyInCollisionAndMoveRefusal(t *testing.T) {
+func TestArchiveCopyInCollision(t *testing.T) {
 	v, filename := archiveView(t)
 	source := t.TempDir()
 	writeBatchFiles(t, source, map[string]string{"a2.txt": "collision", "fresh.txt": "new"})
@@ -171,15 +171,9 @@ func TestArchiveCopyInCollisionAndMoveRefusal(t *testing.T) {
 	p.toggleMark(p.selected)
 	before, _ := os.ReadFile(filename)
 	send, _ := panelInputFrames(v)
-	if !panelTransferReady(v, -1, false) || panelTransferReady(v, -1, true) {
-		t.Fatal("ZIP target capabilities ignored copy/move distinction")
+	if !panelTransferReady(v, -1, false) || !panelTransferReady(v, -1, true) {
+		t.Fatal("writable ZIP target unavailable")
 	}
-	send(pressed(key.NameF6))
-	send(pressed(key.NameReturn))
-	if v.inlineInteraction() == nil || v.transferPending {
-		t.Fatal("move into ZIP was submitted")
-	}
-	send(pressed(key.NameEscape))
 	send(pressed(key.NameF5))
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
@@ -190,11 +184,5 @@ func TestArchiveCopyInCollisionAndMoveRefusal(t *testing.T) {
 	after, _ := os.ReadFile(filename)
 	if !bytes.Equal(before, after) || v.transferPending || v.mutationsBusy() {
 		t.Fatal("failed batch modified ZIP or retained busy state")
-	}
-	v.active = 0
-	for _, command := range v.commandCatalogue() {
-		if slices.Contains([]string{"entry.cut"}, command.id) && command.allowed(v) {
-			t.Fatal("copy-in enabled a separately planned action", command.id)
-		}
 	}
 }

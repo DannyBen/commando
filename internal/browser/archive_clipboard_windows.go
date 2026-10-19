@@ -42,34 +42,41 @@ func readArchiveClipboardLocked() (*ArchiveClipboard, error) {
 
 // Publish only our private references, never CF_HDROP paths or file contents.
 func WriteArchiveClipboard(reference *ArchiveClipboard) (snapshot FileClipboard, err error) {
+	err = withFileClipboard(true, func() error { snapshot, err = writeArchiveClipboardLocked(reference); return err })
+	return
+}
+
+func writeArchiveClipboardLocked(reference *ArchiveClipboard) (FileClipboard, error) {
+	if reference == nil {
+		if ok, _, err := emptyClipboard.Call(); ok == 0 {
+			return FileClipboard{}, err
+		}
+		return FileClipboard{Sequence: FileClipboardSequence()}, nil
+	}
 	data, err := encodeArchiveClipboard(reference)
 	if err != nil {
-		return snapshot, err
+		return FileClipboard{}, err
 	}
-	err = withFileClipboard(true, func() error {
-		format, err := archiveClipboardFormat()
-		if err != nil {
-			return err
+	format, err := archiveClipboardFormat()
+	if err != nil {
+		return FileClipboard{}, err
+	}
+	handle, err := clipboardMemory(append(data, 0))
+	if err != nil {
+		return FileClipboard{}, err
+	}
+	defer func() {
+		if handle != 0 {
+			globalFree.Call(handle)
 		}
-		handle, err := clipboardMemory(append(data, 0))
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if handle != 0 {
-				globalFree.Call(handle)
-			}
-		}()
-		if ok, _, err := emptyClipboard.Call(); ok == 0 {
-			return err
-		}
-		if ok, _, err := setClipboardData.Call(format, handle); ok == 0 {
-			return err
-		}
-		handle = 0
-		copied, err := decodeArchiveClipboard(data)
-		snapshot = FileClipboard{Archive: copied, Sequence: FileClipboardSequence()}
-		return err
-	})
-	return
+	}()
+	if ok, _, err := emptyClipboard.Call(); ok == 0 {
+		return FileClipboard{}, err
+	}
+	if ok, _, err := setClipboardData.Call(format, handle); ok == 0 {
+		return FileClipboard{}, err
+	}
+	handle = 0
+	copied, err := decodeArchiveClipboard(data)
+	return FileClipboard{Archive: copied, Move: reference.Move, Sequence: FileClipboardSequence()}, err
 }

@@ -40,7 +40,7 @@ func (v *view) acceptFileOperation(result loadResult) {
 	}
 	locations := result.request.transfer.locations
 	refreshFailed := false
-	if result.request.archiveFolder != "" {
+	if result.request.archiveFolder != "" || result.archiveReconciled {
 		refreshFailed = v.applyArchivePanels(result, result.request.transfer.archiveLocations)
 	} else {
 		refreshFailed = v.applyTransferPanels(result, locations)
@@ -96,6 +96,9 @@ func (v *view) showTransferResult(result loadResult, refreshFailed bool) {
 	}
 	if result.err != nil {
 		message := fileTransferError(result.err)
+		if result.retainedCopies > 0 && count == 0 {
+			message = "Copied; " + message
+		}
 		if shortcuts && message == "Cannot transfer" {
 			message = "Cannot create shortcuts"
 		}
@@ -105,6 +108,8 @@ func (v *view) showTransferResult(result loadResult, refreshFailed bool) {
 			message = fmt.Sprintf("%d partial; %s", summary.Partial, message)
 		}
 		v.showFeedback(panel, feedback.Error, message)
+	} else if result.retainedCopies > 0 {
+		v.showFeedback(panel, feedback.Warning, fmt.Sprintf("%d moved; sources retained", count))
 	} else if result.clipboardErr != nil {
 		v.showFeedback(panel, feedback.Warning, fmt.Sprintf("%d moved; clipboard update failed", count))
 	} else if refreshFailed {

@@ -47,7 +47,7 @@ func TestArchiveCreationUsesSharedEditorAndReconcilesPeers(t *testing.T) {
 				t.Fatal("archive did not use shared creation draft")
 			}
 			send(replaceCreate(v, name), pressed(key.NameReturn))
-			if !r.pending || !v.mutationsBusy() || !v.nameEditor.ReadOnly {
+			if r.pending && (!v.mutationsBusy() || !v.nameEditor.ReadOnly) || !r.pending && !r.finished {
 				t.Fatal("submitted creation did not own interaction/worker")
 			}
 			waitCreated(t, v)

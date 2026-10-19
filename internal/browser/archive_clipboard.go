@@ -17,6 +17,7 @@ const maxArchiveClipboardBytes = 4 << 20
 // Its stamp rejects a replaced or changed source instead of silently copying
 // different contents. It is a validity check, not a content snapshot.
 type ArchiveClipboard struct {
+	Move     bool
 	Location Location
 	Names    []string
 	Stamp    archiveClipboardStamp
@@ -68,6 +69,9 @@ func CaptureArchiveClipboard(location Location, names []string) (*ArchiveClipboa
 
 func (reference *ArchiveClipboard) valid() error {
 	if reference == nil || !filepath.IsAbs(reference.Location.Path) || !reference.Location.InArchive() || !fs.ValidPath(reference.Location.Folder) || !reference.Location.Capabilities().Read || len(reference.Names) == 0 || len(reference.Names) > 100000 {
+		return fs.ErrInvalid
+	}
+	if reference.Move && !reference.Location.Capabilities().Delete {
 		return fs.ErrInvalid
 	}
 	seen := map[string]bool{}
@@ -152,4 +156,26 @@ func decodeArchiveClipboard(data []byte) (*ArchiveClipboard, error) {
 		return nil, err
 	}
 	return &reference, nil
+}
+
+// Refresh only the surviving cut selection after our confirmed archive rewrite.
+func (reference *ArchiveClipboard) Remaining(moved []string) (*ArchiveClipboard, error) {
+	removed := make(map[string]bool, len(moved))
+	for _, name := range moved {
+		removed[name] = true
+	}
+	var names []string
+	for _, name := range reference.Names {
+		if !removed[name] {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return nil, nil
+	}
+	remaining, err := CaptureArchiveClipboard(reference.Location, names)
+	if remaining != nil {
+		remaining.Move = reference.Move
+	}
+	return remaining, err
 }

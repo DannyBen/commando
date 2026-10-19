@@ -129,11 +129,20 @@ func DeleteArchive(location Location, names []string) (RemovalResult, error) {
 		}
 		seen[name] = true
 	}
-	return adapter.Delete(location, names)
+	return adapter.Delete(location, names, nil)
 }
 
-func (zipAdapter) Delete(location Location, names []string) (RemovalResult, error) {
+func (zipAdapter) Delete(location Location, names []string, expected *archiveClipboardStamp) (RemovalResult, error) {
 	err := rewriteZIP(location.Path, func(reader *zip.Reader, writer *zip.Writer) error {
+		if expected != nil {
+			current, err := readArchiveClipboardStamp(location.Path)
+			if err != nil {
+				return err
+			}
+			if current != *expected {
+				return ErrArchiveClipboardChanged
+			}
+		}
 		removed := make([]bool, len(reader.File))
 		selected := make(map[string]bool, len(names))
 		for _, name := range names {

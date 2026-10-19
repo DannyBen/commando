@@ -20,41 +20,54 @@ type archiveInput struct {
 	info        fs.FileInfo
 }
 
-type archiveAddPlan struct {
-	roots []*os.Root
-	files []archiveInput
-	names map[string]bool
+type ArchiveSources struct {
+	targetStamp archiveClipboardStamp
+	items       map[string]fs.FileInfo
+	sources     []archiveSource
+	target      string
+	roots       []*os.Root
+	files       []archiveInput
+	names       map[string]bool
 }
 
-func (p *archiveAddPlan) close() {
+func (p *ArchiveSources) close() {
 	for _, root := range p.roots {
 		root.Close()
 	}
 }
 
 func AddArchive(location Location, paths []string) error {
+	sources, err := AddArchiveSources(location, paths)
+	if sources != nil {
+		sources.close()
+	}
+	return err
+}
+
+func AddArchiveSources(location Location, paths []string) (*ArchiveSources, error) {
 	adapter := ArchiveFormat(location.Path)
 	if adapter == nil || !location.InArchive() || !fs.ValidPath(location.Folder) || !adapter.Capabilities().Add || len(paths) == 0 {
-		return fs.ErrInvalid
+		return nil, fs.ErrInvalid
 	}
 	return adapter.Add(location, paths)
 }
 
-func (zipAdapter) Add(location Location, paths []string) error {
+func (zipAdapter) Add(location Location, paths []string) (*ArchiveSources, error) {
 	target, err := ResolveOperationPath(location.Path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	target, err = filepath.EvalSymlinks(target)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return rewriteZIP(target, func(reader *zip.Reader, writer *zip.Writer) error {
+	var sources *ArchiveSources
+	err = rewriteZIP(target, func(reader *zip.Reader, writer *zip.Writer) error {
 		plan, err := planArchiveAdd(paths, target)
 		if err != nil {
 			return err
 		}
-		defer plan.close()
+		sources = &plan
 		prefix, found := "", location.Folder == "."
 		if !found {
 			prefix = location.Folder + "/"
@@ -73,7 +86,7 @@ func (zipAdapter) Add(location Location, paths []string) error {
 			child, _, _ := strings.Cut(strings.TrimPrefix(file.Name, prefix), "/")
 			if plan.names[child] {
 				return fs.ErrExist
-			} // No replacements or directory merges.
+			}
 		}
 		if !found {
 			return fs.ErrNotExist
@@ -91,12 +104,23 @@ func (zipAdapter) Add(location Location, paths []string) error {
 		}
 		return nil
 	})
+	if err == nil {
+		sources.targetStamp, err = readArchiveClipboardStamp(target)
+	}
+	if err != nil {
+		if sources != nil {
+			sources.close()
+		}
+		return nil, err
+	}
+	return sources, nil
 }
 
 // Anchor each selected directory itself, rather than following paths from its
 // parent. Walks and later reads remain confined even if source paths change.
-func planArchiveAdd(paths []string, target string) (plan archiveAddPlan, err error) {
+func planArchiveAdd(paths []string, target string) (plan ArchiveSources, err error) {
 	plan.names = map[string]bool{}
+	plan.target = target
 	defer func() {
 		if err != nil {
 			plan.close()
@@ -143,6 +167,7 @@ func planArchiveAdd(paths []string, target string) (plan archiveAddPlan, err err
 			root.Close()
 			return plan, ErrArchiveSelfCopy
 		}
+		plan.sources = append(plan.sources, archiveSource{path: filepath.Join(parent, name), info: info})
 		if !info.IsDir() {
 			plan.roots = append(plan.roots, root)
 			plan.files = append(plan.files, archiveInput{root: root, local: name, name: name, info: info})

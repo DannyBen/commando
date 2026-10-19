@@ -2,6 +2,7 @@ package app
 
 import (
 	"path/filepath"
+	"slices"
 	"time"
 
 	"gioui.org/layout"
@@ -10,7 +11,7 @@ import (
 )
 
 func (v *view) rememberCutClipboard(snapshot browser.FileClipboard, paths, locations []string) {
-	if snapshot.Move && len(snapshot.Paths) > 0 {
+	if snapshot.Move && (len(snapshot.Paths) > 0 || snapshot.Archive != nil) {
 		v.cutClipboard, v.cutPanelPaths, v.cutLocations = snapshot, paths, locations
 	} else {
 		v.cutClipboard, v.cutPanelPaths, v.cutLocations = browser.FileClipboard{}, nil, nil
@@ -18,7 +19,7 @@ func (v *view) rememberCutClipboard(snapshot browser.FileClipboard, paths, locat
 }
 
 func (v *view) updateCutClipboard(gtx layout.Context) {
-	if len(v.cutClipboard.Paths) == 0 {
+	if len(v.cutClipboard.Paths) == 0 && v.cutClipboard.Archive == nil {
 		return
 	}
 	if v.clipboardSequence() != v.cutClipboard.Sequence {
@@ -30,7 +31,17 @@ func (v *view) updateCutClipboard(gtx layout.Context) {
 
 func (v *view) cutEntry(panel, row int) bool {
 	p := &v.panels[panel]
-	if !p.nativeFolder() || !p.markable(row) || !v.cutClipboard.Move {
+	if !p.markable(row) || !v.cutClipboard.Move {
+		return false
+	}
+	if reference := v.cutClipboard.Archive; reference != nil {
+		source := p.path
+		if panel < len(v.cutPanelPaths) && samePath(p.path, v.cutPanelPaths[panel]) && panel < len(v.cutLocations) && v.cutLocations[panel] != "" {
+			source = v.cutLocations[panel]
+		}
+		return p.archiveFolder == reference.Location.Folder && samePath(source, reference.Location.Path) && slices.Contains(reference.Names, p.items[row].file.Name)
+	}
+	if !p.nativeFolder() {
 		return false
 	}
 	path := p.path

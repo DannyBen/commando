@@ -59,7 +59,7 @@ func TestSingleArchiveDuplicateUsesSharedNameEditor(t *testing.T) {
 		}
 		send(replaceCreate(v, custom))
 		send(pressed(key.NameReturn))
-		if !r.pending || !v.mutationsBusy() {
+		if r.pending && !v.mutationsBusy() || !r.pending && !r.finished {
 			t.Fatal("duplicate bypassed shared worker policy")
 		}
 		waitCreated(t, v)

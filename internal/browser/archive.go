@@ -16,11 +16,12 @@ type ArchiveAdapter interface {
 	Capabilities() Capabilities
 	ReadDirectory(Location) (Directory, error)
 	Extract(Location, []string, string) error
-	Delete(Location, []string) (RemovalResult, error)
+	Delete(Location, []string, *archiveClipboardStamp) (RemovalResult, error)
 	Rename(Location, string, string) error
-	Add(Location, []string) error
+	Add(Location, []string) (*ArchiveSources, error)
 	Create(Location, string, bool, []byte) (Location, Entry, error)
 	Duplicate(Location, []string, []string) error
+	Move(Location, []string, Location, *archiveClipboardStamp) error
 }
 
 func ArchiveFormat(filename string) ArchiveAdapter {

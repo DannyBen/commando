@@ -36,7 +36,10 @@ func transferNative(request TransferRequest, originals []string, trace *transfer
 		return result, err
 	}
 	defer operation.call(2)
-	flags := uint32(fofNoConfirmMkdir | fofNoConnectedElements | fofxAddUndoRecord)
+	flags := uint32(fofNoConfirmMkdir | fofNoConnectedElements)
+	if !request.TemporarySources {
+		flags |= fofxAddUndoRecord
+	}
 	if request.Duplicate {
 		flags |= fofRenameOnCollision | fofxPreserveExtensions
 	}
