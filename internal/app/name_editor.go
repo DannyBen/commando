@@ -23,6 +23,7 @@ const (
 	nameCreateFolder
 	nameCreateFile
 	nameDuplicate
+	namePack
 )
 
 // One inline file-list editor handles existing names and temporary draft rows.
@@ -36,6 +37,7 @@ type nameSession struct {
 	err               error
 	duplicate         *browser.DuplicatePlan
 	data              []byte // Captured contents for a new file.
+	packPaths         []string
 	folder            bool
 	previousPosition  layout.Position
 	previousReveal    bool
@@ -43,8 +45,9 @@ type nameSession struct {
 
 // Captured contents use the same draft and exclusive creation as an empty file.
 type fileDraftRequest struct {
-	name string
-	data []byte
+	name      string
+	data      []byte
+	packPaths []string
 }
 
 func (v *view) beginFileDraft(gtx layout.Context, panel int, name string, data []byte) {
@@ -215,10 +218,14 @@ func (v *view) updateName(gtx layout.Context) {
 				progress = "Copying"
 			} else {
 				request.create = &createRequest{name: name, folder: r.kind == nameCreateFolder, data: r.data}
+				request.create.packPaths = r.packPaths
 				if r.archiveFolder != "" {
 					request.create.archiveLocations = v.archiveOperationLocations()
 				}
 				progress = "Creating " + r.noun()
+				if r.kind == namePack {
+					progress = "Packing ZIP"
+				}
 			}
 			r.err, r.pending, v.nameEditor.ReadOnly = nil, true, true
 			v.operationProgress(r.panel, progress)
@@ -304,6 +311,9 @@ func (v *view) acceptName(result loadResult) {
 		if result.created.Directory {
 			success = "Folder created"
 		}
+		if r.kind == namePack {
+			success = "ZIP created"
+		}
 	}
 	r.finished = true
 	if result.err != nil {
@@ -325,6 +335,12 @@ func (n *nameSession) noun() string {
 }
 
 func (n *nameSession) errorText(err error) string {
+	if n.kind == namePack {
+		if message := fileTransferError(err); message != "Cannot transfer" {
+			return message
+		}
+		return "Cannot create ZIP"
+	}
 	if n.kind == nameRename {
 		return renameError(err)
 	}

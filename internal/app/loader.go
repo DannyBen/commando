@@ -266,7 +266,11 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				} else if r := request.rename; r != nil {
 					err = browser.Rename(mutationPath, r.oldName, r.newName)
 				} else if request.create != nil {
-					result.mutationDirectory, created, err = browser.CreatePath(mutationPath, request.create.name, request.create.folder, request.create.data)
+					if len(request.create.packPaths) > 0 {
+						created, err = browser.PackZIP(mutationPath, request.create.name, request.create.packPaths)
+					} else {
+						result.mutationDirectory, created, err = browser.CreatePath(mutationPath, request.create.name, request.create.folder, request.create.data)
+					}
 					if filepath.Dir(request.create.name) != "." {
 						l.refreshTransferPanels(&result)
 						if err == nil {

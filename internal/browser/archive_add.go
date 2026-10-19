@@ -127,7 +127,7 @@ func planArchiveAdd(paths []string, target string) (plan ArchiveSources, err err
 		}
 	}()
 	targetInfo, err := os.Stat(target)
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return plan, err
 	}
 	for _, filename := range paths {
@@ -163,7 +163,7 @@ func planArchiveAdd(paths []string, target string) (plan ArchiveSources, err err
 			root.Close()
 			return plan, errors.ErrUnsupported
 		}
-		if os.SameFile(info, targetInfo) || info.IsDir() && pathWithin(filepath.Join(parent, name), target) {
+		if targetInfo != nil && os.SameFile(info, targetInfo) || info.IsDir() && pathWithin(filepath.Join(parent, name), target) {
 			root.Close()
 			return plan, ErrArchiveSelfCopy
 		}
@@ -202,7 +202,7 @@ func planArchiveAdd(paths []string, target string) (plan ArchiveSources, err err
 			if info.Mode().Type()&^os.ModeDir != 0 {
 				return errors.ErrUnsupported
 			}
-			if os.SameFile(info, targetInfo) {
+			if targetInfo != nil && os.SameFile(info, targetInfo) {
 				return ErrArchiveSelfCopy
 			}
 			plan.files = append(plan.files, archiveInput{root: anchored, local: local, name: path.Join(name, local), info: info})

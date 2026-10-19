@@ -30,6 +30,9 @@ func (r loadRequest) traceKind() (diagnostics.Mask, string) {
 	case r.rename != nil:
 		return diagnostics.FileOperations, "rename"
 	case r.create != nil:
+		if len(r.create.packPaths) > 0 {
+			return diagnostics.FileOperations, "pack_zip"
+		}
 		return diagnostics.FileOperations, "create"
 	case r.removal != nil:
 		if r.removal.permanent {
