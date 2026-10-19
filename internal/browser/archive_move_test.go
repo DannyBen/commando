@@ -95,7 +95,7 @@ func TestArchiveSourceReceiptRefusesChangedTreesAndItems(t *testing.T) {
 	for _, kind := range []string{"changed", "new child", "replaced"} {
 		t.Run(kind, func(t *testing.T) {
 			filename := archiveFixture(t)
-			root := t.TempDir()
+			root := resolvedTempDir(t)
 			source := filepath.Join(root, "source")
 			if err := os.Mkdir(source, 0700); err != nil {
 				t.Fatal(err)

@@ -46,6 +46,12 @@ func (v *view) acceptFileOperation(result loadResult) {
 		refreshFailed = v.applyTransferPanels(result, locations)
 	}
 	if result.request.transfer.snapshot == nil && !result.request.transfer.shortcuts {
+		if result.archiveReconciled {
+			locations = make([]string, len(result.request.transfer.archiveLocations))
+			for i, location := range result.request.transfer.archiveLocations {
+				locations[i] = location.Path
+			}
+		}
 		v.rememberCutClipboard(result.clipboard, locations, result.locations)
 	}
 	if result.request.transfer.shortcuts && len(result.transferred.Items) > 0 && samePath(p.path, result.request.path) {

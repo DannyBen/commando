@@ -89,6 +89,10 @@ func TestArchiveMovesOutConfirmWholeRootsAndFollowPanels(t *testing.T) {
 func TestMoveIntoArchiveAndCutPasteFollowNativeDescendants(t *testing.T) {
 	for _, cut := range []bool{false, true} {
 		v, filename := archiveView(t)
+		canonicalArchive, err := resolveFileLocation(filename)
+		if err != nil {
+			t.Fatal(err)
+		}
 		c := attachTestFileClipboard(v)
 		source := resolvedTempDir(t)
 		writeBatchFiles(t, source, map[string]string{"folder/sub/file.txt": "data", "keep.txt": "keep"})
@@ -125,7 +129,7 @@ func TestMoveIntoArchiveAndCutPasteFollowNativeDescendants(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(source, "folder")); !errors.Is(err, fs.ErrNotExist) {
 			t.Fatal("confirmed source not removed", err)
 		}
-		if v.panels[2].archiveFolder != "folder/sub" || !samePath(v.panels[2].path, filename) || v.panels[2].items[v.panels[2].selected].name != "file.txt" || !v.panels[2].marks[v.panels[2].selected] {
+		if v.panels[2].archiveFolder != "folder/sub" || !samePath(v.panels[2].path, canonicalArchive) || v.panels[2].items[v.panels[2].selected].name != "file.txt" || !v.panels[2].marks[v.panels[2].selected] {
 			t.Fatal("native descendant did not follow into ZIP", v.panels[2].location())
 		}
 		if cut {
@@ -133,6 +137,27 @@ func TestMoveIntoArchiveAndCutPasteFollowNativeDescendants(t *testing.T) {
 				t.Fatal("completed native cut remained on clipboard", err)
 			}
 		}
+	}
+}
+
+func TestArchiveCutCompletionRetainsAliasedPanelPaths(t *testing.T) {
+	v := newPreviewView()
+	p := &v.panels[0]
+	p.path, p.archiveFolder = filepath.Join(t.TempDir(), "alias.zip"), "."
+	p.clearMarks()
+	p.selected = 1
+	canonical := filepath.Join(t.TempDir(), "physical.zip")
+	clipboard := browser.FileClipboard{Move: true, Archive: &browser.ArchiveClipboard{
+		Move: true, Location: browser.Location{Path: canonical, Folder: "."}, Names: p.selectedNames(),
+	}}
+	v.acceptFileOperation(loadResult{
+		request: loadRequest{panel: 0, transfer: &transferRequest{
+			locations: []string{""}, archiveLocations: []browser.Location{p.location()},
+		}},
+		archiveReconciled: true, locations: []string{canonical}, clipboard: clipboard,
+	})
+	if !v.cutEntry(0, p.selected) {
+		t.Fatal("partial archive Cut lost its captured alias mapping")
 	}
 }
 

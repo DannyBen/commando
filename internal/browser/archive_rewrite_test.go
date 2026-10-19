@@ -128,9 +128,13 @@ func TestZIPRewriteKeepsOriginalOnWriteOrReplacementFailure(t *testing.T) {
 	for _, failure := range []string{"write", "replace"} {
 		t.Run(failure, func(t *testing.T) {
 			filename := archiveFixture(t)
+			canonical, err := filepath.EvalSymlinks(filename)
+			if err != nil {
+				t.Fatal(err)
+			}
 			original, _ := os.ReadFile(filename)
 			replaced := false
-			err := rewriteZIPWith(filename, func(r *zip.Reader, w *zip.Writer) error {
+			err = rewriteZIPWith(filename, func(r *zip.Reader, w *zip.Writer) error {
 				if failure == "write" {
 					member, err := w.Create("partial.txt")
 					if err != nil {
@@ -147,7 +151,7 @@ func TestZIPRewriteKeepsOriginalOnWriteOrReplacementFailure(t *testing.T) {
 				return nil
 			}, func(temporary, target string) error {
 				replaced = true
-				if target != filename || filepath.Dir(temporary) != filepath.Dir(filename) {
+				if target != canonical || filepath.Dir(temporary) != filepath.Dir(canonical) {
 					t.Error("replacement is not a sibling operation")
 				}
 				if r, err := zip.OpenReader(temporary); err != nil {
