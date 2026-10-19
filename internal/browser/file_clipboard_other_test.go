@@ -36,3 +36,30 @@ func TestClipboardMoveCompletionAndReplacement(t *testing.T) {
 		t.Fatal("completed cut remained reusable")
 	}
 }
+
+func TestDeferredArchiveClipboardReplacement(t *testing.T) {
+	reference, err := CaptureArchiveClipboard(Location{Path: archiveFixture(t), Folder: "."}, []string{"a2.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	written, err := WriteArchiveClipboard(reference)
+	if err != nil {
+		t.Fatal(err)
+	}
+	read, err := ReadFileClipboard()
+	if err != nil || read.Archive == nil || len(read.Paths) != 0 || read.Move || read.Sequence != written.Sequence {
+		t.Fatal("archive clipboard round trip", read, err)
+	}
+	read.Archive.Names[0] = "changed"
+	fresh, _ := ReadFileClipboard()
+	if fresh.Archive.Names[0] != "a2.txt" {
+		t.Fatal("clipboard aliases caller memory")
+	}
+	if _, err := WriteFileClipboard([]string{filepath.Join(t.TempDir(), "normal.txt")}, false); err != nil {
+		t.Fatal(err)
+	}
+	replaced, err := ReadFileClipboard()
+	if err != nil || replaced.Archive != nil || len(replaced.Paths) != 1 {
+		t.Fatal("normal clipboard did not replace references", replaced, err)
+	}
+}

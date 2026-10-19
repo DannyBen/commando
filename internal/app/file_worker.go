@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"path/filepath"
 
 	"github.com/dannyben/commando/internal/browser"
@@ -16,6 +17,19 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	}
 	result.locations = resolveFileLocations(locations)
 	if capture := request.clipboard; capture != nil {
+		if capture.archive != nil {
+			if capture.move {
+				result.err = errors.ErrUnsupported
+				return result
+			}
+			reference, err := browser.CaptureArchiveClipboard(capture.archive.location, capture.archive.names)
+			if err != nil {
+				result.err = err
+				return result
+			}
+			result.clipboard, result.err = l.writeArchiveClipboard(reference)
+			return result
+		}
 		paths := make([]string, 0, len(capture.paths))
 		for _, path := range capture.paths {
 			resolved, err := browser.ResolveOperationPath(path)
@@ -33,20 +47,44 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 		result.clipboard, result.err = l.writeClipboard(paths, capture.move)
 		return result
 	}
-	if request.archiveFolder != "" {
-		return l.archiveAddOperation(request, result)
-	}
-	if request.transfer.archive != nil {
-		return l.archiveCopyOperation(request, result)
-	}
+
+	// Work with a local transfer plan, preserving the original request for
+	// completion/clipboard ownership and reconciliation.
+	operation := request
+	transfer := *request.transfer
+	operation.transfer = &transfer
 	var snapshot browser.FileClipboard
-	if request.transfer.snapshot != nil {
-		snapshot = *request.transfer.snapshot
-	} else {
+	if transfer.snapshot != nil {
+		snapshot = *transfer.snapshot
+	} else if transfer.archive == nil {
 		snapshot, result.err = l.readClipboard()
 	}
 	if result.err != nil {
 		return result
+	}
+	if snapshot.Archive != nil {
+		if snapshot.Move || transfer.shortcuts {
+			result.err = errors.ErrUnsupported
+			return result
+		}
+		transfer.archive = &archiveSelection{location: snapshot.Archive.Location, names: snapshot.Archive.Names, reference: snapshot.Archive}
+		result.clipboard = snapshot
+	}
+	if request.archiveFolder != "" {
+		if len(snapshot.Paths) > 0 {
+			result.clipboard = snapshot
+		}
+		transfer.snapshot = &snapshot
+		return l.archiveAddOperation(operation, result)
+	}
+	if transfer.archive != nil {
+		if request.transfer.snapshot == nil && l.results != nil {
+			l.results <- loadResult{request: request, progress: "Extracting archive"}
+			if l.invalidate != nil {
+				l.invalidate()
+			}
+		}
+		return l.archiveCopyOperation(operation, result)
 	}
 	if !request.transfer.shortcuts && len(snapshot.ImagePNG) > 0 && len(snapshot.Paths) == 0 {
 		result.clipboard = snapshot
@@ -100,7 +138,7 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 
 func (l *directoryLoader) archiveCopyOperation(request loadRequest, result loadResult) loadResult {
 	selection := request.transfer.archive
-	stage, err := browser.StageArchive(selection.location, selection.names)
+	stage, err := selection.stage()
 	if err != nil {
 		result.err = err
 		return result

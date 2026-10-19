@@ -72,6 +72,14 @@ func preferredEffectFormat() (uintptr, error) {
 func ReadFileClipboard() (snapshot FileClipboard, err error) {
 	var dib bool
 	err = withFileClipboard(false, func() error {
+		reference, err := readArchiveClipboardLocked()
+		if err != nil {
+			return err
+		}
+		if reference != nil {
+			snapshot.Archive, snapshot.Sequence = reference, FileClipboardSequence()
+			return nil
+		}
 		hdrop, _, _ := getClipboardData.Call(fileDropFormat)
 		if hdrop == 0 {
 			var imageErr error

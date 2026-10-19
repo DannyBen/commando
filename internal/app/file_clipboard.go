@@ -25,14 +25,16 @@ func (v *view) copySelectedPaths(gtx layout.Context) {
 }
 
 type fileClipboardRequest struct {
+	archive   *archiveSelection
 	paths     []string
 	move      bool
 	locations []string
 }
 
 type archiveSelection struct {
-	location browser.Location
-	names    []string
+	location  browser.Location
+	names     []string
+	reference *browser.ArchiveClipboard
 }
 
 type transferRequest struct {
@@ -57,15 +59,16 @@ func (v *view) fileOperationLocations() []string {
 
 func (v *view) clipboardSelected(move bool) {
 	p := &v.panels[v.active]
-	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || p.path == "" || !v.actionAllowed(actionClipboard) {
+	if !v.interaction.idle() || move && !clipboardReady(v) || !move && !copyReady(v) {
 		return
 	}
 	paths := p.selectedPaths()
-	if len(paths) == 0 {
-		return
+	var archive *archiveSelection
+	if p.archiveFolder != "" {
+		archive = &archiveSelection{location: p.location(), names: p.selectedNames()}
 	}
 	p.loading, p.prefix = true, ""
-	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, action: actionClipboard, clipboard: &fileClipboardRequest{paths: paths, move: move, locations: v.fileOperationLocations()}}) {
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, action: actionClipboard, clipboard: &fileClipboardRequest{paths: paths, archive: archive, move: move, locations: v.fileOperationLocations()}}) {
 		p.loading = false
 	}
 }
@@ -80,14 +83,28 @@ func (v *view) pasteShortcuts() {
 
 func (v *view) pasteClipboard(shortcuts bool) {
 	p := &v.panels[v.active]
-	if !v.interaction.idle() || v.loader == nil || p.loading || !p.nativeFolder() || p.path == "" || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || !pasteReady(v) || shortcuts && !p.nativeFolder() {
 		return
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true
-	// Windows owns the transfer UI, including progress and cancellation.
-	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, transfer: &transferRequest{locations: v.fileOperationLocations(), owner: v.ownerWindow, shortcuts: shortcuts}}) {
+	// Capture the open destination, including archive subfolders.
+	var archiveLocations []browser.Location
+	if p.archiveFolder != "" {
+		archiveLocations = v.archiveOperationLocations()
+	}
+	// Windows owns the native transfer UI, including progress and cancellation.
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, archiveFolder: p.archiveFolder, transfer: &transferRequest{archiveLocations: archiveLocations, locations: v.fileOperationLocations(), owner: v.ownerWindow, shortcuts: shortcuts}}) {
 		p.loading, v.transferPending = false, false
+	} else if p.archiveFolder != "" {
+		v.operationProgress(v.active, "Updating archive")
 	} else if shortcuts {
 		v.operationProgress(v.active, "Creating shortcuts")
 	}
+}
+
+func (selection *archiveSelection) stage() (*browser.ArchiveStage, error) {
+	if selection.reference != nil {
+		return selection.reference.Stage()
+	}
+	return browser.StageArchive(selection.location, selection.names)
 }

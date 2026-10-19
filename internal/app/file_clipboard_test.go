@@ -25,7 +25,7 @@ func (c *testFileClipboard) read() (browser.FileClipboard, error) {
 	defer c.Unlock()
 	data := c.data
 	data.Paths = slices.Clone(data.Paths)
-	if len(data.Paths) == 0 {
+	if len(data.Paths) == 0 && data.Archive == nil {
 		return data, browser.ErrNoClipboardFiles
 	}
 	return data, nil
@@ -57,6 +57,7 @@ func (c *testFileClipboard) complete(snapshot browser.FileClipboard, moved []str
 func attachTestFileClipboard(v *view) *testFileClipboard {
 	c := new(testFileClipboard)
 	v.loader.readClipboard, v.loader.writeClipboard, v.loader.completeClipboard = c.read, c.write, c.complete
+	v.loader.writeArchiveClipboard = c.writeArchive
 	v.clipboardSequence = func() uint32 { c.Lock(); defer c.Unlock(); return c.data.Sequence }
 	return c
 }
@@ -417,4 +418,13 @@ func TestCopySwitchPasteFollowsInputOrder(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(source, "a.txt")); err != nil {
 		t.Fatal("copy removed source")
 	}
+}
+
+func (c *testFileClipboard) writeArchive(reference *browser.ArchiveClipboard) (browser.FileClipboard, error) {
+	c.Lock()
+	defer c.Unlock()
+	captured := *reference
+	captured.Names = slices.Clone(reference.Names)
+	c.data = browser.FileClipboard{Archive: &captured, Sequence: c.data.Sequence + 1}
+	return c.data, nil
 }

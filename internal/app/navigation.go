@@ -101,6 +101,10 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	if result.progress != "" {
+		v.operationProgress(result.request.panel, result.progress)
+		return
+	}
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
 	}

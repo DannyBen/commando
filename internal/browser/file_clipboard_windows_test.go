@@ -119,3 +119,37 @@ func TestWindowsImageClipboardRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+func TestWindowsArchiveClipboardIsPrivateAndReplaceable(t *testing.T) {
+	if os.Getenv("COMMANDO_TEST_CLIPBOARD") != "1" {
+		t.Skip("requires COMMANDO_TEST_CLIPBOARD=1 on a Windows desktop; replaces clipboard")
+	}
+	reference, err := CaptureArchiveClipboard(Location{Path: archiveFixture(t), Folder: "."}, []string{"a2.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	written, err := WriteArchiveClipboard(reference)
+	if err != nil {
+		t.Fatal(err)
+	}
+	read, err := ReadFileClipboard()
+	if err != nil || !reflect.DeepEqual(read, written) || len(read.Paths) != 0 || read.Archive == nil {
+		t.Fatal("private archive clipboard round trip", read, err)
+	}
+	if err := withFileClipboard(false, func() error {
+		handle, _, _ := getClipboardData.Call(fileDropFormat)
+		if handle != 0 {
+			t.Error("archive copy published external file paths")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := WriteFileClipboard([]string{filepath.Join(t.TempDir(), "normal.txt")}, false); err != nil {
+		t.Fatal(err)
+	}
+	replaced, err := ReadFileClipboard()
+	if err != nil || replaced.Archive != nil || len(replaced.Paths) != 1 {
+		t.Fatal("regular copy did not replace archive references", replaced, err)
+	}
+}

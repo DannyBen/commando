@@ -44,6 +44,7 @@ type loadRequest struct {
 }
 
 type loadResult struct {
+	progress          string // Intermediate worker feedback; does not complete the request.
 	request           loadRequest
 	directory         browser.Directory
 	created           browser.Entry
@@ -69,25 +70,27 @@ type loadResult struct {
 }
 
 type directoryLoader struct {
-	requests             chan loadRequest
-	results              chan loadResult
-	done                 chan struct{}
-	recycle              func(string, []string, uintptr) (browser.RemovalResult, error)
-	delete               func(string, []string, uintptr) (browser.RemovalResult, error)
-	readClipboard        func() (browser.FileClipboard, error)
-	writeClipboard       func([]string, bool) (browser.FileClipboard, error)
-	completeClipboard    func(browser.FileClipboard, []string) (browser.FileClipboard, error)
-	transfer             func(browser.TransferRequest) (browser.TransferResult, error)
-	createShortcuts      func([]string, string) (browser.TransferResult, error)
-	readDirectory        func(string) (browser.Directory, error)
-	launchEditor         func(string, []string, string) error
-	launchTerminal       func(string, bool, uintptr) error
-	folderShortcutTarget func(string) (string, error)
-	readFileIcon         func(string, int) image.Image
-	readFileTypeIcon     func(string, int, bool) image.Image
-	busy                 atomic.Int32
-	stopOnce             sync.Once
-	stopped              chan struct{}
+	invalidate            func()
+	requests              chan loadRequest
+	results               chan loadResult
+	done                  chan struct{}
+	recycle               func(string, []string, uintptr) (browser.RemovalResult, error)
+	delete                func(string, []string, uintptr) (browser.RemovalResult, error)
+	readClipboard         func() (browser.FileClipboard, error)
+	writeClipboard        func([]string, bool) (browser.FileClipboard, error)
+	writeArchiveClipboard func(*browser.ArchiveClipboard) (browser.FileClipboard, error)
+	completeClipboard     func(browser.FileClipboard, []string) (browser.FileClipboard, error)
+	transfer              func(browser.TransferRequest) (browser.TransferResult, error)
+	createShortcuts       func([]string, string) (browser.TransferResult, error)
+	readDirectory         func(string) (browser.Directory, error)
+	launchEditor          func(string, []string, string) error
+	launchTerminal        func(string, bool, uintptr) error
+	folderShortcutTarget  func(string) (string, error)
+	readFileIcon          func(string, int) image.Image
+	readFileTypeIcon      func(string, int, bool) image.Image
+	busy                  atomic.Int32
+	stopOnce              sync.Once
+	stopped               chan struct{}
 }
 
 // One worker keeps reads and mutations off the UI thread and avoids concurrent
@@ -98,21 +101,23 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		count = max(1, panelCount[0])
 	}
 	l := &directoryLoader{
-		requests:             make(chan loadRequest, 2*count),
-		results:              make(chan loadResult, count),
-		done:                 make(chan struct{}),
-		recycle:              browser.Recycle,
-		delete:               browser.Delete,
-		readClipboard:        browser.ReadFileClipboard,
-		writeClipboard:       browser.WriteFileClipboard,
-		completeClipboard:    browser.CompleteFileClipboard,
-		transfer:             browser.Transfer,
-		createShortcuts:      browser.CreateShortcuts,
-		stopped:              make(chan struct{}),
-		readDirectory:        read,
-		launchEditor:         browser.LaunchEditor,
-		launchTerminal:       browser.LaunchTerminal,
-		folderShortcutTarget: browser.FolderShortcutTarget,
+		requests:              make(chan loadRequest, 2*count),
+		results:               make(chan loadResult, count),
+		done:                  make(chan struct{}),
+		recycle:               browser.Recycle,
+		delete:                browser.Delete,
+		readClipboard:         browser.ReadFileClipboard,
+		writeClipboard:        browser.WriteFileClipboard,
+		writeArchiveClipboard: browser.WriteArchiveClipboard,
+		invalidate:            invalidate,
+		completeClipboard:     browser.CompleteFileClipboard,
+		transfer:              browser.Transfer,
+		createShortcuts:       browser.CreateShortcuts,
+		stopped:               make(chan struct{}),
+		readDirectory:         read,
+		launchEditor:          browser.LaunchEditor,
+		launchTerminal:        browser.LaunchTerminal,
+		folderShortcutTarget:  browser.FolderShortcutTarget,
 	}
 	go func() {
 		defer close(l.stopped)

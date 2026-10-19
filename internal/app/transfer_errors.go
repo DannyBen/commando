@@ -10,6 +10,8 @@ import (
 func fileTransferError(err error) string {
 	message := "Cannot transfer"
 	switch {
+	case errors.Is(err, browser.ErrArchiveClipboardChanged):
+		return "Archive changed; copy again"
 	case errors.Is(err, browser.ErrArchiveChanged), errors.Is(err, browser.ErrArchiveRecovery), errors.Is(err, browser.ErrInvalidArchive):
 		return deleteError(err)
 	case errors.Is(err, browser.ErrArchiveSourceChanged):

@@ -69,10 +69,10 @@ func defaultCommands() []command {
 		cmd("entry.rename", "Entry", "Rename", key.NameF2, 0, func(v *view) bool {
 			return selectedReady(v) && v.panels[v.active].location().Capabilities().Rename && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)
 		}),
-		cmd("entry.copy", "Entry", "Copy", "C", key.ModCtrl, clipboardReady),
+		cmd("entry.copy", "Entry", "Copy", "C", key.ModCtrl, copyReady),
 		cmd("entry.copy_paths", "Entry", "Copy paths", "C", key.ModCtrl|key.ModShift, textClipboardReady),
 		cmd("entry.cut", "Entry", "Cut", "X", key.ModCtrl, clipboardReady),
-		cmd("entry.paste", "Entry", "Paste", "V", key.ModCtrl, mutationReady),
+		cmd("entry.paste", "Entry", "Paste", "V", key.ModCtrl, pasteReady),
 		cmd("entry.paste_shortcut", "Entry", "Paste shortcut", "V", key.ModCtrl|key.ModShift, mutationReady),
 		cmd("entry.duplicate", "Entry", "Duplicate", "D", key.ModCtrl, selectedMutationReady),
 		cmd("entry.copy_to_panel", "Entry", "Copy to panel", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, false) }),
@@ -316,4 +316,14 @@ func adjacentReady(v *view, direction int) bool {
 func removalReady(v *view) bool {
 	p := &v.panels[v.active]
 	return folderReady(v) && v.loader != nil && v.actionAllowed(actionMutation) && p.location().Capabilities().Delete && len(p.selectedNames()) > 0
+}
+
+func copyReady(v *view) bool {
+	p := &v.panels[v.active]
+	return clipboardReady(v) || folderReady(v) && v.loader != nil && v.actionAllowed(actionClipboard) && p.archiveFolder != "" && p.location().Capabilities().Read && len(p.selectedNames()) > 0
+}
+
+func pasteReady(v *view) bool {
+	p := &v.panels[v.active]
+	return mutationReady(v) || folderReady(v) && v.loader != nil && v.actionAllowed(actionMutation) && p.archiveFolder != "" && p.location().Capabilities().Add
 }

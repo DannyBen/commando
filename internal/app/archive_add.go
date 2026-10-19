@@ -8,8 +8,8 @@ import (
 
 func (l *directoryLoader) archiveAddOperation(request loadRequest, result loadResult) loadResult {
 	transfer := request.transfer
-	// Clipboard paste and moves have separate tasks. This path owns a captured
-	// panel-copy selection and must never consume or alter the file clipboard.
+	// The worker supplies a captured selection. Archive writes never alter the
+	// clipboard; moves and other mutation types remain separate tasks.
 	if transfer.snapshot == nil || transfer.snapshot.Move || transfer.shortcuts || transfer.duplicate {
 		result.err = errors.ErrUnsupported
 		return result
@@ -28,7 +28,7 @@ func (l *directoryLoader) archiveAddOperation(request loadRequest, result loadRe
 	sources := transfer.snapshot.Paths
 	var stage *browser.ArchiveStage
 	if transfer.archive != nil {
-		stage, err = browser.StageArchive(transfer.archive.location, transfer.archive.names)
+		stage, err = transfer.archive.stage()
 		if err != nil {
 			result.err = err
 			return result

@@ -17,7 +17,11 @@ func (v *view) acceptFileOperation(result loadResult) {
 			if capture.move {
 				verb = "cut"
 			}
-			v.showFeedback(result.request.panel, feedback.Info, fmt.Sprintf("%d %s to clipboard", len(result.clipboard.Paths), verb))
+			count := len(result.clipboard.Paths)
+			if result.clipboard.Archive != nil {
+				count = len(result.clipboard.Archive.Names)
+			}
+			v.showFeedback(result.request.panel, feedback.Info, fmt.Sprintf("%d %s to clipboard", count, verb))
 		} else {
 			v.showFeedback(result.request.panel, feedback.Error, fileTransferError(result.err))
 		}
