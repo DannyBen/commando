@@ -34,7 +34,12 @@ func (v *view) acceptFileOperation(result loadResult) {
 		return
 	}
 	locations := result.request.transfer.locations
-	refreshFailed := v.applyTransferPanels(result, locations)
+	refreshFailed := false
+	if result.request.archiveFolder != "" {
+		refreshFailed = v.applyArchivePanels(result, result.request.transfer.archiveLocations)
+	} else {
+		refreshFailed = v.applyTransferPanels(result, locations)
+	}
 	if result.request.transfer.snapshot == nil && !result.request.transfer.shortcuts {
 		v.rememberCutClipboard(result.clipboard, locations, result.locations)
 	}

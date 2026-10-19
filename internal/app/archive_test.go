@@ -139,8 +139,8 @@ func TestArchiveBlocksFilesystemOnlyOperations(t *testing.T) {
 	if p.loading || !v.interaction.idle() || len(v.loader.requests) != 0 || len(p.selectedPaths()) != 0 || v.fileOperationLocations()[0] != "" {
 		t.Fatal("an unsupported operation queued work or opened an interaction")
 	}
-	if v.panelTransferError(0) == "" {
-		t.Fatal("archive accepted a filesystem transfer destination")
+	if v.panelTransferError(0, true) == "" {
+		t.Fatal("archive accepted an unsupported move destination")
 	}
 	if info, err := os.Stat(filename); err != nil || info.IsDir() {
 		t.Fatal("archive container changed", err)

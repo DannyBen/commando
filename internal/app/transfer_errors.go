@@ -10,6 +10,12 @@ import (
 func fileTransferError(err error) string {
 	message := "Cannot transfer"
 	switch {
+	case errors.Is(err, browser.ErrArchiveChanged), errors.Is(err, browser.ErrArchiveRecovery), errors.Is(err, browser.ErrInvalidArchive):
+		return deleteError(err)
+	case errors.Is(err, browser.ErrArchiveSourceChanged):
+		return "Source changed; retry"
+	case errors.Is(err, browser.ErrArchiveSelfCopy):
+		return "Archive cannot contain itself"
 	case errors.Is(err, browser.ErrNoClipboardFiles):
 		return "Nothing to paste"
 	case errors.Is(err, browser.ErrClipboardImage):

@@ -37,7 +37,7 @@ func (v *view) startPanelTransfer(move bool) {
 			v.submitPanelTransfer(target, target, snapshot, archive)
 		}, func() { v.active = source })
 		v.inlineInteraction().canChoose = func() bool {
-			message := v.panelTransferError(target)
+			message := v.panelTransferError(target, snapshot.Move)
 			if message != "" {
 				v.showFeedback(target, feedback.Info, message)
 				return false
@@ -73,13 +73,15 @@ func (v *view) transferToNeighbor(direction int, move bool) {
 
 func panelTransferReady(v *view, direction int, move bool) bool {
 	target := v.active + direction
-	return target >= 0 && target < len(v.panels) && panelSourceReady(v, move) && v.panelTransferError(target) == ""
+	return target >= 0 && target < len(v.panels) && panelSourceReady(v, move) && v.panelTransferError(target, move) == ""
 }
 
-func (v *view) panelTransferError(target int) string {
+func (v *view) panelTransferError(target int, move bool) string {
 	p := &v.panels[target]
 	switch {
-	case p.archiveFolder != "":
+	case p.archiveFolder != "" && move:
+		return "Cannot move into archive"
+	case p.archiveFolder != "" && !p.location().Capabilities().Add:
 		return "Cannot transfer into archive"
 	case p.drives || p.path == "":
 		return "Select a folder"
@@ -92,16 +94,23 @@ func (v *view) panelTransferError(target int) string {
 }
 
 func (v *view) submitPanelTransfer(target, resultPanel int, snapshot browser.FileClipboard, archive *archiveSelection) {
-	if message := v.panelTransferError(target); message != "" {
+	if message := v.panelTransferError(target, snapshot.Move); message != "" {
 		v.showFeedback(target, feedback.Info, message)
 		return
 	}
+	destination := v.panels[target].location()
+	var archiveLocations []browser.Location
+	if destination.InArchive() {
+		archiveLocations = v.archiveOperationLocations()
+	}
 	p := &v.panels[resultPanel]
 	p.loading, p.prefix, v.transferPending = true, "", true
-	if !v.loader.submit(loadRequest{panel: resultPanel, path: v.panels[target].path, transfer: &transferRequest{
-		locations: v.fileOperationLocations(), snapshot: &snapshot, archive: archive, owner: v.ownerWindow}}) {
+	if !v.loader.submit(loadRequest{panel: resultPanel, path: destination.Path, archiveFolder: destination.Folder, transfer: &transferRequest{
+		locations: v.fileOperationLocations(), snapshot: &snapshot, archive: archive, archiveLocations: archiveLocations, owner: v.ownerWindow}}) {
 		p.loading, v.transferPending = false, false
 		v.showFeedback(resultPanel, feedback.Info, "File operation in progress")
+	} else if destination.InArchive() {
+		v.operationProgress(resultPanel, "Updating archive")
 	} else if archive != nil {
 		v.operationProgress(resultPanel, "Extracting archive")
 	}

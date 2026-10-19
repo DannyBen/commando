@@ -90,7 +90,7 @@ func TestArchiveLocationsAndCapabilities(t *testing.T) {
 	if parent.InArchive() || parent.Path != filepath.Dir(filename) || selected != filepath.Base(filename) {
 		t.Fatal("archive root did not exit to its containing folder")
 	}
-	if root.Capabilities() != (Capabilities{Browse: true, Read: true, Delete: true, Rename: true}) || !parent.Capabilities().NativePaths {
+	if root.Capabilities() != (Capabilities{Browse: true, Read: true, Add: true, Delete: true, Rename: true}) || !parent.Capabilities().NativePaths {
 		t.Fatal("archive capabilities advertised unsupported operations")
 	}
 	resolved, ok := ResolveArchiveLocation(child.String())

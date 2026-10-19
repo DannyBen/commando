@@ -33,6 +33,9 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 		result.clipboard, result.err = l.writeClipboard(paths, capture.move)
 		return result
 	}
+	if request.archiveFolder != "" {
+		return l.archiveAddOperation(request, result)
+	}
 	if request.transfer.archive != nil {
 		return l.archiveCopyOperation(request, result)
 	}

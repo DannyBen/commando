@@ -18,6 +18,7 @@ type ArchiveAdapter interface {
 	Extract(Location, []string, string) error
 	Delete(Location, []string) (RemovalResult, error)
 	Rename(Location, string, string) error
+	Add(Location, []string) error
 }
 
 func ArchiveFormat(filename string) ArchiveAdapter {
@@ -42,7 +43,7 @@ var ErrInvalidArchive = zip.ErrFormat
 type zipAdapter struct{}
 
 func (zipAdapter) Capabilities() Capabilities {
-	return Capabilities{Browse: true, Read: true, Delete: true, Rename: true}
+	return Capabilities{Browse: true, Read: true, Add: true, Delete: true, Rename: true}
 }
 
 func (zipAdapter) ReadDirectory(location Location) (Directory, error) {

@@ -36,12 +36,13 @@ type archiveSelection struct {
 }
 
 type transferRequest struct {
-	archive   *archiveSelection
-	locations []string
-	duplicate bool                   // Direct duplication does not read or change the clipboard.
-	shortcuts bool                   // Create shell links instead of transferring clipboard sources.
-	snapshot  *browser.FileClipboard // Captured selection; bypasses system clipboard reads and writes.
-	owner     uintptr
+	archiveLocations []browser.Location
+	archive          *archiveSelection
+	locations        []string
+	duplicate        bool                   // Direct duplication does not read or change the clipboard.
+	shortcuts        bool                   // Create shell links instead of transferring clipboard sources.
+	snapshot         *browser.FileClipboard // Captured selection; bypasses system clipboard reads and writes.
+	owner            uintptr
 }
 
 func (v *view) fileOperationLocations() []string {
