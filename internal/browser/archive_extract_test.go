@@ -132,7 +132,7 @@ func TestStageArchiveRejectsUnsafeAndAmbiguousMembers(t *testing.T) {
 			if err == nil {
 				t.Fatal("unsafe archive reached transfer staging")
 			}
-			files, err := os.ReadDir(os.TempDir())
+			files, err := os.ReadDir(filepath.Join(os.TempDir(), "Commando", "session"))
 			if err != nil || len(files) != 0 {
 				t.Fatal("failed extraction left staging files", files, err)
 			}

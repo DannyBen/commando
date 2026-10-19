@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/dannyben/commando/internal/tempfiles"
 )
 
 // ArchiveStage contains only disposable files owned by this copy operation.
@@ -17,9 +19,13 @@ type ArchiveStage struct {
 	Paths     []string
 }
 
-func (s *ArchiveStage) Close() error { return os.RemoveAll(s.Directory) }
+func (s *ArchiveStage) Close() error { return tempfiles.Remove(s.Directory) }
 
 func StageArchive(location Location, names []string) (*ArchiveStage, error) {
+	return stageArchive(location, names, tempfiles.NewSession)
+}
+
+func stageArchive(location Location, names []string, newDirectory func() (string, error)) (*ArchiveStage, error) {
 	adapter := ArchiveFormat(location.Path)
 	if !location.InArchive() || !fs.ValidPath(location.Folder) || adapter == nil || !adapter.Capabilities().Read || len(names) == 0 {
 		return nil, fs.ErrInvalid
@@ -35,7 +41,7 @@ func StageArchive(location Location, names []string) (*ArchiveStage, error) {
 		}
 		seen[key] = true
 	}
-	directory, err := os.MkdirTemp("", "commando-archive-*")
+	directory, err := newDirectory()
 	if err != nil {
 		return nil, err
 	}

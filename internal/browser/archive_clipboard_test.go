@@ -43,7 +43,7 @@ func TestArchiveClipboardDefersExtractionAndRoundTrips(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	entries, err = os.ReadDir(scratch)
+	entries, err = os.ReadDir(filepath.Join(scratch, "Commando", "session"))
 	if err != nil || len(entries) != 0 {
 		t.Fatal("paste leaked files", entries, err)
 	}

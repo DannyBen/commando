@@ -85,7 +85,7 @@ func TestArchiveClipboardCopiesReferencesThenPastesThroughSharedFlows(t *testing
 			if err != nil || !reflect.DeepEqual(current, captured) || p.selected != selected || !maps.Equal(p.marks, marks) || destination.items[destination.selected].name != "keep.txt" || !destination.marks[destination.selected] || v.active != 1 || v.transferPending || v.mutationsBusy() {
 				t.Fatal("paste changed clipboard or browsing state", err)
 			}
-			entries, err = os.ReadDir(scratch)
+			entries, err = os.ReadDir(filepath.Join(scratch, "Commando", "session"))
 			if err != nil || len(entries) != 0 {
 				t.Fatal("paste retained temporary files", entries, err)
 			}

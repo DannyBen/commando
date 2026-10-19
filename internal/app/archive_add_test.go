@@ -145,7 +145,7 @@ func TestArchiveCopyIntoAnotherArchiveAndItsCurrentSubfolder(t *testing.T) {
 		if v.panels[1].archiveFolder != folder || !slices.Contains(visibleNames(&v.panels[1]), "docs") {
 			t.Fatal("destination archive location changed")
 		}
-		leftovers, err := os.ReadDir(scratch)
+		leftovers, err := os.ReadDir(filepath.Join(scratch, "Commando", "session"))
 		if err != nil || len(leftovers) != 0 {
 			t.Fatal("archive copy leaked temporary sources", leftovers, err)
 		}

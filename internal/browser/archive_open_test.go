@@ -55,7 +55,7 @@ func TestOpenArchiveFailureCleansTemporaryCopy(t *testing.T) {
 	if err := OpenArchive(Location{Path: filename, Folder: "."}, "a2.txt", nil); err == nil {
 		t.Fatal("nil opener accepted")
 	}
-	entries, err := os.ReadDir(scratch)
+	entries, err := os.ReadDir(filepath.Join(scratch, "Commando", "open"))
 	if err != nil || len(entries) != 0 {
 		t.Fatal("failed opening leaked temporary files", entries, err)
 	}

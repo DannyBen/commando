@@ -3,17 +3,20 @@ package browser
 import (
 	"io/fs"
 	"os"
+
+	"github.com/dannyben/commando/internal/tempfiles"
 )
 
 // OpenArchive opens one read-only, disposable copy with the normal associated
 // application. Successful launches retain the copy in system temporary storage:
 // the application may still need it after the launcher or Commando exits.
+// Shared temporary-file cleanup expires retained copies after seven days.
 // There is deliberately no change detection or write-back to the archive.
 func OpenArchive(location Location, name string, open func(string) error) error {
 	if open == nil {
 		return fs.ErrInvalid
 	}
-	stage, err := StageArchive(location, []string{name})
+	stage, err := stageArchive(location, []string{name}, tempfiles.NewOpen)
 	if err != nil {
 		return err
 	}
@@ -21,8 +24,6 @@ func OpenArchive(location Location, name string, open func(string) error) error 
 	retained := false
 	defer func() {
 		if !retained {
-			// Windows needs the read-only attribute cleared before removal.
-			os.Chmod(filename, 0600)
 			stage.Close()
 		}
 	}()

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
-	"strings"
 	"testing"
 
 	"gioui.org/io/key"
@@ -155,9 +154,10 @@ func TestArchiveCopyCleansStagingAfterNativeCancellationOrFailure(t *testing.T) 
 		selectName(t, &v.panels[0], "a2.txt")
 		destination := t.TempDir()
 		writeBatchFiles(t, destination, map[string]string{"keep.txt": "original"})
-		t.Setenv("TMPDIR", destination)
-		t.Setenv("TMP", destination)
-		t.Setenv("TEMP", destination)
+		scratch := t.TempDir()
+		t.Setenv("TMPDIR", scratch)
+		t.Setenv("TMP", scratch)
+		t.Setenv("TEMP", scratch)
 		v.load(1, destination, "keep.txt")
 		waitLoaded(t, v, 1)
 		paths := make(chan []string, 1)
@@ -188,10 +188,8 @@ func TestArchiveCopyCleansStagingAfterNativeCancellationOrFailure(t *testing.T) 
 		if !slices.Contains(visibleNames(&v.panels[1]), "partial.txt") || v.transferPending || v.mutationsBusy() {
 			t.Fatal("partial result was not reconciled")
 		}
-		for _, name := range visibleNames(&v.panels[1]) {
-			if strings.HasPrefix(name, "commando-archive-") {
-				t.Fatal("reconciliation retained disposable staging directory")
-			}
+		if entries, err := os.ReadDir(filepath.Join(scratch, "Commando", "session")); err != nil || len(entries) != 0 {
+			t.Fatal("native cancellation/failure leaked staging", entries, err)
 		}
 		message := v.panels[1].feedback.Current()
 		if message == nil || fail && message.Text != "Access denied" || !fail && message.Text != "Transfer stopped" {

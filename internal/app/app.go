@@ -19,6 +19,7 @@ import (
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
+	"github.com/dannyben/commando/internal/tempfiles"
 )
 
 const windowWidth, windowHeight = 800, 480
@@ -51,6 +52,7 @@ func Run() error {
 		return err
 	}
 	defer instance.close()
+	tempfiles.Clean()
 	dataDir, folderErr := resolveDataFolder(baseDir)
 	if folderErr != nil {
 		fmt.Fprintln(os.Stderr, "cannot load data folder:", folderErr)
@@ -127,6 +129,7 @@ func Run() error {
 				}
 			case gioapp.DestroyEvent:
 				v.finishOperations()
+				tempfiles.Clean()
 				sounds.Close()
 				state := v.sessionState(tracker.snapshot())
 				state.PanelWidth = tracker.sizingSnapshot().baseWidth
