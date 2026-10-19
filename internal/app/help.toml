@@ -930,3 +930,363 @@ lines = [
   "Choose an optional second shortcut for this command.",
   "Leave it unassigned if one shortcut is enough.",
 ]
+
+["palette.appearance.toggle_auto_color"]
+lines = [
+  "Switch between generated file colors and the theme colors",
+]
+
+["palette.appearance.toggle_contrast_guard"]
+lines = [
+  "Turn automatic readability adjustments on or off",
+]
+
+["palette.appearance.toggle_icons"]
+lines = [
+  "Show or hide Windows file icons beside filenames",
+]
+
+["palette.application.command_palette"]
+lines = [
+  "Find commands, shortcuts and settings by typing their names",
+]
+
+["palette.application.open_data_folder"]
+lines = [
+  "Open the folder containing Commando settings and saved state",
+]
+
+["palette.application.settings"]
+lines = [
+  "Search settings by name or category",
+]
+
+["palette.application.toggle_full_screen"]
+lines = [
+  "Switch between full screen and the normal window",
+]
+
+["palette.application.toggle_help"]
+lines = [
+  "Show or hide the contextual help panel",
+]
+
+["palette.entry.arm_drag"]
+lines = [
+  "Prepare a copy drag, then click in another app to drop the entries",
+]
+
+["palette.entry.context_menu"]
+lines = [
+  "Show the Windows context menu for marked entries or the current entry",
+]
+
+["palette.entry.copy"]
+lines = [
+  "Copy marked entries, or the current entry, to the clipboard",
+]
+
+["palette.entry.copy_left"]
+lines = [
+  "Copy marked entries or the current entry to the folder on the left",
+]
+
+["palette.entry.copy_paths"]
+lines = [
+  "Copy the full paths of marked entries or the current entry as text",
+]
+
+["palette.entry.copy_right"]
+lines = [
+  "Copy marked entries or the current entry to the folder on the right",
+]
+
+["palette.entry.copy_to_panel"]
+lines = [
+  "Copy marked entries or the current entry to a chosen panel",
+]
+
+["palette.entry.cut"]
+lines = [
+  "Mark entries for moving when pasted into another folder",
+]
+
+["palette.entry.delete_permanently"]
+lines = [
+  "Delete marked entries or the current entry without the Recycle Bin",
+]
+
+["palette.entry.duplicate"]
+lines = [
+  "Create copies beside the originals without using the clipboard",
+]
+
+["palette.entry.move_left"]
+lines = [
+  "Move marked entries or the current entry to the folder on the left",
+]
+
+["palette.entry.move_right"]
+lines = [
+  "Move marked entries or the current entry to the folder on the right",
+]
+
+["palette.entry.move_to_panel"]
+lines = [
+  "Move marked entries or the current entry to a chosen panel",
+]
+
+["palette.entry.new_file"]
+lines = [
+  "Create an empty file in the current folder",
+]
+
+["palette.entry.new_folder"]
+lines = [
+  "Create a folder in the current folder",
+]
+
+["palette.entry.open"]
+lines = [
+  "Open the current folder, browse a ZIP, or launch a file in its default app",
+]
+
+["palette.entry.pack_zip"]
+lines = [
+  "Pack marked entries or the current entry into a ZIP archive",
+]
+
+["palette.entry.paste"]
+lines = [
+  "Copy or move clipboard files here, or save a clipboard image as a file",
+]
+
+["palette.entry.paste_shortcut"]
+lines = [
+  "Create Windows shortcuts here for files on the clipboard",
+]
+
+["palette.entry.properties"]
+lines = [
+  "Show Windows properties for marked entries or the current entry",
+]
+
+["palette.entry.recycle"]
+lines = [
+  "Send entries to the Recycle Bin, or delete them from the open archive",
+]
+
+["palette.entry.rename"]
+lines = [
+  "Change the name of the current file or folder",
+]
+
+["palette.entry.unpack_zip"]
+lines = [
+  "Extract a ZIP archive into a chosen folder",
+]
+
+["palette.feedback.toggle_notification_animation"]
+lines = [
+  "Switch between animated and immediate notification text",
+]
+
+["palette.feedback.toggle_sound"]
+lines = [
+  "Turn all Commando sound cues on or off",
+]
+
+["palette.file.edit"]
+lines = [
+  "Open marked files or the current file using your configured editor rules",
+]
+
+["palette.navigation.drives"]
+lines = [
+  "List available drives in the active panel",
+]
+
+["palette.navigation.edit_location"]
+lines = [
+  "Enter or paste a folder path in the location bar",
+]
+
+["palette.navigation.first_entry"]
+lines = [
+  "Select the first entry in the active panel",
+]
+
+["palette.navigation.last_entry"]
+lines = [
+  "Select the last entry in the active panel",
+]
+
+["palette.navigation.next_panel"]
+lines = [
+  "Focus the next panel, wrapping back to the first",
+]
+
+["palette.navigation.open_in_left_panel"]
+lines = [
+  "Show the current entry on the left, adding a panel if needed",
+]
+
+["palette.navigation.open_in_right_panel"]
+lines = [
+  "Show the current entry on the right, adding a panel if needed",
+]
+
+["palette.navigation.page_down"]
+lines = [
+  "Move the current selection down by about one visible page",
+]
+
+["palette.navigation.page_up"]
+lines = [
+  "Move the current selection up by about one visible page",
+]
+
+["palette.navigation.panel_left"]
+lines = [
+  "Focus the neighboring panel on the left",
+]
+
+["palette.navigation.panel_right"]
+lines = [
+  "Focus the neighboring panel on the right",
+]
+
+["palette.navigation.parent_folder"]
+lines = [
+  "Go up one folder level in the active panel",
+]
+
+["palette.navigation.previous_panel"]
+lines = [
+  "Focus the previous panel, wrapping back to the last",
+]
+
+["palette.panel.add_left"]
+lines = [
+  "Clone the active panel on its left, without copying marks",
+]
+
+["palette.panel.add_right"]
+lines = [
+  "Clone the active panel on its right, without copying marks",
+]
+
+["palette.panel.close"]
+lines = [
+  "Close the active panel and retain its state for reopening",
+]
+
+["palette.panel.decrease_size"]
+lines = [
+  "Make the active panel narrower",
+]
+
+["palette.panel.focus"]
+lines = [
+  "Focus the panel identified by this number",
+]
+
+["palette.panel.increase_size"]
+lines = [
+  "Make the active panel wider",
+]
+
+["palette.panel.move_left"]
+lines = [
+  "Move the whole active panel one position to the left",
+]
+
+["palette.panel.move_right"]
+lines = [
+  "Move the whole active panel one position to the right",
+]
+
+["palette.panel.reopen_closed"]
+lines = [
+  "Restore the most recently closed panel with its saved state",
+]
+
+["palette.panel.reset_size"]
+lines = [
+  "Restore the active panel to its default width",
+]
+
+["palette.programs.terminal_here"]
+lines = [
+  "Open a terminal in the active panel's folder",
+]
+
+["palette.programs.terminal_here_admin"]
+lines = [
+  "Open an administrator terminal in the active panel's folder",
+]
+
+["palette.selection.clear_filter_or_marks"]
+lines = [
+  "Clear the file filter first, then marks if there is no filter",
+]
+
+["palette.selection.mark_all"]
+lines = [
+  "Mark all visible entries in the active panel",
+]
+
+["palette.selection.toggle_mark"]
+lines = [
+  "Mark or unmark the current entry for batch operations",
+]
+
+["palette.selection.toggle_mark_and_advance"]
+lines = [
+  "Mark or unmark the current entry, then advance to the next",
+]
+
+["palette.view.filter_files"]
+lines = [
+  "Keep only filenames containing the text you enter",
+]
+
+["palette.view.hidden_files"]
+lines = [
+  "Switch between showing all files, hiding hidden files, and hiding dotfiles too",
+]
+
+["palette.view.next_metadata_column"]
+lines = [
+  "Show the next enabled file detail beside filenames",
+]
+
+["palette.view.previous_metadata_column"]
+lines = [
+  "Show the previous enabled file detail beside filenames",
+]
+
+["palette.view.refresh"]
+lines = [
+  "Read the current folder again to update its listing",
+]
+
+["palette.view.sort_by_metadata"]
+lines = [
+  "Switch between name order and sorting by the displayed file detail",
+]
+
+["palette.view.toggle_metadata_column"]
+lines = [
+  "Hide the file-detail column or restore the last one shown",
+]
+
+["palette.view.toggle_parent_entry"]
+lines = [
+  "Show or hide the .. entry for navigating to the parent folder",
+]
+
+["palette.view.toggle_protected_system_files"]
+lines = [
+  "Show or hide entries with both hidden and system attributes",
+]

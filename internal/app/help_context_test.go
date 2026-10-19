@@ -28,7 +28,7 @@ func TestHelpFollowsPaletteWidgetAndFocusedControl(t *testing.T) {
 	wantHelp("browsing.introduction")
 	height := aboveHelpFooter(v, f32.Point{}).Y
 	send(pressed("`"))
-	wantHelp("palette")
+	wantHelp("palette.file.edit")
 	send(replacePalette(v, "@no such setting"))
 	wantHelp("palette.settings")
 	send(replacePalette(v, "@generator"))

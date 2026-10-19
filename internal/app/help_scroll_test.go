@@ -82,7 +82,7 @@ func TestHelpMarqueeResetsOnResizeFontBindingAndVisibility(t *testing.T) {
 
 func TestHelpMarqueeOnlyOverflowingLinesMoveAndContextResets(t *testing.T) {
 	v := newPreviewView()
-	v.startPalette(layout.Context{})
+	v.openPaletteQuery(layout.Context{}, "no such command")
 	var ops op.Ops
 	start := time.Unix(1000, 0)
 	gtx := layout.Context{Ops: &ops, Now: start, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1},

@@ -12,7 +12,7 @@ import (
 // Add an area here when its catalogue is complete. All future additions in that
 // area then need their own help to pass ordinary tests and CI. Until then, use
 // op help-audit [AREA] as the red/green writing queue; fallbacks never count.
-var completedHelpAreas = []string{"foundation", "settings", "palette.settings"}
+var completedHelpAreas = []string{"foundation", "settings", "palette.settings", "palette.commands"}
 
 type helpRequirement struct{ area, id string }
 
@@ -128,7 +128,7 @@ func TestHelpCoverageDetectsCatalogueAdditionsWithoutFallbacks(t *testing.T) {
 		t.Fatal("adding the missing entry did not turn coverage green", missing)
 	}
 	missing, total = missingHelp(requirements, defaultHelp, "palette.commands")
-	if total != 2 || len(missing) != 2 {
+	if total != 2 || len(missing) != 1 || missing[0].id != "palette.new.command" {
 		t.Fatal("new command was missed or numbered panels required duplicate help", missing, total)
 	}
 	for _, area := range []string{"found", "settings.appearance.theme.generato"} {
