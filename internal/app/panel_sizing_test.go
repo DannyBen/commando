@@ -4,13 +4,20 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"slices"
 	"testing"
 
 	"gioui.org/io/key"
+	"github.com/dannyben/commando/internal/settings"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 func TestPanelSizingInputAndLimits(t *testing.T) {
 	v := newPreviewView()
+	recorder := &recordedSounds{}
+	v.sounds = recorder
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: 4})
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundVolume, settings.Value{Number: 73})
 	send, _ := panelInputFrames(v)
 	selected, marks, position := v.panels[0].selected, v.panels[0].marks, v.panels[0].list.Position
 	for _, tc := range []struct {
@@ -18,19 +25,22 @@ func TestPanelSizingInputAndLimits(t *testing.T) {
 		mods key.Modifiers
 		text string
 		want float64
+		cue  sound.Name
 	}{
-		{"+", key.ModShift, "+", 1.2}, // Main keyboard: symbol key plus text.
-		{"+", 0, "=", 1.5},            // Windows reports OEM_PLUS even without Shift.
-		{"+", 0, "+", 2},              // Numpad.
-		{"+", 0, "+", 2},
-		{"-", 0, "-", 1.5},
-		{"-", 0, "-", 1.2},
-		{"0", key.ModCtrl, "", 1},
-		{"-", 0, "-", 0.8},
-		{"-", 0, "-", 0.6},
-		{"-", 0, "-", 0.6},
-		{"0", key.ModCtrl, "", 1},
+		{"+", key.ModShift, "+", 1.2, sound.PanelSize12}, // Main keyboard: symbol key plus text.
+		{"+", 0, "=", 1.5, sound.PanelSize15},            // Windows reports OEM_PLUS even without Shift.
+		{"+", 0, "+", 2, sound.PanelSize20},              // Numpad.
+		{"+", 0, "+", 2, ""},
+		{"-", 0, "-", 1.5, sound.PanelSize15},
+		{"-", 0, "-", 1.2, sound.PanelSize12},
+		{"0", key.ModCtrl, "", 1, sound.PanelSize10},
+		{"-", 0, "-", 0.8, sound.PanelSize08},
+		{"-", 0, "-", 0.6, sound.PanelSize06},
+		{"-", 0, "-", 0.6, ""},
+		{"0", key.ModCtrl, "", 1, sound.PanelSize10},
+		{"0", key.ModCtrl, "", 1, ""},
 	} {
+		recorder.played, recorder.volumes = nil, nil
 		send(modified(tc.name, tc.mods))
 		if tc.text != "" {
 			send(key.EditEvent{Text: tc.text})
@@ -38,6 +48,13 @@ func TestPanelSizingInputAndLimits(t *testing.T) {
 		send(key.Event{Name: tc.name, Modifiers: tc.mods, State: key.Release})
 		if v.panels[0].sizeRatio != tc.want || v.panels[0].prefix != "" || v.panels[1].sizeRatio != 1 {
 			t.Fatalf("%s/%q: ratios %g/%g, want %g/1", tc.name, tc.text, v.panels[0].sizeRatio, v.panels[1].sizeRatio, tc.want)
+		}
+		if tc.cue == "" {
+			if len(recorder.played) != 0 {
+				t.Fatal("unchanged size played a cue", recorder.played)
+			}
+		} else if !slices.Equal(recorder.played, []sound.Name{tc.cue}) || !slices.Equal(recorder.volumes, []float64{73}) {
+			t.Fatalf("size %g played %v at %v, want %s once at master volume", tc.want, recorder.played, recorder.volumes, tc.cue)
 		}
 	}
 	if v.panels[0].selected != selected || !reflect.DeepEqual(v.panels[0].marks, marks) || v.panels[0].list.Position != position {
@@ -47,6 +64,60 @@ func TestPanelSizingInputAndLimits(t *testing.T) {
 	send(pressed("="), key.EditEvent{Text: "="})
 	if v.panels[0].sizeRatio != 1.2 {
 		t.Fatal("equals did not increase exactly once")
+	}
+}
+
+func TestPanelResizeSoundUsesSharedProfileAndMutePolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		profile float64
+		enabled bool
+		volume  float64
+		audible bool
+	}{
+		{"notifications", 3, true, 50, false},
+		{"all except navigation", 4, true, 50, true},
+		{"all", sound.All, true, 50, true},
+		{"disabled", 4, false, 50, false},
+		{"zero volume", 4, true, 0, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := newPreviewView()
+			recorder := &recordedSounds{}
+			v.sounds = recorder
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: tc.profile})
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundEnabled, settings.Value{Bool: tc.enabled})
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundVolume, settings.Value{Number: tc.volume})
+			v.resizePanel(1)
+			wantCount := 0
+			if tc.audible {
+				wantCount = 1
+			}
+			if v.panels[0].sizeRatio != 1.2 || len(recorder.played) != wantCount {
+				t.Fatal("resize bypassed shared sound policy", recorder.played)
+			}
+		})
+	}
+}
+
+func TestPanelResizePaletteResetPlaysNormalPitch(t *testing.T) {
+	v := newPreviewView()
+	v.panels[0].sizeRatio = 2
+	recorder := &recordedSounds{}
+	v.sounds = recorder
+	_ = v.settingsValues.Set(settings.CatalogueDefault, settingSoundProfile, settings.Value{Number: 4})
+	send, _ := panelInputFrames(v)
+	send(pressed("`"))
+	recorder.played = nil
+	send(key.EditEvent{Text: "Panel Reset size"}, pressed(key.NameReturn))
+	if !slices.Equal(recorder.played, []sound.Name{sound.PanelSize10}) || v.panels[0].sizeRatio != 1 {
+		t.Fatal("palette reset did not play normal pitch once", recorder.played)
+	}
+	recorder.played = nil
+	v.panels[0].loading = true
+	v.resizePanel(1)
+	if len(recorder.played) != 0 {
+		t.Fatal("rejected resize played a cue")
 	}
 }
 

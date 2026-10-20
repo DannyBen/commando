@@ -23,11 +23,15 @@ func (v *view) resizePanel(direction int) {
 		return
 	}
 	p := &v.panels[v.active]
+	previous := panelSizeRatio(p.sizeRatio)
 	ratio := 1.0
 	if direction != 0 {
-		index := slices.Index(panelSizeSteps, panelSizeRatio(p.sizeRatio))
+		index := slices.Index(panelSizeSteps, previous)
 		ratio = panelSizeSteps[max(0, min(len(panelSizeSteps)-1, index+direction))]
 	}
 	p.sizeRatio = ratio
 	p.prefix = ""
+	if ratio != previous {
+		v.announcePanelResize(ratio)
+	}
 }

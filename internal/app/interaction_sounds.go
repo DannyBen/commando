@@ -57,3 +57,20 @@ func (v *view) announceInteraction(event interactionEvent) {
 		v.playSound(cue)
 	}
 }
+
+// Resize cues describe the resulting size, independently of the command's
+// direction. Resetting to normal has the same pitch as reaching it by steps.
+var panelSizeSounds = map[float64]sound.Name{
+	0.6: sound.PanelSize06,
+	0.8: sound.PanelSize08,
+	1:   sound.PanelSize10,
+	1.2: sound.PanelSize12,
+	1.5: sound.PanelSize15,
+	2:   sound.PanelSize20,
+}
+
+func (v *view) announcePanelResize(ratio float64) {
+	if cue := panelSizeSounds[ratio]; cue != "" {
+		v.playSound(cue)
+	}
+}

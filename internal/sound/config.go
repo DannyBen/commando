@@ -24,6 +24,12 @@ const (
 	MessageSuccess      Name = "messageSuccess"
 	MessageWarning      Name = "messageWarning"
 	MessageError        Name = "messageError"
+	PanelSize06         Name = "panelSize06"
+	PanelSize08         Name = "panelSize08"
+	PanelSize10         Name = "panelSize10"
+	PanelSize12         Name = "panelSize12"
+	PanelSize15         Name = "panelSize15"
+	PanelSize20         Name = "panelSize20"
 )
 
 // All is independent of cue levels, including levels added in the future.

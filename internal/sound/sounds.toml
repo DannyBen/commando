@@ -93,3 +93,46 @@ length_ms = 100
 spacing_ms = 85
 waveform = "square"
 volume = 24
+
+# Panel sizes 0.6, 0.8, 1, 1.2, 1.5 and 2: G3, A3, C4, D4, E4, G4.
+[sounds.panelSize06]
+level = 4
+notes = [196]
+length_ms = 45
+waveform = "triangle"
+volume = 28
+
+[sounds.panelSize08]
+level = 4
+notes = [220]
+length_ms = 45
+waveform = "triangle"
+volume = 28
+
+[sounds.panelSize10]
+level = 4
+notes = [261.63]
+length_ms = 45
+waveform = "triangle"
+volume = 28
+
+[sounds.panelSize12]
+level = 4
+notes = [293.66]
+length_ms = 45
+waveform = "triangle"
+volume = 28
+
+[sounds.panelSize15]
+level = 4
+notes = [329.63]
+length_ms = 45
+waveform = "triangle"
+volume = 28
+
+[sounds.panelSize20]
+level = 4
+notes = [392]
+length_ms = 45
+waveform = "triangle"
+volume = 28

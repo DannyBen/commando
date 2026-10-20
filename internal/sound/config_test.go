@@ -56,3 +56,20 @@ func TestMasterVolumeScalesWithoutMutatingCachedAudio(t *testing.T) {
 		}
 	}
 }
+
+func TestPanelSizeCuesRiseFromG3ThroughNormalC4ToG4(t *testing.T) {
+	previous := 0.0
+	for _, name := range []Name{PanelSize06, PanelSize08, PanelSize10, PanelSize12, PanelSize15, PanelSize20} {
+		cue := cues[name]
+		if len(cue.Notes) != 1 || cue.Notes[0] <= previous {
+			t.Fatalf("size cue %s is not a single rising pitch", name)
+		}
+		previous = cue.Notes[0]
+		if cue.Level != 4 || cue.LengthMS != 45 || cue.Volume != 28 || cue.Waveform != Triangle {
+			t.Fatalf("size cue %s does not use the agreed sound profile", name)
+		}
+	}
+	if math.Abs(cues[PanelSize10].Notes[0]-261.6256) > 0.01 {
+		t.Fatal("normal size is not C4")
+	}
+}
