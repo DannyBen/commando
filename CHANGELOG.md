@@ -1,6 +1,15 @@
 Changelog
 ========================================
 
+v0.6.3 - 2026-10-20
+----------------------------------------
+
+- Multi rename with expressions
+- Example inserter for multi-rename expression
+- Update multi rename examples
+- Fix footer premature ellipsis
+
+
 v0.6.2 - 2026-10-20
 ----------------------------------------
 
