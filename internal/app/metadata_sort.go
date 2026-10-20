@@ -11,6 +11,12 @@ import (
 // Metadata sorting is a panel preference. The complete cache retains its
 // natural-name order; visible projections and inserted rows use this comparator.
 func (p *panel) compareEntries(a, b browser.Entry) int {
+	if p.drives && a.Favorite != b.Favorite {
+		if a.Favorite {
+			return -1
+		}
+		return 1
+	}
 	if !p.sortByMetadata || p.metadata == metadataNone || p.drives ||
 		a.Parent || b.Parent || a.Directory != b.Directory {
 		return browser.CompareEntries(a, b)

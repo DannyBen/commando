@@ -92,7 +92,7 @@ func TestFavoriteNamingCancelSaveOpenAndReveal(t *testing.T) {
 	if v.paletteInteraction() == nil {
 		t.Fatalf("palette did not open after Home cancellation: owner=%T", v.interaction.current)
 	}
-	send(replacePalette(v, "Folder Favorite"), pressed(key.NameReturn))
+	send(replacePalette(v, "Location Favorite"), pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	send()
 	if n := v.nameInteraction(); n == nil || n.kind != nameFavorite {
@@ -171,6 +171,11 @@ func TestFavoritesReviewPreview(t *testing.T) {
 	s := &favoriteSession{panel: 1, target: `C:\Work\Projects`, previous: v.panels[1]}
 	v.beginName(layout.Context{}, &nameSession{kind: nameFavorite, panel: 1, row: 2, favorite: s}, "Commando", true)
 	if err := renderSizedViewPNG(filepath.Join(dir, "favorites-name.png"), v, image.Pt(800, 480)); err != nil {
+		t.Fatal(err)
+	}
+	v.interaction.finish(v.nameInteraction())
+	v.startName(layout.Context{}, nameRename)
+	if err := renderSizedViewPNG(filepath.Join(dir, "favorites-rename.png"), v, image.Pt(800, 480)); err != nil {
 		t.Fatal(err)
 	}
 }

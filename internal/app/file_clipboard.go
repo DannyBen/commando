@@ -17,9 +17,12 @@ func (v *view) copySelectedPaths(gtx layout.Context) {
 	}
 	p := &v.panels[v.active]
 	names := p.selectedNames()
-	paths := make([]string, len(names))
-	for i, name := range names {
-		paths[i] = p.location().Child(name).String()
+	paths := p.selectedPaths()
+	if p.archiveFolder != "" {
+		paths = make([]string, len(names))
+		for i, name := range names {
+			paths[i] = p.location().Child(name).String()
+		}
 	}
 	gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(strings.Join(paths, "\n")))})
 	message := "Path copied"
@@ -73,6 +76,11 @@ func (v *view) clipboardSelected(move bool) {
 		archive = &archiveSelection{location: p.location(), names: p.selectedNames()}
 	}
 	locations := v.fileOperationLocations()
+	for i := range v.panels {
+		if v.panels[i].drives {
+			locations[i] = v.favoritesDirectory()
+		}
+	}
 	if archive != nil {
 		for i, panel := range v.panels {
 			if !panel.drives {
@@ -81,7 +89,7 @@ func (v *view) clipboardSelected(move bool) {
 		}
 	}
 	p.loading, p.prefix = true, ""
-	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, action: actionClipboard, clipboard: &fileClipboardRequest{paths: paths, archive: archive, move: move, locations: locations}}) {
+	if !v.loader.submit(loadRequest{panel: v.active, path: v.entryDirectory(v.active), action: actionClipboard, clipboard: &fileClipboardRequest{paths: paths, archive: archive, move: move, locations: locations}}) {
 		p.loading = false
 	}
 }

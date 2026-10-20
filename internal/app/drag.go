@@ -1,7 +1,6 @@
 package app
 
 import (
-	"path/filepath"
 	"time"
 
 	"gioui.org/layout"
@@ -19,7 +18,7 @@ func (v *view) startDrag(gtx layout.Context, index, row int, armed bool) {
 	p := &v.panels[index]
 	paths := p.selectedPaths()
 	if !armed && !p.marks[row] {
-		paths = []string{filepath.Join(p.path, p.items[row].file.Name)}
+		paths = []string{p.entryPath(row)}
 	}
 	s := &nativeSession{panel: index, request: shellRequest{action: shellDrag, armed: armed, paths: paths, queued: time.Now()}}
 	if !v.startInteraction(s) {

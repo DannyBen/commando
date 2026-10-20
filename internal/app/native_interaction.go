@@ -111,9 +111,7 @@ func (v *view) completeNative(completion shellCompletion) bool {
 		// Shell verbs and extensions can change any open folder. Quiet reads
 		// retain marks, identity, filtering and viewport through normal refresh.
 		for i := range v.panels {
-			if !v.panels[i].drives {
-				v.panels[i].refreshNeeded = true
-			}
+			v.panels[i].refreshNeeded = true
 		}
 	}
 	return true
@@ -141,6 +139,9 @@ func (v *view) nativeItemsAvailable(index, row int, mouse bool, action shellActi
 	}
 	p := &v.panels[index]
 	if p.drives {
+		if mouse && p.markable(row) || !mouse && len(p.selectedPaths()) > 0 {
+			return true
+		}
 		return action == shellProperties && row >= 0 && row < len(p.items) && p.items[row].file.Path != ""
 	}
 	if p.path == "" || !p.nativeFolder() {

@@ -1,8 +1,6 @@
 package app
 
 import (
-	"path/filepath"
-
 	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
@@ -17,13 +15,14 @@ type duplicateRequest struct {
 }
 
 func (p *panel) selectedPaths() []string {
-	if !p.nativeFolder() {
+	if !p.nativeFolder() && !p.drives {
 		return nil
 	}
-	names := p.selectedNames()
-	paths := make([]string, 0, len(names))
-	for _, name := range names {
-		paths = append(paths, filepath.Join(p.path, name))
+	paths := make([]string, 0)
+	for row := range p.items {
+		if p.markable(row) && (len(p.marks) > 0 && p.marks[row] || len(p.marks) == 0 && row == p.selected) {
+			paths = append(paths, p.entryPath(row))
+		}
 	}
 	return paths
 }

@@ -127,10 +127,10 @@ func (v *view) submitPanelTransfer(target, resultPanel int, snapshot browser.Fil
 
 func panelSourceReady(v *view, move bool) bool {
 	p := &v.panels[v.active]
-	if !folderReady(v) || v.loader == nil || !v.actionAllowed(actionMutation) || len(p.selectedNames()) == 0 {
+	if !panelReady(v) || v.loader == nil || !v.actionAllowed(actionMutation) || len(p.selectedNames()) == 0 {
 		return false
 	}
-	if p.nativeFolder() {
+	if p.nativeFolder() || p.drives {
 		return true
 	}
 	return p.location().Capabilities().Read && (!move || p.location().Capabilities().Delete)

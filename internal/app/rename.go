@@ -22,6 +22,12 @@ func (v *view) applyRename(result loadResult, oldName, newName string) {
 	oldPath, newPath := filepath.Join(result.mutationDirectory, oldName), filepath.Join(result.mutationDirectory, newName)
 	for pi := range v.panels {
 		p := &v.panels[pi]
+		if p.drives {
+			if samePath(result.request.path, v.favoritesDirectory()) {
+				p.renameEntry(oldName, newName)
+			}
+			continue
+		}
 		if !v.nameResultApplies(result, pi) {
 			continue
 		}
@@ -48,9 +54,16 @@ func (p *panel) renameEntry(oldName, newName string) {
 	for i := range p.entries {
 		if p.entries[i].Name == oldName {
 			p.entries[i].Name = newName
+			if p.entries[i].Favorite {
+				p.entries[i].Path = filepath.Join(filepath.Dir(p.entries[i].Path), newName)
+			}
 		}
 	}
-	slices.SortFunc(p.entries, browser.CompareEntries)
+	if p.drives {
+		slices.SortFunc(p.entries, p.compareEntries)
+	} else {
+		slices.SortFunc(p.entries, browser.CompareEntries)
+	}
 	firstName := ""
 	if first := p.list.Position.First; first >= 0 && first < len(p.items) {
 		firstName = p.items[first].name
@@ -73,6 +86,9 @@ func (p *panel) renameEntry(oldName, newName string) {
 	for i := range p.items {
 		if p.items[i].file.Name == oldName {
 			p.items[i].name, p.items[i].file.Name = newName, newName
+			if p.items[i].file.Favorite {
+				p.items[i].file.Path = filepath.Join(filepath.Dir(p.items[i].file.Path), newName)
+			}
 		}
 	}
 	if selectedName == oldName {

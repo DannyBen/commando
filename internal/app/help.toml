@@ -1114,7 +1114,7 @@ lines = [
   "Show favorite folders and available drives on Home",
 ]
 
-["palette.folder.favorite"]
+["palette.location.favorite"]
 lines = [
   "Favorite the current folder, or reveal its existing favorite on Home.",
   "Choose a name on Home; [key:navigation.drives] returns to Home later.",

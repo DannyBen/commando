@@ -43,7 +43,7 @@ func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 	if p.archiveFolder != "" {
 		request.archiveLocations = v.archiveOperationLocations()
 	}
-	panel, path := v.active, p.path
+	panel, path := v.active, v.entryDirectory(v.active)
 	submit := func(layout.Context) { v.submitRemoval(panel, path, request) }
 	guard := v.removalGuard(permanent, len(names), hasDirectory)
 	if guard == guardOff {
@@ -70,7 +70,7 @@ func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 
 func (v *view) submitRemoval(panel int, path string, request *removalRequest) {
 	// The confirmation owns the captured sources; browsing never retargets it.
-	if !v.interaction.idle() || panel >= len(v.panels) || !samePath(v.panels[panel].path, path) || v.panels[panel].archiveFolder != request.archiveFolder || !v.actionAllowed(actionMutation) {
+	if !v.interaction.idle() || panel >= len(v.panels) || !samePath(v.entryDirectory(panel), path) || v.panels[panel].archiveFolder != request.archiveFolder || !v.actionAllowed(actionMutation) {
 		return
 	}
 	p := &v.panels[panel]
@@ -96,6 +96,9 @@ func (v *view) acceptRemoval(result loadResult) {
 		for pi := range v.panels {
 			other := &v.panels[pi]
 			if other.drives {
+				if samePath(result.request.path, v.favoritesDirectory()) {
+					other.removeEntries(result.removed.Names)
+				}
 				continue
 			}
 			matches := samePath(other.path, result.request.path)

@@ -10,7 +10,7 @@ type selectionRange struct {
 }
 
 func (p *panel) markable(row int) bool {
-	return !p.drives && row >= 0 && row < len(p.items) &&
+	return row >= 0 && row < len(p.items) && (!p.drives || p.items[row].file.Favorite) &&
 		!p.items[row].file.Parent && p.items[row].name != ".."
 }
 

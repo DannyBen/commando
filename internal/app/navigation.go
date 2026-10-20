@@ -114,6 +114,9 @@ func (v *view) acceptLoad(result loadResult) {
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
 	}
+	if result.request.rename != nil || result.request.removal != nil || result.request.transfer != nil || result.request.duplicate != nil {
+		v.refreshHomePanels()
+	}
 	if result.request.homeDirectory != "" && result.err == nil {
 		v.rememberFavorites(result.directory)
 	}
@@ -208,8 +211,14 @@ func (v *view) acceptLoad(result loadResult) {
 	if !p.sameLocation(result.directory) {
 		p.refreshNeeded = false
 	}
-	if result.request.refresh && v.monitor != nil && !result.directory.Drives && result.directory.ArchiveFolder == "" {
-		v.monitor.retry(result.directory.Path)
+	if result.request.refresh && v.monitor != nil && result.directory.ArchiveFolder == "" {
+		path := result.directory.Path
+		if result.directory.Drives {
+			path = result.request.homeDirectory
+		}
+		if path != "" {
+			v.monitor.retry(path)
+		}
 	}
 	previousRow := p.selected
 	var previousItem browser.Entry

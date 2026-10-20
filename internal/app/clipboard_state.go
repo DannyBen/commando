@@ -41,11 +41,11 @@ func (v *view) cutEntry(panel, row int) bool {
 		}
 		return p.archiveFolder == reference.Location.Folder && samePath(source, reference.Location.Path) && slices.Contains(reference.Names, p.items[row].file.Name)
 	}
-	if !p.nativeFolder() {
+	if !p.nativeFolder() && !p.drives {
 		return false
 	}
-	path := p.path
-	if panel < len(v.cutPanelPaths) && samePath(p.path, v.cutPanelPaths[panel]) && panel < len(v.cutLocations) && v.cutLocations[panel] != "" {
+	path := v.entryDirectory(panel)
+	if panel < len(v.cutPanelPaths) && samePath(path, v.cutPanelPaths[panel]) && panel < len(v.cutLocations) && v.cutLocations[panel] != "" {
 		path = v.cutLocations[panel]
 	}
 	path = filepath.Join(path, p.items[row].file.Name)

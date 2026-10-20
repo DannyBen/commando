@@ -67,7 +67,7 @@ func defaultCommands() []command {
 		cmd("file.edit", "File", "Edit", key.NameF4, 0, editorReady),
 		cmd("entry.open", "Entry", "Open", key.NameReturn, 0, openReady),
 		cmd("entry.rename", "Entry", "Rename…", key.NameF2, 0, func(v *view) bool {
-			return selectedReady(v) && v.panels[v.active].location().Capabilities().Rename && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)
+			return selectedReady(v) && (v.panels[v.active].favoriteSelected() || !v.panels[v.active].drives && v.panels[v.active].location().Capabilities().Rename) && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)
 		}),
 		cmd("entry.copy", "Entry", "Copy", "C", key.ModCtrl, copyReady),
 		cmd("entry.copy_paths", "Entry", "Copy paths", "C", key.ModCtrl|key.ModShift, textClipboardReady),
@@ -102,7 +102,7 @@ func defaultCommands() []command {
 
 		cmd("entry.arm_drag", "Entry", "Arm drag", "D", key.ModCtrl|key.ModShift, func(v *view) bool { return v.dragAvailable(v.active, v.panels[v.active].selected, true) }),
 
-		cmd("folder.favorite", "Folder", "Favorite…", "B", key.ModCtrl, favoriteReady),
+		cmd("location.favorite", "Location", "Favorite…", "B", key.ModCtrl, favoriteReady),
 		cmd("navigation.parent_folder", "Navigation", "Parent folder", key.NameDeleteBackward, 0, func(v *view) bool { return folderReady(v) && v.loader != nil }),
 		cmd("navigation.drives", "Navigation", "Home", key.NameHome, key.ModCtrl, func(v *view) bool { return folderReady(v) && v.loader != nil }),
 		cmd("navigation.edit_location", "Navigation", "Edit location…", "D", key.ModAlt, nil),
@@ -304,11 +304,11 @@ func selectedMutationReady(v *view) bool {
 
 func clipboardReady(v *view) bool {
 	p := &v.panels[v.active]
-	return folderReady(v) && v.loader != nil && v.actionAllowed(actionClipboard) && len(p.selectedNames()) > 0 && (p.nativeFolder() || p.location().Capabilities().Read && p.location().Capabilities().Delete)
+	return (folderReady(v) || panelReady(v) && p.drives) && v.loader != nil && v.actionAllowed(actionClipboard) && len(p.selectedNames()) > 0 && (p.nativeFolder() || p.drives || p.location().Capabilities().Read && p.location().Capabilities().Delete)
 }
 
 func textClipboardReady(v *view) bool {
-	return folderReady(v) && v.actionAllowed(actionClipboard) && len(v.panels[v.active].selectedNames()) > 0
+	return panelReady(v) && v.actionAllowed(actionClipboard) && len(v.panels[v.active].selectedNames()) > 0
 }
 
 func panelsCanSwap(v *view) bool {
@@ -331,7 +331,7 @@ func adjacentReady(v *view, direction int) bool {
 
 func removalReady(v *view) bool {
 	p := &v.panels[v.active]
-	return folderReady(v) && v.loader != nil && v.actionAllowed(actionMutation) && p.location().Capabilities().Delete && len(p.selectedNames()) > 0
+	return panelReady(v) && v.loader != nil && v.actionAllowed(actionMutation) && (p.drives || p.location().Capabilities().Delete) && len(p.selectedNames()) > 0
 }
 
 func copyReady(v *view) bool {

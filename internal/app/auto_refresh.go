@@ -23,6 +23,9 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 	if v.monitor != nil {
 		watched := v.fileOperationLocations()
 		for i, p := range v.panels {
+			if p.drives {
+				watched[i] = v.favoritesDirectory()
+			}
 			if p.archiveFolder != "" {
 				watched[i] = filepath.Dir(p.path)
 			}
@@ -37,23 +40,27 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 	for pi := range v.panels {
 		p := &v.panels[pi]
 		for _, path := range paths {
-			watched := p.path
+			watched := v.entryDirectory(pi)
 			if p.archiveFolder != "" {
 				watched = filepath.Dir(p.path)
 			}
-			if !p.drives && samePath(watched, path) {
+			if samePath(watched, path) {
 				p.refreshNeeded = true
 			}
 		}
-		if !p.refreshNeeded || p.drives || p.loading || p.refreshing ||
+		if !p.refreshNeeded || p.drives && v.favoritesDirectory() == "" || p.loading || p.refreshing ||
 			v.pendingNameDraft != nil && v.pendingNameDraft.request.panel == pi ||
 			v.interaction.protectsListing(pi) || !v.actionAllowed(actionMutation) {
 			continue
 		}
 		// This is a background read, not a mutation. Use a nonblocking enqueue so
 		// automatic work never holds the UI while the worker's queue is full.
+		request := loadRequest{panel: pi, path: p.path, archiveFolder: p.archiveFolder, autoRefresh: true, action: actionBrowse}
+		if p.drives {
+			request.path, request.homeDirectory = "", v.favoritesDirectory()
+		}
 		select {
-		case v.loader.requests <- loadRequest{panel: pi, path: p.path, archiveFolder: p.archiveFolder, autoRefresh: true, action: actionBrowse}:
+		case v.loader.requests <- request:
 			p.refreshing, p.refreshNeeded = true, false
 		default:
 		}
@@ -63,7 +70,8 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 func (v *view) acceptAutoRefresh(result loadResult) {
 	p := &v.panels[result.request.panel]
 	p.refreshing = false
-	if p.drives || !samePath(p.path, result.request.path) || p.archiveFolder != result.request.archiveFolder {
+	home := result.request.homeDirectory != ""
+	if p.drives != home || !home && (!samePath(p.path, result.request.path) || p.archiveFolder != result.request.archiveFolder) {
 		return // Navigation or a confirmed folder move changed the location.
 	}
 	if p.loading || v.interaction.protectsListing(result.request.panel) || !v.actionAllowed(actionMutation) {

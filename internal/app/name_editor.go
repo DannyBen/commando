@@ -4,6 +4,7 @@ import (
 	"errors"
 	"image/color"
 	"path/filepath"
+	"strings"
 	"unicode/utf8"
 
 	"gioui.org/io/key"
@@ -33,6 +34,7 @@ type nameSession struct {
 	kind              nameOperation
 	panel, row        int
 	path, oldName     string
+	shortcutExtension string
 	archiveFolder     string
 	pending, finished bool
 	focused           bool
@@ -67,7 +69,7 @@ func (n *nameSession) draft() bool { return n.kind != nameRename && !n.finished 
 
 func (v *view) startName(gtx layout.Context, kind nameOperation) {
 	p := &v.panels[v.active]
-	supported := p.nativeFolder()
+	supported := p.nativeFolder() || kind == nameRename && p.favoriteSelected()
 	if p.archiveFolder != "" {
 		capabilities := p.location().Capabilities()
 		switch kind {
@@ -80,7 +82,7 @@ func (v *view) startName(gtx layout.Context, kind nameOperation) {
 	if p.loading || !supported || !v.interaction.idle() || !v.actionAllowed(actionMutation) {
 		return
 	}
-	r := &nameSession{kind: kind, panel: v.active, path: p.path, archiveFolder: p.archiveFolder, row: p.selected,
+	r := &nameSession{kind: kind, panel: v.active, path: v.entryDirectory(v.active), archiveFolder: p.archiveFolder, row: p.selected,
 		previousPosition: p.list.Position, previousReveal: p.reveal}
 	if kind == nameRename {
 		if !p.markable(p.selected) || p.items[p.selected].file.Name == "" {
@@ -88,6 +90,9 @@ func (v *view) startName(gtx layout.Context, kind nameOperation) {
 		}
 		item := p.items[p.selected].file
 		r.oldName = item.Name
+		if item.Favorite {
+			r.shortcutExtension = filepath.Ext(item.Name)
+		}
 		r.folder = item.Directory
 		p.markRange = nil
 	} else {
@@ -97,7 +102,7 @@ func (v *view) startName(gtx layout.Context, kind nameOperation) {
 		// Keep the draft next to the current row until successful creation.
 		r.row = max(0, min(p.selected+1, len(p.items)))
 	}
-	v.beginName(gtx, r, r.oldName, r.folder)
+	v.beginName(gtx, r, strings.TrimSuffix(r.oldName, r.shortcutExtension), r.folder || r.shortcutExtension != "")
 }
 
 func (v *view) beginName(gtx layout.Context, r *nameSession, name string, folder bool) {
@@ -192,7 +197,7 @@ func (v *view) updateName(gtx layout.Context) {
 			if r.pending {
 				continue
 			}
-			if r.kind == nameRename && e.Text == r.oldName {
+			if r.kind == nameRename && e.Text+r.shortcutExtension == r.oldName {
 				v.stopName(gtx)
 				return
 			}
@@ -225,7 +230,7 @@ func (v *view) updateName(gtx layout.Context) {
 				request.unpack = &unpackRequest{archive: r.unpackArchive, name: name}
 				progress = "Extracting ZIP"
 			} else if r.kind == nameRename {
-				request.rename = &renameRequest{oldName: r.oldName, newName: e.Text}
+				request.rename = &renameRequest{oldName: r.oldName, newName: name + r.shortcutExtension}
 				if r.archiveFolder != "" {
 					request.rename.archiveLocations = v.archiveOperationLocations()
 				}

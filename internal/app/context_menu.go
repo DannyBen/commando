@@ -2,7 +2,6 @@ package app
 
 import (
 	"image"
-	"path/filepath"
 	"time"
 
 	"gioui.org/layout"
@@ -42,10 +41,10 @@ func (v *view) startItemShellAction(gtx layout.Context, index, row int, mouse bo
 	}
 	p := &v.panels[index]
 	paths := p.selectedPaths()
-	if p.drives {
+	if p.drives && !mouse && len(paths) == 0 {
 		paths = []string{p.items[row].file.Path}
 	} else if mouse {
-		paths = []string{filepath.Join(p.path, p.items[row].file.Name)}
+		paths = []string{p.entryPath(row)}
 	}
 	if len(paths) == 0 {
 		return

@@ -120,6 +120,10 @@ func (v *view) acceptFavoriteWrite(result loadResult) {
 		return
 	}
 	n.finished = true
+	if v.monitor != nil {
+		// The store may have been absent when Home first tried to watch it.
+		v.monitor.retry(v.favoritesDirectory())
+	}
 	if result.err != nil {
 		result.directory = browser.Directory{Drives: true, Entries: append(slices.Clone(v.panels[n.panel].entries), result.created)}
 	}
@@ -142,5 +146,33 @@ func (v *view) acceptFavoriteWrite(result loadResult) {
 		v.showFeedback(n.panel, feedback.Warning, "Added; refresh failed")
 	} else {
 		v.showFeedback(n.panel, feedback.Success, "Favorite added")
+	}
+}
+
+// Home keeps its previous browsing path. Entry actions use the shortcut store.
+func (v *view) entryDirectory(index int) string {
+	if v.panels[index].drives {
+		return v.favoritesDirectory()
+	}
+	return v.panels[index].path
+}
+
+func (p *panel) favoriteSelected() bool {
+	return p.drives && p.markable(p.selected) && p.items[p.selected].file.Favorite
+}
+
+func (p *panel) entryPath(row int) string {
+	file := p.items[row].file
+	if p.drives {
+		return file.Path
+	}
+	return filepath.Join(p.path, file.Name)
+}
+
+func (v *view) refreshHomePanels() {
+	for i := range v.panels {
+		if v.panels[i].drives {
+			v.panels[i].refreshNeeded = true
+		}
 	}
 }
