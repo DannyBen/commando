@@ -1,6 +1,8 @@
 package app
 
 import (
+	"unicode/utf8"
+
 	"gioui.org/io/key"
 	"gioui.org/layout"
 )
@@ -165,6 +167,16 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 	if v.interactionKey(gtx, ke) {
 		return
 	}
+	p := &v.panels[v.active]
+	if ke.Name == key.NameDeleteBackward && ke.Modifiers == 0 && p.prefix != "" && gtx.Now.Before(p.prefixAt.Add(prefixDelay)) {
+		_, size := utf8.DecodeLastRuneInString(p.prefix)
+		p.prefix = p.prefix[:len(p.prefix)-size]
+		p.prefixAt, p.markRange = gtx.Now, nil
+		if p.prefix != "" {
+			v.selectPrefix(false, 1)
+		}
+		return
+	}
 	for _, command := range v.shortcutCommands() {
 		if !command.matches(ke) {
 			continue
@@ -186,7 +198,6 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		return
 	}
 	// Plain arrows cycle prefix matches only while the typing state is active.
-	p := &v.panels[v.active]
 	if ke.Modifiers == 0 && p.prefix != "" && gtx.Now.Before(p.prefixAt.Add(prefixDelay)) && (ke.Name == key.NameUpArrow || ke.Name == key.NameDownArrow) {
 		direction := 1
 		if ke.Name == key.NameUpArrow {

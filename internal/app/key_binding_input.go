@@ -18,6 +18,7 @@ func (v *view) browsingKeyFilters() []event.Filter {
 		key.Filter{Focus: &v.focus, Name: key.NameEnter, Optional: key.ModCtrl},
 		key.Filter{Focus: &v.focus, Name: key.NameUpArrow, Optional: key.ModShift},
 		key.Filter{Focus: &v.focus, Name: key.NameDownArrow, Optional: key.ModShift},
+		key.Filter{Focus: &v.focus, Name: key.NameDeleteBackward},
 		key.Filter{Focus: &v.focus, Name: key.NameHome, Required: key.ModShift},
 		key.Filter{Focus: &v.focus, Name: key.NameEnd, Required: key.ModShift},
 	}

@@ -274,8 +274,8 @@ func TestTypeToSelect(t *testing.T) {
 		t.Fatal("Unicode prefix did not match case-insensitively")
 	}
 	send(pressed(key.NameDeleteBackward))
-	if v.panels[1].prefix != "" {
-		t.Fatal("Backspace did not clear the filename prefix")
+	if v.panels[1].prefix != "å" {
+		t.Fatal("Backspace did not shorten the filename prefix")
 	}
 	send(pressed(key.NameHome))
 	send(key.EditEvent{Text: ".."})
@@ -585,7 +585,7 @@ func TestFileOpeningFailureIsNonblockingAndReportsFixedFeedback(t *testing.T) {
 	}
 }
 
-func TestBackspaceGoesUpWithActivePrefix(t *testing.T) {
+func TestBackspaceEditsActivePrefixBeforeGoingUp(t *testing.T) {
 	root := t.TempDir()
 	child := filepath.Join(root, "child")
 	if err := os.Mkdir(child, 0700); err != nil {
@@ -597,23 +597,57 @@ func TestBackspaceGoesUpWithActivePrefix(t *testing.T) {
 	v := newBrowserView([]string{child}, nil)
 	defer v.loader.close()
 	waitLoaded(t, v, 0)
-	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "no"})
-	if v.panels[0].prefix != "no" {
+	send, advance := panelInputFrames(v)
+	send(key.EditEvent{Text: "noé"})
+	p := &v.panels[0]
+	if p.prefix != "noé" {
 		t.Fatal("prefix not active")
+	}
+	advance(800 * time.Millisecond)
+	send(pressed(key.NameDeleteBackward))
+	if p.prefix != "no" || p.path != child || p.loading || p.items[p.selected].file.Name != "note.txt" {
+		t.Fatal("Backspace did not remove the last Unicode character and select a match")
+	}
+	advance(400 * time.Millisecond) // Editing renews the typing deadline.
+	send(pressed(key.NameDeleteBackward))
+	if p.prefix != "n" || p.path != child || p.loading {
+		t.Fatal("Backspace did not renew the prefix timeout")
+	}
+	selected := p.selected
+	send(pressed(key.NameDeleteBackward))
+	if p.prefix != "" || p.path != child || p.loading || p.selected != selected {
+		t.Fatal("erasing the final character navigated or changed selection")
 	}
 	send(pressed(key.NameDeleteBackward))
 	waitLoaded(t, v, 0)
 	send()
-	p := &v.panels[0]
 	if p.path != root || p.prefix != "" || p.items[p.selected].file.Name != "child" {
-		t.Fatal("Backspace did not immediately go up and reselect the folder")
+		t.Fatal("Backspace with an empty prefix did not go up and reselect the folder")
 	}
 	// In the path editor, Backspace still deletes text instead of navigating.
 	send(key.Event{Name: "D", Modifiers: key.ModAlt, State: key.Press})
 	send(pressed(key.NameDeleteBackward))
 	if !v.locationEditing() || v.location.Text() != "" || p.path != root || p.loading {
 		t.Fatal("Backspace in the path editor navigated instead of editing text")
+	}
+}
+
+func TestBackspaceGoesUpAfterPrefixExpires(t *testing.T) {
+	root := t.TempDir()
+	child := filepath.Join(root, "child")
+	if err := os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	v := newBrowserView([]string{child}, nil)
+	defer v.loader.close()
+	waitLoaded(t, v, 0)
+	send, advance := panelInputFrames(v)
+	send(key.EditEvent{Text: "no"})
+	advance(prefixDelay)
+	send(pressed(key.NameDeleteBackward))
+	waitLoaded(t, v, 0)
+	if p := &v.panels[0]; p.path != root || p.prefix != "" || p.items[p.selected].file.Name != "child" {
+		t.Fatal("Backspace after the typing timeout did not go up and reselect the folder")
 	}
 }
 
