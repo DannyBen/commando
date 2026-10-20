@@ -102,8 +102,9 @@ func defaultCommands() []command {
 
 		cmd("entry.arm_drag", "Entry", "Arm drag", "D", key.ModCtrl|key.ModShift, func(v *view) bool { return v.dragAvailable(v.active, v.panels[v.active].selected, true) }),
 
+		cmd("folder.favorite", "Folder", "Favorite…", "B", key.ModCtrl, favoriteReady),
 		cmd("navigation.parent_folder", "Navigation", "Parent folder", key.NameDeleteBackward, 0, func(v *view) bool { return folderReady(v) && v.loader != nil }),
-		cmd("navigation.drives", "Navigation", "Drives", key.NameHome, key.ModCtrl, func(v *view) bool { return folderReady(v) && v.loader != nil }),
+		cmd("navigation.drives", "Navigation", "Home", key.NameHome, key.ModCtrl, func(v *view) bool { return folderReady(v) && v.loader != nil }),
 		cmd("navigation.edit_location", "Navigation", "Edit location…", "D", key.ModAlt, nil),
 		cmd("navigation.next_panel", "Navigation", "Next panel", key.NameTab, 0, nil),
 		cmd("navigation.previous_panel", "Navigation", "Previous panel", key.NameTab, key.ModShift, nil),

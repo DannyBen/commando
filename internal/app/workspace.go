@@ -71,6 +71,7 @@ type view struct {
 	appearance        Theme
 	theme             *material.Theme
 	panels            []panel
+	favorites         []browser.Entry
 	closedPanels      []closedPanel
 	active            int
 	focus             bool

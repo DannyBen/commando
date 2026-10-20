@@ -119,6 +119,23 @@ func copyDataFiles(source, destination string) error {
 	}
 	for _, entry := range entries {
 		name := entry.Name()
+		if name == "favorites" && entry.IsDir() {
+			favorites, err := os.ReadDir(filepath.Join(source, name))
+			if err != nil {
+				return err
+			}
+			if err := os.MkdirAll(filepath.Join(destination, name), 0700); err != nil {
+				return err
+			}
+			for _, favorite := range favorites {
+				if favorite.Type().IsRegular() && strings.EqualFold(filepath.Ext(favorite.Name()), ".lnk") {
+					if err := copyDataFile(filepath.Join(source, name, favorite.Name()), filepath.Join(destination, name, favorite.Name())); err != nil {
+						return err
+					}
+				}
+			}
+			continue
+		}
 		// Only application-owned data, never unrelated files or the bootstrap
 		// pointer. Register new persisted data here when adding another store.
 		managed := name == "settings.toml" || name == "state.json" || name == "shell-menu.jsonl" || name == "trace-log.jsonl" ||

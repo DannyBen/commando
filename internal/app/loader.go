@@ -16,6 +16,9 @@ import (
 type loadRequest struct {
 	panel            int
 	path, selectName string
+	homeDirectory    string
+	favoriteRead     *favoriteSession
+	favoriteWrite    *nameSession
 	archiveFolder    string
 	suggestedPath    string // Visible location completion captured at submission.
 	successMessage   string
@@ -92,6 +95,8 @@ type directoryLoader struct {
 	launchEditor          func(string, []string, string) error
 	launchTerminal        func(string, bool, uintptr) error
 	folderShortcutTarget  func(string) (string, error)
+	readFavorites         func(string) ([]browser.Entry, error)
+	createFavorite        func(string, string, string) (browser.Entry, error)
 	readFileIcon          func(string, int) image.Image
 	readFileTypeIcon      func(string, int, bool) image.Image
 	busy                  atomic.Int32
@@ -125,6 +130,8 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		launchEditor:          browser.LaunchEditor,
 		launchTerminal:        browser.LaunchTerminal,
 		folderShortcutTarget:  browser.FolderShortcutTarget,
+		readFavorites:         browser.ReadFavorites,
+		createFavorite:        browser.CreateFavorite,
 	}
 	go func() {
 		defer close(l.stopped)
@@ -147,6 +154,20 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				publish := func(result loadResult) {
 					diagnostics.Record(group, id, "WorkerCompleted", map[string]any{"kind": name, "error": diagnostics.Error(result.err), "duration_ms": time.Since(started).Seconds() * 1000, "entries": len(result.directory.Entries)})
 					l.results <- result
+				}
+				if request.homeDirectory != "" {
+					result := loadResult{request: request}
+					if request.favoriteWrite != nil {
+						result.created, result.err = l.createFavorite(request.homeDirectory, request.path, request.favoriteWrite.favorite.target)
+					}
+					if result.err == nil {
+						result.directory, result.err = l.readHome(request.homeDirectory)
+					}
+					publish(result)
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
 				}
 				if len(request.icons) > 0 {
 					icons := make([]image.Image, len(request.icons))

@@ -133,7 +133,7 @@ func (v *view) activeEditor() *widget.Editor {
 func (v *view) helpContextIDs() []string {
 	var ids []string
 	switch s := v.interaction.current.(type) {
-	case nil, *nativeSession:
+	case nil, *nativeSession, *favoriteSession:
 		ids = append(ids, "browsing.introduction")
 	case *settingsSession:
 		if s.pending {
@@ -191,6 +191,9 @@ func (v *view) helpContextIDs() []string {
 		ids = append(ids, "editing.location", "editing")
 	case *nameSession:
 		ids = append(ids, "editing.name", "editing")
+		if s.kind == nameFavorite {
+			ids = append([]string{"editing.favorite"}, ids...)
+		}
 	case *filterSession:
 		ids = append(ids, "editing.filter", "editing")
 	case *inlineActionSession:
@@ -222,6 +225,10 @@ func (v *view) focusInteraction(gtx layout.Context) {
 // A submitted name mutation must finish before its editor can be left.
 func (v *view) cancelInteraction(gtx layout.Context) bool {
 	switch s := v.interaction.current.(type) {
+	case *favoriteSession:
+		v.interaction.finish(s)
+		v.panels[s.panel] = s.previous
+		v.focusInteraction(gtx)
 	case *confirmationSession:
 		return false // Only its explicit buttons and Escape resolve a decision.
 	case *settingsSession:
@@ -312,6 +319,12 @@ func (v *view) escape(gtx layout.Context) {
 // Return true when a foreground session owns this key, even when the session
 // ignores it. Browsing shortcuts must not leak through an editor or choice.
 func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
+	if _, ok := v.interaction.current.(*favoriteSession); ok {
+		if ke.State == key.Press && ke.Name == key.NameEscape {
+			v.escape(gtx)
+		}
+		return true
+	}
 	if s := v.confirmationInteraction(); s != nil {
 		v.confirmationKey(gtx, s, ke)
 		return true

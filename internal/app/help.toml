@@ -1111,7 +1111,19 @@ lines = [
 
 ["palette.navigation.drives"]
 lines = [
-  "List available drives in the active panel",
+  "Show favorite folders and available drives on Home",
+]
+
+["palette.folder.favorite"]
+lines = [
+  "Favorite the current folder, or reveal its existing favorite on Home.",
+  "Choose a name on Home; [key:navigation.drives] returns to Home later.",
+]
+
+["editing.favorite"]
+lines = [
+  "Name this folder shortcut on Home.",
+  "Enter saves; Escape restores your previous folder.",
 ]
 
 ["palette.navigation.edit_location"]

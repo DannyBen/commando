@@ -21,6 +21,16 @@ var (
 // Run on the directory worker; COM and filesystem access stay off the UI thread.
 // https://learn.microsoft.com/en-us/windows/win32/shell/links
 func FolderShortcutTarget(path string) (string, error) {
+	return shortcutTarget(path, true)
+}
+
+// ShortcutTarget reads a saved link without resolving or probing its destination.
+// Home can list offline/network favorites without touching their target folders.
+func ShortcutTarget(path string) (string, error) {
+	return shortcutTarget(path, false)
+}
+
+func shortcutTarget(path string, resolve bool) (string, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if err := windows.CoInitializeEx(0, windows.COINIT_APARTMENTTHREADED|windows.COINIT_DISABLE_OLE1DDE); err != nil && err != syscall.Errno(1) {
@@ -50,8 +60,10 @@ func FolderShortcutTarget(path string) (string, error) {
 	}
 	// No dialogs, shortcut updates, recursive search, or distributed tracking.
 	const noUI, noUpdate, noSearch, noTrack = 0x0001, 0x0008, 0x0010, 0x0020
-	if err := shellHRESULT(link.call(19, 0, noUI|noUpdate|noSearch|noTrack)); err != nil {
-		return "", err
+	if resolve {
+		if err := shellHRESULT(link.call(19, 0, noUI|noUpdate|noSearch|noTrack)); err != nil {
+			return "", err
+		}
 	}
 	// A PIDL -> IShellItem path avoids GetPath's fixed MAX_PATH buffer.
 	var idList unsafe.Pointer
@@ -72,6 +84,9 @@ func FolderShortcutTarget(path string) (string, error) {
 	folder, err := shellItemPath(target)
 	if err != nil {
 		return "", nil
+	}
+	if !resolve {
+		return folder, nil
 	}
 	info, err := os.Stat(folder)
 	if err != nil {

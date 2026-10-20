@@ -72,6 +72,9 @@ func (m metadataColumn) heading() string {
 // Keep the complete name in the entry; only the browsing label omits an
 // extension that is already visible in the trailing metadata.
 func (m metadataColumn) displayName(item entry) string {
+	if item.file.Favorite {
+		return strings.TrimSuffix(item.name, filepath.Ext(item.name))
+	}
 	if m == metadataExtension {
 		if extension := m.value(item); extension != "" {
 			return strings.TrimSuffix(item.name, "."+extension)

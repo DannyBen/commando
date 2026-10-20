@@ -14,7 +14,7 @@ import (
 	"github.com/dannyben/commando/internal/feedback"
 )
 
-func newLocationView(locations []panelState, active int, invalidate func()) *view {
+func newLocationView(locations []panelState, active int, invalidate func(), dataFolder ...string) *view {
 	panels := make([]panel, len(locations))
 	for i, location := range locations {
 		panels[i].path, panels[i].drives, panels[i].selected = location.Path, location.Drives, -1
@@ -23,6 +23,9 @@ func newLocationView(locations []panelState, active int, invalidate func()) *vie
 		}
 	}
 	v := newView(panels)
+	if len(dataFolder) > 0 {
+		v.activeDataFolder = dataFolder[0]
+	}
 	if active >= 0 && active < len(panels) {
 		v.active = active
 	}
@@ -64,6 +67,9 @@ func (v *view) refreshPanel() {
 
 func (v *view) queueLoad(request loadRequest) {
 	request.action = actionBrowse
+	if request.path == "" {
+		request.homeDirectory = v.favoritesDirectory()
+	}
 	if v.interaction.protectsListing(request.panel) || v.pendingNameDraft != nil && v.pendingNameDraft.request.panel == request.panel {
 		return
 	}
@@ -107,6 +113,17 @@ func (v *view) acceptLoad(result loadResult) {
 	}
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
+	}
+	if result.request.homeDirectory != "" && result.err == nil {
+		v.rememberFavorites(result.directory)
+	}
+	if result.request.favoriteRead != nil {
+		v.acceptFavoriteRead(result)
+		return
+	}
+	if result.request.favoriteWrite != nil {
+		v.acceptFavoriteWrite(result)
+		return
 	}
 	if len(result.request.icons) > 0 {
 		v.acceptFileIcons(result)
@@ -284,6 +301,9 @@ func (v *view) activateSelected() {
 		}
 		if file.Name != "" {
 			path := filepath.Join(p.path, file.Name)
+			if file.Favorite {
+				path = file.Path
+			}
 			if browser.ArchiveFormat(path) != nil {
 				v.loadLocation(v.active, browser.Location{Path: path, Folder: "."}, "")
 			} else if strings.EqualFold(filepath.Ext(path), ".lnk") && v.loader != nil {
@@ -363,6 +383,15 @@ func (p *panel) status() (string, bool) {
 		return message.Text, message.Kind == feedback.Error
 	}
 	if p.drives {
+		favorites := 0
+		for _, item := range p.items {
+			if item.file.Favorite {
+				favorites++
+			}
+		}
+		if favorites > 0 {
+			return fmt.Sprintf("%d favorites · %d drives", favorites, len(p.items)-favorites), false
+		}
 		return fmt.Sprintf("%d drives", len(p.items)), false
 	}
 	if len(p.marks) > 0 {
@@ -387,7 +416,7 @@ func formatSize(bytes int64) string {
 
 func (p *panel) locationLabel() string {
 	if p.drives {
-		return "Drives"
+		return "Home"
 	}
 	return p.location().String()
 }

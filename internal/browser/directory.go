@@ -12,6 +12,8 @@ import (
 // .lnk shortcuts remain files; only activation resolves their folder target.
 type Entry struct {
 	Name, Path        string
+	Favorite          bool
+	Target            string // Resolved folder target of a favorite shortcut.
 	Directory, Parent bool
 	Hidden, System    bool // Windows attributes of this entry, independent of its name.
 	Bytes             int64

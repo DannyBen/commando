@@ -267,7 +267,7 @@ func TestDriveListNavigation(t *testing.T) {
 	send(pressed(key.NameDeleteBackward))
 	waitLoaded(t, v, 0)
 	send()
-	if !p.drives || p.locationLabel() != "Drives" || p.selected != 1 || p.items[1].name != "System" {
+	if !p.drives || p.locationLabel() != "Home" || p.selected != 1 || p.items[1].name != "System" {
 		t.Fatal("root Backspace did not show drives and retain the current drive selection")
 	}
 	if v.panels[1].drives || v.panels[1].path != root {
@@ -356,7 +356,7 @@ func TestGoToDrivesFromNestedFolder(t *testing.T) {
 			if route == "keyboard" {
 				send(modified(key.NameHome, key.ModCtrl))
 			} else {
-				send(pressed("`"), key.EditEvent{Text: "Navigation Drives"})
+				send(pressed("`"), key.EditEvent{Text: "Navigation Home"})
 				s := v.paletteInteraction()
 				if len(s.results) == 0 || s.results[0].command.id != "navigation.drives" {
 					t.Fatal("Drives command not found in palette")

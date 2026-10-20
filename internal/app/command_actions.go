@@ -5,6 +5,8 @@ import "gioui.org/layout"
 func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 	p := &v.panels[v.active]
 	switch id {
+	case "folder.favorite":
+		v.startFavorite(gtx)
 	case "file.edit":
 		v.editSelectedFiles()
 	case "programs.terminal_here", "programs.terminal_here_admin":

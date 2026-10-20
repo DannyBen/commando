@@ -32,7 +32,11 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
 					return v.filterContents(gtx, index)
 				}
-				return v.columns(gtx, entry{name: "NAME", size: p.metadata.heading()}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize, contrastSecondary, false)
+				heading := p.metadata.heading()
+				if p.drives {
+					heading = "TYPE"
+				}
+				return v.columns(gtx, entry{name: "NAME", size: heading}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize, contrastSecondary, false)
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -228,7 +232,14 @@ func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor 
 		return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.Y = 0
-				return v.columns(gtx, entry{name: mode.displayName(item), size: mode.value(item)}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata, item.file.Directory && !item.file.Parent && !drives)
+				metadata := mode.value(item)
+				if drives {
+					metadata = "Drive"
+					if item.file.Favorite {
+						metadata = "Favorite"
+					}
+				}
+				return v.columns(gtx, entry{name: mode.displayName(item), size: metadata}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata, item.file.Directory && !item.file.Parent && !drives)
 			})
 		})
 	})(gtx)

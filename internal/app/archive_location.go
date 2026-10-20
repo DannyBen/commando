@@ -42,6 +42,9 @@ func openReady(v *view) bool {
 // Adjacent-panel navigation and Enter use the same location transitions.
 func (p *panel) selectedLocation() (browser.Location, string) {
 	file := p.items[p.selected].file
+	if file.Favorite && file.Target != "" {
+		return browser.Location{Path: file.Target}, ""
+	}
 	if file.Parent {
 		return p.location().Parent()
 	}

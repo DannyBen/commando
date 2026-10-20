@@ -26,6 +26,35 @@ func dataFolderValues(t *testing.T, target string) settings.Values {
 	return values
 }
 
+func TestDataFolderCopiesFavoritesWithoutReplacingExistingLinks(t *testing.T) {
+	source, destination := t.TempDir(), t.TempDir()
+	for _, directory := range []string{source, destination} {
+		if err := os.Mkdir(filepath.Join(directory, "favorites"), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, content := range map[string]string{"Work.lnk": "source", "Projects.lnk": "project", "unrelated.txt": "skip"} {
+		if err := os.WriteFile(filepath.Join(source, "favorites", name), []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(destination, "favorites", "Work.lnk"), []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := copyDataFiles(source, destination); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{"Work.lnk": "keep", "Projects.lnk": "project"} {
+		data, err := os.ReadFile(filepath.Join(destination, "favorites", name))
+		if err != nil || string(data) != want {
+			t.Fatal("favorite relocation replaced or lost data", name, string(data), err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(destination, "favorites", "unrelated.txt")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("relocation copied unrelated favorite-store data")
+	}
+}
+
 func TestDataFolderCopyAndManualRestart(t *testing.T) {
 	for _, existing := range []bool{false, true} {
 		t.Run(map[bool]string{false: "empty", true: "existing"}[existing], func(t *testing.T) {

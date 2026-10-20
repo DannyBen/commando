@@ -25,6 +25,7 @@ const (
 	nameDuplicate
 	namePack
 	nameUnpack
+	nameFavorite
 )
 
 // One inline file-list editor handles existing names and temporary draft rows.
@@ -41,6 +42,7 @@ type nameSession struct {
 	packPaths         []string
 	unpackArchive     string
 	folder            bool
+	favorite          *favoriteSession
 	previousPosition  layout.Position
 	previousReveal    bool
 }
@@ -130,6 +132,9 @@ func (v *view) stopName(gtx layout.Context) {
 		p.rows = make(map[int]*fileRow)
 	}
 	v.interaction.finish(r)
+	if r.favorite != nil && !r.finished {
+		v.panels[r.panel] = r.favorite.previous
+	}
 	if r.kind == nameDuplicate {
 		v.transferPending = false
 		if !r.finished {
@@ -207,6 +212,14 @@ func (v *view) updateName(gtx layout.Context) {
 				continue
 			}
 			request := loadRequest{panel: r.panel, path: r.path, archiveFolder: r.archiveFolder, locations: v.fileOperationLocations()}
+			if r.kind == nameFavorite {
+				request := loadRequest{panel: r.panel, path: name, homeDirectory: r.path, favoriteWrite: r}
+				if v.loader.submit(request) {
+					r.err, r.pending, v.nameEditor.ReadOnly = nil, true, true
+					v.operationProgress(r.panel, "Creating favorite")
+				}
+				continue
+			}
 			progress := "Renaming"
 			if r.kind == nameUnpack {
 				request.unpack = &unpackRequest{archive: r.unpackArchive, name: name}
@@ -334,6 +347,9 @@ func (v *view) acceptName(result loadResult) {
 }
 
 func (n *nameSession) noun() string {
+	if n.kind == nameFavorite {
+		return "favorite"
+	}
 	if n.kind == nameCreateFolder || n.kind == nameUnpack || n.kind == nameDuplicate && n.folder {
 		return "folder"
 	}
@@ -386,6 +402,9 @@ func (v *view) nameContents(gtx layout.Context, metadata string, metaColor color
 		hint = "File name"
 		if v.nameInteraction().noun() == "folder" {
 			hint = "Folder name"
+		}
+		if v.nameInteraction().kind == nameFavorite {
+			hint = "Favorite name"
 		}
 	}
 	return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {

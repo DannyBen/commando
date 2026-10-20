@@ -27,6 +27,8 @@ func (v *view) applyTraceSettings() {
 
 func (r loadRequest) traceKind() (diagnostics.Mask, string) {
 	switch {
+	case r.favoriteWrite != nil:
+		return diagnostics.FileOperations, "favorite"
 	case r.unpack != nil:
 		return diagnostics.FileOperations, "unpack_zip"
 	case r.rename != nil:

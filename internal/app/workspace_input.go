@@ -24,6 +24,7 @@ func (v *view) update(gtx layout.Context) {
 		v.focusInteraction(gtx)
 		v.started = gtx.Focused(&v.focus) || v.activeEditor() != nil && gtx.Focused(v.activeEditor())
 	}
+panelInput:
 	for pi := range v.panels {
 		p := &v.panels[pi]
 		v.updateLocationBar(gtx, pi)
@@ -72,8 +73,15 @@ func (v *view) update(gtx layout.Context) {
 				if storedRow < 0 {
 					continue
 				}
+				favoriteNaming := v.nameInteraction() != nil && v.nameInteraction().kind == nameFavorite
 				if !v.cancelInteraction(gtx) {
 					continue
+				}
+				if favoriteNaming {
+					// Cancellation restored a different listing. Consume the Home
+					// click rather than interpreting its row in the source folder.
+					v.focusInteraction(gtx)
+					break panelInput
 				}
 				v.panels[v.active].prefix = ""
 				v.active = pi
