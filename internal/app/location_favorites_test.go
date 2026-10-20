@@ -2,12 +2,14 @@ package app
 
 import (
 	"errors"
+	"image"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 	"sync"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"gioui.org/io/event"
@@ -172,9 +174,30 @@ func TestFavoriteLocationEnterBeforeLookupFinishes(t *testing.T) {
 	gate := make(chan struct{})
 	release := sync.OnceFunc(func() { close(gate) })
 	defer release()
-	v.loader.readFavorites = func(directory string) ([]browser.Entry, error) { <-gate; return read(directory) }
+	lookupStarted := make(chan struct{})
+	startLookup := sync.OnceFunc(func() { close(lookupStarted) })
+	v.loader.readFavorites = func(directory string) ([]browser.Entry, error) { startLookup(); <-gate; return read(directory) }
+	// Emulate Windows' initial icon work on every platform. The completion
+	// lookup must be running, rather than queued behind that work, before Enter.
+	iconGate := make(chan struct{})
+	releaseIcons := sync.OnceFunc(func() { close(iconGate) })
+	defer releaseIcons()
+	iconStarted := make(chan struct{})
+	startIcon := sync.OnceFunc(func() { close(iconStarted) })
+	v.loader.readFileIcon = func(string, int) image.Image { startIcon(); <-iconGate; return nil }
 	send, _ := panelInputFrames(v)
+	select {
+	case <-iconStarted:
+	case <-time.After(3 * time.Second):
+		t.Fatal("initial icon work did not start")
+	}
 	send(modified("D", key.ModAlt))
+	releaseIcons()
+	select {
+	case <-lookupStarted:
+	case <-time.After(3 * time.Second):
+		t.Fatal("favorite lookup did not start")
+	}
 	editFavoriteLocation(v, send, "Desktop")
 	send(pressed(key.NameReturn))
 	if !v.panels[0].loading {

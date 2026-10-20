@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
@@ -124,9 +125,16 @@ func TestHomeFavoriteClipboardAndNativeActionsUseLinks(t *testing.T) {
 	p := &v.panels[0]
 	p.markAll()
 	want := []string{filepath.Join(v.favoritesDirectory(), "Alpha.lnk"), filepath.Join(v.favoritesDirectory(), "Work.lnk")}
+	// Clipboard capture resolves parent aliases, while native selection retains
+	// the displayed spelling. Windows TempDir can use an 8.3 user-directory name.
+	backing, err := resolveFileLocation(v.favoritesDirectory())
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantClipboard := []string{filepath.Join(backing, "Alpha.lnk"), filepath.Join(backing, "Work.lnk")}
 	v.loader.writeClipboard = func(paths []string, move bool) (browser.FileClipboard, error) {
-		if !slices.Equal(paths, want) {
-			t.Errorf("clipboard captured targets instead of links: %v", paths)
+		if !slices.EqualFunc(paths, wantClipboard, samePath) {
+			t.Errorf("clipboard captured %v, want shortcut paths %v", paths, wantClipboard)
 		}
 		return browser.FileClipboard{Paths: paths, Move: move}, nil
 	}
@@ -175,12 +183,13 @@ func TestHomeRefreshReconcilesExternalShortcutChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.refreshNeeded = true
-	send, _ := panelInputFrames(v)
-	send()
+	// Queue without rendering extra frames, which can already consume the
+	// completion and clear refreshing on a fast worker.
+	runAutomaticRefresh(v, time.Now())
 	if !p.refreshing {
 		t.Fatal("Home did not queue a quiet refresh")
 	}
-	v.acceptLoad(<-v.loader.results)
+	finishAutomaticRefresh(t, v)
 	if !p.drives || p.items[p.selected].file.Name != "Work.lnk" || !p.marks[p.selected] || len(v.favorites) != 3 || !slices.Contains(visibleNames(p), "New.lnk") {
 		t.Fatal("Home refresh lost selection or did not reload shortcuts", visibleNames(p))
 	}
