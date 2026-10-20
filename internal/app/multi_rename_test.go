@@ -46,11 +46,15 @@ func TestMultiRenamePreviewAndCancel(t *testing.T) {
 		t.Fatal("preview changed listing, marks, selection or order")
 	}
 	send(pressed(key.NameTab))
-	if s.focus != 1 || v.active != 0 {
+	if s.focus != renameFocusInsert {
+		t.Fatal("Tab did not focus the inserter")
+	}
+	send(pressed(key.NameTab))
+	if s.focus != renameFocusApply || v.active != 0 {
 		t.Fatal("Tab did not focus Apply")
 	}
 	send(pressed(key.NameTab))
-	if s.focus != 2 {
+	if s.focus != renameFocusCancel {
 		t.Fatal("Tab did not focus Cancel")
 	}
 	send(pressed(key.NameReturn))

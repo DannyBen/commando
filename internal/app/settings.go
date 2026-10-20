@@ -804,9 +804,10 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		key.FocusFilter{Target: &v.focus}, key.Filter{Focus: focus, Name: key.NameEscape},
 		key.Filter{Focus: focus, Name: key.NameReturn, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameEnter, Optional: key.ModCtrl},
 		key.Filter{Focus: focus, Name: key.NameTab, Optional: key.ModShift},
+		key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow},
 	}
 	if !s.editing {
-		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow}, key.Filter{Focus: focus, Name: key.NameLeftArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameRightArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameSpace})
+		filters = append(filters, key.Filter{Focus: focus, Name: key.NameLeftArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameRightArrow, Optional: key.ModCtrl}, key.Filter{Focus: focus, Name: key.NameSpace})
 		field := s.fields[s.selected]
 		if !s.actionsFocused {
 			numeric := field.Control == "stepper" || field.Control == "stepper-progress"
@@ -820,8 +821,6 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 		if s.fields[s.selected].Control == "shortcut" {
 			filters = append(filters, key.Filter{Focus: focus, Name: key.NameDeleteForward})
 		}
-	} else if s.completesField() {
-		filters = append(filters, key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: focus, Name: key.NameDownArrow})
 	}
 	var keys []key.Event
 	for {
@@ -889,6 +888,32 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 				continue
 			}
 		}
+		if direction := widgetRowDirection(ke); direction != 0 {
+			if s.deleted {
+				continue
+			}
+			row := s.selected
+			if s.actionsFocused {
+				row = len(s.fields)
+			}
+			next := widgetRowNext(row, len(s.fields)+1, direction)
+			if next == row {
+				continue
+			}
+			if s.editing && !v.applySettingDraft(gtx) {
+				return
+			}
+			s.actionsFocused = next == len(s.fields)
+			if s.actionsFocused {
+				s.action = 0
+			} else {
+				s.selected = next
+			}
+			s.errorText = ""
+			v.announceInteraction(eventSelectionChanged)
+			v.focusInteraction(gtx)
+			continue
+		}
 		if ke.Name == key.NameEscape {
 			v.escape(gtx)
 			return
@@ -947,12 +972,6 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 				s.action = max(0, s.action-1)
 			case key.NameRightArrow:
 				s.action = min(len(s.actionLabels())-1, s.action+1)
-			case key.NameUpArrow:
-				if s.deleted {
-					continue
-				}
-				s.actionsFocused = false
-				v.announceInteraction(eventSelectionChanged)
 			case key.NameSpace:
 				v.activateSettingsAction(gtx, s.action)
 				return
@@ -983,18 +1002,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			v.focusInteraction(gtx)
 			return
 		}
-		old := s.selected
 		switch ke.Name {
-		case key.NameUpArrow:
-			s.selected = max(0, s.selected-1)
-		case key.NameDownArrow:
-			if s.selected == len(s.fields)-1 {
-				s.actionsFocused = true
-				s.action = 0
-				v.announceInteraction(eventSelectionChanged)
-			} else {
-				s.selected++
-			}
 		case key.NameLeftArrow:
 			v.adjustSetting(s.fields[s.selected].Key, -1)
 		case key.NameRightArrow:
@@ -1003,10 +1011,6 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			if field.Control == "toggle" || field.Control == "choice" {
 				v.adjustSetting(s.fields[s.selected].Key, 0)
 			}
-		}
-		if old != s.selected {
-			s.errorText = ""
-			v.announceInteraction(eventSelectionChanged)
 		}
 	}
 }

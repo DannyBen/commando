@@ -1,18 +1,46 @@
 package app
 
 import (
+	"image"
 	"image/color"
 
 	"gioui.org/layout"
 	"gioui.org/text"
 )
 
+func (v *view) renameField(gtx layout.Context, height int, label string, content layout.Widget) layout.Dimensions {
+	return v.band(gtx, height, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
+		return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				width := min(gtx.Constraints.Max.X/3, v.textWidth(gtx, "Expression", v.appearance.TextSize)+gtx.Dp(8))
+				gtx.Constraints.Min.X, gtx.Constraints.Max.X = width, width
+				return v.label(gtx, label, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
+			}),
+			layout.Flexed(1, content),
+		)
+	}, false)
+}
+
+func (v *view) layoutRenameExamples(gtx layout.Context, s *multiRenameSession, height int) layout.Dimensions {
+	gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, height))
+	return s.exampleTarget.layout(gtx, true, func(gtx layout.Context) layout.Dimensions {
+		focused := s.focus == renameFocusInsert
+		return v.widgetValueContent(gtx, &s.exampleTarget, focused, height, func(gtx layout.Context) layout.Dimensions {
+			fg := v.appearance.Colors.Filename
+			if s.exampleTarget.state(gtx, focused).selectedAppearance() {
+				fg = v.appearance.Colors.SelectedName
+			}
+			return v.label(gtx, renameExamples[s.example].expression, v.appearance.TextSize, fg, text.Start)
+		})
+	})
+}
+
 func (v *view) layoutMultiRename(gtx layout.Context, s *multiRenameSession) layout.Dimensions {
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
 	smallHeight := v.textHeight(gtx, v.appearance.SmallTextSize)
 	rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
 	footerHeight := smallHeight + gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))
-	return s.surface.layout(gtx, footerHeight, gtx.Dp(v.appearance.SettingsWidth), 3*rowHeight+gtx.Dp(2)+footerHeight, v.appearance.Colors, func(gtx layout.Context) layout.Dimensions {
+	return s.surface.layout(gtx, footerHeight, gtx.Dp(v.appearance.SettingsWidth), 4*rowHeight+gtx.Dp(2)+footerHeight, v.appearance.Colors, func(gtx layout.Context) layout.Dimensions {
 		if s.pending {
 			gtx = gtx.Disabled()
 		}
@@ -23,35 +51,24 @@ func (v *view) layoutMultiRename(gtx layout.Context, s *multiRenameSession) layo
 				}, true)
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return v.band(gtx, rowHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
-					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							return v.label(gtx, "Expression  ", v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
-						}),
-						layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-							return v.textEditor(&s.editor, "<name>").Layout(gtx)
-						}),
-					)
-				}, false)
+				return v.renameField(gtx, rowHeight, "Expression", func(gtx layout.Context) layout.Dimensions {
+					return v.textEditor(&s.editor, "<name>").Layout(gtx)
+				})
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				selected := s.focus - 1
+				return v.renameField(gtx, rowHeight, "Insert", func(gtx layout.Context) layout.Dimensions {
+					return v.layoutRenameExamples(gtx, s, textHeight)
+				})
+			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				selected := s.focus - renameFocusApply
 				return s.actions.layout(gtx, []string{"Apply", "Cancel"}, selected, rowHeight, v.appearance,
 					func(gtx layout.Context, label string, fg, bg color.NRGBA) layout.Dimensions {
 						return v.rawLabel(gtx, label, v.appearance.TextSize, v.resolvedTextOn(fg, bg), text.Middle)
 					})
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return v.band(gtx, footerHeight, v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
-					message, fg := s.message, v.appearance.Colors.Error
-					if message == "" {
-						message, fg = "Ctrl+Enter Apply · Esc Cancel", v.appearance.Colors.Muted
-					}
-					if s.pending {
-						message, fg = "Renaming", v.appearance.Colors.Muted
-					}
-					return v.label(gtx, message, v.appearance.SmallTextSize, fg, text.Start)
-				}, false)
+				return v.layoutWidgetFooter(gtx, footerHeight, s.footer())
 			}),
 		)
 	})

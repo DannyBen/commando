@@ -112,7 +112,7 @@ func (v *view) inlineInteraction() *inlineActionSession {
 
 func (v *view) activeEditor() *widget.Editor {
 	if s := v.multiRenameInteraction(); s != nil {
-		if s.focus == 0 && !s.pending {
+		if s.focus == renameFocusExpression && !s.pending {
 			return &s.editor
 		}
 		return nil

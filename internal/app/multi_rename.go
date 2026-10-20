@@ -15,20 +15,23 @@ import (
 )
 
 type multiRenameSession struct {
-	panel      int
-	path       string
-	entries    []browser.Entry // Captured in panel order, independent of marks and sorting.
-	editor     widget.Editor
-	surface    dockedSurface
-	actions    actionBar
-	focus      int // Expression, Apply, Cancel.
-	pending    bool
-	preview    map[string]string
-	spans      map[string][]renameSpan
-	expression string // Last validated text; validation follows editor contents, not key kinds.
-	invalid    map[string]bool
-	changes    []renameChange
-	message    string
+	panel          int
+	path           string
+	entries        []browser.Entry // Captured in panel order, independent of marks and sorting.
+	editor         widget.Editor
+	surface        dockedSurface
+	actions        actionBar
+	focus          int // Expression, Insert, Apply, Cancel.
+	example        int
+	exampleTarget  valueTarget
+	exampleBrowsed bool
+	pending        bool
+	preview        map[string]string
+	spans          map[string][]renameSpan
+	expression     string // Last validated text; validation follows editor contents, not key kinds.
+	invalid        map[string]bool
+	changes        []renameChange
+	message        string
 }
 
 type renameChange struct{ oldName, newName string }
@@ -197,8 +200,10 @@ func (v *view) updateMultiRename(gtx layout.Context, s *multiRenameSession) {
 	if s.pending {
 		return
 	}
+	pointerFocused := v.updateRenameExamplePointer(gtx, s)
 	if action, ok := s.actions.update(gtx); ok {
-		s.focus = action + 1
+		pointerFocused = true
+		s.focus = action + renameFocusApply
 		if action == 0 {
 			v.applyMultiRename(gtx)
 		} else {
@@ -210,14 +215,16 @@ func (v *view) updateMultiRename(gtx layout.Context, s *multiRenameSession) {
 		}
 	}
 	focus := any(&v.focus)
-	if s.focus == 0 {
+	if s.focus == renameFocusExpression {
 		focus = &s.editor
 	}
 	var keys []key.Event
 	for {
 		e, ok := gtx.Event(key.FocusFilter{Target: &v.focus}, key.Filter{Focus: focus, Name: key.NameEscape},
 			key.Filter{Focus: &v.focus, Name: key.NameLeftArrow}, key.Filter{Focus: &v.focus, Name: key.NameRightArrow},
-			key.Filter{Focus: &v.focus, Name: key.NameUpArrow}, key.Filter{Focus: &v.focus, Name: key.NameSpace},
+			key.Filter{Focus: focus, Name: key.NameUpArrow}, key.Filter{Focus: &v.focus, Name: key.NameSpace},
+			key.Filter{Focus: focus, Name: key.NameDownArrow},
+			key.Filter{Focus: &v.focus, Name: key.NameHome}, key.Filter{Focus: &v.focus, Name: key.NameEnd},
 			key.Filter{Focus: focus, Name: key.NameTab, Optional: key.ModShift},
 			key.Filter{Focus: focus, Name: key.NameReturn, Optional: key.ModCtrl},
 			key.Filter{Focus: focus, Name: key.NameEnter, Optional: key.ModCtrl})
@@ -238,19 +245,25 @@ func (v *view) updateMultiRename(gtx layout.Context, s *multiRenameSession) {
 	if s.editor.Text() != s.expression {
 		v.previewMultiRename(s)
 	}
-	if gtx.Focused(&s.editor) && s.focus != 0 {
-		s.focus = 0
+	if !pointerFocused && gtx.Focused(&s.editor) && s.focus != renameFocusExpression {
+		s.focus = renameFocusExpression
 	}
 	for _, ke := range keys {
+		if v.renameExampleKey(gtx, s, ke) {
+			continue
+		}
 		switch ke.Name {
-		case key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow:
+		case key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow:
 			previous := s.focus
 			if ke.Name == key.NameLeftArrow {
-				s.focus = 1
+				s.focus = renameFocusApply
 			} else if ke.Name == key.NameRightArrow {
-				s.focus = 2
-			} else {
-				s.focus = 0
+				s.focus = renameFocusCancel
+			} else if direction := widgetRowDirection(ke); direction != 0 {
+				row := min(s.focus, renameFocusApply)
+				if next := widgetRowNext(row, 3, direction); next != row {
+					s.focus = next
+				}
 			}
 			if s.focus != previous {
 				v.announceInteraction(eventSelectionChanged)
@@ -264,13 +277,13 @@ func (v *view) updateMultiRename(gtx layout.Context, s *multiRenameSession) {
 			if ke.Modifiers == key.ModShift {
 				direction = -1
 			}
-			s.focus = (s.focus + direction + 3) % 3
+			s.focus = (s.focus + direction + renameFocusCount) % renameFocusCount
 			v.announceInteraction(eventSelectionChanged)
 			v.focusInteraction(gtx)
 		case key.NameReturn, key.NameEnter, key.NameSpace:
-			if ke.Modifiers == key.ModCtrl || s.focus == 1 {
+			if ke.Modifiers == key.ModCtrl || s.focus == renameFocusApply {
 				v.applyMultiRename(gtx)
-			} else if s.focus == 2 {
+			} else if s.focus == renameFocusCancel {
 				v.escape(gtx)
 			} else {
 				v.previewMultiRename(s)

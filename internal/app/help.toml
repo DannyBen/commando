@@ -1089,8 +1089,8 @@ lines = [
 
 ["editing.multi_rename"]
 lines = [
-  "Preview new names in the panel; Tab selects Apply or Cancel",
-  "Use <name>, <base>, <ext> and <counter pad:0>; Ctrl+Enter applies",
+  "Preview new names in the panel; the Insert row offers examples",
+  "Browse examples with ←/→ or the wheel; Enter inserts; Ctrl+Enter applies",
 ]
 
 ["palette.entry.unpack_zip"]
