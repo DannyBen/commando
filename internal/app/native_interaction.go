@@ -34,7 +34,6 @@ const (
 
 type shellRequest struct {
 	action  shellAction
-	armed   bool
 	paths   []string
 	options windowshell.MenuOptions
 	queued  time.Time
@@ -56,7 +55,7 @@ func (v *view) dispatchNative(invalidate func()) {
 	}
 	s.dispatched = true
 	s.traceID = diagnostics.NextID()
-	diagnostics.Record(diagnostics.Shell, s.traceID, "NativeRequested", map[string]any{"action": s.request.action, "paths": s.request.paths, "armed": s.request.armed})
+	diagnostics.Record(diagnostics.Shell, s.traceID, "NativeRequested", map[string]any{"action": s.request.action, "paths": s.request.paths})
 	request := s.request
 	if request.options.ClientPoint != nil {
 		anchor := v.panels[s.panel].selectionAnchor

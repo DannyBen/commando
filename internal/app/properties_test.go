@@ -20,7 +20,7 @@ func TestDrivePropertiesUsesExistingCommandAndNativeSession(t *testing.T) {
 		p.selected = 0
 		p.clearMarks()
 		send, _ := panelInputFrames(v)
-		if v.nativeItemsAvailable(0, 0, false, shellMenu) || v.dragAvailable(0, 0, true) {
+		if v.nativeItemsAvailable(0, 0, false, shellMenu) || v.dragAvailable(0, 0) {
 			t.Fatal("drive Properties enabled other shell actions")
 		}
 		if palette {

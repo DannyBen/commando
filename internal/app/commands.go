@@ -98,8 +98,6 @@ func defaultCommands() []command {
 			return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false, shellProperties)
 		}),
 
-		cmd("entry.arm_drag", "Entry", "Arm drag", "D", key.ModCtrl|key.ModShift, func(v *view) bool { return v.dragAvailable(v.active, v.panels[v.active].selected, true) }),
-
 		cmd("location.favorite", "Location", "Favorite…", "B", key.ModCtrl, favoriteReady),
 		cmd("navigation.parent_folder", "Navigation", "Parent folder", key.NameDeleteBackward, 0, func(v *view) bool { return folderReady(v) && v.loader != nil }),
 		cmd("navigation.drives", "Navigation", "Home", key.NameHome, key.ModCtrl, func(v *view) bool { return folderReady(v) && v.loader != nil }),

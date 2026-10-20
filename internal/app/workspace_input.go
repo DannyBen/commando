@@ -53,7 +53,7 @@ panelInput:
 			}
 			context, dragged := row.updatePointer(pointerContext)
 			if dragged {
-				v.startDrag(gtx, pi, v.storedRow(pi, ri), false)
+				v.startDrag(gtx, pi, v.storedRow(pi, ri))
 			}
 			if context {
 				v.startContextMenu(gtx, pi, v.storedRow(pi, ri), true)

@@ -28,11 +28,7 @@ var (
 	trackPopupMenu   = user32.NewProc("TrackPopupMenuEx")
 	clientToScreen   = user32.NewProc("ClientToScreen")
 	getCursorPos     = user32.NewProc("GetCursorPos")
-	windowFromPoint  = user32.NewProc("WindowFromPoint")
-	getAncestor      = user32.NewProc("GetAncestor")
-	getAsyncKeyState = user32.NewProc("GetAsyncKeyState")
 	getKeyState      = user32.NewProc("GetKeyState")
-	getSystemMetrics = user32.NewProc("GetSystemMetrics")
 	windowThread     = user32.NewProc("GetWindowThreadProcessId")
 	releaseCapture   = user32.NewProc("ReleaseCapture")
 	setSubclass      = comctl32.NewProc("SetWindowSubclass")
@@ -108,7 +104,7 @@ func (h *Host) end() {
 
 // Drag is outbound and copy-only. The target/shell owns the transfer;
 // the source must never interpret the returned effect as permission to delete.
-func (h *Host) Drag(paths []string, armed bool) (Result, error) {
+func (h *Host) Drag(paths []string) (Result, error) {
 	r := Result{Action: "drag", ThreadID: h.thread}
 	if err := h.begin(); err != nil {
 		return r, err
@@ -119,16 +115,7 @@ func (h *Host) Drag(paths []string, armed bool) (Result, error) {
 		return r, err
 	}
 	defer data.call(2)
-	source := &dropSource{table: &sourceTable, state: dragState{standard: !armed}, owner: h.hwnd}
-	if armed {
-		// GetAsyncKeyState reports physical buttons; honor the user's logical
-		// primary button when Windows has swapped left and right.
-		source.primaryButton = 1                                      // VK_LBUTTON
-		if swapped, _, _ := getSystemMetrics.Call(23); swapped != 0 { // SM_SWAPBUTTON
-			source.primaryButton = 2 // VK_RBUTTON
-		}
-		source.state.waitRelease = source.primaryDown()
-	}
+	source := &dropSource{table: &sourceTable}
 	source.refs.Store(1)
 	var pin runtime.Pinner
 	pin.Pin(source)

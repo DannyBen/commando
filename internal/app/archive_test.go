@@ -122,7 +122,7 @@ func TestArchiveBlocksFilesystemOnlyOperations(t *testing.T) {
 		return shellCompletion{}
 	}
 	v.openFile = func(string) error { t.Error("archive item reached external opening"); return nil }
-	blocked := []string{"entry.paste_shortcut", "entry.context_menu", "entry.properties", "entry.arm_drag", "file.edit", "programs.terminal_here", "programs.terminal_here_admin"}
+	blocked := []string{"entry.paste_shortcut", "entry.context_menu", "entry.properties", "file.edit", "programs.terminal_here", "programs.terminal_here_admin"}
 	for _, c := range v.commandCatalogue() {
 		if slices.Contains(blocked, c.id) && c.allowed(v) {
 			t.Errorf("unsupported archive command is available: %s", c.id)
@@ -130,7 +130,7 @@ func TestArchiveBlocksFilesystemOnlyOperations(t *testing.T) {
 	}
 	// Pointer/direct routes must be protected too, independently of the catalogue.
 	v.startContextMenu(layout.Context{}, 0, p.selected, true)
-	v.startDrag(layout.Context{}, 0, p.selected, false)
+	v.startDrag(layout.Context{}, 0, p.selected)
 	if p.loading || !v.interaction.idle() || len(v.loader.requests) != 0 || len(p.selectedPaths()) != 0 || v.fileOperationLocations()[0] != "" {
 		t.Fatal("an unsupported operation queued work or opened an interaction")
 	}

@@ -49,8 +49,6 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		v.startContextMenu(gtx, v.active, p.selected, false)
 	case "entry.properties":
 		v.startItemShellAction(gtx, v.active, p.selected, false, shellProperties)
-	case "entry.arm_drag":
-		v.startDrag(gtx, v.active, p.selected, true)
 	case "navigation.parent_folder":
 		v.parentFolder()
 	case "navigation.drives":

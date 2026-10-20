@@ -152,7 +152,7 @@ func TestHomeFavoriteClipboardAndNativeActionsUseLinks(t *testing.T) {
 	gtx := layout.Context{Ops: &ops}
 	for _, action := range []shellAction{shellMenu, shellProperties, shellDrag} {
 		if action == shellDrag {
-			v.startDrag(gtx, 0, p.selected, true)
+			v.startDrag(gtx, 0, p.selected)
 		} else {
 			v.startItemShellAction(gtx, 0, p.selected, false, action)
 		}

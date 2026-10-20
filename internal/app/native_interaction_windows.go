@@ -21,7 +21,7 @@ func (n *nativeWindow) shellExecutor(w *gioapp.Window) func(shellRequest) shellC
 			case shellProperties:
 				result.result, result.err = n.shell.Properties(request.paths, request.options)
 			case shellDrag:
-				result.result, result.err = n.shell.Drag(request.paths, request.armed)
+				result.result, result.err = n.shell.Drag(request.paths)
 			default:
 				result.result, result.err = n.shell.ContextMenu(request.paths, request.options)
 			}

@@ -975,11 +975,6 @@ lines = [
   "Show or hide the contextual help panel",
 ]
 
-["palette.entry.arm_drag"]
-lines = [
-  "Prepare a copy drag, then click in another app to drop the entries",
-]
-
 ["palette.entry.context_menu"]
 lines = [
   "Show the Windows context menu for marked entries or the current entry",

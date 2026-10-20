@@ -5,7 +5,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
-	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -16,28 +15,8 @@ var (
 )
 
 type dropSource struct {
-	table         *[5]uintptr
-	refs          atomic.Int32
-	state         dragState
-	primaryButton uintptr
-	owner         uintptr
-}
-
-func (s *dropSource) overOwner() bool {
-	var point nativePoint
-	if ok, _, _ := getCursorPos.Call(uintptr(unsafe.Pointer(&point))); ok == 0 {
-		return false
-	}
-	// Windows x64 passes the by-value POINT as one packed 64-bit argument.
-	packed := uintptr(uint32(point.X)) | uintptr(uint32(point.Y))<<32
-	hwnd, _, _ := windowFromPoint.Call(packed)
-	root, _, _ := getAncestor.Call(hwnd, 2) // GA_ROOT includes child windows.
-	return root == s.owner
-}
-
-func (s *dropSource) primaryDown() bool {
-	state, _, _ := getAsyncKeyState.Call(s.primaryButton)
-	return state&0x8000 != 0
+	table *[5]uintptr
+	refs  atomic.Int32
 }
 
 // Native clients can retain an interface. Root and pin the source until its
@@ -70,17 +49,7 @@ var sourceTable = [5]uintptr{
 	syscall.NewCallback(func(s *dropSource) uintptr { return uintptr(s.refs.Add(1)) }),
 	syscall.NewCallback(releaseSource),
 	syscall.NewCallback(func(s *dropSource, escape, keys uintptr) uintptr {
-		buttons := uint32(keys)
-		if !s.state.standard {
-			// Gio and OLE consume the same native message queue. For armed
-			// dragging, queued flags must not masquerade as a fresh click.
-			buttons = armedDragKeys(buttons, s.primaryDown())
-		}
-		decision := s.state.next(escape != 0, buttons)
-		if decision == dragDrop {
-			decision = s.state.dropAt(!s.state.standard && s.overOwner())
-		}
-		return uintptr(decision)
+		return uintptr(continueDrag(escape != 0, uint32(keys)))
 	}),
 	syscall.NewCallback(func(_ *dropSource, _ uintptr) uintptr {
 		return 0x40102 // DRAGDROP_S_USEDEFAULTCURSORS.
