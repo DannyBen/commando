@@ -1,6 +1,89 @@
 Changelog
 ========================================
 
+v0.6.2 - 2026-10-20
+----------------------------------------
+
+- Right click on empty space open Windows menu
+- Disable location bar scrolling when palette is open
+- Show ellipsis on commands that need further input
+- Up/Down selects the next match during type-to-select
+- Add references to related @settings in tips
+- Favorites
+- Delete/rename/copy favorites
+- Autocomplete favorites in location bar
+- Remove meta column from home screen
+- Add sound to panel resizing
+- Fix default key binding overrides saved in user settings
+
+
+v0.6.1 - 2026-10-20
+----------------------------------------
+
+- Help footer
+- Add keyboard hints to some tips
+- Add help for commands
+- Add interaction tips
+
+
+v0.6.0 - 2026-10-19
+----------------------------------------
+
+- +/- to resize panels
+- Shift+Home/End to select files
+- Allow viewing zip files in panels
+- Organize and normalize Theme settings
+- Deletable files in ZIP files
+- Rename in ZIP
+- Copy into ZIP
+- Open files in ZIP
+- Copy files from ZIP
+- Duplicate files in ZIP
+- Move files in/out of ZIP
+- Improve temp file cleanup
+- Copy path from inside ZIP
+- Entry > Pack to ZIP
+- Entry > Unpack ZIP
+- Allow showing drive properties
+
+
+v0.5.0 - 2026-10-18
+----------------------------------------
+
+- Notify on failed open
+- Navigation > Drives
+- Appearance > Icons
+- Add icon recoloring setting
+- Fix possible theme selector hang
+- Apply color offsets to hidden and dot files
+- Show icons in settings overlays and draft floats
+- Preserve custom keybindings when new defaults conflict
+- Feedback > Toggle sounds
+- Add toggle commands for metadata and boolean settings
+- Programs > Terminal here
+- Application > Toggle full screen
+- Entry > Properties
+- Show confirmation modal for key reassignment
+- Guards > Recycle/Delete confirmation
+- Orange icon
+- Fix deletion outcomes and footer notifications
+- Debug > Trace mask
+- Remember Current theme in Theme > Select
+- Internal mouse control surface
+- Add mouse over and click shading
+- Fix key reassign button on Alt+Enter assignment
+- Show native retry dialog on locked deletions
+- Double click to open entries
+- Clickable settings buttons
+- Steppers respond to click and mouse wheel
+- Double click a command palette action executes
+- Click on empty panel area selects the panel
+- Double click location bar to edit
+- Add Empty folder marker to empty panels
+- Icon for parent entry
+- Entry > Paste shortcut
+
+
 v0.4.0 - 2026-10-17
 ----------------------------------------
 
