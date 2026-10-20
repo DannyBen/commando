@@ -48,18 +48,18 @@ func (v *view) typeToSelect(text string, now time.Time) {
 	fresh := p.prefix == ""
 	p.prefix += text
 	p.prefixAt = now
-	v.selectPrefix(fresh)
+	v.selectPrefix(fresh, 1)
 }
 
-func (v *view) selectPrefix(fresh bool) {
+func (v *view) selectPrefix(skipCurrent bool, direction int) {
 	p := &v.panels[v.active]
 	start := max(0, p.selected)
-	if fresh {
-		start++
+	if skipCurrent {
+		start += direction
 	}
 	prefix := strings.ToLower(p.prefix)
 	for offset := 0; offset < len(p.items); offset++ {
-		index := (start + offset) % len(p.items)
+		index := (start + offset*direction + len(p.items)) % len(p.items)
 		item := p.items[index]
 		name := item.file.Name
 		if name == "" {

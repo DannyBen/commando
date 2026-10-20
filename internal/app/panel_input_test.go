@@ -168,6 +168,67 @@ func TestTabKeepsLocationEditorFocus(t *testing.T) {
 	}
 }
 
+func TestTypingArrowsCycleMatchesAndRenewTimeout(t *testing.T) {
+	items := []entry{
+		{name: "..", file: browser.Entry{Name: "..", Parent: true, Directory: true}},
+		{name: ".todo", file: browser.Entry{Name: ".todo", Directory: true}},
+		{name: "other", file: browser.Entry{Name: "other", Directory: true}},
+		{name: ".todo.md", file: browser.Entry{Name: ".todo.md"}},
+		{name: ".TODO.txt", file: browser.Entry{Name: ".TODO.txt"}},
+		{name: "unrelated.txt", file: browser.Entry{Name: "unrelated.txt"}},
+	}
+	v := newView([]panel{{items: items, selected: 0}})
+	p := &v.panels[0]
+	p.marks = map[int]bool{2: true}
+	send, advance := panelInputFrames(v)
+	send(key.EditEvent{Text: ".todo"})
+	if p.selected != 1 {
+		t.Fatal("typing did not select the folder")
+	}
+	advance(800 * time.Millisecond)
+	send(pressed(key.NameDownArrow))
+	if p.selected != 3 || p.prefix != ".todo" {
+		t.Fatal("Down did not skip the unrelated folder or retained no prefix")
+	}
+	advance(400 * time.Millisecond) // Beyond the original typing deadline.
+	for _, step := range []struct {
+		key  key.Name
+		want int
+	}{{key.NameDownArrow, 4}, {key.NameDownArrow, 1}, {key.NameUpArrow, 4}, {key.NameUpArrow, 3}} {
+		send(pressed(step.key))
+		if p.selected != step.want || p.prefix != ".todo" {
+			t.Fatalf("%s selected %d, want %d with prefix retained", step.key, p.selected, step.want)
+		}
+		assertMarks(t, p, 2)
+	}
+	send(key.EditEvent{Text: ".m"})
+	send(pressed(key.NameDownArrow), pressed(key.NameUpArrow))
+	if p.prefix != ".todo.m" || p.selected != 3 {
+		t.Fatal("continued typing or single-match arrows changed selection incorrectly")
+	}
+	send(key.EditEvent{Text: "issing"})
+	send(pressed(key.NameDownArrow), pressed(key.NameUpArrow))
+	if p.prefix != ".todo.missing" || p.selected != 3 {
+		t.Fatal("unmatched prefix arrows moved to an unrelated entry")
+	}
+	for _, exit := range []string{"escape", "timeout", "shift"} {
+		send(pressed(key.NameEscape), pressed(key.NameHome), key.EditEvent{Text: ".todo"})
+		switch exit {
+		case "escape":
+			send(pressed(key.NameEscape), pressed(key.NameDownArrow))
+		case "timeout":
+			advance(prefixDelay)
+			send(pressed(key.NameDownArrow))
+		case "shift":
+			send(modified(key.NameDownArrow, key.ModShift))
+			assertMarks(t, p, 1, 2)
+		}
+		if p.selected != 2 || p.prefix != "" {
+			t.Fatalf("%s did not restore ordinary row navigation", exit)
+		}
+	}
+}
+
 func TestTypeToSelect(t *testing.T) {
 	items := []entry{
 		{name: "..", file: browser.Entry{Name: "..", Directory: true, Parent: true}},

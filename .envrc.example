@@ -1,2 +1,3 @@
 PATH_add support/showroom
 export GOFLAGS='-tags=novulkan,nox11'
+export TODO_BACKUP=on

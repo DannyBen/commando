@@ -177,8 +177,21 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		}
 		return
 	}
-	// Row movement and range marking remain fixed browsing interactions.
+	// Plain arrows cycle prefix matches only while the typing state is active.
 	p := &v.panels[v.active]
+	if ke.Modifiers == 0 && p.prefix != "" && gtx.Now.Before(p.prefixAt.Add(prefixDelay)) && (ke.Name == key.NameUpArrow || ke.Name == key.NameDownArrow) {
+		direction := 1
+		if ke.Name == key.NameUpArrow {
+			direction = -1
+		}
+		before := p.selected
+		p.prefixAt, p.markRange = gtx.Now, nil
+		v.selectPrefix(true, direction)
+		if p.selected != before {
+			v.announceInteraction(eventSelectionChanged)
+		}
+		return
+	}
 	next := p.selected
 	switch ke.Name {
 	case key.NameUpArrow:
