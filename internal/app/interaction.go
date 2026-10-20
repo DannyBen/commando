@@ -86,6 +86,9 @@ type locationSession struct {
 	completionPath, pendingPath string
 	completionLoaded            bool
 	completionEntries           []browser.Entry
+	favorites                   []browser.Entry
+	favoritesLoaded             bool
+	favoritesPending            bool
 }
 
 func (s *locationSession) interactionPanel() int     { return s.panel }

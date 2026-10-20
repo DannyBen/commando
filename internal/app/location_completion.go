@@ -66,10 +66,50 @@ func completionLocation(base, query string) (locationCompletionPath, bool) {
 	return plan, plan.directory != "." && plan.directory != ""
 }
 
+// Favorite aliases are offered only for bare names, never inside a path or
+// environment expression. Quotes delimit a name rather than changing its meaning.
+func favoriteCompletionQuery(query string) bool {
+	query = strings.Trim(query, `"`)
+	return query != "" && !strings.ContainsAny(query, `/\:`) && expandLocationEnvironment(query) == query
+}
+
+func favoriteCompletionTarget(favorites []browser.Entry, candidate string) string {
+	if !favoriteCompletionQuery(candidate) {
+		return ""
+	}
+	name := strings.Trim(candidate, `"`)
+	for _, file := range favorites {
+		if strings.EqualFold(strings.TrimSuffix(file.Name, filepath.Ext(file.Name)), name) {
+			return file.Target
+		}
+	}
+	return ""
+}
+
+func (s *locationSession) selectedFavoriteTarget() string {
+	if s.completion.suffix() == "" {
+		return ""
+	}
+	candidate := s.completion.matches[s.completion.selected]
+	// A local file may have the very same name as an alias. Both remain in the
+	// cycle; favorites precede filesystem entries, so later copies are literal.
+	for _, earlier := range s.completion.matches[:s.completion.selected] {
+		if strings.EqualFold(earlier, candidate) {
+			return ""
+		}
+	}
+	return favoriteCompletionTarget(s.favorites, candidate)
+}
+
 func (v *view) updateLocationCompletion() {
 	s, ok := v.interaction.current.(*locationSession)
 	if !ok {
 		return
+	}
+	// Each editing session gets a fresh shortcut snapshot, even before Home has
+	// been visited. This read never probes favorite targets or creates the store.
+	if !s.favoritesLoaded && !s.favoritesPending && v.loader != nil && v.favoritesDirectory() != "" {
+		s.favoritesPending = v.loader.submit(loadRequest{completion: s, favoritesDirectory: v.favoritesDirectory(), action: actionBrowse})
 	}
 	s.completion.trailer = ""
 	if strings.HasPrefix(v.location.Text(), `"`) {
@@ -79,39 +119,86 @@ func (v *view) updateLocationCompletion() {
 	if s.completion.query == "" {
 		return
 	}
-	plan, ok := completionLocation(v.panels[s.panel].locationPath(), s.completion.query)
-	if !ok {
+	plan, valid := completionLocation(v.panels[s.panel].locationPath(), s.completion.query)
+	if !valid {
 		s.completionPath, s.completionLoaded = "", false
-		s.completion.candidates = nil
-		s.completion.update(&v.location)
-		return
-	}
-	if s.completionPath != plan.directory {
-		s.completionPath, s.completionLoaded = plan.directory, false
-		s.completionEntries, s.completion.candidates = nil, nil
-	}
-	if !s.completionLoaded && s.pendingPath == "" && v.loader != nil {
-		if v.loader.submit(loadRequest{path: plan.directory, completion: s, action: actionBrowse}) {
-			s.pendingPath = plan.directory
+		s.completionEntries = nil
+	} else {
+		if s.completionPath != plan.directory {
+			s.completionPath, s.completionLoaded = plan.directory, false
+			s.completionEntries = nil
+		}
+		if !s.completionLoaded && s.pendingPath == "" && v.loader != nil {
+			if v.loader.submit(loadRequest{path: plan.directory, completion: s, action: actionBrowse}) {
+				s.pendingPath = plan.directory
+			}
 		}
 	}
 	s.completion.candidates = s.completion.candidates[:0]
-	for _, file := range s.completionEntries {
-		if file.Parent || file.Hidden && file.System {
-			continue
+	if favoriteCompletionQuery(s.completion.query) {
+		for _, file := range s.favorites {
+			if file.Target == "" {
+				continue
+			}
+			name := strings.TrimSuffix(file.Name, filepath.Ext(file.Name))
+			if s.completion.trailer != "" {
+				name = `"` + name + `"`
+			}
+			s.completion.candidates = append(s.completion.candidates, name)
 		}
-		name := plan.prefix + file.Name
-		if file.Directory {
-			name += string(filepath.Separator)
+	}
+	if valid {
+		for _, file := range s.completionEntries {
+			if file.Parent || file.Hidden && file.System {
+				continue
+			}
+			name := plan.prefix + file.Name
+			if file.Directory {
+				name += string(filepath.Separator)
+			}
+			s.completion.candidates = append(s.completion.candidates, name+plan.trailer)
 		}
-		s.completion.candidates = append(s.completion.candidates, name+plan.trailer)
 	}
 	s.completion.update(&v.location)
 }
 
+// Accepting an alias makes its destination explicit and uses the editor's normal
+// undo history. A local entry with the same name cannot retarget an accepted alias.
+func (v *view) acceptLocationSuggestion() bool {
+	s := v.interaction.current.(*locationSession)
+	s.completion.update(&v.location)
+	if s.completion.suffix() != "" {
+		if target := s.selectedFavoriteTarget(); target != "" {
+			if s.completion.trailer != "" {
+				target = `"` + target + `"`
+			}
+			v.location.SetCaret(0, len([]rune(v.location.Text())))
+			v.location.Insert(target)
+			if s.completion.trailer != "" {
+				end := len([]rune(target)) - 1
+				v.location.SetCaret(end, end)
+			}
+			return true
+		}
+	}
+	return s.completion.accept(&v.location)
+}
+
 func (v *view) acceptLocationCompletion(result loadResult) {
 	s := result.request.completion
-	if v.interaction.current != s || s.pendingPath != result.request.path {
+	if v.interaction.current != s {
+		return
+	}
+	if result.request.favoritesDirectory != "" {
+		s.favoritesPending, s.favoritesLoaded = false, true
+		s.favorites = nil
+		if result.err == nil {
+			s.favorites = slices.Clone(result.favorites)
+		}
+		v.updateLocationCompletion()
+		return
+	}
+	if s.pendingPath != result.request.path {
 		return
 	}
 	s.pendingPath = ""

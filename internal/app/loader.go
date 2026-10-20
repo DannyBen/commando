@@ -14,37 +14,39 @@ import (
 )
 
 type loadRequest struct {
-	panel            int
-	path, selectName string
-	homeDirectory    string
-	favoriteRead     *favoriteSession
-	favoriteWrite    *nameSession
-	archiveFolder    string
-	suggestedPath    string // Visible location completion captured at submission.
-	successMessage   string
-	refresh          bool
-	autoRefresh      bool
-	shortcut         bool // Resolve a .lnk before deciding between folder navigation and native opening.
-	explicitPath     bool // Resolve pasted files and missing paths within their own ancestry.
-	tracked          bool
-	action           actionClass
-	locations        []string // Captured panel paths for create/rename alias reconciliation.
-	rename           *renameRequest
-	create           *createRequest
-	duplicate        *duplicateRequest
-	removal          *removalRequest
-	clipboard        *fileClipboardRequest
-	transfer         *transferRequest
-	settingsSave     *settingsSaveRequest
-	terminal         *terminalRequest
-	editor           *editorRequest
-	archiveOpen      *archiveOpenRequest
-	unpack           *unpackRequest
-	fontFamilies     bool
-	completion       *locationSession
-	fileDraft        *fileDraftRequest
-	themeLibrary     *settingsSession
-	icons            []fileIconKey
+	panel              int
+	path, selectName   string
+	homeDirectory      string
+	favoritesDirectory string // Read favorite aliases independently of filesystem completion.
+	favoriteName       string // Exact alias fallback when Enter precedes completion results.
+	favoriteRead       *favoriteSession
+	favoriteWrite      *nameSession
+	archiveFolder      string
+	suggestedPath      string // Visible location completion captured at submission.
+	successMessage     string
+	refresh            bool
+	autoRefresh        bool
+	shortcut           bool // Resolve a .lnk before deciding between folder navigation and native opening.
+	explicitPath       bool // Resolve pasted files and missing paths within their own ancestry.
+	tracked            bool
+	action             actionClass
+	locations          []string // Captured panel paths for create/rename alias reconciliation.
+	rename             *renameRequest
+	create             *createRequest
+	duplicate          *duplicateRequest
+	removal            *removalRequest
+	clipboard          *fileClipboardRequest
+	transfer           *transferRequest
+	settingsSave       *settingsSaveRequest
+	terminal           *terminalRequest
+	editor             *editorRequest
+	archiveOpen        *archiveOpenRequest
+	unpack             *unpackRequest
+	fontFamilies       bool
+	completion         *locationSession
+	fileDraft          *fileDraftRequest
+	themeLibrary       *settingsSession
+	icons              []fileIconKey
 }
 
 type loadResult struct {
@@ -55,6 +57,7 @@ type loadResult struct {
 	progress                 string // Intermediate worker feedback; does not complete the request.
 	request                  loadRequest
 	directory                browser.Directory
+	favorites                []browser.Entry
 	created                  browser.Entry
 	removed                  browser.RemovalResult
 	sameDirectory            []bool
@@ -188,7 +191,9 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				}
 				if request.completion != nil {
 					result := loadResult{request: request}
-					if localCompletionPath(request.path) {
+					if request.favoritesDirectory != "" {
+						result.favorites, result.err = l.readFavorites(request.favoritesDirectory)
+					} else if localCompletionPath(request.path) {
 						result.directory, result.err = l.readDirectory(request.path)
 					}
 					publish(result)
@@ -343,6 +348,11 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				} else if request.archiveFolder != "" {
 					directory, err = browser.ReadArchive(browser.Location{Path: request.path, Folder: request.archiveFolder})
 				} else if request.explicitPath {
+					if request.favoriteName != "" && request.favoritesDirectory != "" {
+						if favorites, favoriteErr := l.readFavorites(request.favoritesDirectory); favoriteErr == nil {
+							request.suggestedPath = favoriteCompletionTarget(favorites, request.favoriteName)
+						}
+					}
 					directory, result.request.selectName, result.pathMissing, err = l.readExplicitPath(request.path, request.suggestedPath)
 				} else {
 					directory, err = l.readExistingParent(request.path)

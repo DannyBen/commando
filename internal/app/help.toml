@@ -1318,7 +1318,7 @@ lines = [
 
 ["editing.location"]
 lines = [
-  "Enter a folder path; relative paths such as .. and ..\\other also work.",
+  "Enter a path or favorite name; Tab completes, arrows choose another match.",
   "Enter opens the path; Escape keeps the current folder.",
 ]
 

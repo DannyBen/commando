@@ -149,7 +149,7 @@ func (v *view) updateLocation(gtx layout.Context) {
 			v.location.SetCaret(0, utf8.RuneCountInString(v.location.Text()))
 			v.updateLocationCompletion()
 		case key.NameTab:
-			if ke.Modifiers == 0 && s.completion.accept(&v.location) {
+			if ke.Modifiers == 0 && v.acceptLocationSuggestion() {
 				v.updateLocationCompletion()
 			}
 		case key.NameUpArrow, key.NameDownArrow:
@@ -175,14 +175,23 @@ func (v *view) submitLocation(gtx layout.Context) {
 		return
 	}
 	suggestedPath := ""
+	favoriteName := ""
 	if s, ok := v.interaction.current.(*locationSession); ok {
 		s.completion.update(&v.location)
+		if favoriteCompletionQuery(v.location.Text()) {
+			favoriteName = v.location.Text()
+		}
 		if s.completion.suffix() != "" {
-			suggestedPath = resolveLocationPath(base, s.completion.matches[s.completion.selected])
+			favoriteName = ""
+			candidate := s.completion.matches[s.completion.selected]
+			suggestedPath = s.selectedFavoriteTarget()
+			if suggestedPath == "" {
+				suggestedPath = resolveLocationPath(base, candidate)
+			}
 		}
 	}
 	v.stopLocation(gtx)
-	v.queueLoad(loadRequest{panel: v.active, path: path, suggestedPath: suggestedPath, explicitPath: true})
+	v.queueLoad(loadRequest{panel: v.active, path: path, suggestedPath: suggestedPath, favoriteName: favoriteName, favoritesDirectory: v.favoritesDirectory(), explicitPath: true})
 }
 
 func resolveLocationPath(base, text string) string {

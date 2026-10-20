@@ -20,7 +20,7 @@ func waitLocationCompletion(t *testing.T, v *view) {
 	defer timer.Stop()
 	for {
 		s, ok := v.interaction.current.(*locationSession)
-		if !ok || s.pendingPath == "" {
+		if !ok || s.pendingPath == "" && !s.favoritesPending {
 			return
 		}
 		select {
