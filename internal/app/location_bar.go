@@ -41,7 +41,8 @@ func (v *view) updateLocationBar(gtx layout.Context, index int) {
 
 func (v *view) layoutLocationBar(gtx layout.Context, index, height int) layout.Dimensions {
 	p := &v.panels[index]
-	if index != v.active || v.locationEditing() {
+	animate := index == v.active && v.interaction.idle() && gtx.Focused(&v.focus)
+	if !animate {
 		p.locationScroll = textMarquee{}
 	}
 	if v.locationEditing() && index == v.active {
@@ -64,7 +65,7 @@ func (v *view) layoutLocationBar(gtx layout.Context, index, height int) layout.D
 		}
 		bg = state.background(bg, v.appearance.HoverStrength)
 		return v.headerBand(gtx, height, bg, func(gtx layout.Context) layout.Dimensions {
-			if index != v.active {
+			if !animate {
 				return v.label(gtx, fmt.Sprintf("%d  %s", index+1, p.locationLabel()), v.appearance.TextSize, fg, text.Start)
 			}
 			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,

@@ -1,6 +1,8 @@
 package app
 
 import (
+	"bytes"
+	"fmt"
 	"image"
 	"maps"
 	"os"
@@ -9,8 +11,13 @@ import (
 	"time"
 
 	"gioui.org/f32"
+	"gioui.org/gpu/headless"
+	"gioui.org/io/event"
+	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
+	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/unit"
 )
 
@@ -36,6 +43,139 @@ func TestLocationMarqueeOnlyActiveAndEditorKeepsFullPath(t *testing.T) {
 	send(modified("D", key.ModAlt))
 	if v.location.Text() != path || !v.panels[1].locationScroll.start.IsZero() {
 		t.Fatal("scrolling altered the editable path or continued in editor")
+	}
+}
+
+func TestLocationMarqueeStopsForPaletteAndSettings(t *testing.T) {
+	for _, settings := range []bool{false, true} {
+		t.Run(fmt.Sprintf("settings=%v", settings), func(t *testing.T) {
+			v := newPreviewView()
+			v.panels[0].path = `W:\go\commando\日本語\a very long folder\internal\app\themes`
+			send, advance := panelInputFrames(v)
+			p := &v.panels[0]
+			if p.locationScroll.fullWidth <= p.locationScroll.width {
+				t.Fatal("test path does not overflow")
+			}
+			advance(3 * time.Second)
+			before := p.locationScroll.start
+			if settings {
+				openSettingsGroup(t, v, "appearance.autocolor")
+				send()
+			} else {
+				send(pressed("`"))
+			}
+			if settings && v.settingsWidget() == nil || !settings && v.paletteInteraction() == nil {
+				t.Fatal("test did not open the requested interaction")
+			}
+			if p.locationScroll != (textMarquee{}) {
+				t.Fatal("opening the interaction retained location animation")
+			}
+			advance(10 * time.Second)
+			if p.locationScroll != (textMarquee{}) {
+				t.Fatal("location animation restarted behind the interaction")
+			}
+			send(pressed(key.NameEscape))
+			if !v.interaction.idle() || !p.locationScroll.start.After(before) {
+				t.Fatal("closing the interaction did not restart normal location scrolling")
+			}
+			start := p.locationScroll.start
+			advance(time.Second)
+			if p.locationScroll.start != start {
+				t.Fatal("resumed animation restarted on subsequent frames")
+			}
+		})
+	}
+}
+
+func TestLocationMarqueeRequiresFocusedBrowsingPanel(t *testing.T) {
+	v := newPreviewView()
+	p := &v.panels[0]
+	p.path = `W:\go\commando\a very long folder\internal\app\themes`
+	var router input.Router
+	var ops op.Ops
+	var capture func() []byte
+	if os.Getenv("COMMANDO_PREVIEW_LOCATION_SCROLL") != "" {
+		w, err := headless.NewWindow(240, 40)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer w.Release()
+		capture = func() []byte {
+			if err := w.Frame(&ops); err != nil {
+				t.Fatal(err)
+			}
+			img := image.NewRGBA(image.Rect(0, 0, 240, 40))
+			if err := w.Screenshot(img); err != nil {
+				t.Fatal(err)
+			}
+			return img.Pix
+		}
+	}
+	now := time.Unix(1000, 0)
+	frame := func() bool {
+		ops.Reset()
+		gtx := layout.Context{Ops: &ops, Source: router.Source(), Now: now,
+			Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(240, 40))}
+		event.Op(&ops, &v.focus)
+		for {
+			if _, ok := gtx.Event(key.FocusFilter{Target: &v.focus}); !ok {
+				break
+			}
+		}
+		v.layoutLocationBar(gtx, 0, 40)
+		router.Frame(&ops)
+		_, wake := router.WakeupTime()
+		return wake
+	}
+	frame()
+	for _, tc := range []struct {
+		name    string
+		focused bool
+		active  int
+		owner   interactionSession
+	}{
+		{name: "no keyboard focus", active: 0},
+		{name: "inactive panel", focused: true, active: 1},
+		{name: "palette", focused: true, owner: &paletteSession{}},
+		{name: "settings", focused: true, owner: &settingsSession{}},
+		{name: "name editor", focused: true, owner: &nameSession{}},
+		{name: "filter editor", focused: true, owner: &filterSession{}},
+		{name: "native menu", focused: true, owner: &nativeSession{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v.active, v.interaction.current = 0, nil
+			router.Source().Execute(key.FocusCmd{Tag: &v.focus})
+			frame() // Drain focus-related invalidation before checking animation.
+			var initial []byte
+			if capture != nil {
+				initial = capture()
+			}
+			now = now.Add(3 * time.Second)
+			if !frame() || p.locationScroll.start.IsZero() {
+				t.Fatal("focused browsing did not animate")
+			}
+			if capture != nil && bytes.Equal(initial, capture()) {
+				t.Fatal("focused header did not visibly scroll")
+			}
+			v.active, v.interaction.current = tc.active, tc.owner
+			if !tc.focused {
+				router.Source().Execute(key.FocusCmd{})
+			}
+			frame()
+			var stopped []byte
+			if capture != nil {
+				stopped = capture()
+			}
+			for range 3 {
+				now = now.Add(time.Second)
+				if frame() || p.locationScroll != (textMarquee{}) {
+					t.Fatal("unfocused panel retained animation or requested another frame")
+				}
+				if capture != nil && !bytes.Equal(stopped, capture()) {
+					t.Fatal("stopped header changed pixels across frames")
+				}
+			}
+		})
 	}
 }
 
