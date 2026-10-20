@@ -29,7 +29,7 @@ func TestArchiveDeleteUsesPermanentGuardAndCancellation(t *testing.T) {
 	}
 	send, _ := panelInputFrames(v)
 	for _, c := range v.commandCatalogue() {
-		if c.id == "entry.recycle" && (c.label() != "Entry › Delete from archive" || !c.allowed(v)) {
+		if c.id == "entry.recycle" && (c.label() != "Entry › Delete from archive…" || !c.allowed(v)) {
 			t.Fatal("archive delete catalogue label/availability wrong", c)
 		}
 	}

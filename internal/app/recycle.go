@@ -29,19 +29,7 @@ func (v *view) removeSelected(gtx layout.Context, permanent bool) {
 	if !v.interaction.idle() || !removalReady(v) {
 		return
 	}
-	var names []string
-	hasDirectory := false
-	if len(p.marks) != 0 {
-		for row, item := range p.items {
-			if p.marks[row] && p.markable(row) {
-				names = append(names, item.file.Name)
-				hasDirectory = hasDirectory || item.file.Directory
-			}
-		}
-	} else if p.markable(p.selected) {
-		names = append(names, p.items[p.selected].file.Name)
-		hasDirectory = p.items[p.selected].file.Directory
-	}
+	names, hasDirectory := p.removalSelection()
 	if len(names) == 0 {
 		return
 	}

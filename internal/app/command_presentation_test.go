@@ -1,11 +1,47 @@
 package app
 
 import (
+	"strings"
 	"testing"
 
 	"gioui.org/io/key"
+	"gioui.org/layout"
+	"gioui.org/op"
 	"github.com/dannyben/commando/internal/feedback"
 )
+
+func TestRemovalEllipsisMatchesConfirmation(t *testing.T) {
+	for _, permanent := range []bool{false, true} {
+		for _, guarded := range []bool{false, true} {
+			v := newPreviewView()
+			v.loader = &directoryLoader{requests: make(chan loadRequest, 1)}
+			value := "OFF"
+			if guarded {
+				value = "ON"
+			}
+			for _, name := range []string{"single_files", "directories", "multiple_entries"} {
+				setGuard(t, v, permanent, name, value)
+			}
+			id := "entry.recycle"
+			if permanent {
+				id = "entry.delete_permanently"
+			}
+			for _, command := range v.commandCatalogue() {
+				if command.id != id {
+					continue
+				}
+				var ops op.Ops
+				v.executeCommand(layout.Context{Ops: &ops}, command)
+				if strings.HasSuffix(command.label(), "…") != guarded || (v.confirmationInteraction() != nil) != guarded {
+					t.Fatalf("ellipsis disagrees with confirmation: %s guarded=%v", command.label(), guarded)
+				}
+				if (len(v.loader.requests) == 0) != guarded {
+					t.Fatal("confirmation label disagrees with immediate dispatch")
+				}
+			}
+		}
+	}
+}
 
 func TestArchivePaletteMasksPreserveOriginalShortcutDialogName(t *testing.T) {
 	v, _ := archiveView(t)
@@ -43,7 +79,7 @@ func TestArchivePaletteMasksPreserveOriginalShortcutDialogName(t *testing.T) {
 	for _, result := range v.paletteInteraction().results {
 		visible[result.command.id] = result.command.label()
 	}
-	if visible["entry.recycle"] != "Entry › Recycle" || visible["entry.delete_permanently"] != "Entry › Delete permanently" {
+	if visible["entry.recycle"] != "Entry › Recycle" || visible["entry.delete_permanently"] != "Entry › Delete permanently…" {
 		t.Fatal("normal folder retained archive presentation")
 	}
 

@@ -66,7 +66,7 @@ func defaultCommands() []command {
 	catalogue := []command{
 		cmd("file.edit", "File", "Edit", key.NameF4, 0, editorReady),
 		cmd("entry.open", "Entry", "Open", key.NameReturn, 0, openReady),
-		cmd("entry.rename", "Entry", "Rename", key.NameF2, 0, func(v *view) bool {
+		cmd("entry.rename", "Entry", "Rename…", key.NameF2, 0, func(v *view) bool {
 			return selectedReady(v) && v.panels[v.active].location().Capabilities().Rename && v.panels[v.active].markable(v.panels[v.active].selected) && v.actionAllowed(actionMutation)
 		}),
 		cmd("entry.copy", "Entry", "Copy", "C", key.ModCtrl, copyReady),
@@ -74,26 +74,24 @@ func defaultCommands() []command {
 		cmd("entry.cut", "Entry", "Cut", "X", key.ModCtrl, clipboardReady),
 		cmd("entry.paste", "Entry", "Paste", "V", key.ModCtrl, pasteReady),
 		cmd("entry.paste_shortcut", "Entry", "Paste shortcut", "V", key.ModCtrl|key.ModShift, mutationReady),
-		cmd("entry.duplicate", "Entry", "Duplicate", "D", key.ModCtrl, duplicateReady),
-		cmd("entry.pack_zip", "Entry", "Pack to ZIP", key.NameF5, key.ModAlt, packReady),
-		cmd("entry.unpack_zip", "Entry", "Unpack ZIP", key.NameF6, key.ModAlt, unpackReady),
-		cmd("entry.copy_to_panel", "Entry", "Copy to panel", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, false) }),
-		cmd("entry.move_to_panel", "Entry", "Move to panel", key.NameF6, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, true) }),
+		cmd("entry.duplicate", "Entry", "Duplicate", "D", key.ModCtrl, duplicateReady).withPresentation(func(v *view) commandPresentation {
+			if len(v.panels[v.active].selectedNames()) == 1 {
+				return commandPresentation{name: "Duplicate…"}
+			}
+			return commandPresentation{}
+		}),
+		cmd("entry.pack_zip", "Entry", "Pack to ZIP…", key.NameF5, key.ModAlt, packReady),
+		cmd("entry.unpack_zip", "Entry", "Unpack ZIP…", key.NameF6, key.ModAlt, unpackReady),
+		cmd("entry.copy_to_panel", "Entry", "Copy to panel…", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, false) }),
+		cmd("entry.move_to_panel", "Entry", "Move to panel…", key.NameF6, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, true) }),
 		cmd("entry.copy_left", "Entry", "Copy to left", "[", 0, func(v *view) bool { return panelTransferReady(v, -1, false) }),
 		cmd("entry.copy_right", "Entry", "Copy to right", "]", 0, func(v *view) bool { return panelTransferReady(v, 1, false) }),
 		cmd("entry.move_left", "Entry", "Move to left", "{", 0, func(v *view) bool { return panelTransferReady(v, -1, true) }),
 		cmd("entry.move_right", "Entry", "Move to right", "}", 0, func(v *view) bool { return panelTransferReady(v, 1, true) }),
-		cmd("entry.recycle", "Entry", "Recycle", key.NameDeleteForward, 0, removalReady).withPresentation(func(v *view) commandPresentation {
-			if v.panels[v.active].archiveFolder != "" {
-				return commandPresentation{name: "Delete from archive"}
-			}
-			return commandPresentation{}
-		}),
-		cmd("entry.delete_permanently", "Entry", "Delete permanently", key.NameDeleteForward, key.ModShift, removalReady).withPresentation(func(v *view) commandPresentation {
-			return commandPresentation{hidden: v.panels[v.active].archiveFolder != ""}
-		}),
-		cmd("entry.new_file", "Entry", "New file", "N", key.ModCtrl, createReady),
-		cmd("entry.new_folder", "Entry", "New folder", "N", key.ModCtrl|key.ModShift, createReady),
+		cmd("entry.recycle", "Entry", "Recycle", key.NameDeleteForward, 0, removalReady).withPresentation(func(v *view) commandPresentation { return v.removalPresentation(false) }),
+		cmd("entry.delete_permanently", "Entry", "Delete permanently", key.NameDeleteForward, key.ModShift, removalReady).withPresentation(func(v *view) commandPresentation { return v.removalPresentation(true) }),
+		cmd("entry.new_file", "Entry", "New file…", "N", key.ModCtrl, createReady),
+		cmd("entry.new_folder", "Entry", "New folder…", "N", key.ModCtrl|key.ModShift, createReady),
 		cmd("entry.context_menu", "Entry", "Context menu", "/", key.ModAlt, func(v *view) bool {
 			return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false, shellMenu)
 		}),
@@ -106,7 +104,7 @@ func defaultCommands() []command {
 
 		cmd("navigation.parent_folder", "Navigation", "Parent folder", key.NameDeleteBackward, 0, func(v *view) bool { return folderReady(v) && v.loader != nil }),
 		cmd("navigation.drives", "Navigation", "Drives", key.NameHome, key.ModCtrl, func(v *view) bool { return folderReady(v) && v.loader != nil }),
-		cmd("navigation.edit_location", "Navigation", "Edit location", "D", key.ModAlt, nil),
+		cmd("navigation.edit_location", "Navigation", "Edit location…", "D", key.ModAlt, nil),
 		cmd("navigation.next_panel", "Navigation", "Next panel", key.NameTab, 0, nil),
 		cmd("navigation.previous_panel", "Navigation", "Previous panel", key.NameTab, key.ModShift, nil),
 		cmd("navigation.panel_left", "Navigation", "Panel left", key.NameLeftArrow, 0, func(v *view) bool { return v.active > 0 }),
@@ -119,7 +117,7 @@ func defaultCommands() []command {
 		cmd("navigation.page_down", "Navigation", "Page down", key.NamePageDown, 0, nil),
 
 		cmd("view.refresh", "View", "Refresh", "R", key.ModCtrl, func(v *view) bool { return panelReady(v) && v.loader != nil }),
-		cmd("view.filter_files", "View", "Filter files", "/", 0, folderReady),
+		cmd("view.filter_files", "View", "Filter files…", "/", 0, folderReady),
 		cmd("view.hidden_files", "View", "Hidden files", "H", key.ModCtrl, folderReady),
 		toggleSettingCommand("view.toggle_parent_entry", "View", "parent entry", settingParentEntry),
 		toggleSettingCommand("view.toggle_protected_system_files", "View", "protected system files", settingProtectedSystem),

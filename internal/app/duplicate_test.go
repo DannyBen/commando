@@ -47,6 +47,13 @@ func TestSingleDuplicateUsesInlineNameEditor(t *testing.T) {
 				}
 			}
 			router, send := clipboardFrames(v)
+			if !paste {
+				for _, command := range v.commandCatalogue() {
+					if command.id == "entry.duplicate" && command.label() != "Entry › Duplicate…" {
+						t.Fatal("single duplicate did not advertise its name editor")
+					}
+				}
+			}
 			shortcut := "D"
 			if paste {
 				shortcut = "V"
@@ -153,6 +160,11 @@ func TestBatchDuplicateAndSameFolderCutPaste(t *testing.T) {
 		v, root, _ := clipboardView(t)
 		c := attachTestFileClipboard(v)
 		markClipboardItems(t, &v.panels[0])
+		for _, command := range v.commandCatalogue() {
+			if command.id == "entry.duplicate" && command.label() != "Entry › Duplicate" {
+				t.Fatal("batch duplicate advertised an input step")
+			}
+		}
 		paths := []string{filepath.Join(root, "folder"), filepath.Join(root, "a.txt")}
 		before, _ := c.write(paths, shortcut == "cut")
 		keyName := "V"
