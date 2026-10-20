@@ -1,5 +1,6 @@
 # One or two lines per context. Quoted dotted IDs are flat catalogue keys.
 # [key:command.id] displays the command's first assigned shortcut in key style.
+# [settings:query] displays a short @query in the same secondary text style.
 # Ordinary brackets are literal text. Edit and rebuild to change this catalogue.
 # Context candidates are supplied by helpContextIDs in interaction.go.
 # Missing entries fall back to the enclosing context, then to "help".
@@ -13,7 +14,7 @@ lines = [
 ["browsing.introduction"]
 lines = [
   "This is the help panel. Press [key:application.toggle_help] to toggle it.",
-  "Press [key:application.command_palette] for commands and shortcuts; search @font for text size.",
+  "Press [key:application.command_palette] for commands and shortcuts; search [settings:font] for text size.",
 ]
 
 ["palette"]
@@ -934,16 +935,19 @@ lines = [
 ["palette.appearance.toggle_auto_color"]
 lines = [
   "Switch between generated file colors and the theme colors",
+  "Adjust file colors in [settings:color].",
 ]
 
 ["palette.appearance.toggle_contrast_guard"]
 lines = [
   "Turn automatic readability adjustments on or off",
+  "Configure readability in [settings:contrast].",
 ]
 
 ["palette.appearance.toggle_icons"]
 lines = [
   "Show or hide Windows file icons beside filenames",
+  "Adjust icon colors in [settings:icons].",
 ]
 
 ["palette.application.command_palette"]
@@ -1014,6 +1018,7 @@ lines = [
 ["palette.entry.delete_permanently"]
 lines = [
   "Delete marked entries or the current entry without the Recycle Bin",
+  "Configure confirmations in [settings:guards].",
 ]
 
 ["palette.entry.duplicate"]
@@ -1074,6 +1079,7 @@ lines = [
 ["palette.entry.recycle"]
 lines = [
   "Send entries to the Recycle Bin, or delete them from the open archive",
+  "Configure confirmations in [settings:guards].",
 ]
 
 ["palette.entry.rename"]
@@ -1094,11 +1100,13 @@ lines = [
 ["palette.feedback.toggle_sound"]
 lines = [
   "Turn all Commando sound cues on or off",
+  "Choose a sound profile and volume in [settings:sounds].",
 ]
 
 ["palette.file.edit"]
 lines = [
   "Open marked files or the current file using your configured editor rules",
+  "Configure editor rules in [settings:editors].",
 ]
 
 ["palette.navigation.drives"]
@@ -1254,16 +1262,19 @@ lines = [
 ["palette.view.hidden_files"]
 lines = [
   "Switch between showing all files, hiding hidden files, and hiding dotfiles too",
+  "Adjust hidden-entry colors in [settings:color].",
 ]
 
 ["palette.view.next_metadata_column"]
 lines = [
   "Show the next enabled file detail beside filenames",
+  "Choose available columns in [settings:metadata].",
 ]
 
 ["palette.view.previous_metadata_column"]
 lines = [
   "Show the previous enabled file detail beside filenames",
+  "Choose available columns in [settings:metadata].",
 ]
 
 ["palette.view.refresh"]
@@ -1274,11 +1285,13 @@ lines = [
 ["palette.view.sort_by_metadata"]
 lines = [
   "Switch between name order and sorting by the displayed file detail",
+  "Choose available columns in [settings:metadata].",
 ]
 
 ["palette.view.toggle_metadata_column"]
 lines = [
   "Hide the file-detail column or restore the last one shown",
+  "Choose available columns in [settings:metadata].",
 ]
 
 ["palette.view.toggle_parent_entry"]

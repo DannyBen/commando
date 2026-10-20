@@ -13,7 +13,7 @@ const helpCommandID = "application.toggle_help"
 //go:embed help.toml
 var helpTOML string
 
-type helpSpan struct{ text, command string }
+type helpSpan struct{ text, command, settingsQuery string }
 type helpTip struct{ lines [][]helpSpan }
 type helpCatalogue map[string]helpTip
 
@@ -90,18 +90,30 @@ func parseHelpCatalogue(source string, commands []command) (helpCatalogue, error
 func parseHelpLine(line string, commands map[string]bool) ([]helpSpan, error) {
 	var spans []helpSpan
 	for line != "" {
-		plain, token, found := strings.Cut(line, "[key:")
+		marker := "[key:"
+		start := strings.Index(line, marker)
+		if settings := strings.Index(line, "[settings:"); settings >= 0 && (start < 0 || settings < start) {
+			start, marker = settings, "[settings:"
+		}
+		if start < 0 {
+			spans = append(spans, helpSpan{text: line})
+			break
+		}
+		plain, token := line[:start], line[start+len(marker):]
 		if plain != "" {
 			spans = append(spans, helpSpan{text: plain})
 		}
-		if !found {
-			break
-		}
 		id, rest, closed := strings.Cut(token, "]")
-		if !closed || !commands[id] {
+		if marker == "[settings:" {
+			if !closed || id == "" || strings.ContainsAny(id, " @[]\t\r\n") {
+				return nil, fmt.Errorf("invalid help settings query: %q", token)
+			}
+			spans = append(spans, helpSpan{text: "@" + id, settingsQuery: id})
+		} else if !closed || !commands[id] {
 			return nil, fmt.Errorf("invalid help binding: %q", token)
+		} else {
+			spans = append(spans, helpSpan{command: id})
 		}
-		spans = append(spans, helpSpan{command: id})
 		line = rest
 	}
 	return spans, nil

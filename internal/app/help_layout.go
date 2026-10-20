@@ -51,7 +51,7 @@ func (v *view) layoutHelpLine(gtx layout.Context, line []helpSpan, scroll *textM
 	for _, span := range v.resolveHelpLine(line) {
 		content.WriteString(span.text)
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if span.command != "" {
+			if span.command != "" || span.settingsQuery != "" {
 				return v.labelFor(contrastSecondary, gtx, span.text, v.appearance.TextSize, v.appearance.Colors.Muted, text.Start)
 			}
 			return v.label(gtx, span.text, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)

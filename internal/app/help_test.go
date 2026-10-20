@@ -194,6 +194,14 @@ lines = ["[key:missing.command]"]`,
 		`["test"]
 lines = ["[key:application.toggle_help"]`,
 		`["test"]
+lines = ["[settings:]"]`,
+		`["test"]
+lines = ["[settings:two words]"]`,
+		`["test"]
+lines = ["[settings:@editors]"]`,
+		`["test"]
+lines = ["[settings:editors"]`,
+		`["test"]
 line = "misspelled"`,
 	} {
 		if _, err := parseHelpCatalogue(source, defaultCommands()); err == nil {
@@ -201,12 +209,15 @@ line = "misspelled"`,
 		}
 	}
 	catalogue, err := parseHelpCatalogue(`["test.unicode"]
-lines = ["Å text [literal] [key:application.toggle_help] / [key:application.command_palette]."]`, defaultCommands())
+lines = ["Å text [literal] [key:application.toggle_help] / [settings:editors] / [key:application.command_palette]."]`, defaultCommands())
 	if err != nil {
 		t.Fatal(err)
 	}
 	v := newPreviewView()
 	line := catalogue["test.unicode"].lines[0]
+	if line[3].settingsQuery != "editors" || line[3].text != "@editors" {
+		t.Fatal("settings query lost its display text or styling marker", line)
+	}
 	flatten := func() string {
 		var text strings.Builder
 		for _, span := range v.resolveHelpLine(line) {
@@ -214,7 +225,7 @@ lines = ["Å text [literal] [key:application.toggle_help] / [key:application.com
 		}
 		return text.String()
 	}
-	if got := flatten(); got != "Å text [literal] [F1] / [`]." {
+	if got := flatten(); got != "Å text [literal] [F1] / @editors / [`]." {
 		t.Fatal("unexpected default help text", got)
 	}
 	set := func(id string, slot int, value string) {
@@ -225,11 +236,43 @@ lines = ["Å text [literal] [key:application.toggle_help] / [key:application.com
 	}
 	set(helpCommandID, 0, "F9")
 	set("application.command_palette", 0, "none")
-	if got := flatten(); got != "Å text [literal] [F9] / [Ctrl+Shift+P]." {
+	if got := flatten(); got != "Å text [literal] [F9] / @editors / [Ctrl+Shift+P]." {
 		t.Fatal("help ignored current or alternate binding", got)
 	}
 	set("application.command_palette", 1, "none")
 	if got := flatten(); !strings.HasSuffix(got, "[unassigned].") {
 		t.Fatal("help invented an unassigned shortcut", got)
+	}
+}
+
+func TestHelpSettingsQueriesFindSettings(t *testing.T) {
+	v := newPreviewView()
+	palette := &paletteSession{settingsCommands: v.settingsCatalogue()}
+	queries := make(map[string]bool)
+	for id, tip := range defaultHelp {
+		count := 0
+		for _, line := range tip.lines {
+			for _, span := range line {
+				if span.settingsQuery == "" {
+					continue
+				}
+				count++
+				query := span.settingsQuery
+				if query != strings.ToLower(query) {
+					t.Errorf("%s: settings query should be easy to type: %s", id, query)
+				}
+				palette.filter("@" + query)
+				if len(palette.results) == 0 {
+					t.Errorf("%s: @%s finds no settings", id, query)
+				}
+				queries[query] = true
+			}
+		}
+		if count > 1 {
+			t.Errorf("%s: more than one settings pointer", id)
+		}
+	}
+	if len(queries) == 0 {
+		t.Fatal("catalogue has no settings pointers")
 	}
 }
