@@ -110,6 +110,90 @@ func TestExplicitlyUnassignedBindingSurvivesRestart(t *testing.T) {
 	}
 }
 
+func TestReassigningTerminalDefaultOmitsBothRedundantOverrides(t *testing.T) {
+	catalogue := bindingSettingsCatalogue()
+	terminal := bindingSettingKey("programs.terminal_here", 0)
+	generator := bindingSettingKey("settings.appearance.theme.generator", 0)
+	var values settings.Values
+	if err := values.Set(catalogue, generator, settings.Value{Text: "Ctrl+T"}); err != nil {
+		t.Fatal(err)
+	}
+	// Simulate the upgrade: Terminal's newly introduced default yields to the
+	// user's existing generator binding until the user reassigns it.
+	if err := validateBindingOverrides(&values); err != nil {
+		t.Fatal(err)
+	}
+	if values.Get(catalogue, terminal).Text != "none" {
+		t.Fatal("upgrade did not preserve the generator's shortcut")
+	}
+	if err := values.Set(catalogue, terminal, settings.Value{Text: "Ctrl+T"}); err != nil {
+		t.Fatal(err)
+	}
+	resolved, _, ok := reassignBindings(values, "programs.terminal_here", 0)
+	if !ok || resolved.Get(catalogue, generator).Text != "none" {
+		t.Fatal("reassignment did not clear the generator")
+	}
+	dir := t.TempDir()
+	if err := catalogue.Save(dir, resolved); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "settings.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(string(data)) != "" {
+		t.Fatalf("effective defaults remained in the user file:\n%s", data)
+	}
+	// Filtering a saved copy must preserve the live settings transaction.
+	if resolved.Get(catalogue, terminal).Text != "Ctrl+T" || resolved.Get(catalogue, generator).Text != "none" {
+		t.Fatal("saving changed the supplied values")
+	}
+	loaded, err := settings.Load(dir, catalogue)
+	if err != nil || loaded.Overridden(terminal) || loaded.Overridden(generator) {
+		t.Fatal("default bindings did not reload as inherited", err)
+	}
+}
+
+func TestBindingPersistenceComparesEffectiveDefaultsPerSlot(t *testing.T) {
+	for _, tc := range []struct {
+		name, command, text string
+		slot                int
+		stored              bool
+	}{
+		{"default key", "programs.terminal_here", "Ctrl+T", 0, false},
+		{"equivalent key spelling", "programs.terminal_here", "ctrl+t", 0, false},
+		{"empty secondary", "programs.terminal_here", "none", 1, false},
+		{"unbound settings command", "settings.appearance.theme.generator", "none", 0, false},
+		{"default generated key", "panel.focus_3", "Alt+3", 0, false},
+		{"unbound dynamic command", "panel.focus_12", "none", 0, false},
+		{"explicit unassignment", "programs.terminal_here", "none", 0, true},
+		{"custom key", "programs.terminal_here", "Ctrl+Y", 0, true},
+		{"custom settings key", "settings.appearance.theme.generator", "Ctrl+Y", 0, true},
+		{"custom secondary", "programs.terminal_here", "Ctrl+Y", 1, true},
+		{"default key in another slot", "programs.terminal_here", "Ctrl+T", 1, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			catalogue := bindingSettingsCatalogue()
+			field := bindingSettingKey(tc.command, tc.slot)
+			var values settings.Values
+			if err := values.Set(catalogue, field, settings.Value{Text: tc.text}); err != nil {
+				t.Fatal(err)
+			}
+			dir := t.TempDir()
+			if err := catalogue.Save(dir, values); err != nil {
+				t.Fatal(err)
+			}
+			loaded, err := settings.Load(dir, catalogue)
+			if err != nil || loaded.Overridden(field) != tc.stored {
+				t.Fatalf("stored=%v want=%v err=%v", loaded.Overridden(field), tc.stored, err)
+			}
+			if tc.stored && loaded.Get(catalogue, field).Text != tc.text {
+				t.Fatal("non-default shortcut was changed")
+			}
+		})
+	}
+}
+
 func TestCustomBrowsingPasteBindingLeavesTextFieldPasteFixed(t *testing.T) {
 	v := newPreviewView()
 	catalogue := bindingSettingsCatalogue()

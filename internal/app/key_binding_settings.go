@@ -89,7 +89,24 @@ func validateBindingOverrides(values *settings.Values) error {
 		values.Reset("keybindings")
 		return conflict
 	}
+	resetDefaultBindings(values)
 	return nil
+}
+
+// Settings encode inheritance as an empty string, independently of the actual
+// command default. Compare resolved slots so default keys and redundant "none"
+// values both inherit; disabling a nonempty default remains an override.
+func resetDefaultBindings(values *settings.Values) {
+	v := view{settingsValues: *values}
+	for _, c := range bindingCommands(*values) {
+		c = v.resolveCommandBindings(c)
+		for slot, binding := range c.bindings {
+			field := bindingSettingKey(c.id, slot)
+			if values.Overridden(field) && c.effectiveShortcut(slot) == binding.Default {
+				values.Reset(field)
+			}
+		}
+	}
 }
 
 func unassignConflictingDefaults(values *settings.Values) error {
