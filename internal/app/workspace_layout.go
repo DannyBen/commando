@@ -68,6 +68,9 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 		}
 		v.layoutSettingsWidget(settingsContext)
 	}
+	if s := v.multiRenameInteraction(); s != nil {
+		v.layoutMultiRename(gtx, s)
+	}
 	if v.confirmationInteraction() != nil {
 		v.layoutConfirmation(frame)
 	}

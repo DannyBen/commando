@@ -58,6 +58,7 @@ func TestNavigationEdgesAndEditorsStaySilent(t *testing.T) {
 	for _, editor := range []string{"location", "name"} {
 		t.Run(editor, func(t *testing.T) {
 			v := newPreviewView()
+			v.panels[0].clearMarks()
 			recorded := &recordedSounds{}
 			v.sounds = recorded
 			send, _ := panelInputFrames(v)

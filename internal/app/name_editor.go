@@ -69,6 +69,10 @@ func (n *nameSession) draft() bool { return n.kind != nameRename && !n.finished 
 
 func (v *view) startName(gtx layout.Context, kind nameOperation) {
 	p := &v.panels[v.active]
+	if kind == nameRename && p.nativeFolder() && len(p.selectedNames()) > 1 {
+		v.startMultiRename(gtx)
+		return
+	}
 	supported := p.nativeFolder() || kind == nameRename && p.favoriteSelected()
 	if p.archiveFolder != "" {
 		capabilities := p.location().Capabilities()

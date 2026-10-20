@@ -336,6 +336,7 @@ func TestCreateFolderEmptyDirectoryAndUnavailableContexts(t *testing.T) {
 		t.Fatal("creation interrupted a location editor")
 	}
 	v = newPreviewView()
+	v.panels[0].clearMarks() // This case exercises the single-name editor.
 	send, _ = panelInputFrames(v)
 	send(pressed(key.NameF2))
 	send(newFolderKey())

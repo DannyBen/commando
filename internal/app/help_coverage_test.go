@@ -44,7 +44,7 @@ func helpRequirements(c settings.Catalogue, paletteCommands, paletteSettings []c
 		"settings.actions.save", "settings.actions.cancel", "settings.actions.reset", "settings.actions.delete",
 		"settings.saving", "settings.selecting",
 		"settings.shortcuts", "settings.shortcuts.capture", "settings.shortcuts.shortcut_1", "settings.shortcuts.shortcut_2",
-		"editing.location", "editing.name", "editing.filter", "actions", "actions.target_panel", "actions.target_panel.choices", "confirmation",
+		"editing.location", "editing.name", "editing.multi_rename", "editing.filter", "actions", "actions.target_panel", "actions.target_panel.choices", "confirmation",
 	} {
 		add("interactions", id)
 	}

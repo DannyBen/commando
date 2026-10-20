@@ -12,6 +12,7 @@ import (
 
 func TestForegroundSessionRejectsCompetingInteractions(t *testing.T) {
 	v := newPreviewView()
+	v.panels[0].clearMarks()
 	v.panels[0].selected = 1
 	send, _ := panelInputFrames(v)
 	send(pressed(key.NameF2))
@@ -42,6 +43,7 @@ func TestForegroundSessionRejectsCompetingInteractions(t *testing.T) {
 
 func TestSubmittedNameCannotLeaveBeforeReconciliation(t *testing.T) {
 	v := newPreviewView()
+	v.panels[0].clearMarks()
 	v.loader = &directoryLoader{requests: make(chan loadRequest, 1)}
 	v.panels[0].selected = 1
 	send, _ := panelInputFrames(v)

@@ -47,13 +47,16 @@ func TestDeletePreviousWordSelectionUnicodeWhitespaceAndReadOnly(t *testing.T) {
 }
 
 func TestCtrlBackspaceAcrossEditorsPreservesUndoFocusAndMarks(t *testing.T) {
-	for _, name := range []string{"rename", "create", "location", "palette", "filter", "settings"} {
+	for _, name := range []string{"rename", "multi-rename", "create", "location", "palette", "filter", "settings"} {
 		t.Run(name, func(t *testing.T) {
 			v := newPreviewView()
 			v.panels[0].selected = 12
+			if name == "rename" {
+				v.panels[0].marks = map[int]bool{12: true}
+			}
 			router, send := clipboardFrames(v)
 			switch name {
-			case "rename":
+			case "rename", "multi-rename":
 				send(pressed(key.NameF2))
 			case "create":
 				send(newFolderKey())
@@ -115,6 +118,10 @@ func TestEditorCopyAndPaste(t *testing.T) {
 				v := newPreviewView()
 				v.nativeKeys = &nativeKeyInput{invalidate: func() {}}
 				v.panels[0].selected = 12 // AGENTS.md
+				if editorName == "rename" {
+					v.panels[0].marks = map[int]bool{12: true}
+				}
+				marks := len(v.panels[0].marks)
 				router, send := clipboardFrames(v)
 				start := func() {
 					if editorName == "rename" {
@@ -171,7 +178,7 @@ func TestEditorCopyAndPaste(t *testing.T) {
 				if editor.Text() != want || v.active != 0 || !router.Source().Focused(editor) {
 					t.Fatalf("paste: got %q want %q (before %q)", editor.Text(), want, before)
 				}
-				if len(v.panels[0].marks) != 3 {
+				if len(v.panels[0].marks) != marks {
 					t.Fatal("editor Insert changed file marks")
 				}
 				// Ctrl+Z must undo the paste through Gio's ordinary editor history.
@@ -188,6 +195,7 @@ func TestNativeInsertPasteRequiresShiftAndWritableEditor(t *testing.T) {
 	for _, name := range []string{"location", "rename", "pending rename"} {
 		t.Run(name, func(t *testing.T) {
 			v := newPreviewView()
+			v.panels[0].clearMarks()
 			v.nativeKeys = &nativeKeyInput{invalidate: func() {}}
 			router, send := clipboardFrames(v)
 			if name == "location" {

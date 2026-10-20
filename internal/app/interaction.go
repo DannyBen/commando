@@ -111,6 +111,12 @@ func (v *view) inlineInteraction() *inlineActionSession {
 }
 
 func (v *view) activeEditor() *widget.Editor {
+	if s := v.multiRenameInteraction(); s != nil {
+		if s.focus == 0 && !s.pending {
+			return &s.editor
+		}
+		return nil
+	}
 	if s := v.settingsInteraction(); s != nil {
 		if s.editing {
 			return &s.editor
@@ -197,6 +203,8 @@ func (v *view) helpContextIDs() []string {
 		if s.kind == nameFavorite {
 			ids = append([]string{"editing.favorite"}, ids...)
 		}
+	case *multiRenameSession:
+		ids = append(ids, "editing.multi_rename", "editing")
 	case *filterSession:
 		ids = append(ids, "editing.filter", "editing")
 	case *inlineActionSession:
@@ -228,6 +236,8 @@ func (v *view) focusInteraction(gtx layout.Context) {
 // A submitted name mutation must finish before its editor can be left.
 func (v *view) cancelInteraction(gtx layout.Context) bool {
 	switch s := v.interaction.current.(type) {
+	case *multiRenameSession:
+		return false // The expression transaction has explicit Apply / Cancel actions.
 	case *favoriteSession:
 		v.interaction.finish(s)
 		v.panels[s.panel] = s.previous
@@ -277,6 +287,15 @@ func (v *view) escape(gtx layout.Context) {
 		}
 	}
 	if s := v.nameInteraction(); s != nil && s.pending {
+		return
+	}
+	if s := v.multiRenameInteraction(); s != nil {
+		if s.pending {
+			return
+		}
+		v.dismissFeedback()
+		v.stopMultiRename(gtx)
+		v.announceInteraction(eventCancelled)
 		return
 	}
 	v.dismissFeedback()
@@ -353,6 +372,10 @@ func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
 // Editors consume their events before ordinary browsing, preserving event
 // order and native text handling. True means editing is still active.
 func (v *view) updateInteraction(gtx layout.Context) bool {
+	if s := v.multiRenameInteraction(); s != nil {
+		v.updateMultiRename(gtx, s)
+		return true
+	}
 	if s := v.confirmationInteraction(); s != nil {
 		v.updateConfirmation(gtx, s)
 		return true

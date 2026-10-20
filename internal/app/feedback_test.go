@@ -122,6 +122,9 @@ func TestFeedbackKeysStayInEditors(t *testing.T) {
 	for _, name := range []string{"location", "rename", "create"} {
 		t.Run(name, func(t *testing.T) {
 			v := newPreviewView()
+			if name == "rename" {
+				v.panels[0].clearMarks()
+			}
 			v.nativeKeys = &nativeKeyInput{invalidate: func() {}}
 			send, advance := panelInputFrames(v)
 			if name == "location" {

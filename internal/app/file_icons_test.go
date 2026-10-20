@@ -193,6 +193,7 @@ func TestFileIconCacheKeepsRecentlyViewedIconsWhenFull(t *testing.T) {
 func TestNameEditorsAndSettingsPreviewsRequestIcons(t *testing.T) {
 	for _, kind := range []nameOperation{nameCreateFile, nameCreateFolder, nameRename} {
 		v := newPreviewView()
+		v.panels[0].clearMarks()
 		v.loader = &directoryLoader{readFileIcon: func(string, int) image.Image { return nil }}
 		var ops op.Ops
 		gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 300))}

@@ -1084,7 +1084,13 @@ lines = [
 
 ["palette.entry.rename"]
 lines = [
-  "Change the name of the current file or folder",
+  "Rename the current entry, or use an expression for multiple marked entries",
+]
+
+["editing.multi_rename"]
+lines = [
+  "Preview new names in the panel; Tab selects Apply or Cancel",
+  "Use <name>, <base>, <ext> and <counter pad:0>; Ctrl+Enter applies",
 ]
 
 ["palette.entry.unpack_zip"]

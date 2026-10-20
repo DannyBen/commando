@@ -32,6 +32,7 @@ type loadRequest struct {
 	action             actionClass
 	locations          []string // Captured panel paths for create/rename alias reconciliation.
 	rename             *renameRequest
+	multiRename        *multiRenameRequest
 	create             *createRequest
 	duplicate          *duplicateRequest
 	removal            *removalRequest
@@ -51,6 +52,7 @@ type loadRequest struct {
 
 type loadResult struct {
 	archiveReconciled        bool
+	renamed                  []renameChange
 	archiveMoves             []archivePanelMove
 	movedNames, movedSources []string
 	retainedCopies           int
@@ -95,6 +97,7 @@ type directoryLoader struct {
 	transfer              func(browser.TransferRequest) (browser.TransferResult, error)
 	createShortcuts       func([]string, string) (browser.TransferResult, error)
 	readDirectory         func(string) (browser.Directory, error)
+	renameEntry           func(string, string, string) error
 	launchEditor          func(string, []string, string) error
 	launchTerminal        func(string, bool, uintptr) error
 	folderShortcutTarget  func(string) (string, error)
@@ -130,6 +133,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		createShortcuts:       browser.CreateShortcuts,
 		stopped:               make(chan struct{}),
 		readDirectory:         read,
+		renameEntry:           browser.Rename,
 		launchEditor:          browser.LaunchEditor,
 		launchTerminal:        browser.LaunchTerminal,
 		folderShortcutTarget:  browser.FolderShortcutTarget,
@@ -256,9 +260,11 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					}
 					continue
 				}
-				if request.unpack != nil || request.clipboard != nil || request.transfer != nil || request.duplicate != nil || (request.removal != nil || request.rename != nil || request.create != nil) && request.archiveFolder != "" {
+				if request.multiRename != nil || request.unpack != nil || request.clipboard != nil || request.transfer != nil || request.duplicate != nil || (request.removal != nil || request.rename != nil || request.create != nil) && request.archiveFolder != "" {
 					var result loadResult
-					if request.unpack != nil {
+					if request.multiRename != nil {
+						result = l.multiRenameOperation(request)
+					} else if request.unpack != nil {
 						result = l.unpackOperation(request)
 					} else if request.rename != nil {
 						result = l.archiveRenameOperation(request)

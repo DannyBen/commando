@@ -69,6 +69,7 @@ func TestEscapePlaysOneCueAcrossInteractions(t *testing.T) {
 
 func TestEscapeRemainsSilentWhileSubmittedNameIsProtected(t *testing.T) {
 	v := newPreviewView()
+	v.panels[0].clearMarks()
 	v.loader = &directoryLoader{requests: make(chan loadRequest, 1)}
 	send, _ := panelInputFrames(v)
 	send(pressed(key.NameF2))

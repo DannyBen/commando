@@ -82,6 +82,7 @@ func TestRemovalProgressIsDelayedAndQuietWithNormalResults(t *testing.T) {
 func TestSubmittedNameMutationUsesDelayedQuietProgress(t *testing.T) {
 	for _, kind := range []nameOperation{nameRename, nameCreateFile, nameCreateFolder, nameDuplicate} {
 		v := newPreviewView()
+		v.panels[0].clearMarks()
 		v.appearance.FeedbackProgressDelay = time.Hour
 		v.loader = &directoryLoader{requests: make(chan loadRequest, 1)}
 		send, _ := panelInputFrames(v)

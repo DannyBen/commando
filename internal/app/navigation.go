@@ -114,7 +114,7 @@ func (v *view) acceptLoad(result loadResult) {
 	if v.loader != nil {
 		defer v.loader.complete(result.request)
 	}
-	if result.request.rename != nil || result.request.removal != nil || result.request.transfer != nil || result.request.duplicate != nil {
+	if result.request.multiRename != nil || result.request.rename != nil || result.request.removal != nil || result.request.transfer != nil || result.request.duplicate != nil {
 		v.refreshHomePanels()
 	}
 	if result.request.homeDirectory != "" && result.err == nil {
@@ -176,6 +176,10 @@ func (v *view) acceptLoad(result loadResult) {
 	}
 	if result.request.autoRefresh {
 		v.acceptAutoRefresh(result)
+		return
+	}
+	if result.request.multiRename != nil {
+		v.acceptMultiRename(result)
 		return
 	}
 	if result.request.clipboard != nil || result.request.transfer != nil {

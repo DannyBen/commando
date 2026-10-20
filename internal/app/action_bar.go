@@ -11,11 +11,18 @@ import (
 
 // actionBar is a keyboard-controlled row of equal-width, clickable action cells.
 // Its owner supplies focus, labels and activation, keeping session policy outside.
-type actionBar struct{ buttons []clickTarget }
+type actionBar struct {
+	buttons  []clickTarget
+	disabled []bool
+}
+
+func (b *actionBar) isDisabled(index int) bool {
+	return index < len(b.disabled) && b.disabled[index]
+}
 
 func (b *actionBar) update(gtx layout.Context) (int, bool) {
 	for i := range b.buttons {
-		if b.buttons[i].Clicked(gtx) {
+		if b.buttons[i].Clicked(gtx) && !b.isDisabled(i) {
 			return i, true
 		}
 	}
@@ -29,13 +36,20 @@ func (b *actionBar) layout(gtx layout.Context, labels []string, selected, height
 	children := make([]layout.FlexChild, 0, len(labels))
 	for i, value := range labels {
 		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			disabled := b.isDisabled(i)
+			if disabled {
+				gtx = gtx.Disabled()
+			}
 			size := image.Pt(gtx.Constraints.Max.X, height)
 			gtx.Constraints = layout.Exact(size)
 			return b.buttons[i].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				state := b.buttons[i].state(gtx, i == selected)
+				state := b.buttons[i].state(gtx, i == selected && !disabled)
 				bg, fg := colors.Surface, colors.Foreground
 				if state.selectedAppearance() {
 					bg, fg = colors.Selected, colors.SelectedName
+				}
+				if disabled {
+					fg = colors.Muted
 				}
 				bg = state.background(bg, theme.HoverStrength)
 				paint.FillShape(gtx.Ops, bg, clip.Rect{Max: size}.Op())

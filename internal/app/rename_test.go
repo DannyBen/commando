@@ -265,6 +265,7 @@ func TestPendingRenameKeepsUIResponsiveAndCannotBeCancelled(t *testing.T) {
 
 func TestClickCancelsRenameDraft(t *testing.T) {
 	v := newPreviewView()
+	v.panels[0].clearMarks()
 	send, _ := panelInputFrames(v)
 	send(pressed(key.NameF2))
 	send(replaceRename(v, "draft"))

@@ -33,6 +33,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					return v.filterContents(gtx, index)
 				}
 				heading := p.metadata.heading()
+				if s := v.multiRenameInteraction(); s != nil && s.panel == index {
+					heading = ""
+				}
 				if p.drives {
 					heading = ""
 				}
@@ -101,6 +104,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 						active = storedRow == p.selected && index == v.active && transient < 0 && !p.navigating
 						state := p.rows[row].state(gtx, active)
 						active = state.selectedAppearance()
+						if s := v.multiRenameInteraction(); s != nil && s.panel == index {
+							active = false
+						}
 						cut = v.cutEntry(index, storedRow)
 						bg, nameColor, sizeColor = v.appearance.entryColors(p.items[storedRow].file, active, cut)
 						bg = state.background(bg, v.appearance.HoverStrength)
@@ -124,7 +130,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							})
 						}
 						return v.withFileIcon(gtx, p, p.items[storedRow], cut, func(gtx layout.Context) layout.Dimensions {
-							return v.rowContents(gtx, p.items[storedRow], nameColor, sizeColor, p.metadata, v.appearance.entryTextRoles(p.items[storedRow].file, active, cut), p.drives)
+							return v.multiRenameRow(gtx, index, p.items[storedRow], nameColor, sizeColor, v.appearance.entryTextRoles(p.items[storedRow].file, active, cut))
 						})
 					})
 				}
