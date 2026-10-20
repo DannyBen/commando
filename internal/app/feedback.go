@@ -120,7 +120,7 @@ func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 	if index == v.active && p.prefix != "" {
 		status = "> " + p.prefix
 	}
-	return v.columnLayout(gtx, gtx.Dp(84), func(gtx layout.Context) layout.Dimensions {
+	return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return v.label(gtx, status, v.appearance.SmallTextSize, v.appearance.Colors.Foreground, text.Start)
 	}, func(gtx layout.Context) layout.Dimensions {
 		return v.labelFor(contrastSecondary, gtx, p.positionLabel(), v.appearance.SmallTextSize, v.appearance.Colors.Muted, text.End)
