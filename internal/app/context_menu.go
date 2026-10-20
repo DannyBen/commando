@@ -6,7 +6,29 @@ import (
 	"time"
 
 	"gioui.org/layout"
+	"github.com/dannyben/commando/internal/windowshell"
 )
+
+func (v *view) startBackgroundContextMenu(gtx layout.Context, index int) {
+	if v.shellExecutor == nil || !v.canStartInteraction(index, actionMutation) {
+		return
+	}
+	p := &v.panels[index]
+	if p.path == "" || !p.nativeFolder() {
+		return
+	}
+	s := &nativeSession{panel: index, request: shellRequest{
+		action: shellMenu, paths: []string{p.path},
+		options: windowshell.MenuOptions{Background: true}, queued: time.Now(),
+	}}
+	if !v.startInteraction(s) {
+		return
+	}
+	v.dismissFeedback()
+	v.focusPanel(index, false)
+	p.prefix = ""
+	v.focusInteraction(gtx)
+}
 
 // Mouse, keyboard and command search join here. Mouse invocation targets only
 // the clicked item; keyboard invocation uses the shared marked selection.

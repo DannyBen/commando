@@ -31,6 +31,11 @@ func (v *view) update(gtx layout.Context) {
 		if v.interaction.panelsBlocked() {
 			pointerContext = gtx.Disabled()
 		}
+		if p.emptySpace != nil {
+			if context, _ := p.emptySpace.updatePointer(pointerContext); context {
+				v.startBackgroundContextMenu(gtx, pi)
+			}
+		}
 		if p.emptySpace != nil && p.emptySpace.Clicked(pointerContext) {
 			if v.cancelInteraction(gtx) {
 				v.dismissFeedback()

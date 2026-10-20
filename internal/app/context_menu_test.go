@@ -2,6 +2,7 @@ package app
 
 import (
 	"image"
+	"maps"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -158,5 +159,70 @@ func TestContextMenuDragOutsideRowDoesNotOpenMenu(t *testing.T) {
 		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(20, 200)})
 	if !v.interaction.idle() {
 		t.Fatal("releasing outside the row opened its menu")
+	}
+}
+
+func TestBackgroundContextMenuPreservesPanelState(t *testing.T) {
+	for _, empty := range []bool{false, true} {
+		v := selectionView()
+		v.shellExecutor = menuTestView().shellExecutor
+		p := &v.panels[1]
+		if empty {
+			p.items, p.selected = nil, -1
+		}
+		send, _ := panelInputFrames(v)
+		selected, marks, position := p.selected, maps.Clone(p.marks), p.list.Position
+		point := f32.Pt(450, 350)
+		send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonSecondary, Position: point})
+		if !v.interaction.idle() {
+			t.Fatal("background menu opened before release")
+		}
+		send(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: point})
+		s, ok := v.interaction.current.(*nativeSession)
+		if !ok || s.panel != 1 || v.active != 1 || !s.request.options.Background || s.request.options.ClientPoint != nil || !reflect.DeepEqual(s.request.paths, []string{p.path}) {
+			t.Fatalf("empty=%v: background click did not target its folder: owner=%#v", empty, v.interaction.current)
+		}
+		if p.selected != selected || !maps.Equal(p.marks, marks) || p.list.Position.First != position.First || p.list.Position.Offset != position.Offset {
+			t.Fatal("background menu changed selection, marks or viewport")
+		}
+		if v.requestClose() || v.actionAllowed(actionMutation) {
+			t.Fatal("background menu did not hold shared native ownership")
+		}
+		v.dispatchNative(func() {})
+		v.completeNative(<-v.shellResults)
+		if !v.interaction.idle() {
+			t.Fatal("background completion retained ownership")
+		}
+	}
+}
+
+func TestBackgroundContextMenuRejectsUnavailablePanels(t *testing.T) {
+	for _, block := range []func(*view){
+		func(v *view) { v.shellExecutor = nil },
+		func(v *view) { v.panels[1].drives = true },
+		func(v *view) { v.panels[1].archiveFolder = "nested" },
+		func(v *view) { v.panels[1].path = "" },
+		func(v *view) { v.panels[1].loading = true },
+		func(v *view) { v.transferPending = true },
+		func(v *view) { v.pendingNameDraft = &loadResult{} },
+	} {
+		v := menuTestView()
+		block(v)
+		var ops op.Ops
+		v.startBackgroundContextMenu(layout.Context{Ops: &ops}, 1)
+		if !v.interaction.idle() || v.active != 0 {
+			t.Fatal("unavailable background menu changed foreground or panel")
+		}
+	}
+}
+
+func TestBackgroundContextMenuReleaseOutsideDoesNotOpen(t *testing.T) {
+	v := selectionView()
+	v.shellExecutor = menuTestView().shellExecutor
+	send, _ := panelInputFrames(v)
+	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonSecondary, Position: f32.Pt(450, 350)},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: f32.Pt(20, 110)})
+	if !v.interaction.idle() {
+		t.Fatal("release outside the empty space opened a menu")
 	}
 }

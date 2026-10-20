@@ -44,6 +44,7 @@ type Result struct {
 }
 
 type MenuOptions struct {
+	Background  bool // Request the single folder's background menu, including drive roots.
 	Extended    bool
 	ClientPoint *image.Point // nil uses the cursor captured before preparation.
 }

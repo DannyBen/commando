@@ -19,6 +19,7 @@ var (
 	comctl32         = windows.NewLazySystemDLL("comctl32.dll")
 	parseDisplayName = shell32.NewProc("SHParseDisplayName")
 	bindToParent     = shell32.NewProc("SHBindToParent")
+	bindToObject     = shell32.NewProc("SHBindToObject")
 	doDragDrop       = shell32.NewProc("SHDoDragDrop")
 	oleInitialize    = ole32.NewProc("OleInitialize")
 	oleUninitialize  = ole32.NewProc("OleUninitialize")
@@ -143,7 +144,7 @@ func (h *Host) Drag(paths []string, armed bool) (Result, error) {
 	return r, hresult(hr)
 }
 
-// ContextMenu hosts the traditional Windows shell menu for sibling items.
+// ContextMenu hosts the traditional Windows shell menu for sibling items or a folder background.
 // Menu and command callbacks remain on the native thread throughout.
 func (h *Host) ContextMenu(paths []string, options MenuOptions) (Result, error) {
 	r := Result{Action: "menu", ThreadID: h.thread}
@@ -157,7 +158,12 @@ func (h *Host) ContextMenu(paths []string, options MenuOptions) (Result, error) 
 	if err != nil {
 		return r, err
 	}
-	menu, err := timedShellObject(h.hwnd, paths, &iidMenu, &r.Timings, false)
+	var menu *object
+	if options.Background {
+		menu, err = backgroundMenu(h.hwnd, paths, &r.Timings)
+	} else {
+		menu, err = timedShellObject(h.hwnd, paths, &iidMenu, &r.Timings, false)
+	}
 	if err != nil {
 		return r, err
 	}

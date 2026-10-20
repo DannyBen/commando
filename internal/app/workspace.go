@@ -30,7 +30,7 @@ type panel struct {
 	items               []entry
 	entries             []browser.Entry // Complete listing; items is the currently visible projection.
 	rows                map[int]*fileRow
-	emptySpace          *clickTarget
+	emptySpace          *fileRow
 	locationBar         *clickTarget
 	locationScroll      textMarquee
 	list                widget.List

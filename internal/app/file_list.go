@@ -201,7 +201,7 @@ func (p *panel) layoutEmptySpace(gtx layout.Context, top, width int) {
 		return
 	}
 	if p.emptySpace == nil {
-		p.emptySpace = new(clickTarget)
+		p.emptySpace = new(fileRow)
 	}
 	defer op.Offset(image.Pt(0, top)).Push(gtx.Ops).Pop()
 	gtx.Constraints = layout.Exact(image.Pt(width, gtx.Constraints.Max.Y-top))
