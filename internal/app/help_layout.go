@@ -40,7 +40,19 @@ func (v *view) layoutHelpFooter(gtx layout.Context) layout.Dimensions {
 				return v.layoutHelpLine(gtx, line, &v.helpScroll[i])
 			}))
 		}
-		return layout.Flex{Axis: layout.Vertical}.Layout(gtx, children...)
+		dims := layout.Flex{Axis: layout.Vertical}.Layout(gtx, children...)
+		// Use only spare space on the bottom line; help retains its full width.
+		lineWidth := 0
+		if len(tip.lines) > 1 {
+			lineWidth = v.helpScroll[1].fullWidth
+		}
+		label := "v" + version
+		if lineWidth+gtx.Dp(8)+v.textWidth(gtx, label, v.appearance.SmallTextSize) <= gtx.Constraints.Max.X {
+			layout.SE.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return v.labelFor(contrastSecondary, gtx, label, v.appearance.SmallTextSize, v.appearance.Colors.Muted, text.End)
+			})
+		}
+		return dims
 	}))
 	return layout.Dimensions{Size: size}
 }

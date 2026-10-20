@@ -3,6 +3,7 @@ set -euo pipefail
 
 mkdir -p dist
 
+version=$(go run ./tools/build-version.go)
 resource_file=resource_windows_amd64.syso
 trap 'rm -f "$resource_file"' EXIT
 
@@ -11,6 +12,6 @@ scripts/build-resources
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build \
   -buildvcs=false \
   -trimpath \
-  -ldflags="-H windowsgui" \
+  -ldflags="-H windowsgui -X github.com/dannyben/commando/internal/app.version=$version" \
   -o dist/commando.exe \
   .

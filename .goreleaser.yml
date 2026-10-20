@@ -16,7 +16,7 @@ builds:
       - -trimpath
       - -buildvcs=false
     ldflags:
-      - -s -w -H windowsgui
+      - -s -w -H windowsgui -X github.com/dannyben/commando/internal/app.version={{.Version}}
     hooks:
       pre: scripts/build-resources
       post: rm -f resource_windows_amd64.syso
