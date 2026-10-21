@@ -110,6 +110,10 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	if result.request.driveSpace != nil {
+		v.acceptDriveSpace(result)
+		return
+	}
 	if result.request.folderCacheLoad {
 		v.applyFolderSizes(result.folderSizes)
 		return
@@ -251,6 +255,7 @@ func (v *view) acceptLoad(result loadResult) {
 		p.path = result.directory.Path
 	}
 	p.entries = slices.Clone(result.directory.Entries)
+	p.prepareDriveSpaces()
 	files := p.visibleEntries()
 	p.items = make([]entry, len(files))
 	p.selected = -1
@@ -408,6 +413,11 @@ func (p *panel) status() (string, bool) {
 		return message.Text, message.Kind == feedback.Error
 	}
 	if p.drives {
+		if p.selected >= 0 && p.selected < len(p.items) {
+			if space, ok := p.driveSpaceFor(p.items[p.selected].file); ok {
+				return formatSize(space.Total-space.Free) + " used", false
+			}
+		}
 		return "", false
 	}
 	if len(p.marks) > 0 {

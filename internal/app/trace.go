@@ -27,6 +27,8 @@ func (v *view) applyTraceSettings() {
 
 func (r loadRequest) traceKind() (diagnostics.Mask, string) {
 	switch {
+	case r.driveSpace != nil:
+		return diagnostics.Browsing, "drive_space"
 	case r.folderCacheLoad:
 		return diagnostics.Storage, "folder_size_cache"
 	case r.size != nil:

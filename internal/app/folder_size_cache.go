@@ -120,6 +120,10 @@ func (p *panel) entrySize(file browser.Entry, now time.Time) (int64, bool) {
 }
 
 func (p *panel) displayEntry(item entry) entry {
+	if p.drives {
+		item.size = p.driveSpaceLabel(item.file)
+		return item
+	}
 	if record, ok := p.cachedFolderSize(item.file, time.Now()); ok {
 		item.size = "≈" + formatSize(record.Bytes)
 	}

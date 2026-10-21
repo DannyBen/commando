@@ -22,6 +22,8 @@ type entry struct {
 }
 
 type panel struct {
+	driveSpace          *driveSpaceRequest
+	driveSpaces         map[string]browser.DriveSpace
 	folderSizes         folderSizeCache // Shared measurements, independent of the directory listing.
 	showProtectedSystem bool
 	showParentEntry     bool

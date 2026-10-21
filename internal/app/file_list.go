@@ -41,7 +41,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					heading = ""
 				}
 				if p.drives {
-					heading = ""
+					heading = "FREE / TOTAL"
 				}
 				return v.columns(gtx, entry{name: "NAME", size: heading}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize, contrastSecondary, false)
 			}, false)
@@ -255,7 +255,7 @@ func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor 
 				gtx.Constraints.Min.Y = 0
 				metadata := mode.value(item)
 				if drives {
-					metadata = ""
+					metadata = item.size
 				}
 				return v.columns(gtx, entry{name: mode.displayName(item), size: metadata}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata, item.file.Directory && !item.file.Parent && !drives)
 			})

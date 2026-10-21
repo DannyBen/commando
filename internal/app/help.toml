@@ -1154,6 +1154,7 @@ lines = [
 ["palette.navigation.drives"]
 lines = [
   "Show favorite folders and available drives on Home",
+  "Fixed drives show free / total space; the footer shows used space.",
 ]
 
 ["palette.location.favorite"]

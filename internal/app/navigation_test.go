@@ -261,6 +261,7 @@ func TestDriveListNavigation(t *testing.T) {
 			return browser.Directory{}, fmt.Errorf("unexpected location %q", path)
 		}
 	}, nil)
+	v.loader.readDriveSpace = func(string) (browser.DriveSpace, bool) { return browser.DriveSpace{}, false }
 	defer v.loader.close()
 	send, _ := panelInputFrames(v)
 	p := &v.panels[0]

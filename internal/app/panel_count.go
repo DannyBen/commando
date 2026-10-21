@@ -1,6 +1,7 @@
 package app
 
 import (
+	"maps"
 	"slices"
 
 	"gioui.org/layout"
@@ -20,6 +21,8 @@ func panelsCanChange(v *view) bool {
 }
 
 func (p panel) clone() panel {
+	p.driveSpace = nil
+	p.driveSpaces = maps.Clone(p.driveSpaces)
 	p.items, p.entries = slices.Clone(p.items), slices.Clone(p.entries)
 	p.rows = make(map[int]*fileRow)
 	p.emptySpace = nil

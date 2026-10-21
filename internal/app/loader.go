@@ -47,6 +47,7 @@ type loadRequest struct {
 	fontFamilies       bool
 	size               *sizeSession
 	folderCacheLoad    bool
+	driveSpace         *driveSpaceRequest
 	completion         *locationSession
 	fileDraft          *fileDraftRequest
 	themeLibrary       *settingsSession
@@ -54,6 +55,8 @@ type loadRequest struct {
 }
 
 type loadResult struct {
+	driveSpace               browser.DriveSpace
+	driveSpaceKnown          bool
 	folderSizes              folderSizeCache
 	size                     browser.SizeResult
 	archiveReconciled        bool
@@ -88,6 +91,7 @@ type loadResult struct {
 }
 
 type directoryLoader struct {
+	readDriveSpace        func(string) (browser.DriveSpace, bool)
 	folderCacheDir        string // Directory worker owns the persisted cache.
 	folderSizes           folderSizeCache
 	calculateSize         func(context.Context, []string) (browser.SizeResult, error)
@@ -126,6 +130,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		count = max(1, panelCount[0])
 	}
 	l := &directoryLoader{
+		readDriveSpace:        browser.ReadFixedDriveSpace,
 		calculateSize:         browser.CalculateSize,
 		removeArchiveSources:  browser.RemoveArchiveSources,
 		requests:              make(chan loadRequest, 2*count),
@@ -170,6 +175,23 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				publish := func(result loadResult) {
 					diagnostics.Record(group, id, "WorkerCompleted", map[string]any{"kind": name, "error": diagnostics.Error(result.err), "duration_ms": time.Since(started).Seconds() * 1000, "entries": len(result.directory.Entries)})
 					l.results <- result
+				}
+				if request.driveSpace != nil {
+					for _, root := range request.driveSpace.roots {
+						select {
+						case <-l.done:
+							return
+						default:
+						}
+						space, known := l.readDriveSpace(root)
+						completed := request
+						completed.path = root
+						publish(loadResult{request: completed, driveSpace: space, driveSpaceKnown: known})
+						if invalidate != nil {
+							invalidate()
+						}
+					}
+					continue
 				}
 				if request.folderCacheLoad {
 					l.folderCacheDir = request.path
