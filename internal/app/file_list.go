@@ -168,13 +168,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			if len(preview.messages) > 0 {
 				return preview.footer(v, gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
 			}
-			dims := v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
-				return v.footerContents(gtx, index)
-			}, false)
-			if message := p.feedback.Current(); message != nil {
-				paint.FillShape(gtx.Ops, v.feedbackColor(message.Kind), clip.Rect{Max: image.Pt(dims.Size.X, gtx.Dp(2))}.Op())
-			}
-			return dims
+			return v.panelFooter(gtx, index, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
 		}),
 	)
 }

@@ -7,6 +7,26 @@ import (
 	"unicode/utf8"
 )
 
+func TestFrameDistinguishesProgressFromNotifications(t *testing.T) {
+	var c Channel
+	due := time.Unix(1000, 0)
+	c.ProgressAt("Reading folder", due)
+	if frame, owns := c.Frame(due.Add(-time.Nanosecond), Animations{}); owns || frame.Progress {
+		t.Fatal("pending progress claimed presentation before its deadline")
+	}
+	if frame, owns := c.Frame(due, Animations{}); !owns || !frame.Progress || !frame.Started {
+		t.Fatal("visible progress did not identify itself")
+	}
+	c.ShowWithStyle(Info, "Ready", Immediate)
+	if frame, owns := c.Frame(due, Animations{}); !owns || frame.Progress || !frame.Started {
+		t.Fatal("ordinary immediate notification was mistaken for progress")
+	}
+	c.Complete()
+	if c.Current() == nil {
+		t.Fatal("progress completion erased a result notification")
+	}
+}
+
 func TestImmediateStylePreservesAnnouncementAndLifecycle(t *testing.T) {
 	var c Channel
 	start := time.Unix(1000, 0)

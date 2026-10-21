@@ -8,7 +8,6 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/text"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
@@ -158,7 +157,7 @@ func (preview panelPreview) footer(v *view, gtx layout.Context, height int) layo
 	for i, kind := range preview.messages {
 		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			label := map[feedback.Kind]string{feedback.Error: "Error", feedback.Success: "Success", feedback.Warning: "Warning", feedback.Info: "Info"}[kind]
-			fg := v.feedbackColor(kind)
+			background, foreground := v.notificationColors(kind)
 			// Keep normal outer margins, with only a small gap between samples.
 			inset := layout.Inset{Left: 2, Right: 2}
 			if i == 0 {
@@ -167,12 +166,9 @@ func (preview panelPreview) footer(v *view, gtx layout.Context, height int) layo
 			if i == len(preview.messages)-1 {
 				inset.Right = max(0, v.appearance.ContentPaddingHorizontal)
 			}
-			dims := v.bandWithInset(gtx, height, v.appearance.Colors.Footer, inset, func(gtx layout.Context) layout.Dimensions {
-				return v.feedbackLabel(gtx, label, kind)
+			return v.bandWithInset(gtx, height, background, inset, func(gtx layout.Context) layout.Dimensions {
+				return v.feedbackLabel(gtx, label, foreground)
 			}, false)
-			// Match the steady top edge of a real footer notification.
-			paint.FillShape(gtx.Ops, fg, clip.Rect{Max: image.Pt(dims.Size.X, gtx.Dp(2))}.Op())
-			return dims
 		}))
 	}
 	return layout.Flex{}.Layout(gtx, children...)

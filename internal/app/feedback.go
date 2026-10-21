@@ -96,7 +96,7 @@ func (v *view) dismissUnhandledFeedbackKeys(gtx layout.Context) {
 	}
 }
 
-func (v *view) feedbackColor(kind feedback.Kind) color.NRGBA {
+func (v *view) notificationColors(kind feedback.Kind) (background, text color.NRGBA) {
 	var fg color.NRGBA
 	switch kind {
 	case feedback.Success:
@@ -108,15 +108,15 @@ func (v *view) feedbackColor(kind feedback.Kind) color.NRGBA {
 	default:
 		fg = v.appearance.Colors.Info
 	}
-	return v.resolvedTextFor(contrastNotification, fg, v.appearance.Colors.Footer)
+	return v.appearance.filenameSelectionColors(oklchFromRGB(fg))
 }
 
-// Short notifications use bold text and one resolved color for text and edge.
-func (v *view) feedbackLabel(gtx layout.Context, content string, kind feedback.Kind) layout.Dimensions {
-	return v.labelStyle(content, v.appearance.SmallTextSize, v.feedbackColor(kind), text.Start, true).Layout(gtx)
+// Notification text and the counter share the selected-row contrast treatment.
+func (v *view) feedbackLabel(gtx layout.Context, content string, foreground color.NRGBA) layout.Dimensions {
+	return v.labelStyle(content, v.appearance.SmallTextSize, v.resolvedTextFor(contrastPrimary, foreground, v.currentTextBackground()), text.Start, true).Layout(gtx)
 }
 
-func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
+func (v *view) panelFooter(gtx layout.Context, index, height int) layout.Dimensions {
 	p := &v.panels[index]
 	frame, ownsFooter := p.feedback.Frame(gtx.Now, v.appearance.Feedback)
 	if !frame.Next.IsZero() {
@@ -126,15 +126,23 @@ func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 	if index == v.active && p.prefix != "" {
 		status = "> " + p.prefix
 	}
-	return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
-		if ownsFooter {
-			v.playFeedbackSound(frame)
-			return v.feedbackLabel(gtx, frame.Text, frame.Kind)
-		}
-		return v.label(gtx, status, v.appearance.SmallTextSize, v.appearance.Colors.Foreground, text.Start)
-	}, func(gtx layout.Context) layout.Dimensions {
-		return v.labelFor(contrastSecondary, gtx, p.positionLabel(), v.appearance.SmallTextSize, v.appearance.Colors.Muted, text.End)
-	})
+	background, foreground, counter := v.appearance.Colors.Footer, v.appearance.Colors.Foreground, v.appearance.Colors.Muted
+	counterRole := contrastSecondary
+	if ownsFooter && !frame.Progress {
+		background, foreground = v.notificationColors(frame.Kind)
+		counter, counterRole = foreground, contrastPrimary
+	}
+	return v.band(gtx, height, background, func(gtx layout.Context) layout.Dimensions {
+		return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
+			if ownsFooter {
+				v.playFeedbackSound(frame)
+				return v.feedbackLabel(gtx, frame.Text, foreground)
+			}
+			return v.label(gtx, status, v.appearance.SmallTextSize, foreground, text.Start)
+		}, func(gtx layout.Context) layout.Dimensions {
+			return v.labelFor(counterRole, gtx, p.positionLabel(), v.appearance.SmallTextSize, counter, text.End)
+		})
+	}, false)
 }
 
 func (v *view) playFeedbackSound(frame feedback.Frame) {

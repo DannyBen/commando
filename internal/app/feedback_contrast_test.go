@@ -13,56 +13,41 @@ import (
 	"github.com/dannyben/commando/internal/settings"
 )
 
-func TestNotificationContrastPreservesMoreColorThanPrimaryText(t *testing.T) {
-	v := newPreviewView()
-	v.applySettings()
-	v.appearance.Colors.Footer = rgb(0)
-	v.appearance.Colors.Error = rgb(0xff0000)
-	got := v.feedbackColor(feedback.Error)
-	primary := v.resolvedTextFor(contrastPrimary, v.appearance.Colors.Error, v.appearance.Colors.Footer)
-	if math.Abs(perceptualContrast(got, v.appearance.Colors.Footer)) < themeContrastRules[contrastNotification].targetLc {
-		t.Fatal("notification lost its minimum contrast")
-	}
-	if oklchFromRGB(got).c <= oklchFromRGB(primary).c {
-		t.Fatal("notification correction did not retain more red chroma than ordinary text")
-	}
-}
-
-func TestNotificationTextAndEdgeShareDisplayColor(t *testing.T) {
-	for _, background := range []uint32{0, 0x888888, 0xffffff} {
+func TestNotificationFooterUsesSelectionColorsAndReadableText(t *testing.T) {
+	for _, theme := range builtInThemes {
 		for _, guarded := range []bool{false, true} {
 			v := newPreviewView()
+			v.settingsValues = theme.values.Clone()
 			v.applySettings()
 			_ = v.settingsValues.Set(settings.CatalogueDefault, settingContrastGuard, settings.Value{Bool: guarded})
-			v.appearance.Colors.Footer = rgb(background)
-			v.appearance.Colors.Info, v.appearance.Colors.Success = rgb(0x00aaff), rgb(0x00ff00)
-			v.appearance.Colors.Warning, v.appearance.Colors.Error = rgb(0xffff00), rgb(0xff0000)
 			palette := v.appearance.Colors
 			for kind, raw := range map[feedback.Kind]color.NRGBA{
 				feedback.Info: palette.Info, feedback.Success: palette.Success,
 				feedback.Warning: palette.Warning, feedback.Error: palette.Error,
 			} {
-				v.textContrast = nil
-				displayed := v.feedbackColor(kind) // The line uses this color directly.
-				if !guarded && displayed != raw {
-					t.Fatal("disabled guard changed notification color")
+				background, foreground := v.notificationColors(kind)
+				wantBackground, wantText := v.appearance.filenameSelectionColors(oklchFromRGB(raw))
+				if background != wantBackground || foreground != wantText {
+					t.Fatal("notification did not reuse semantic color and file-selection treatment")
 				}
-				if guarded && math.Abs(perceptualContrast(displayed, palette.Footer)) < themeContrastRules[contrastNotification].targetLc {
-					t.Fatal("notification was not readable against its footer")
+				displayed := v.resolvedTextFor(contrastPrimary, foreground, background)
+				if !guarded && displayed != foreground {
+					t.Fatal("disabled guard changed notification text")
+				}
+				// Midtone backgrounds may not reach the target even with black or
+				// white text; the shared guard then keeps the strongest contrast.
+				available := math.Max(math.Abs(perceptualContrast(rgb(0), background)), math.Abs(perceptualContrast(rgb(0xffffff), background)))
+				target := math.Min(themeContrastRules[contrastPrimary].targetLc, available)
+				if guarded && math.Abs(perceptualContrast(displayed, background))+0.01 < target {
+					t.Fatalf("%s kind %v: notification text did not receive the available contrast", theme.name, kind)
 				}
 				v.panels[0].feedback.ShowWithStyle(kind, "Notification", feedback.Immediate)
 				var ops op.Ops
 				gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(300, 30))}
-				v.footerContents(gtx, 0)
+				v.panelFooter(gtx, 0, 30)
 				(panelPreview{messages: []feedback.Kind{kind}}).footer(v, gtx, 30)
-				// A second pass through ordinary label contrast would recolor the
-				// text after resolving the edge, recreating the reported mismatch.
-				// The persistent counter also resolves its secondary text color.
-				if guarded && len(v.textContrast) != 2 {
-					t.Fatal("real or preview notification applied a second contrast policy")
-				}
 				if v.appearance.Colors != palette {
-					t.Fatal("display correction modified the theme palette")
+					t.Fatal("display correction modified the saved palette")
 				}
 			}
 		}

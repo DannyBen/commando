@@ -148,10 +148,11 @@ func (c *Channel) Acknowledge() {
 }
 
 type Frame struct {
-	Text    string
-	Kind    Kind
-	Next    time.Time // Zero means the presentation is steady; no redraw is needed.
-	Started bool      // Newly announced feedback, once per message unless acknowledged.
+	Text     string
+	Kind     Kind
+	Next     time.Time // Zero means the presentation is steady; no redraw is needed.
+	Started  bool      // Newly announced feedback, once per message unless acknowledged.
+	Progress bool      // Transient operation status, rather than a result notification.
 }
 
 // Frame reports whether the channel owns the footer, even during an empty
@@ -174,7 +175,7 @@ func (c *Channel) Frame(now time.Time, animations Animations) (Frame, bool) {
 		animation = Animation{}
 	}
 	text, next := m.frame(now, animation)
-	frame := Frame{Text: text, Kind: m.Kind, Next: next, Started: !m.presented}
+	frame := Frame{Text: text, Kind: m.Kind, Next: next, Started: !m.presented, Progress: m.progress}
 	m.presented = true
 	return frame, true
 }

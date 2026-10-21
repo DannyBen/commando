@@ -21,6 +21,35 @@ import (
 	"github.com/dannyben/commando/internal/feedback"
 )
 
+func TestNotificationFooterPreview(t *testing.T) {
+	directory := os.Getenv("COMMANDO_PREVIEW_MESSAGES")
+	if directory == "" {
+		t.Skip("optional notification footer previews")
+	}
+	for _, mode := range []string{"light", "dark"} {
+		v := newPreviewView()
+		if mode == "dark" {
+			v.settingsValues = builtInThemes[1].values.Clone()
+			v.applySettings()
+		}
+		v.followMe = true
+		v.panels[1].items[v.panels[1].selected] = v.panels[0].items[v.panels[0].selected]
+		for i, kind := range []feedback.Kind{feedback.Info, feedback.Success, feedback.Error} {
+			message := []string{"Ready", "Folder created", "Access denied"}[i]
+			v.panels[i].feedback.ShowWithStyle(kind, message, feedback.Immediate)
+		}
+		if err := renderViewPNG(filepath.Join(directory, "notifications-"+mode+".png"), v); err != nil {
+			t.Fatal(err)
+		}
+		v.panels[0].feedback.Dismiss()
+		v.panels[1].feedback.ShowWithStyle(feedback.Warning, "Check destination", feedback.Immediate)
+		v.panels[2].feedback.QuietProgressAt("Reading folder", time.Unix(1, 0))
+		if err := renderViewPNG(filepath.Join(directory, "notifications-progress-"+mode+".png"), v); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestFeedbackPreview(t *testing.T) {
 	directory := os.Getenv("COMMANDO_PREVIEW_MESSAGES")
 	if directory == "" {
@@ -33,6 +62,7 @@ func TestFeedbackPreview(t *testing.T) {
 	defer w.Release()
 	v := newPreviewView()
 	v.showFeedback(0, feedback.Success, "Folder created")
+	background, _ := v.notificationColors(feedback.Success)
 	start := time.Unix(1000, 0)
 	var ops op.Ops
 	animation := &gif.GIF{LoopCount: 0}
@@ -47,10 +77,10 @@ func TestFeedbackPreview(t *testing.T) {
 		if err := w.Screenshot(img); err != nil {
 			t.Fatal(err)
 		}
-		for _, y := range []int{450, 451} {
+		for _, y := range []int{452, 462, 474} {
 			point := aboveHelpFooter(v, f32.Pt(10, float32(y)))
-			if color.NRGBAModel.Convert(img.At(10, int(point.Y))) != v.feedbackColor(feedback.Success) {
-				t.Fatal("message edge was not two pixels high across animation states")
+			if color.NRGBAModel.Convert(img.At(10, int(point.Y))) != background {
+				t.Fatalf("notification background at %v: got %v, want %v", point, color.NRGBAModel.Convert(img.At(10, int(point.Y))), background)
 			}
 		}
 		if ms == 200 {
@@ -125,14 +155,14 @@ func TestDelayedFeedbackPreview(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := v.appearance.Colors.Footer
-		if tc.visible {
-			want = v.feedbackColor(feedback.Info)
-		}
-		for _, y := range []int{450, 451} {
+		for _, y := range []int{452, 462, 474} {
 			point := aboveHelpFooter(v, f32.Pt(10, float32(y)))
 			if color.NRGBAModel.Convert(img.At(10, int(point.Y))) != want {
-				t.Fatalf("%s: footer edge appeared early or did not follow visible progress", tc.name)
+				t.Fatalf("%s: progress background at %v: got %v, want %v", tc.name, point, color.NRGBAModel.Convert(img.At(10, int(point.Y))), want)
 			}
+		}
+		if (v.panels[0].feedback.Current() != nil) != tc.visible {
+			t.Fatalf("%s: delayed progress visibility changed", tc.name)
 		}
 		f, err := os.Create(filepath.Join(directory, tc.name+".png"))
 		if err != nil {
