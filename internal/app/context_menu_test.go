@@ -92,20 +92,34 @@ func TestContextMenuKeyboardAndPaletteUseMarkedSnapshot(t *testing.T) {
 	}
 }
 
-func TestContextMenuRightClickSelectsOnlyClickedItem(t *testing.T) {
-	v := menuTestView()
-	send, _ := panelInputFrames(v)
-	marks := v.panels[1].marks
-	point := f32.Pt(285, 110) // Second panel, first child after the parent row.
-	send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonSecondary, Position: point},
-		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: point})
-	s, ok := v.interaction.current.(*nativeSession)
-	if !ok || v.active != 1 || v.panels[1].selected != 1 {
-		t.Fatalf("right click did not select its row: active=%d selected=%d owner=%T", v.active, v.panels[1].selected, v.interaction.current)
-	}
-	want := []string{filepath.Join(v.panels[1].path, v.panels[1].items[1].file.Name)}
-	if !reflect.DeepEqual(s.request.paths, want) || s.request.options.ClientPoint != nil || !reflect.DeepEqual(v.panels[1].marks, marks) {
-		t.Fatal("right-click menu included marks or disturbed independent marks")
+func TestContextMenuRightClickUsesMarksOnlyWhenClickedItemIsMarked(t *testing.T) {
+	for _, marked := range []bool{false, true} {
+		v := menuTestView()
+		p := &v.panels[1]
+		p.selected, p.marks = 3, map[int]bool{2: true, 3: true}
+		if marked {
+			p.marks[1] = true
+		}
+		marks := maps.Clone(p.marks)
+		want := []string{filepath.Join(p.path, p.items[1].file.Name)}
+		if marked {
+			want = p.selectedPaths()
+		}
+		send, _ := panelInputFrames(v)
+		point := f32.Pt(285, 110) // Second panel, first child after the parent row.
+		send(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonSecondary, Position: point},
+			pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: point})
+		s, ok := v.interaction.current.(*nativeSession)
+		if !ok || v.active != 1 || p.selected != 1 {
+			t.Fatalf("marked=%v: right click did not select its row: active=%d selected=%d owner=%T", marked, v.active, p.selected, v.interaction.current)
+		}
+		if !reflect.DeepEqual(s.request.paths, want) || s.request.options.ClientPoint != nil || !maps.Equal(p.marks, marks) {
+			t.Fatalf("marked=%v: wrong menu selection or disturbed marks: got=%v want=%v", marked, s.request.paths, want)
+		}
+		p.clearMarks()
+		if !reflect.DeepEqual(s.request.paths, want) {
+			t.Fatal("live marks changed the captured mouse selection")
+		}
 	}
 }
 

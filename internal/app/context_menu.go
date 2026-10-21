@@ -29,8 +29,8 @@ func (v *view) startBackgroundContextMenu(gtx layout.Context, index int) {
 	v.focusInteraction(gtx)
 }
 
-// Mouse, keyboard and command search join here. Mouse invocation targets only
-// the clicked item; keyboard invocation uses the shared marked selection.
+// Mouse, keyboard and command search join here. Right-clicking a marked item
+// uses the shared marked selection; an unmarked item is targeted alone.
 func (v *view) startContextMenu(gtx layout.Context, index, row int, mouse bool) {
 	v.startItemShellAction(gtx, index, row, mouse, shellMenu)
 }
@@ -43,7 +43,7 @@ func (v *view) startItemShellAction(gtx layout.Context, index, row int, mouse bo
 	paths := p.selectedPaths()
 	if p.drives && !mouse && len(paths) == 0 {
 		paths = []string{p.items[row].file.Path}
-	} else if mouse {
+	} else if mouse && !p.marks[row] {
 		paths = []string{p.entryPath(row)}
 	}
 	if len(paths) == 0 {

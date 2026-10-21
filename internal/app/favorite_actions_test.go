@@ -164,8 +164,8 @@ func TestHomeFavoriteClipboardAndNativeActionsUseLinks(t *testing.T) {
 	}
 	v.startContextMenu(gtx, 0, 0, true)
 	s := v.interaction.current.(*nativeSession)
-	if !slices.Equal(s.request.paths, want[:1]) {
-		t.Fatal("mouse menu used marks instead of clicked link")
+	if !slices.Equal(s.request.paths, want) {
+		t.Fatal("mouse menu omitted marked favorite links")
 	}
 	v.interaction.finish(s)
 	p.clearMarks()
