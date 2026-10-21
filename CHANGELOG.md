@@ -1,6 +1,30 @@
 Changelog
 ========================================
 
+v0.7.0 - 2026-10-21
+----------------------------------------
+
+- Show version in help footer
+- Fix backspace in type-to-select
+- Remove Arm Drag
+- Mark copied/moved files
+- Improve notification colors recipe in theme generator
+- Improve hue dynamics of text in white theme generator
+- Settings > Interface > Sound/Animations
+- Hide meta information on rename
+- Force min window size of 100x100
+- Paste from Explorer archives
+- Fix right click on multiple marked entries
+- Unpack tar.gz, tgz, tar
+- Metadata in footer
+- Entry > Calculate size
+- Cache folder sizes for 1 hour
+- Home: Show free/used/total drive size
+- Panel > Follow me
+- Change notification style
+- Normalize sound pipeline
+
+
 v0.6.3 - 2026-10-20
 ----------------------------------------
 
