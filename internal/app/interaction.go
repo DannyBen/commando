@@ -106,6 +106,8 @@ type locationSession struct {
 	favoritesPending            bool
 }
 
+func (*locationSession) openingEvent() interactionEvent { return eventCommandActivated }
+
 func (s *locationSession) interactionPanel() int     { return s.panel }
 func (s *nameSession) interactionPanel() int         { return s.panel }
 func (s *inlineActionSession) interactionPanel() int { return s.panel }

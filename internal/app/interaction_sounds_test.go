@@ -2,13 +2,51 @@ package app
 
 import (
 	"os"
+	"path/filepath"
 	"slices"
 	"testing"
+	"unicode/utf8"
 
 	"gioui.org/io/key"
 	"github.com/dannyben/commando/internal/settings"
 	"github.com/dannyben/commando/internal/sound"
 )
+
+func TestLocationEditorUsesClickAndSingleNavigationCue(t *testing.T) {
+	for _, enter := range []key.Name{key.NameReturn, key.NameEnter} {
+		t.Run(string(enter), func(t *testing.T) {
+			root := t.TempDir()
+			child := filepath.Join(root, "child")
+			if err := os.Mkdir(child, 0700); err != nil {
+				t.Fatal(err)
+			}
+			v := newBrowserView([]string{root}, nil)
+			defer v.loader.close()
+			waitLoaded(t, v, 0)
+			recorder := &recordedSounds{}
+			v.sounds = recorder
+			send, _ := panelInputFrames(v)
+			send(modified("D", key.ModAlt))
+			if !v.locationEditing() || !slices.Equal(recorder.played, []sound.Name{sound.Click}) {
+				t.Fatal("location opening did not use one quiet click", recorder.played)
+			}
+			send(key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.location.Text())}, Text: child})
+			recorder.played = nil
+			send(pressed(enter))
+			waitLoaded(t, v, 0)
+			send()
+			if v.locationEditing() || v.panels[0].path != child || !slices.Equal(recorder.played, []sound.Name{sound.DirectoryNavigation}) {
+				t.Fatal("location submission did not navigate with one cue", recorder.played)
+			}
+			send(modified("D", key.ModAlt))
+			recorder.played = nil
+			send(pressed(key.NameEscape))
+			if v.locationEditing() || !slices.Equal(recorder.played, []sound.Name{sound.Closed}) {
+				t.Fatal("location cancellation lost its single shared cue", recorder.played)
+			}
+		})
+	}
+}
 
 func TestInteractionSoundMapUsesConfiguredCues(t *testing.T) {
 	for event, cue := range interactionSounds {
