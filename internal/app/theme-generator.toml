@@ -160,43 +160,31 @@ lightness.range = [-20, 20]
 saturation.range = [-35, 65]
 hue.range = [-280, 280]
 
-# Semantic colors start from conventional absolute hues rather than seeded hue.
-# Color Shift rotates these too, keeping its whole-palette behavior consistent.
-[colors.error]
-base = "mode_text"
-lightness.offset = -12
-lightness.range = [-8, 4]
-saturation.center = 75
-saturation.range = [-15, 20]
-hue.center = 25
-hue.range = [-180, 180]
-
+# Info anchors the notification group. Mode direction biases its midrange
+# lightness toward ordinary text; Dynamics opens a wider shared lightness range.
+# Shared saturation and bounded hue drift keep the group consistent and its
+# conventional color families recognizable. Color Shift rotates the whole group.
 [colors.info]
 base = "mode_text"
-lightness.offset = -12
-lightness.range = [-8, 4]
-saturation.center = 65
-saturation.range = [-15, 25]
+lightness.center = 50
+lightness.offset = 12
+lightness.range = [-24, 12]
+saturation.center = 85
+saturation.range = [-10, 10]
 hue.center = 255
-hue.range = [-180, 180]
+hue.range = [-15, 15]
+
+[colors.error]
+base = "info"
+hue.offset = 130
 
 [colors.success]
-base = "mode_text"
-lightness.offset = -12
-lightness.range = [-8, 4]
-saturation.center = 65
-saturation.range = [-15, 25]
-hue.center = 145
-hue.range = [-180, 180]
+base = "info"
+hue.offset = -110
 
 [colors.warning]
-base = "mode_text"
-lightness.offset = -12
-lightness.range = [-8, 4]
-saturation.center = 75
-saturation.range = [-15, 20]
-hue.center = 80
-hue.range = [-180, 180]
+base = "info"
+hue.offset = -175
 
 # Filename appearance uses the existing shared controls, without randomization.
 [files]

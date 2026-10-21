@@ -272,6 +272,42 @@ func TestThemeGeneratorDeterministicAndGray(t *testing.T) {
 	}
 }
 
+func TestThemeNotificationGroupKeepsSharedToneAndHueSpacing(t *testing.T) {
+	for _, mode := range []string{"Black", "Dark", "Midtone", "Light", "White"} {
+		for seed := uint64(1); seed <= 30; seed++ {
+			baseline := defaultThemeRecipe.generate(themeGeneration{mode, seed, 50, 1, 0}, nil)["info"]
+			moderate := defaultThemeRecipe.generate(themeGeneration{mode, seed, 50, 35, 0}, nil)["info"]
+			high := defaultThemeRecipe.generate(themeGeneration{mode, seed, 50, 100, 0}, nil)["info"]
+			if math.Abs(high.l-baseline.l) <= math.Abs(moderate.l-baseline.l) || math.Abs(high.h-255) <= math.Abs(moderate.h-255) {
+				t.Fatal("high Dynamics did not allow greater shared lightness and hue movement")
+			}
+			for _, dynamics := range []float64{1, 35, 100} {
+				for _, vibrance := range []float64{25, 50, 100} {
+					for _, shift := range []float64{0, 120, 359} {
+						colors := defaultThemeRecipe.generate(themeGeneration{mode, seed, vibrance, dynamics, shift}, nil)
+						info := colors["info"]
+						if info.l < 0.25 || info.l > 0.75 {
+							t.Fatalf("%s notifications returned to near-black/white: %+v", mode, info)
+						}
+						saturation := lshFromOKLCH(info).s
+						for name, hue := range map[string]float64{"info": 255, "error": 25, "success": 145, "warning": 80} {
+							value := colors[name]
+							if value.l != info.l || math.Abs(lshFromOKLCH(value).s-saturation) > 1e-7 {
+								t.Fatalf("%s notification %s diverged in lightness or saturation", mode, name)
+							}
+							drift := wrapHue(value.h-hue-shift+180) - 180
+							sharedDrift := wrapHue(info.h-255-shift+180) - 180
+							if math.Abs(drift) > 15+1e-7 || math.Abs(drift-sharedDrift) > 1e-7 || dynamics == 1 && math.Abs(drift) > 1e-7 {
+								t.Fatalf("%s notification %s lost its recognizable hue or shared rotation", mode, name)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestThemeGeneratorPreservesRequestedColorsDespitePoorContrast(t *testing.T) {
 	r := partialThemeRecipe(t, `[colors.background]
 base = "mode_background"

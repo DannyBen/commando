@@ -16,7 +16,7 @@ func TestContrastGuardToggleBypassesCorrectionsAndCancelRestores(t *testing.T) {
 	foreground, background := rgb(0x222222), rgb(0x222222)
 	assertGuard := func(enabled bool) {
 		t.Helper()
-		for _, role := range []contrastRole{contrastPrimary, contrastSecondary, contrastDimmedFile} {
+		for _, role := range []contrastRole{contrastPrimary, contrastSecondary, contrastDimmedFile, contrastNotification} {
 			got := v.resolvedTextFor(role, foreground, background)
 			if (got != foreground) != enabled {
 				t.Fatalf("role %d: guard enabled=%t, got %v", role, enabled, got)

@@ -168,7 +168,7 @@ func (preview panelPreview) footer(v *view, gtx layout.Context, height int) layo
 				inset.Right = max(0, v.appearance.ContentPaddingHorizontal)
 			}
 			dims := v.bandWithInset(gtx, height, v.appearance.Colors.Footer, inset, func(gtx layout.Context) layout.Dimensions {
-				return v.label(gtx, label, v.appearance.SmallTextSize, fg, text.Start)
+				return v.feedbackLabel(gtx, label, kind)
 			}, false)
 			// Match the steady top edge of a real footer notification.
 			paint.FillShape(gtx.Ops, fg, clip.Rect{Max: image.Pt(dims.Size.X, gtx.Dp(2))}.Op())

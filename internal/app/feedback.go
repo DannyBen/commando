@@ -94,16 +94,23 @@ func (v *view) dismissUnhandledFeedbackKeys(gtx layout.Context) {
 }
 
 func (v *view) feedbackColor(kind feedback.Kind) color.NRGBA {
+	var fg color.NRGBA
 	switch kind {
 	case feedback.Success:
-		return v.appearance.Colors.Success
+		fg = v.appearance.Colors.Success
 	case feedback.Warning:
-		return v.appearance.Colors.Warning
+		fg = v.appearance.Colors.Warning
 	case feedback.Error:
-		return v.appearance.Colors.Error
+		fg = v.appearance.Colors.Error
 	default:
-		return v.appearance.Colors.Info
+		fg = v.appearance.Colors.Info
 	}
+	return v.resolvedTextFor(contrastNotification, fg, v.appearance.Colors.Footer)
+}
+
+// Short notifications use bold text and one resolved color for text and edge.
+func (v *view) feedbackLabel(gtx layout.Context, content string, kind feedback.Kind) layout.Dimensions {
+	return v.labelStyle(content, v.appearance.SmallTextSize, v.feedbackColor(kind), text.Start, true).Layout(gtx)
 }
 
 func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
@@ -114,7 +121,7 @@ func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 	}
 	if ownsFooter {
 		v.playFeedbackSound(frame)
-		return v.label(gtx, frame.Text, v.appearance.SmallTextSize, v.feedbackColor(frame.Kind), text.Start)
+		return v.feedbackLabel(gtx, frame.Text, frame.Kind)
 	}
 	status, _ := p.status()
 	if index == v.active && p.prefix != "" {
