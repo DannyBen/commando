@@ -64,7 +64,7 @@ lightness_spread = 1.0
 
 [modes.White]
 background = 98
-text = 10
+text = 35
 direction = -1
 filename = 31
 filename_selection_offset = 20

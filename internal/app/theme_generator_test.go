@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -144,6 +145,37 @@ func TestThemeGeneratorPreview(t *testing.T) {
 		if err := renderViewPNG(filepath.Join(dir, fmt.Sprintf("generator-%s.png", mode)), v); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestWhiteTextCanDisplayBlueAndOrange(t *testing.T) {
+	base := defaultThemeRecipe.generate(themeGeneration{"White", 1, 100, 100, 0}, nil)["text"]
+	for name, hue := range map[string]float64{"blue": 270, "orange": 50} {
+		t.Run(name, func(t *testing.T) {
+			v := newPreviewView()
+			v.applySettings()
+			v.startSettingsWidget(settingThemeGenerator)
+			_ = v.setWidgetValue(settingThemeGenerator+".mode", settings.Value{Text: "White"})
+			for key, n := range map[string]float64{"seed": 1, "vibrance": 100, "dynamics": 100, "color_shift": math.Round(wrapHue(hue - base.h))} {
+				if err := v.setWidgetValue(settingThemeGenerator+"."+key, settings.Value{Number: n}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			v.applySettings()
+			c := v.appearance.Colors
+			displayed := v.resolvedTextFor(contrastPrimary, c.Foreground, c.Surface)
+			if max(displayed.R, displayed.G, displayed.B)-min(displayed.R, displayed.G, displayed.B) < 100 {
+				t.Fatalf("White %s text still looked neutral or nearly black: %v", name, displayed)
+			}
+			if math.Abs(perceptualContrast(displayed, c.Surface)) < themeContrastRules[contrastPrimary].targetLc {
+				t.Fatal("colored White text lost ordinary-text contrast")
+			}
+			if dir := os.Getenv("COMMANDO_PREVIEW_SETTINGS"); dir != "" {
+				if err := renderViewPNG(filepath.Join(dir, "white-text-"+name+".png"), v); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
 	}
 }
 
