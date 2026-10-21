@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"maps"
 	"os"
@@ -29,6 +30,100 @@ func forbidTransferClipboard(t *testing.T, v *view) {
 	v.loader.completeClipboard = func(browser.FileClipboard, []string) (browser.FileClipboard, error) {
 		t.Error("panel transfer consumed the cut clipboard")
 		return browser.FileClipboard{}, errors.New("unexpected clipboard completion")
+	}
+}
+
+func TestDirectPanelTransferRevealsAndSelectsDestinationBatch(t *testing.T) {
+	for _, direction := range []int{-1, 1} {
+		for _, move := range []bool{false, true} {
+			t.Run(fmt.Sprintf("direction=%d/move=%t", direction, move), func(t *testing.T) {
+				v, source, target := clipboardView(t)
+				files := make(map[string]string)
+				for i := range 50 {
+					files[fmt.Sprintf("old-%02d.txt", i)] = "old"
+				}
+				writeBatchFiles(t, target, files)
+				sourcePanel, targetPanel := 0, 1
+				if direction < 0 {
+					sourcePanel, targetPanel = 1, 0
+				}
+				v.load(sourcePanel, source, "")
+				waitLoaded(t, v, sourcePanel)
+				v.load(targetPanel, target, "")
+				waitLoaded(t, v, targetPanel)
+				v.active = sourcePanel
+				for _, name := range []string{"a.txt", "z.txt"} {
+					selectName(t, &v.panels[sourcePanel], name)
+					v.panels[sourcePanel].toggleMark(v.panels[sourcePanel].selected)
+				}
+				p := &v.panels[targetPanel]
+				selectName(t, p, "old-00.txt")
+				p.toggleMark(p.selected)
+				v.loader.transfer = func(request browser.TransferRequest) (browser.TransferResult, error) {
+					// Simulate the final names supplied by shell conflict handling.
+					request.Names = []string{"zz-2.txt", "zz-1.txt"}
+					return fixtureTransfer(request)
+				}
+				forbidTransferClipboard(t, v)
+				send, _ := panelInputFrames(v)
+				shortcut, next := key.Name("]"), key.NameRightArrow
+				if direction < 0 {
+					shortcut, next = "[", key.NameLeftArrow
+				}
+				if move {
+					brace := "}"
+					if direction < 0 {
+						brace = "{"
+					}
+					send(modified(shortcut, key.ModShift), key.EditEvent{Text: brace})
+				} else {
+					send(pressed(shortcut), key.EditEvent{Text: string(shortcut)})
+				}
+				waitLoaded(t, v, sourcePanel)
+				send()
+				if v.active != sourcePanel || p.items[p.selected].name != "zz-1.txt" || !slices.Equal(p.selectedNames(), []string{"zz-1.txt", "zz-2.txt"}) {
+					t.Fatal("transfer did not replace destination marks/select the first sorted result while retaining focus")
+				}
+				if p.list.Position.First == 0 || p.selected < p.list.Position.First || p.selected >= p.list.Position.First+p.list.Position.Count {
+					t.Fatal("offscreen result was not brought into view", p.selected, p.list.Position)
+				}
+				send(pressed(next))
+				if v.active != targetPanel || p.items[p.selected].name != "zz-1.txt" {
+					t.Fatal("switching panels lost the transferred selection")
+				}
+			})
+		}
+	}
+}
+
+func TestPanelTransferSelectionHonorsFilterAndIgnoresStaleOrFailedResults(t *testing.T) {
+	for _, state := range []string{"filtered", "empty", "navigated", "refresh failed"} {
+		t.Run(state, func(t *testing.T) {
+			v := newPreviewView()
+			p := &v.panels[1]
+			target := &panelTransferTarget{panel: 1, location: p.location()}
+			p.filter = "keep"
+			p.reconcileDirectoryListing(browser.Directory{Path: p.path, Entries: []browser.Entry{{Name: "keep.txt"}, {Name: "hidden.txt"}}})
+			selectName(t, p, "keep.txt")
+			p.toggleMark(p.selected)
+			result := loadResult{panelUpdates: make([]transferPanelUpdate, len(v.panels)), transferred: browser.TransferResult{Items: []browser.TransferredItem{{Entry: browser.Entry{Name: "hidden.txt"}}}}}
+			switch state {
+			case "empty":
+				result.transferred.Items = nil
+			case "navigated":
+				target.location.Path += "elsewhere"
+			case "refresh failed":
+				result.panelUpdates[1].err = fs.ErrPermission
+			}
+			v.revealPanelTransfer(target, result)
+			wantMarks := 1
+			if state == "filtered" {
+				wantMarks = 0
+			}
+			if p.filter != "keep" || p.items[p.selected].name != "keep.txt" || len(p.marks) != wantMarks {
+				t.Fatal("completion changed the filter or applied an invalid batch selection")
+			}
+		})
 	}
 }
 
@@ -159,11 +254,15 @@ func TestPanelTransferCapturedSelectionAndOpenFolderDestination(t *testing.T) {
 			if v.active != 1 || v.inlineInteraction() != nil || v.transferPending || v.panels[0].items[v.panels[0].selected].name != "z.txt" {
 				t.Fatal("completion lost destination focus/source current item or retained targeting")
 			}
-			for pi, name := range map[int]string{1: "highlighted", 2: "z.txt"} {
-				p := &v.panels[pi]
-				if p.items[p.selected].name != name || !p.marks[p.selected] {
-					t.Fatal("completion changed destination or alias current item/mark")
-				}
+			names := []string{"a.txt"}
+			if marked {
+				names = []string{"folder", "a.txt"}
+			}
+			if p := &v.panels[1]; p.items[p.selected].name != names[0] || !slices.Equal(p.selectedNames(), names) {
+				t.Fatal("destination did not replace its selection with the transferred batch")
+			}
+			if p := &v.panels[2]; p.items[p.selected].name != "z.txt" || !p.marks[p.selected] {
+				t.Fatal("completion changed the other panel's current item/mark")
 			}
 			if !move {
 				assertBatchFile(t, filepath.Join(source, "a.txt"), "alpha")
@@ -196,6 +295,9 @@ func TestPanelTransferCancelledOrFailedBatchKeepsPartialResults(t *testing.T) {
 		waitLoaded(t, v, 1)
 		send()
 		assertBatchFile(t, filepath.Join(target, "folder", "nested", "file"), "nested")
+		if p := &v.panels[1]; p.items[p.selected].name != "folder" || !slices.Equal(p.selectedNames(), []string{"folder"}) {
+			t.Fatal("partial transfer did not select only its successful item")
+		}
 		assertBatchFile(t, filepath.Join(source, "a.txt"), "alpha")
 		selectName(t, &v.panels[0], "a.txt")
 		if !v.panels[0].marks[v.panels[0].selected] || len(v.panels[0].marks) != 1 || v.active != 1 {
@@ -311,6 +413,9 @@ func TestPanelTransferSameFolderAliasesReuseDuplicateAndMoveNoOp(t *testing.T) {
 			waitCreated(t, v)
 			send()
 			assertBatchFile(t, filepath.Join(root, "a - Copy.txt"), "alpha")
+			if p := &v.panels[2]; !slices.Equal(p.selectedNames(), []string{"a - Copy.txt"}) || !p.marks[p.selected] {
+				t.Fatal("same-folder copy did not mark and select its result")
+			}
 		}
 		assertBatchFile(t, filepath.Join(root, "a.txt"), "alpha")
 	}

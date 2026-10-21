@@ -81,8 +81,12 @@ func TestDirectPanelTransfersUseNeighborAndRetainSource(t *testing.T) {
 				if !reflect.DeepEqual(current, before) || !reflect.DeepEqual(v.cutClipboard, before) || v.active != 1 || v.transferPending {
 					t.Fatal("completion changed clipboard, focus, or retained pending state")
 				}
-				if v.panels[targetIndex].items[v.panels[targetIndex].selected].file.Name != "highlighted" {
-					t.Fatal("destination selection changed")
+				names := []string{"a.txt"}
+				if marked {
+					names = []string{"folder", "a.txt"}
+				}
+				if p := &v.panels[targetIndex]; p.items[p.selected].file.Name != names[0] || !slices.Equal(p.selectedNames(), names) {
+					t.Fatal("destination did not select and mark the transferred batch")
 				}
 				if !move {
 					assertBatchFile(t, filepath.Join(root, "a.txt"), "alpha")

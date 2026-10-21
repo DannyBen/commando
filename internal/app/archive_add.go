@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"path/filepath"
 
 	"github.com/dannyben/commando/internal/browser"
 )
@@ -43,6 +44,9 @@ func (l *directoryLoader) archiveAddOperation(request loadRequest, result loadRe
 		return result
 	}
 	result.transferred = browser.TransferResult{Directory: target, Attempted: true, Summary: browser.TransferSummary{Requested: len(sources), Completed: len(sources)}}
+	for _, source := range sources {
+		result.transferred.Items = append(result.transferred.Items, browser.TransferredItem{Entry: browser.Entry{Name: filepath.Base(source)}})
+	}
 	l.refreshArchivePanels(&result, locations, target)
 	return result
 }

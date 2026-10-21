@@ -62,6 +62,7 @@ func (v *view) acceptFileOperation(result loadResult) {
 			}
 		}
 	}
+	v.revealPanelTransfer(result.request.transfer.target, result)
 	v.showTransferResult(result, refreshFailed)
 	if message := p.feedback.Current(); message != nil {
 		browser.TraceTransferFeedback(result.transferred, message.Text)

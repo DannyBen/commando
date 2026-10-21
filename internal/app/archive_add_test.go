@@ -97,12 +97,12 @@ func TestPanelCopiesIntoArchiveUseSharedFlowAndPreservePanels(t *testing.T) {
 					t.Fatal("empty folder lost")
 				}
 			}
-			if !slices.Contains(visibleNames(destination), "new.txt") || destination.items[destination.selected].file.Name != "a10.txt" {
-				t.Fatal("ZIP panel did not reconcile independently")
+			names := []string{"new.txt"}
+			if marked {
+				names = []string{"added", "new.txt"}
 			}
-			selectName(t, destination, "a2.txt")
-			if !destination.marks[destination.selected] {
-				t.Fatal("destination mark lost")
+			if destination.items[destination.selected].file.Name != names[0] || !slices.Equal(destination.selectedNames(), names) {
+				t.Fatal("ZIP panel did not replace its marks and selection with the copied batch")
 			}
 			if p.selected != selected || !maps.Equal(p.marks, marks) || v.active != resultPanel || v.transferPending || v.mutationsBusy() {
 				t.Fatal("copy changed source state, focus or retained busy state")

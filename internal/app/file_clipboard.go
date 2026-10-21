@@ -46,6 +46,7 @@ type archiveSelection struct {
 }
 
 type transferRequest struct {
+	target           *panelTransferTarget
 	archiveLocations []browser.Location
 	archive          *archiveSelection
 	locations        []string

@@ -7,6 +7,7 @@ import (
 )
 
 type duplicateRequest struct {
+	target           *panelTransferTarget
 	archiveLocations []browser.Location
 	plan             *browser.DuplicatePlan
 	name             string
@@ -120,6 +121,7 @@ func (v *view) offerNameDraft(gtx layout.Context) {
 	}
 	r := &nameSession{kind: nameDuplicate, panel: panel, row: row, path: p.path, archiveFolder: p.archiveFolder, folder: source.Directory,
 		duplicate: result.duplicatePlan, previousPosition: p.list.Position, previousReveal: p.reveal}
+	r.transferTarget = result.request.transfer.target
 	v.beginName(gtx, r, name, source.Directory)
 }
 

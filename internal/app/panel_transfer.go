@@ -5,6 +5,37 @@ import (
 	"github.com/dannyben/commando/internal/feedback"
 )
 
+type panelTransferTarget struct {
+	panel    int
+	location browser.Location
+}
+
+// Only the chosen destination adopts the batch selection; other open views
+// retain their independently reconciled state.
+func (v *view) revealPanelTransfer(target *panelTransferTarget, result loadResult) {
+	if target == nil || len(result.transferred.Items) == 0 || target.panel >= len(v.panels) || target.panel >= len(result.panelUpdates) || result.panelUpdates[target.panel].err != nil {
+		return
+	}
+	p := &v.panels[target.panel]
+	if !p.sameLocation(browser.Directory{Path: target.location.Path, ArchiveFolder: target.location.Folder}) || p.refreshNeeded {
+		return
+	}
+	names := make(map[string]bool, len(result.transferred.Items))
+	for _, item := range result.transferred.Items {
+		names[p.entryKey(item.Entry.Name)] = true
+	}
+	p.clearMarks()
+	p.marks = make(map[int]bool)
+	for row, item := range p.items {
+		if !item.file.Parent && names[p.entryKey(item.file.Name)] {
+			if len(p.marks) == 0 {
+				p.selected, p.reveal = row, true
+			}
+			p.marks[row] = true
+		}
+	}
+}
+
 // Panel transfers capture the source once and carry the shared inline action
 // between destination panes, initially choosing the right neighbor or the left
 // neighbor at the outer edge. Completion never changes panel focus.
@@ -115,6 +146,7 @@ func (v *view) submitPanelTransfer(target, resultPanel int, snapshot browser.Fil
 	p := &v.panels[resultPanel]
 	p.loading, p.prefix, v.transferPending = true, "", true
 	if !v.loader.submit(loadRequest{panel: resultPanel, path: destination.Path, archiveFolder: destination.Folder, transfer: &transferRequest{
+		target:    &panelTransferTarget{panel: target, location: destination},
 		locations: v.fileOperationLocations(), snapshot: &snapshot, archive: archive, archiveLocations: archiveLocations, owner: v.ownerWindow}}) {
 		p.loading, v.transferPending = false, false
 		v.showFeedback(resultPanel, feedback.Info, "File operation in progress")

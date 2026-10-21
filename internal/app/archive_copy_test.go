@@ -86,8 +86,8 @@ func TestArchiveCopyUsesSharedPanelFlowAndNativeTransfer(t *testing.T) {
 			if p.archiveFolder != "." || p.path != filename || p.selected != selected || !reflect.DeepEqual(p.marks, marks) {
 				t.Fatal("copy changed archive browsing state")
 			}
-			if v.panels[1].items[v.panels[1].selected].file.Name != "keep.txt" || !slices.Contains(visibleNames(&v.panels[1]), "a2.txt") {
-				t.Fatal("destination did not reconcile preserving selection")
+			if p := &v.panels[1]; p.items[p.selected].file.Name != names[0] || !slices.Equal(p.selectedNames(), names) {
+				t.Fatal("destination did not select and mark the copied items")
 			}
 			if v.active != resultPanel || v.transferPending || v.mutationsBusy() {
 				t.Fatal("copy changed focus or retained busy state")

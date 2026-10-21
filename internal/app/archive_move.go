@@ -151,5 +151,8 @@ func (l *directoryLoader) moveIntoArchive(request loadRequest, result loadResult
 		requested = len(selection.names)
 	}
 	result.transferred = browser.TransferResult{Directory: target, Attempted: count > 0 || result.retainedCopies > 0, Summary: browser.TransferSummary{Requested: requested, Completed: count, Unfinished: requested - count}}
+	for _, move := range result.archiveMoves {
+		result.transferred.Items = append(result.transferred.Items, browser.TransferredItem{Entry: browser.Entry{Name: path.Base(move.target.Folder)}, Moved: true})
+	}
 	return l.finishArchiveMove(result, snapshot)
 }

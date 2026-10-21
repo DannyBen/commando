@@ -40,6 +40,7 @@ type nameSession struct {
 	focused           bool
 	err               error
 	duplicate         *browser.DuplicatePlan
+	transferTarget    *panelTransferTarget
 	data              []byte // Captured contents for a new file.
 	packPaths         []string
 	unpackArchive     string
@@ -239,7 +240,7 @@ func (v *view) updateName(gtx layout.Context) {
 					request.rename.archiveLocations = v.archiveOperationLocations()
 				}
 			} else if r.kind == nameDuplicate {
-				request.duplicate = &duplicateRequest{plan: r.duplicate, name: e.Text, locations: v.fileOperationLocations(), owner: v.ownerWindow}
+				request.duplicate = &duplicateRequest{target: r.transferTarget, plan: r.duplicate, name: e.Text, locations: v.fileOperationLocations(), owner: v.ownerWindow}
 				if r.archiveFolder != "" {
 					request.duplicate.archiveLocations = v.archiveOperationLocations()
 				}
@@ -304,6 +305,7 @@ func (v *view) acceptName(result loadResult) {
 		if result.created.Name != "" {
 			v.applyDuplicate(result)
 		}
+		v.revealPanelTransfer(result.request.duplicate.target, result)
 		v.showTransferResult(result, refreshFailed)
 		return
 	}
