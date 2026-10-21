@@ -75,6 +75,9 @@ func (l *directoryLoader) complete(request loadRequest) {
 // A destroyed window cannot discard an active operation's completion. Stop
 // accepting queued work, wait for the worker, and reconcile before saving state.
 func (v *view) finishOperations() {
+	if s, ok := v.interaction.current.(*sizeSession); ok {
+		s.cancel()
+	}
 	v.finishNative()
 	if v.monitor != nil {
 		v.monitor.close()
@@ -102,6 +105,10 @@ func (v *view) finishOperations() {
 
 func (v *view) requestClose() bool {
 	v.pollLoads()
+	if s, ok := v.interaction.current.(*sizeSession); ok {
+		s.cancel()
+		return !v.mutationsBusy()
+	}
 	if !v.mutationsBusy() && !v.interaction.operationsHeld() {
 		return true
 	}

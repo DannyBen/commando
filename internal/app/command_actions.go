@@ -5,6 +5,8 @@ import "gioui.org/layout"
 func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 	p := &v.panels[v.active]
 	switch id {
+	case "entry.calculate_size":
+		v.startCalculateSize(gtx)
 	case "location.favorite":
 		v.startFavorite(gtx)
 	case "file.edit":

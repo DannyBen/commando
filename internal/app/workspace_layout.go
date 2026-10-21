@@ -34,9 +34,6 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 			}))
 		}
 		children = append(children, layout.Flexed(float32(v.panels[i].sizeRatio), func(gtx layout.Context) layout.Dimensions {
-			if v.interaction.panelsBlocked() {
-				gtx.Source = gtx.Source.Disabled()
-			}
 			dims := v.panel(gtx, i)
 			v.panels[i].selectionAnchor.X += panelX
 			panelX += dims.Size.X + gtx.Dp(1)

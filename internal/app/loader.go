@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"github.com/dannyben/commando/internal/diagnostics"
 	"image"
 	"os"
@@ -44,6 +45,7 @@ type loadRequest struct {
 	archiveOpen        *archiveOpenRequest
 	unpack             *unpackRequest
 	fontFamilies       bool
+	size               *sizeSession
 	completion         *locationSession
 	fileDraft          *fileDraftRequest
 	themeLibrary       *settingsSession
@@ -51,6 +53,7 @@ type loadRequest struct {
 }
 
 type loadResult struct {
+	size                     browser.SizeResult
 	archiveReconciled        bool
 	renamed                  []renameChange
 	archiveMoves             []archivePanelMove
@@ -83,6 +86,7 @@ type loadResult struct {
 }
 
 type directoryLoader struct {
+	calculateSize         func(context.Context, []string) (browser.SizeResult, error)
 	removeArchiveSources  func(*browser.ArchiveSources, uintptr) ([]string, error)
 	invalidate            func()
 	requests              chan loadRequest
@@ -118,6 +122,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		count = max(1, panelCount[0])
 	}
 	l := &directoryLoader{
+		calculateSize:         browser.CalculateSize,
 		removeArchiveSources:  browser.RemoveArchiveSources,
 		requests:              make(chan loadRequest, 2*count),
 		results:               make(chan loadResult, count),
@@ -161,6 +166,14 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 				publish := func(result loadResult) {
 					diagnostics.Record(group, id, "WorkerCompleted", map[string]any{"kind": name, "error": diagnostics.Error(result.err), "duration_ms": time.Since(started).Seconds() * 1000, "entries": len(result.directory.Entries)})
 					l.results <- result
+				}
+				if s := request.size; s != nil {
+					size, err := l.calculateSize(s.ctx, s.paths)
+					publish(loadResult{request: request, size: size, err: err})
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
 				}
 				if request.homeDirectory != "" {
 					result := loadResult{request: request}

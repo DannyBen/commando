@@ -13,3 +13,11 @@ func setEntryAttributes(item *Entry, info fs.FileInfo) {
 		item.System = data.FileAttributes&syscall.FILE_ATTRIBUTE_SYSTEM != 0
 	}
 }
+
+func sizeTraversalLink(info fs.FileInfo) bool {
+	if info.Mode()&fs.ModeSymlink != 0 {
+		return true
+	}
+	data, ok := info.Sys().(*syscall.Win32FileAttributeData)
+	return info.IsDir() && ok && data.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0
+}

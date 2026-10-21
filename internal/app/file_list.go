@@ -15,6 +15,10 @@ import (
 )
 
 func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
+	footerSource := gtx.Source
+	if v.interaction.panelsBlocked() {
+		gtx = gtx.Disabled()
+	}
 	p := &v.panels[index]
 	preview := v.settingsPanelPreview(index)
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
@@ -154,6 +158,8 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			return dims
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			// Footer redraw deadlines remain active while panel input is blocked.
+			gtx.Source = footerSource
 			if len(preview.messages) > 0 {
 				return preview.footer(v, gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
 			}

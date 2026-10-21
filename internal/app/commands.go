@@ -97,6 +97,7 @@ func defaultCommands() []command {
 		cmd("entry.properties", "Entry", "Properties", key.NameF12, 0, func(v *view) bool {
 			return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false, shellProperties)
 		}),
+		cmd("entry.calculate_size", "Entry", "Calculate size", "", 0, calculateSizeReady),
 
 		cmd("location.favorite", "Location", "Favorite…", "B", key.ModCtrl, favoriteReady),
 		cmd("navigation.parent_folder", "Navigation", "Parent folder", key.NameDeleteBackward, 0, func(v *view) bool { return folderReady(v) && v.loader != nil }),

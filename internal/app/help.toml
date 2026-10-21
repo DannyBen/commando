@@ -1095,6 +1095,18 @@ lines = [
   "Create Windows shortcuts here for files on the clipboard",
 ]
 
+["calculating_size"]
+lines = [
+  "Counting files and calculating size, including hidden entries",
+  "Press [key:selection.clear_filter_or_marks] to cancel; directory links are skipped.",
+]
+
+["palette.entry.calculate_size"]
+lines = [
+  "Count files and calculate total size for marked entries or the current entry",
+  "Includes folder contents and hidden files; directory links are skipped.",
+]
+
 ["palette.entry.properties"]
 lines = [
   "Show Windows properties for marked entries or the current entry",

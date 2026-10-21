@@ -27,6 +27,8 @@ func (v *view) applyTraceSettings() {
 
 func (r loadRequest) traceKind() (diagnostics.Mask, string) {
 	switch {
+	case r.size != nil:
+		return diagnostics.Browsing, "calculate_size"
 	case r.favoriteWrite != nil:
 		return diagnostics.FileOperations, "favorite"
 	case r.unpack != nil:

@@ -107,6 +107,10 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	if result.request.size != nil {
+		v.acceptCalculateSize(result)
+		return
+	}
 	if result.progress != "" {
 		v.operationProgress(result.request.panel, result.progress)
 		return

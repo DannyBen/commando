@@ -53,6 +53,9 @@ func (v *view) pollFeedback() {
 }
 
 func (v *view) dismissFeedback() {
+	if _, ok := v.interaction.current.(*sizeSession); ok {
+		return // Ignored input must not erase active calculation progress.
+	}
 	dismissed := false
 	for i := range v.panels {
 		dismissed = dismissed || v.panels[i].feedback.Current() != nil

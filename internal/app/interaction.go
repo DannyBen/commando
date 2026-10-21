@@ -142,6 +142,8 @@ func (v *view) activeEditor() *widget.Editor {
 func (v *view) helpContextIDs() []string {
 	var ids []string
 	switch s := v.interaction.current.(type) {
+	case *sizeSession:
+		ids = append(ids, "calculating_size")
 	case nil, *nativeSession, *favoriteSession:
 		ids = append(ids, "browsing.introduction")
 	case *settingsSession:
@@ -236,6 +238,8 @@ func (v *view) focusInteraction(gtx layout.Context) {
 // A submitted name mutation must finish before its editor can be left.
 func (v *view) cancelInteraction(gtx layout.Context) bool {
 	switch s := v.interaction.current.(type) {
+	case *sizeSession:
+		return false // Only Escape or closing cancels; retain ownership until completion.
 	case *multiRenameSession:
 		return false // The expression transaction has explicit Apply / Cancel actions.
 	case *favoriteSession:
@@ -269,6 +273,10 @@ func (v *view) cancelInteraction(gtx layout.Context) bool {
 // Escape uses the same session cancellation as other input routes, with one
 // semantic cue. Submitted name mutations remain protected until reconciliation.
 func (v *view) escape(gtx layout.Context) {
+	if s, ok := v.interaction.current.(*sizeSession); ok {
+		s.cancel()
+		return
+	}
 	if s := v.confirmationInteraction(); s != nil {
 		v.finishConfirmation(gtx, s, false)
 		return
@@ -341,6 +349,12 @@ func (v *view) escape(gtx layout.Context) {
 // Return true when a foreground session owns this key, even when the session
 // ignores it. Browsing shortcuts must not leak through an editor or choice.
 func (v *view) interactionKey(gtx layout.Context, ke key.Event) bool {
+	if _, ok := v.interaction.current.(*sizeSession); ok {
+		if ke.State == key.Press && ke.Name == key.NameEscape {
+			v.escape(gtx)
+		}
+		return true
+	}
 	if _, ok := v.interaction.current.(*favoriteSession); ok {
 		if ke.State == key.Press && ke.Name == key.NameEscape {
 			v.escape(gtx)
