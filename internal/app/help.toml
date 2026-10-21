@@ -151,6 +151,11 @@ lines = [
   "Adjust notification animation",
 ]
 
+["palette.settings.feedback.location_bar"]
+lines = [
+  "Choose whether and how long location-bar paths scroll",
+]
+
 ["palette.settings.feedback.sounds"]
 lines = [
   "Choose which sounds play and how loud they are",
@@ -813,6 +818,30 @@ lines = [
   "Turn off to show notification text immediately.",
 ]
 
+["settings.feedback.location_bar"]
+lines = [
+  "Animate long paths in the active location bar.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.feedback.location_bar.enabled"]
+lines = [
+  "Scroll paths that do not fit in the active location bar.",
+  "Turn off to keep the path stationary and clipped.",
+]
+
+["settings.feedback.location_bar.animation"]
+lines = [
+  "Ping Pong reverses direction and pauses at each end.",
+  "Ticker repeats the path with a separator and scrolls continuously.",
+]
+
+["settings.feedback.location_bar.speed"]
+lines = [
+  "Choose movement speed from 1 to 10; 5 is normal.",
+  "10 is twice normal speed; pauses keep their usual duration.",
+]
+
 ["settings.guards.recycle_confirmation"]
 lines = [
   "Choose when recycling with [key:entry.recycle] asks for confirmation.",
@@ -1101,7 +1130,7 @@ lines = [
 ["palette.feedback.toggle_sound"]
 lines = [
   "Turn all Commando sound cues on or off",
-  "Choose a sound profile and volume in [settings:sounds].",
+  "Choose a sound profile and volume in [settings:sound].",
 ]
 
 ["palette.file.edit"]

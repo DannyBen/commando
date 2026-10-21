@@ -689,11 +689,11 @@ description = "%SelectedFiles% passes each matching file as a separate argument.
 control = "input"
 
 [feedback]
-label = "Feedback"
+label = "Interface"
 
 [feedback.sounds]
-label = "Sounds"
-title = "Sounds"
+label = "Sound"
+title = "Sound"
 
 [feedback.sounds.enabled]
 label = "Enabled"
@@ -719,11 +719,37 @@ step = 1
 [feedback.notifications]
 label = "Notifications"
 title = "Notifications"
+category = "Animations"
 
 [feedback.notifications.animation]
-label = "Animation"
+label = "Enabled"
 description = "Animate notification text and cursor."
 control = "toggle"
+
+[feedback.location_bar]
+label = "Location bar"
+title = "Location bar"
+category = "Animations"
+
+[feedback.location_bar.enabled]
+label = "Enabled"
+description = "Scroll long paths in the active location bar."
+control = "toggle"
+
+[feedback.location_bar.animation]
+label = "Animation"
+description = "Reverse at the ends, or repeat the path in a continuous ticker."
+control = "choice"
+choices = ["Ping Pong", "Ticker"]
+
+[feedback.location_bar.speed]
+label = "Speed"
+description = "Movement speed from 1 to 10; 5 is normal and 10 is twice as fast."
+control = "stepper-progress"
+min = 1
+max = 10
+step = 1
+integer = true
 
 [programs.editors.id]
 label = "ID"

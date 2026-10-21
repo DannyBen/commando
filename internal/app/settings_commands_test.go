@@ -14,7 +14,7 @@ func TestBooleanToggleCommandsApplyPersistAndBind(t *testing.T) {
 		{"appearance.toggle_icons", "Appearance › Toggle icons", settingIconsEnabled},
 		{"appearance.toggle_auto_color", "Theme › Toggle file colors", settingAutoColorEnabled},
 		{"appearance.toggle_contrast_guard", "Theme › Toggle contrast guard", settingContrastGuard},
-		{"feedback.toggle_notification_animation", "Feedback › Toggle notification animation", settingNotificationAnimation},
+		{"feedback.toggle_notification_animation", "Interface › Toggle notification animation", settingNotificationAnimation},
 	} {
 		t.Run(tc.id, func(t *testing.T) {
 			v := newPreviewView()

@@ -19,6 +19,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/dannyben/commando/internal/settings"
 )
 
 func TestLocationMarqueeOnlyActiveAndEditorKeepsFullPath(t *testing.T) {
@@ -129,10 +130,11 @@ func TestLocationMarqueeRequiresFocusedBrowsingPanel(t *testing.T) {
 	}
 	frame()
 	for _, tc := range []struct {
-		name    string
-		focused bool
-		active  int
-		owner   interactionSession
+		name     string
+		focused  bool
+		active   int
+		owner    interactionSession
+		disabled bool
 	}{
 		{name: "no keyboard focus", active: 0},
 		{name: "inactive panel", focused: true, active: 1},
@@ -141,9 +143,11 @@ func TestLocationMarqueeRequiresFocusedBrowsingPanel(t *testing.T) {
 		{name: "name editor", focused: true, owner: &nameSession{}},
 		{name: "filter editor", focused: true, owner: &filterSession{}},
 		{name: "native menu", focused: true, owner: &nativeSession{}},
+		{name: "disabled", focused: true, disabled: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			v.active, v.interaction.current = 0, nil
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingLocationScrollEnabled, settings.Value{Bool: true})
 			router.Source().Execute(key.FocusCmd{Tag: &v.focus})
 			frame() // Drain focus-related invalidation before checking animation.
 			var initial []byte
@@ -158,6 +162,9 @@ func TestLocationMarqueeRequiresFocusedBrowsingPanel(t *testing.T) {
 				t.Fatal("focused header did not visibly scroll")
 			}
 			v.active, v.interaction.current = tc.active, tc.owner
+			if tc.disabled {
+				_ = v.settingsValues.Set(settings.CatalogueDefault, settingLocationScrollEnabled, settings.Value{Bool: false})
+			}
 			if !tc.focused {
 				router.Source().Execute(key.FocusCmd{})
 			}

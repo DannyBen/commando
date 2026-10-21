@@ -46,7 +46,7 @@ func TestSoundSettingsStopsAudioAndPreviewsAtMasterVolume(t *testing.T) {
 	v.applySettings()
 	v.startSettingsWidget("feedback.sounds")
 	s := v.settingsInteraction()
-	if s.title != "Feedback › Sounds" || len(s.fields) != 3 || s.fields[0].Label != "Enabled" || s.fields[1].Label != "Profile" || s.fields[2].Label != "Master volume" {
+	if s.title != "Interface › Sound" || len(s.fields) != 3 || s.fields[0].Label != "Enabled" || s.fields[1].Label != "Profile" || s.fields[2].Label != "Master volume" {
 		t.Fatal("Sounds must offer Enabled, Profile and Master volume")
 	}
 	stops, played := recorder.stops, len(recorder.played)
@@ -235,7 +235,7 @@ func TestToggleSoundPaletteAndCustomShortcut(t *testing.T) {
 	v.applySettings()
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
-	send(key.EditEvent{Text: "Feedback Toggle sound"})
+	send(key.EditEvent{Text: "Interface Toggle sound"})
 	p := v.paletteInteraction()
 	if len(p.results) == 0 || p.results[0].command.id != "feedback.toggle_sound" || p.results[0].command.shortcut() != "" {
 		t.Fatal("Toggle sound must be discoverable and initially unbound")

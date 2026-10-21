@@ -79,7 +79,7 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 			groups = append(groups, result.command.group)
 		}
 	}
-	if !slices.Equal(groups, []string{"File", "Entry", "Location", "Navigation", "View", "Panel", "Selection", "Programs", "Appearance", "Theme", "Feedback", "Application"}) ||
+	if !slices.Equal(groups, []string{"File", "Entry", "Location", "Navigation", "View", "Panel", "Selection", "Programs", "Appearance", "Theme", "Interface", "Application"}) ||
 		s.results[0].command.label() != "File › Edit" || s.results[1].command.label() != "Entry › Open" || s.results[2].command.label() != "Entry › Rename…" {
 		t.Fatalf("blank search lost reviewed browsing order: %v", groups)
 	}

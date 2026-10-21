@@ -25,8 +25,8 @@ func TestNotificationAnimationOffKeepsMessagesAndSounds(t *testing.T) {
 		v.sounds = recorded
 		v.startSettingsWidget("feedback.notifications")
 		s := v.settingsInteraction()
-		if s.title != "Feedback › Notifications" || len(s.fields) != 1 || s.fields[0].Label != "Animation" {
-			t.Fatal("Notifications did not offer a single Animation field")
+		if s.title != "Interface › Animations › Notifications" || len(s.fields) != 1 || s.fields[0].Label != "Enabled" {
+			t.Fatal("Notifications did not offer a single Enabled field")
 		}
 		v.adjustSetting(settingNotificationAnimation, 0)
 		if v.appearance.Feedback.Enabled || !s.dirty {

@@ -149,8 +149,8 @@ func defaultCommands() []command {
 		toggleSettingCommand("appearance.toggle_auto_color", "Theme", "file colors", settingAutoColorEnabled),
 		toggleSettingCommand("appearance.toggle_contrast_guard", "Theme", "contrast guard", settingContrastGuard),
 
-		toggleSettingCommand("feedback.toggle_sound", "Feedback", "sound", settingSoundEnabled),
-		toggleSettingCommand("feedback.toggle_notification_animation", "Feedback", "notification animation", settingNotificationAnimation),
+		toggleSettingCommand("feedback.toggle_sound", "Interface", "sound", settingSoundEnabled),
+		toggleSettingCommand("feedback.toggle_notification_animation", "Interface", "notification animation", settingNotificationAnimation),
 
 		cmd("application.toggle_full_screen", "Application", "Toggle full screen", key.NameReturn, key.ModAlt, func(v *view) bool { return v.toggleFullScreen != nil }),
 		cmd(helpCommandID, "Application", "Toggle help", key.NameF1, 0, nil),

@@ -141,6 +141,11 @@ master_volume = 50
 [feedback.notifications]
 animation = true
 
+[feedback.location_bar]
+enabled = true
+animation = "Ping Pong"
+speed = 5
+
 
 [guards.recycle_confirmation]
 single_files = "OFF"
