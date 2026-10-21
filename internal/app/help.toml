@@ -1119,7 +1119,7 @@ lines = [
 
 ["palette.entry.unpack_zip"]
 lines = [
-  "Extract a ZIP archive into a chosen folder",
+  "Extract a ZIP, TAR, TAR.GZ or TGZ archive into a chosen folder",
 ]
 
 ["palette.feedback.toggle_notification_animation"]

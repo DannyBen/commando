@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/dannyben/commando/internal/tempfiles"
 )
@@ -93,10 +94,7 @@ func planZIPExtraction(reader *zip.Reader, location Location, names []string) ([
 	if location.Folder != "." {
 		prefix = location.Folder + "/"
 	}
-	spellings := map[string]string{}
-	directories := map[string]bool{}
-	explicit := map[string]bool{}
-	tops := map[string]bool{}
+	plan := newArchiveExtractPlan()
 	var members []zipExtractMember
 	for _, member := range reader.File {
 		if !strings.HasPrefix(member.Name, prefix) {
@@ -109,32 +107,10 @@ func planZIPExtraction(reader *zip.Reader, location Location, names []string) ([
 				continue
 			}
 		}
-		if !fs.ValidPath(relative) || relative == "." {
-			return nil, nil, ErrInvalidName
-		}
-		mode := member.Mode()
-		if !mode.IsRegular() && !mode.IsDir() {
-			return nil, nil, errors.ErrUnsupported
-		}
-		if explicit[relative] {
-			return nil, nil, fs.ErrExist
-		}
-		explicit[relative] = true
-		components := strings.Split(relative, "/")
-		for i, component := range components {
-			if err := ValidateName(component); err != nil {
-				return nil, nil, err
-			}
-			name := strings.Join(components[:i+1], "/")
-			key := strings.ToUpper(name)
-			directory := i < len(components)-1 || mode.IsDir()
-			if previous, ok := spellings[key]; ok && (previous != name || directories[key] != directory) {
-				return nil, nil, fs.ErrExist
-			}
-			spellings[key], directories[key] = name, directory
+		if err := plan.add(relative, member.Mode()); err != nil {
+			return nil, nil, err
 		}
 		selected[child] = true
-		tops[child] = len(components) > 1 || mode.IsDir()
 		members = append(members, zipExtractMember{member, filepath.FromSlash(relative)})
 	}
 	for _, found := range selected {
@@ -142,10 +118,47 @@ func planZIPExtraction(reader *zip.Reader, location Location, names []string) ([
 			return nil, nil, fs.ErrNotExist
 		}
 	}
-	return members, tops, nil
+	return members, plan.tops, nil
 }
 
-func extractZIPMembers(root *os.Root, members []zipExtractMember, tops map[string]bool) error {
+type archiveExtractPlan struct {
+	spellings                   map[string]string
+	directories, explicit, tops map[string]bool
+}
+
+func newArchiveExtractPlan() archiveExtractPlan {
+	return archiveExtractPlan{spellings: map[string]string{}, directories: map[string]bool{}, explicit: map[string]bool{}, tops: map[string]bool{}}
+}
+
+func (p *archiveExtractPlan) add(name string, mode fs.FileMode) error {
+	if !fs.ValidPath(name) || name == "." {
+		return ErrInvalidName
+	}
+	if !mode.IsRegular() && !mode.IsDir() {
+		return errors.ErrUnsupported
+	}
+	if p.explicit[name] {
+		return fs.ErrExist
+	}
+	p.explicit[name] = true
+	components := strings.Split(name, "/")
+	for i, component := range components {
+		if err := ValidateName(component); err != nil {
+			return err
+		}
+		name := strings.Join(components[:i+1], "/")
+		key := strings.ToUpper(name)
+		directory := i < len(components)-1 || mode.IsDir()
+		if previous, ok := p.spellings[key]; ok && (previous != name || p.directories[key] != directory) {
+			return fs.ErrExist
+		}
+		p.spellings[key], p.directories[key] = name, directory
+	}
+	p.tops[components[0]] = len(components) > 1 || mode.IsDir()
+	return nil
+}
+
+func prepareArchiveExtraction(root *os.Root, tops map[string]bool) error {
 	// Refuse existing roots, including case variants on development hosts. Never
 	// merge an archive directory into an existing filesystem directory.
 	entries, err := fs.ReadDir(root.FS(), ".")
@@ -167,6 +180,13 @@ func extractZIPMembers(root *os.Root, members []zipExtractMember, tops map[strin
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func extractZIPMembers(root *os.Root, members []zipExtractMember, tops map[string]bool) error {
+	if err := prepareArchiveExtraction(root, tops); err != nil {
+		return err
 	}
 	for _, member := range members {
 		if member.file.Mode().IsDir() {
@@ -191,18 +211,22 @@ func extractZipFile(root *os.Root, filename string, member *zip.File) error {
 		return err
 	}
 	defer source.Close()
+	return extractArchiveFile(root, filename, source, member.Modified)
+}
+
+func extractArchiveFile(root *os.Root, filename string, source io.Reader, modified time.Time) error {
 	target, err := root.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return err
 	}
-	// Streaming retains ZIP checksum verification without loading members into RAM.
+	// Stream payloads and propagate reader errors without buffering whole files.
 	_, copyErr := io.Copy(target, source)
 	closeErr := target.Close()
 	if err := errors.Join(copyErr, closeErr); err != nil {
 		return err
 	}
-	if !member.Modified.IsZero() {
-		return root.Chtimes(filename, member.Modified, member.Modified)
+	if !modified.IsZero() {
+		return root.Chtimes(filename, modified, modified)
 	}
 	return nil
 }

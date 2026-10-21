@@ -1,10 +1,12 @@
 package app
 
 import (
+	"archive/tar"
 	"archive/zip"
+	"compress/gzip"
 	"errors"
+	"io"
 	"path/filepath"
-	"strings"
 
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
@@ -18,7 +20,7 @@ func unpackReady(v *view) bool {
 	}
 	p := &v.panels[v.active]
 	names := p.selectedNames()
-	if len(names) != 1 || browser.ArchiveFormat(names[0]) == nil {
+	if len(names) != 1 || browser.UnpackExtension(names[0]) == "" {
 		return false
 	}
 	for _, item := range p.items {
@@ -36,7 +38,8 @@ func (v *view) startUnpack() {
 	source := v.active
 	p := &v.panels[source]
 	archive := p.selectedPaths()[0]
-	name := strings.TrimSuffix(filepath.Base(archive), filepath.Ext(archive))
+	name := filepath.Base(archive)
+	name = name[:len(name)-len(browser.UnpackExtension(name))]
 	if browser.ValidateName(name) != nil {
 		name = "Archive"
 	}
@@ -59,7 +62,7 @@ func (v *view) startUnpack() {
 			if v.loader.submit(request) {
 				v.panels[target].loading = true
 				v.transferPending = true
-				v.operationProgress(target, "Extracting ZIP")
+				v.operationProgress(target, "Extracting archive")
 			}
 		}
 	})
@@ -69,7 +72,7 @@ func (l *directoryLoader) unpackOperation(request loadRequest) loadResult {
 	result := loadResult{request: request, locations: resolveFileLocations(request.locations)}
 	result.mutationDirectory, result.err = resolveFileLocation(request.path)
 	if result.err == nil {
-		result.created, result.err = browser.UnpackZIP(request.unpack.archive, result.mutationDirectory, request.unpack.name)
+		result.created, result.err = browser.UnpackArchive(request.unpack.archive, result.mutationDirectory, request.unpack.name)
 		l.refreshTransferPanels(&result)
 	}
 	return result
@@ -105,14 +108,17 @@ func (v *view) acceptUnpack(result loadResult) {
 }
 
 func unpackError(err error) string {
-	if errors.Is(err, zip.ErrFormat) {
-		return "Invalid ZIP"
+	if errors.Is(err, zip.ErrFormat) || errors.Is(err, tar.ErrHeader) || errors.Is(err, gzip.ErrHeader) {
+		return "Invalid archive"
 	}
-	if errors.Is(err, zip.ErrChecksum) {
+	if errors.Is(err, zip.ErrChecksum) || errors.Is(err, gzip.ErrChecksum) {
 		return "Archive checksum failed"
+	}
+	if errors.Is(err, io.ErrUnexpectedEOF) {
+		return "Archive is truncated"
 	}
 	if message := fileTransferError(err); message != "Cannot transfer" {
 		return message
 	}
-	return "Cannot extract ZIP"
+	return "Cannot extract archive"
 }

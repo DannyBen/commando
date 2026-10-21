@@ -2,17 +2,37 @@ package browser
 
 import (
 	"archive/zip"
+	"errors"
 	"os"
+	"strings"
 )
 
-// UnpackZIP streams a whole ZIP into a filesystem directory. A nonempty name
+// UnpackExtension identifies extraction formats independently of browsing support.
+func UnpackExtension(filename string) string {
+	filename = strings.ToLower(filename)
+	for _, extension := range []string{".tar.gz", ".tgz", ".tar", ".zip"} {
+		if strings.HasSuffix(filename, extension) {
+			return extension
+		}
+	}
+	return ""
+}
+
+// UnpackArchive streams an archive into a filesystem directory. A nonempty name
 // creates an exclusive subfolder first. Once extraction starts, errors may leave
 // partial output; the source archive and preexisting entries are never changed.
-func UnpackZIP(filename, directory, name string) (Entry, error) {
+func UnpackArchive(filename, directory, name string) (Entry, error) {
 	if name != "" {
 		if err := ValidateName(name); err != nil {
 			return Entry{}, err
 		}
+	}
+	extension := UnpackExtension(filename)
+	if extension == ".tar" || extension == ".tar.gz" || extension == ".tgz" {
+		return unpackTAR(filename, directory, name, extension != ".tar")
+	}
+	if extension != ".zip" {
+		return Entry{}, errors.ErrUnsupported
 	}
 	r, err := zip.OpenReader(filename)
 	if err != nil {
@@ -26,6 +46,12 @@ func UnpackZIP(filename, directory, name string) (Entry, error) {
 	if err != nil {
 		return Entry{}, err
 	}
+	return unpackDirectory(directory, name, func(root *os.Root) error {
+		return extractZIPMembers(root, members, tops)
+	})
+}
+
+func unpackDirectory(directory, name string, extract func(*os.Root) error) (Entry, error) {
 	root, err := os.OpenRoot(directory)
 	if err != nil {
 		return Entry{}, err
@@ -46,7 +72,7 @@ func UnpackZIP(filename, directory, name string) (Entry, error) {
 			return created, err
 		}
 		defer child.Close()
-		return created, extractZIPMembers(child, members, tops)
+		return created, extract(child)
 	}
-	return created, extractZIPMembers(root, members, tops)
+	return created, extract(root)
 }

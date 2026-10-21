@@ -41,7 +41,7 @@ func TestUnpackZIPPreservesStructureAndSource(t *testing.T) {
 	before, _ := os.ReadFile(filename)
 	for _, folder := range []string{"", "extracted.zip"} {
 		target := t.TempDir()
-		created, err := UnpackZIP(filename, target, folder)
+		created, err := UnpackArchive(filename, target, folder)
 		if err != nil || created.Name != folder || folder != "" && !created.Directory {
 			t.Fatal("unpack failed", created, err)
 		}
@@ -68,7 +68,7 @@ func TestUnpackZIPRefusesExistingRootsWithoutWriting(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(target, name), []byte("existing"), 0600); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := UnpackZIP(unpackFixture(t, "a2.txt", "a10.txt", "folder/sub/file.txt", "empty/"), target, ""); !errors.Is(err, fs.ErrExist) {
+			if _, err := UnpackArchive(unpackFixture(t, "a2.txt", "a10.txt", "folder/sub/file.txt", "empty/"), target, ""); !errors.Is(err, fs.ErrExist) {
 				t.Fatal("collision accepted", err)
 			}
 			entries, _ := os.ReadDir(target)
@@ -105,7 +105,7 @@ func TestUnpackZIPValidatesEntireArchiveBeforeCreatingFolder(t *testing.T) {
 			t.Fatal(err)
 		}
 		target := t.TempDir()
-		if _, err := UnpackZIP(filename, target, "new"); err == nil {
+		if _, err := UnpackArchive(filename, target, "new"); err == nil {
 			t.Fatal("unsafe ZIP accepted", names)
 		}
 		entries, _ := os.ReadDir(target)

@@ -31,7 +31,7 @@ func TestUnpackZIPFloaterChoicesNavigationAndCompletion(t *testing.T) {
 			send, _ := panelInputFrames(v)
 			if mode == "palette" {
 				send(pressed("`"))
-				send(replacePalette(v, "Entry Unpack ZIP"))
+				send(replacePalette(v, "Entry Unpack archive"))
 				send(pressed(key.NameReturn))
 			} else {
 				send(modified(key.NameF6, key.ModAlt))

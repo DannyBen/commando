@@ -233,7 +233,7 @@ func (v *view) updateName(gtx layout.Context) {
 			progress := "Renaming"
 			if r.kind == nameUnpack {
 				request.unpack = &unpackRequest{archive: r.unpackArchive, name: name}
-				progress = "Extracting ZIP"
+				progress = "Extracting archive"
 			} else if r.kind == nameRename {
 				request.rename = &renameRequest{oldName: r.oldName, newName: name + r.shortcutExtension}
 				if r.archiveFolder != "" {
