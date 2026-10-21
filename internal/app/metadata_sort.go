@@ -3,6 +3,7 @@ package app
 import (
 	"cmp"
 	"strings"
+	"time"
 
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
@@ -29,11 +30,12 @@ func (p *panel) compareEntries(a, b browser.Entry) int {
 				strings.ToLower(metadataExtension.value(entry{file: b})))
 		}
 	case metadataSize:
-		if !a.Directory {
-			order = compareKnown(a.SizeKnown, b.SizeKnown)
-			if order == 0 && a.SizeKnown {
-				order = cmp.Compare(b.Bytes, a.Bytes)
-			}
+		now := time.Now()
+		first, firstKnown := p.entrySize(a, now)
+		second, secondKnown := p.entrySize(b, now)
+		order = compareKnown(firstKnown, secondKnown)
+		if order == 0 && firstKnown {
+			order = cmp.Compare(second, first)
 		}
 	case metadataModified, metadataCreated:
 		first, second := p.metadata.date(a), p.metadata.date(b)

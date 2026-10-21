@@ -46,6 +46,7 @@ type loadRequest struct {
 	unpack             *unpackRequest
 	fontFamilies       bool
 	size               *sizeSession
+	folderCacheLoad    bool
 	completion         *locationSession
 	fileDraft          *fileDraftRequest
 	themeLibrary       *settingsSession
@@ -53,6 +54,7 @@ type loadRequest struct {
 }
 
 type loadResult struct {
+	folderSizes              folderSizeCache
 	size                     browser.SizeResult
 	archiveReconciled        bool
 	renamed                  []renameChange
@@ -86,6 +88,8 @@ type loadResult struct {
 }
 
 type directoryLoader struct {
+	folderCacheDir        string // Directory worker owns the persisted cache.
+	folderSizes           folderSizeCache
 	calculateSize         func(context.Context, []string) (browser.SizeResult, error)
 	removeArchiveSources  func(*browser.ArchiveSources, uintptr) ([]string, error)
 	invalidate            func()
@@ -167,9 +171,20 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					diagnostics.Record(group, id, "WorkerCompleted", map[string]any{"kind": name, "error": diagnostics.Error(result.err), "duration_ms": time.Since(started).Seconds() * 1000, "entries": len(result.directory.Entries)})
 					l.results <- result
 				}
+				if request.folderCacheLoad {
+					l.folderCacheDir = request.path
+					cache, err := loadFolderSizes(request.path, time.Now())
+					l.folderSizes = cache
+					diagnostics.Record(diagnostics.Storage, id, "FolderSizeCacheLoaded", map[string]any{"error": diagnostics.Error(err), "entries": len(cache)})
+					publish(loadResult{request: request, folderSizes: cache.clone()})
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
 				if s := request.size; s != nil {
-					size, err := l.calculateSize(s.ctx, s.paths)
-					publish(loadResult{request: request, size: size, err: err})
+					size, cache, err := l.calculateCachedSize(s)
+					publish(loadResult{request: request, size: size, folderSizes: cache, err: err})
 					if invalidate != nil {
 						invalidate()
 					}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"strconv"
+	"time"
 
 	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/browser"
@@ -12,10 +13,11 @@ import (
 )
 
 type sizeSession struct {
-	panel  int
-	paths  []string
-	ctx    context.Context
-	cancel context.CancelFunc
+	panel   int
+	paths   []string
+	ctx     context.Context
+	cancel  context.CancelFunc
+	folders map[string]bool
 }
 
 func (s *sizeSession) interactionPanel() int { return s.panel }
@@ -35,6 +37,12 @@ func (v *view) startCalculateSize(gtx layout.Context) {
 	p := &v.panels[v.active]
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &sizeSession{panel: v.active, paths: p.selectedPaths(), ctx: ctx, cancel: cancel}
+	s.folders = make(map[string]bool)
+	for row, item := range p.items {
+		if item.file.Directory && p.markable(row) && (len(p.marks) > 0 && p.marks[row] || len(p.marks) == 0 && row == p.selected) {
+			s.folders[p.entryPath(row)] = true
+		}
+	}
 	if !v.startInteraction(s) {
 		cancel()
 		return
@@ -72,18 +80,58 @@ func (v *view) acceptCalculateSize(result loadResult) {
 		}
 		v.showFeedback(s.panel, feedback.Error, message)
 	} else {
+		if result.folderSizes != nil {
+			v.applyFolderSizes(result.folderSizes)
+		}
 		v.showFeedback(s.panel, feedback.Success, sizeResultLabel(result.size))
 	}
 }
 
 func sizeResultLabel(result browser.SizeResult) string {
-	count := strconv.FormatInt(result.Files, 10)
+	return fileCountLabel(result.Files) + " · " + formatSize(result.Bytes)
+}
+
+func fileCountLabel(files int64) string {
+	count := strconv.FormatInt(files, 10)
 	for i := len(count) - 3; i > 0; i -= 3 {
 		count = count[:i] + "," + count[i:]
 	}
-	word := " files · "
-	if result.Files == 1 {
-		word = " file · "
+	word := " files"
+	if files == 1 {
+		word = " file"
 	}
-	return count + word + formatSize(result.Bytes)
+	return count + word
+}
+
+// The worker measures each selected target separately so folder records never
+// contain a marked selection's aggregate. Publish and save only a complete batch.
+func (l *directoryLoader) calculateCachedSize(s *sizeSession) (browser.SizeResult, folderSizeCache, error) {
+	if l.folderCacheDir == "" {
+		total, err := l.calculateSize(s.ctx, s.paths)
+		return total, nil, err
+	}
+	var total browser.SizeResult
+	records := make(folderSizeCache)
+	for _, path := range s.paths {
+		result, err := l.calculateSize(s.ctx, []string{path})
+		if err != nil {
+			return browser.SizeResult{}, nil, err
+		}
+		total.Bytes += result.Bytes
+		total.Files += result.Files
+		if s.folders[path] {
+			records[folderSizeKey(path)] = folderSize{Path: path, Bytes: result.Bytes, Files: result.Files, CalculatedAt: time.Now()}
+		}
+	}
+	if err := s.ctx.Err(); err != nil {
+		return browser.SizeResult{}, nil, err
+	}
+	if len(records) == 0 {
+		return total, nil, nil
+	}
+	for key, record := range records {
+		l.folderSizes[key] = record
+	}
+	l.saveFolderSizeCache()
+	return total, l.folderSizes.clone(), nil
 }

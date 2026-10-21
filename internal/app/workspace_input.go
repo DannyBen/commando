@@ -1,6 +1,7 @@
 package app
 
 import (
+	"time"
 	"unicode/utf8"
 
 	"gioui.org/io/key"
@@ -15,6 +16,7 @@ func (v *view) update(gtx layout.Context) {
 	defer v.dismissUnhandledFeedbackKeys(gtx)
 	v.pollNative(gtx)
 	v.pollLoads()
+	v.expireFolderSizes(time.Now())
 	v.pollFeedback()
 	if v.interaction.focusPending {
 		v.focusInteraction(gtx)

@@ -22,6 +22,7 @@ type entry struct {
 }
 
 type panel struct {
+	folderSizes         folderSizeCache // Shared measurements, independent of the directory listing.
 	showProtectedSystem bool
 	showParentEntry     bool
 	path                string // Last physical directory, retained while displaying drives.
@@ -57,6 +58,7 @@ type panel struct {
 }
 
 type view struct {
+	folderSizes         folderSizeCache
 	settingsValues      settings.Values
 	prepareSettingsSave func(settings.Values) func() (string, error) // Captures UI state before worker I/O; nil in previews.
 	directSettingsSave  *settingsSaveRequest
@@ -133,7 +135,7 @@ func newPreviewView() *view {
 
 func newView(panels []panel) *view {
 	appearance := defaultTheme
-	v := &view{appearance: appearance, theme: appearance.materialTheme(), panels: panels,
+	v := &view{appearance: appearance, theme: appearance.materialTheme(), panels: panels, folderSizes: make(folderSizeCache),
 		location:          widget.Editor{SingleLine: true, Submit: true},
 		nameEditor:        widget.Editor{SingleLine: true, Submit: true},
 		commandSearch:     widget.Editor{SingleLine: true},
@@ -143,6 +145,7 @@ func newView(panels []panel) *view {
 	}
 	for i := range v.panels {
 		p := &v.panels[i]
+		p.folderSizes = v.folderSizes
 		p.rows = make(map[int]*fileRow)
 		p.list.Axis = layout.Vertical
 		p.metadata = metadataSize

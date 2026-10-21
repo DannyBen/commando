@@ -35,6 +35,7 @@ func (p panel) clone() panel {
 }
 
 func (v *view) insertPanel(index int, p panel, cutPath, cutLocation string) {
+	p.folderSizes = v.folderSizes
 	// Alias caches have one slot per live panel. Keep the clipboard itself
 	// untouched while inserting, removing, or restoring pane models.
 	for len(v.cutPanelPaths) < len(v.panels) {

@@ -34,6 +34,9 @@ func newLocationView(locations []panelState, active int, invalidate func(), data
 	v.loader = newDirectoryLoader(browser.ReadLocation, invalidate, len(panels))
 	v.loader.readFileIcon = browser.NewFileIconReader()
 	v.loader.readFileTypeIcon = browser.NewFileTypeIconReader()
+	if v.activeDataFolder != "" {
+		v.loader.submit(loadRequest{path: v.activeDataFolder, folderCacheLoad: true, action: actionBrowse})
+	}
 	for i, location := range locations {
 		v.panels[i].metadata = metadataFromState(location.Metadata)
 		v.panels[i].lastMetadata = metadataFromState(location.LastMetadata)
@@ -107,6 +110,10 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	if result.request.folderCacheLoad {
+		v.applyFolderSizes(result.folderSizes)
+		return
+	}
 	if result.request.size != nil {
 		v.acceptCalculateSize(result)
 		return
@@ -396,6 +403,7 @@ func (p *panel) itemCount() int {
 }
 
 func (p *panel) status() (string, bool) {
+	now := time.Now()
 	if message := p.feedback.Current(); message != nil {
 		return message.Text, message.Kind == feedback.Error
 	}
@@ -404,15 +412,28 @@ func (p *panel) status() (string, bool) {
 	}
 	if len(p.marks) > 0 {
 		var total int64
+		var files int64
+		approximate := false
 		for row := range p.marks {
 			if row < 0 || row >= len(p.items) {
 				return "", false
 			}
 			file := p.items[row].file
-			if file.Directory || !file.SizeKnown {
+			size, known := p.entrySize(file, now)
+			if !known {
 				return "", false
 			}
-			total += file.Bytes
+			total += size
+			if file.Directory {
+				record, _ := p.cachedFolderSize(file, now)
+				files += record.Files
+				approximate = true
+			} else {
+				files++
+			}
+		}
+		if approximate {
+			return "≈" + sizeResultLabel(browser.SizeResult{Bytes: total, Files: files}), false
 		}
 		return formatSize(total), false
 	}
@@ -420,6 +441,12 @@ func (p *panel) status() (string, bool) {
 		return "", false
 	}
 	item := p.items[p.selected]
+	if record, ok := p.cachedFolderSize(item.file, now); ok {
+		if p.metadata == metadataSize {
+			return "≈" + fileCountLabel(record.Files), false
+		}
+		return "≈" + sizeResultLabel(browser.SizeResult{Bytes: record.Bytes, Files: record.Files}), false
+	}
 	if item.file.Directory || item.file.Parent || item.file.Path != "" {
 		return "", false
 	}

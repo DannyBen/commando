@@ -79,6 +79,7 @@ func (v *view) layoutMultiRename(gtx layout.Context, s *multiRenameSession) layo
 func (v *view) multiRenameRow(gtx layout.Context, panel int, item entry, nameColor, metadataColor color.NRGBA, roles fileTextRoles) layout.Dimensions {
 	s := v.multiRenameInteraction()
 	if s == nil || s.panel != panel {
+		item = v.panels[panel].displayEntry(item)
 		return v.rowContents(gtx, item, nameColor, metadataColor, v.panels[panel].metadata, roles, v.panels[panel].drives)
 	}
 	bad := s.invalid[item.file.Name]

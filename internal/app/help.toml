@@ -1104,7 +1104,7 @@ lines = [
 ["palette.entry.calculate_size"]
 lines = [
   "Count files and calculate total size for marked entries or the current entry",
-  "Includes folder contents and hidden files; directory links are skipped.",
+  "Folder results are cached for one hour; ≈ marks a cached measurement.",
 ]
 
 ["palette.entry.properties"]

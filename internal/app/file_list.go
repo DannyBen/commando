@@ -126,7 +126,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							metadata := ""
 							item := entry{file: browser.Entry{Name: v.nameEditor.Text(), Directory: v.nameInteraction().noun() == "folder"}}
 							if storedRow >= 0 {
-								metadata = p.metadata.value(p.items[storedRow])
+								metadata = p.metadata.value(p.displayEntry(p.items[storedRow]))
 								item = p.items[storedRow]
 							}
 							return v.withRowIcon(gtx, p, item, false, storedRow < 0, func(gtx layout.Context) layout.Dimensions {
