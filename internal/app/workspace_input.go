@@ -92,6 +92,7 @@ panelInput:
 				p.clickRow(storedRow, click.Modifiers&key.ModShift != 0, click.Modifiers&key.ModCtrl != 0)
 				p.prefix = ""
 				p.reveal, p.err = true, nil
+				v.followSelection()
 				gtx.Execute(key.FocusCmd{Tag: &v.focus})
 				if click.NumClicks == 2 && click.Modifiers == 0 {
 					if !v.chooseSettingsFile(gtx) {
@@ -250,4 +251,5 @@ func (v *view) selectBrowsingRow(next int, extendMarks, navigationSound bool) {
 	}
 	p.selected = next
 	p.reveal, p.err = true, nil
+	v.followSelection()
 }

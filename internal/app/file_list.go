@@ -29,7 +29,12 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			return v.layoutLocationBar(gtx, index, v.locationBarHeight(gtx, textHeight))
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
+			background, filename, metadata := v.metadataHeaderColors(index)
+			metadataRole := contrastSecondary
+			if v.followMe {
+				metadataRole = contrastPrimary
+			}
+			return v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), background, func(gtx layout.Context) layout.Dimensions {
 				if preview.textSelection {
 					return v.themePreviewSelection(gtx)
 				}
@@ -43,7 +48,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if p.drives {
 					heading = "FREE / TOTAL"
 				}
-				return v.columns(gtx, entry{name: "NAME", size: heading}, v.appearance.Colors.Filename, v.appearance.Colors.Metadata, v.appearance.SmallTextSize, contrastSecondary, false)
+				return v.columns(gtx, entry{name: "NAME", size: heading}, filename, metadata, v.appearance.SmallTextSize, metadataRole, false)
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {

@@ -78,6 +78,7 @@ type view struct {
 	favorites         []browser.Entry
 	closedPanels      []closedPanel
 	active            int
+	followMe          bool // Session-only broadcast of user browsing actions.
 	focus             bool
 	frameSize         image.Point
 	helpHidden        bool

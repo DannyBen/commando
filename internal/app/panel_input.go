@@ -67,6 +67,7 @@ func (v *view) selectPrefix(skipCurrent bool, direction int) {
 		}
 		if !item.file.Parent && name != ".." && strings.HasPrefix(strings.ToLower(name), prefix) {
 			p.selected, p.reveal, p.err = index, true, nil
+			v.followSelection()
 			return
 		}
 	}

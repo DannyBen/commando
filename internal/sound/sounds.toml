@@ -63,6 +63,22 @@ spacing_ms = 85
 waveform = "triangle"
 volume = 28
 
+[sounds.followEnabled]
+level = 4
+notes = [392, 659.25]
+length_ms = 35
+spacing_ms = 30
+waveform = "triangle"
+volume = 24
+
+[sounds.followDisabled]
+level = 4
+notes = [659.25, 392]
+length_ms = 35
+spacing_ms = 30
+waveform = "triangle"
+volume = 24
+
 [sounds.messageInfo]
 level = 3
 notes = [440]

@@ -155,6 +155,9 @@ func (v *view) filterContents(gtx layout.Context, index int) layout.Dimensions {
 	if s := v.filterInteraction(); s != nil && s.panel == index {
 		fg = v.appearance.Colors.EditorText
 	}
+	if v.followMe {
+		_, fg, _ = v.metadataHeaderColors(index)
+	}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return v.label(gtx, "/ ", v.appearance.SmallTextSize, fg, text.Start)
@@ -163,6 +166,11 @@ func (v *view) filterContents(gtx layout.Context, index int) layout.Dimensions {
 			if s := v.filterInteraction(); s != nil && s.panel == index {
 				editor := v.textEditor(&v.filterEditor, "Filter files")
 				editor.TextSize = v.appearance.SmallTextSize
+				if v.followMe {
+					editor.Color = v.resolvedText(fg)
+					editor.HintColor = v.resolvedTextFor(contrastDimmedText, v.dimmedColor(fg), v.currentTextBackground())
+					editor.SelectionColor = v.resolvedTextSelection(editor.Color, v.currentTextBackground())
+				}
 				return editor.Layout(gtx)
 			}
 			return v.label(gtx, p.filter, v.appearance.SmallTextSize, fg, text.Start)

@@ -73,3 +73,11 @@ func TestPanelSizeCuesRiseFromG3ThroughNormalC4ToG4(t *testing.T) {
 		t.Fatal("normal size is not C4")
 	}
 }
+
+func TestFollowCuesRiseAndFallAtInteractionLevel(t *testing.T) {
+	on, off := cues[FollowEnabled], cues[FollowDisabled]
+	if len(on.Notes) != 2 || len(off.Notes) != 2 || on.Notes[0] >= on.Notes[1] ||
+		on.Notes[0] != off.Notes[1] || on.Notes[1] != off.Notes[0] || on.Level != 4 || off.Level != 4 {
+		t.Fatal("Follow cues must be a rising/falling pair at the interaction level")
+	}
+}

@@ -57,6 +57,14 @@ func (s filenameColorSettings) activeBackground(value oklchColor) oklchColor {
 	return value
 }
 
+func (t Theme) filenameSelectionColors(value oklchColor) (background, text color.NRGBA) {
+	colors := defaultFilenameColors
+	if t.FilenameColors != nil {
+		colors = *t.FilenameColors
+	}
+	return colors.activeBackground(value).rgb(), t.Colors.Surface
+}
+
 func (s filenameColorSettings) cutColor(value oklchColor) oklchColor {
 	value.l = clampLightness(value.l + s.cutLightnessOffset)
 	return value
@@ -88,8 +96,8 @@ func (t Theme) entryColors(file browser.Entry, active, cut bool) (background, fi
 	}
 	if active {
 		if generated {
-			background = colors.activeBackground(value).rgb()
-			filename, metadata = t.Colors.Surface, t.Colors.Surface
+			background, filename = t.filenameSelectionColors(value)
+			metadata = filename
 		} else {
 			background, filename, metadata = t.Colors.Selected, t.Colors.SelectedName, t.Colors.SelectedMetadata
 		}

@@ -125,6 +125,7 @@ func defaultCommands() []command {
 		cmd("view.previous_metadata_column", "View", "Previous metadata column", "M", key.ModCtrl|key.ModShift, nil),
 		cmd("view.sort_by_metadata", "View", "Toggle sort by metadata", key.NameF3, key.ModCtrl, folderReady),
 
+		cmd("panel.follow_me", "Panel", "Follow me", "X", key.ModAlt, nil),
 		cmd("panel.move_left", "Panel", "Move left", key.NameLeftArrow, key.ModShift, func(v *view) bool { return v.active > 0 && panelsCanSwap(v) }),
 		cmd("panel.move_right", "Panel", "Move right", key.NameRightArrow, key.ModShift, func(v *view) bool { return v.active+1 < len(v.panels) && panelsCanSwap(v) }),
 		cmd("panel.increase_size", "Panel", "Increase size", "+", 0, panelSizingReady),

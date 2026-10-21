@@ -19,6 +19,8 @@ const (
 	Question            Name = "question"
 	HelpOpened          Name = "helpOpened"
 	HelpClosed          Name = "helpClosed"
+	FollowEnabled       Name = "followEnabled"
+	FollowDisabled      Name = "followDisabled"
 	DirectoryNavigation Name = "directoryNavigation"
 	MessageInfo         Name = "messageInfo"
 	MessageSuccess      Name = "messageSuccess"

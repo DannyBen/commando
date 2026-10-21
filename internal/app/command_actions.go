@@ -96,6 +96,13 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		v.toggleMetadataSort()
 	case "view.toggle_metadata_column":
 		v.toggleMetadataColumn()
+	case "panel.follow_me":
+		v.followMe = !v.followMe
+		if v.followMe {
+			v.announceInteraction(eventFollowEnabled)
+		} else {
+			v.announceInteraction(eventFollowDisabled)
+		}
 	case "panel.move_left":
 		v.swapPanel(-1)
 	case "panel.increase_size":

@@ -26,6 +26,7 @@ type loadRequest struct {
 	suggestedPath      string // Visible location completion captured at submission.
 	successMessage     string
 	refresh            bool
+	follow             bool // Read exactly this folder; a missing counterpart stays put.
 	autoRefresh        bool
 	shortcut           bool // Resolve a .lnk before deciding between folder navigation and native opening.
 	explicitPath       bool // Resolve pasted files and missing paths within their own ancestry.
@@ -403,6 +404,8 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					}
 				} else if request.archiveFolder != "" {
 					directory, err = browser.ReadArchive(browser.Location{Path: request.path, Folder: request.archiveFolder})
+				} else if request.follow {
+					directory, err = l.readDirectory(request.path)
 				} else if request.explicitPath {
 					if request.favoriteName != "" && request.favoritesDirectory != "" {
 						if favorites, favoriteErr := l.readFavorites(request.favoritesDirectory); favoriteErr == nil {

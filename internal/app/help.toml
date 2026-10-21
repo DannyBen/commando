@@ -1244,6 +1244,12 @@ lines = [
   "Close the active panel and retain its state for reopening",
 ]
 
+["palette.panel.follow_me"]
+lines = [
+  "Follow selections and folder navigation; Parent only leaves same-name folders",
+  "Header: blue leads, green matches, red differs; file operations remain local",
+]
+
 ["palette.panel.decrease_size"]
 lines = [
   "Make the active panel narrower",

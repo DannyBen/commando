@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -68,20 +69,20 @@ func (v *view) refreshPanel() {
 	v.queueLoad(loadRequest{panel: v.active, path: path, archiveFolder: p.archiveFolder, refresh: true})
 }
 
-func (v *view) queueLoad(request loadRequest) {
+func (v *view) queueLoad(request loadRequest) bool {
 	request.action = actionBrowse
 	if request.path == "" {
 		request.homeDirectory = v.favoritesDirectory()
 	}
 	if v.interaction.protectsListing(request.panel) || v.pendingNameDraft != nil && v.pendingNameDraft.request.panel == request.panel {
-		return
+		return false
 	}
 	p := &v.panels[request.panel]
 	if v.loader == nil || p.loading {
-		return
+		return false
 	}
 	if !v.loader.submit(request) {
-		return
+		return false
 	}
 	p.loading, p.err = true, nil
 	p.navigating = !request.refresh
@@ -90,9 +91,10 @@ func (v *view) queueLoad(request loadRequest) {
 		progress = "Opening shortcut"
 	}
 	p.feedback.ProgressAt(progress, time.Now().Add(v.appearance.FeedbackProgressDelay))
-	if !request.refresh && !request.shortcut && v.sounds != nil {
+	if !request.refresh && !request.shortcut && !request.follow && v.sounds != nil {
 		v.announceInteraction(eventDirectoryNavigation)
 	}
+	return true
 }
 
 func (v *view) pollLoads() {
@@ -221,6 +223,11 @@ func (v *view) acceptLoad(result loadResult) {
 	}
 	p.loading, p.err = false, result.err
 	p.navigating = false
+	if result.request.follow && os.IsNotExist(result.err) {
+		p.err = nil
+		p.feedback.Complete()
+		return
+	}
 	if result.err != nil {
 		v.showFeedback(result.request.panel, feedback.Error, readError(result.err))
 		return
@@ -348,7 +355,9 @@ func (v *view) activateSelected() {
 	} else if file.Parent {
 		v.parentFolder()
 	} else {
-		v.load(v.active, filepath.Join(p.path, file.Name), "")
+		if v.queueLoad(loadRequest{panel: v.active, path: filepath.Join(p.path, file.Name)}) {
+			v.followNavigation(file.Name, false)
+		}
 	}
 }
 
@@ -364,10 +373,15 @@ func (v *view) parentFolder() {
 	}
 	parent := filepath.Dir(p.path)
 	if parent == p.path {
+		if v.followMe {
+			return
+		}
 		v.showDrives()
 		return
 	}
-	v.load(v.active, parent, filepath.Base(p.path))
+	if v.queueLoad(loadRequest{panel: v.active, path: parent, selectName: filepath.Base(p.path)}) {
+		v.followNavigation(filepath.Base(p.path), true)
+	}
 }
 
 func (v *view) showDrives() {
