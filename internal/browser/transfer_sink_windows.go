@@ -29,16 +29,18 @@ type transferSink struct {
 	outcomes    transferOutcomes
 	err         error
 	trace       *transferBatchTrace
+
+	shellClipboard bool
 }
 
 func newTransferSink(request TransferRequest) *transferSink {
-	sink := &transferSink{vtable: &transferSinkVtable, sources: make(map[uintptr]transferSource), sourcePaths: make(map[string]uintptr), journal: newTransferJournal(request), outcomes: newTransferOutcomes(request)}
+	sink := &transferSink{vtable: &transferSinkVtable, shellClipboard: request.ShellClipboard != nil, sources: make(map[uintptr]transferSource), sourcePaths: make(map[string]uintptr), journal: newTransferJournal(request), outcomes: newTransferOutcomes(request)}
 	sink.refs.Store(1)
 	return sink
 }
 
 func (s *transferSink) pre(item *shellObject) uintptr {
-	path, err := shellItemPath(item)
+	path, err := s.sourcePath(item)
 	if err != nil {
 		// Observing metadata must not preempt Windows permission/error UI.
 		return 0
@@ -47,7 +49,7 @@ func (s *transferSink) pre(item *shellObject) uintptr {
 	needed := s.journal.needs(path)
 	s.mu.Unlock()
 	directory := false
-	if needed {
+	if needed && !s.shellClipboard {
 		info, err := os.Lstat(path)
 		directory = err == nil && info.IsDir()
 	}
@@ -72,7 +74,7 @@ func (s *transferSink) post(item, target, created *shellObject, name *uint16, hr
 	}
 	s.mu.Unlock()
 	if !ok {
-		if path, err := shellItemPath(item); err == nil {
+		if path, err := s.sourcePath(item); err == nil {
 			source.path = path
 			s.mu.Lock()
 			if key, exists := s.sourcePaths[transferPathKey(path)]; exists {
@@ -137,6 +139,13 @@ func (s *transferSink) post(item, target, created *shellObject, name *uint16, hr
 	s.journal.observe(transferObservation{source: source.path, destination: destination, directory: source.directory})
 	s.mu.Unlock()
 	return 0
+}
+
+func (s *transferSink) sourcePath(item *shellObject) (string, error) {
+	if s.shellClipboard {
+		return shellItemName(item, 0x80028000) // SIGDN_DESKTOPABSOLUTEPARSING.
+	}
+	return shellItemPath(item)
 }
 
 func (s *transferSink) fail(err error) {

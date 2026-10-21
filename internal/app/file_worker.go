@@ -60,6 +60,18 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 	if result.err != nil {
 		return result
 	}
+	if snapshot.Shell {
+		if transfer.shortcuts || request.archiveFolder != "" {
+			result.err = errors.ErrUnsupported
+			return result
+		}
+		result.clipboard = snapshot
+		result.transferred, result.err = l.transfer(browser.TransferRequest{ShellClipboard: &snapshot.Sequence, Directory: request.path, Owner: transfer.owner})
+		if result.transferred.Attempted {
+			l.refreshTransferPanels(&result)
+		}
+		return result
+	}
 	if transfer.duplicate && transfer.archive != nil {
 		return l.archiveDuplicateOperation(operation, result)
 	}

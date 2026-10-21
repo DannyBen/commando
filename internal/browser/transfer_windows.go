@@ -30,6 +30,24 @@ func transferNative(request TransferRequest, originals []string, trace *transfer
 		return result, err
 	}
 	defer windows.CoUninitialize()
+	var clipboardItems *shellObject
+	if request.ShellClipboard != nil {
+		hr, _, _ := clipboardOLE.NewProc("OleInitialize").Call(0)
+		if err := shellHRESULT(uint32(hr)); err != nil {
+			return result, err
+		}
+		defer clipboardOLE.NewProc("OleUninitialize").Call()
+		var err error
+		clipboardItems, request.Paths, err = shellClipboardItems(*request.ShellClipboard)
+		if err != nil {
+			return result, err
+		}
+		defer clipboardItems.call(2)
+		// Parsing names identify virtual sources only for observation; they are
+		// never resolved or passed to filesystem mutation APIs.
+		originals = request.Paths
+		trace.record("ShellClipboardSelection", map[string]any{"sources": request.Paths})
+	}
 	var operation *shellObject
 	hr, _, _ := coCreateInstance.Call(uintptr(unsafe.Pointer(&clsidFileOperation)), 0, 1, uintptr(unsafe.Pointer(&iidFileOperation)), uintptr(unsafe.Pointer(&operation)))
 	if err := shellHRESULT(uint32(hr)); err != nil {
@@ -66,7 +84,13 @@ func transferNative(request TransferRequest, originals []string, trace *transfer
 	defer operation.call(fileOpUnadvise, uintptr(cookie))
 	// Queue the complete selection before execution, with one shell dialog/batch.
 	for i, path := range request.Paths {
-		item, err := shellItem(path)
+		var item *shellObject
+		var err error
+		if clipboardItems != nil {
+			err = shellHRESULT(clipboardItems.call(8, uintptr(i), uintptr(unsafe.Pointer(&item))))
+		} else {
+			item, err = shellItem(path)
+		}
 		if err != nil {
 			return result, err
 		}

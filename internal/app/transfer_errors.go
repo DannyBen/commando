@@ -22,6 +22,8 @@ func fileTransferError(err error) string {
 		return "Archive cannot contain itself"
 	case errors.Is(err, browser.ErrNoClipboardFiles):
 		return "Nothing to paste"
+	case errors.Is(err, browser.ErrClipboardChanged):
+		return "Clipboard changed; paste again"
 	case errors.Is(err, browser.ErrClipboardImage):
 		return "Unsupported clipboard image"
 	case errors.Is(err, browser.ErrInvalidName):

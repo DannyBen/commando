@@ -14,6 +14,7 @@ var ErrTransferUnavailable = errors.New("file transfers require Windows")
 // TransferRequest dispatches a selection to the Windows shell. Names is used
 // for duplication; ordinary copy/move lets Windows resolve destination names.
 type TransferRequest struct {
+	ShellClipboard   *uint32  // Expected clipboard sequence; Shell sources are acquired on the STA.
 	TemporarySources bool     // Archive staging sources must not enter shell Undo history.
 	OpenFolders      []string // Resolved UI locations needing descendant move tracking.
 	Paths            []string
@@ -62,7 +63,11 @@ func Transfer(request TransferRequest) (result TransferResult, err error) {
 // Resolve SUBST and parent aliases without scanning file contents or deciding
 // conflicts. The shell receives backing paths so same-volume aliases stay fast.
 func prepareTransfer(request TransferRequest) (TransferRequest, error) {
-	if len(request.Paths) == 0 || len(request.Names) != 0 && len(request.Names) != len(request.Paths) || request.Duplicate && request.Move {
+	if request.ShellClipboard != nil {
+		if len(request.Paths) != 0 || len(request.Names) != 0 || request.Move || request.Duplicate {
+			return request, fs.ErrInvalid
+		}
+	} else if len(request.Paths) == 0 || len(request.Names) != 0 && len(request.Names) != len(request.Paths) || request.Duplicate && request.Move {
 		return request, fs.ErrInvalid
 	}
 	target, err := ResolveOperationPath(request.Directory)

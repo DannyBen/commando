@@ -8,9 +8,11 @@ import (
 )
 
 var ErrNoClipboardFiles = errors.New("clipboard contains no files")
+var ErrClipboardChanged = errors.New("clipboard changed before paste")
 
 type FileClipboard struct {
 	Archive  *ArchiveClipboard // Private deferred selection, pasteable only in Commando.
+	Shell    bool              // Windows Shell selection without filesystem paths; copy-only.
 	Paths    []string
 	ImagePNG []byte // Captured image when no file selection is present.
 	Move     bool

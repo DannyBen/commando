@@ -57,12 +57,15 @@ func shellItem(path string) (*shellObject, error) {
 }
 
 func shellItemPath(item *shellObject) (string, error) {
+	return shellItemName(item, 0x80058000) // SIGDN_FILESYSPATH.
+}
+
+func shellItemName(item *shellObject, kind uintptr) (string, error) {
 	if item == nil {
 		return "", syscall.EINVAL
 	}
-	const sigdnFileSystemPath = 0x80058000
 	var path *uint16
-	if err := shellHRESULT(item.call(5, sigdnFileSystemPath, uintptr(unsafe.Pointer(&path)))); err != nil {
+	if err := shellHRESULT(item.call(5, kind, uintptr(unsafe.Pointer(&path)))); err != nil {
 		return "", err
 	}
 	defer windows.CoTaskMemFree(unsafe.Pointer(path))
