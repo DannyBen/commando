@@ -119,15 +119,15 @@ func (v *view) footerContents(gtx layout.Context, index int) layout.Dimensions {
 	if !frame.Next.IsZero() {
 		gtx.Execute(op.InvalidateCmd{At: frame.Next})
 	}
-	if ownsFooter {
-		v.playFeedbackSound(frame)
-		return v.feedbackLabel(gtx, frame.Text, frame.Kind)
-	}
 	status, _ := p.status()
 	if index == v.active && p.prefix != "" {
 		status = "> " + p.prefix
 	}
 	return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
+		if ownsFooter {
+			v.playFeedbackSound(frame)
+			return v.feedbackLabel(gtx, frame.Text, frame.Kind)
+		}
 		return v.label(gtx, status, v.appearance.SmallTextSize, v.appearance.Colors.Foreground, text.Start)
 	}, func(gtx layout.Context) layout.Dimensions {
 		return v.labelFor(contrastSecondary, gtx, p.positionLabel(), v.appearance.SmallTextSize, v.appearance.Colors.Muted, text.End)

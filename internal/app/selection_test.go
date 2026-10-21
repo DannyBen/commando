@@ -73,8 +73,8 @@ func TestMarkKeysAndPanelIndependence(t *testing.T) {
 	}
 	send(modified("A", key.ModCtrl))
 	assertMarks(t, p, 1, 2, 3, 4, 5)
-	if status, _ := p.status(); status != "5 marked" {
-		t.Fatalf("status=%q", status)
+	if position := p.positionLabel(); position != "5 / 5" {
+		t.Fatalf("position=%q", position)
 	}
 	send(pressed(key.NameEscape))
 	assertMarks(t, p)

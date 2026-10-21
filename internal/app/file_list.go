@@ -220,7 +220,16 @@ func (p *panel) layoutEmptySpace(gtx layout.Context, top, width int) {
 	})
 }
 
-func (p *panel) positionLabel() string { return fmt.Sprintf("%d / %d", p.selected+1, len(p.items)) }
+func (p *panel) positionLabel() string {
+	position := p.selected + 1
+	if len(p.items) > 0 && p.items[0].file.Parent {
+		position = max(0, position-1)
+	}
+	if len(p.marks) > 0 {
+		position = len(p.marks)
+	}
+	return fmt.Sprintf("%d / %d", position, p.itemCount())
+}
 
 // Shared by real listings and passive theme previews, including mark and
 // inactive-selection bars. Input handling belongs to the surrounding file row.

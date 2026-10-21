@@ -273,7 +273,7 @@ func TestDriveListNavigation(t *testing.T) {
 	if v.panels[1].drives || v.panels[1].path != root {
 		t.Fatal("drive list changed another panel")
 	}
-	if status, failed := p.status(); status != "2 drives" || failed {
+	if status, failed := p.status(); status != "" || failed {
 		t.Fatalf("drive status=%q failed=%v", status, failed)
 	}
 	send(pressed(key.NameDeleteBackward))

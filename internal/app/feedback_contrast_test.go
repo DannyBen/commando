@@ -57,7 +57,8 @@ func TestNotificationTextAndEdgeShareDisplayColor(t *testing.T) {
 				(panelPreview{messages: []feedback.Kind{kind}}).footer(v, gtx, 30)
 				// A second pass through ordinary label contrast would recolor the
 				// text after resolving the edge, recreating the reported mismatch.
-				if guarded && len(v.textContrast) != 1 {
+				// The persistent counter also resolves its secondary text color.
+				if guarded && len(v.textContrast) != 2 {
 					t.Fatal("real or preview notification applied a second contrast policy")
 				}
 				if v.appearance.Colors != palette {

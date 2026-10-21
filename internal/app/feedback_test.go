@@ -222,7 +222,7 @@ func TestReadFeedbackDismissalDoesNotReappearFromStoredError(t *testing.T) {
 	if p.feedback.Current() != nil || p.err == nil {
 		t.Fatal("dismissal changed read result or failed to dismiss")
 	}
-	if status, failed := p.status(); failed || status != "3 marked" {
+	if status, failed := p.status(); failed || status != "" {
 		t.Fatalf("normal footer did not resume: %q %v", status, failed)
 	}
 	advance(time.Hour)

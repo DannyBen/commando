@@ -396,21 +396,40 @@ func (p *panel) status() (string, bool) {
 		return message.Text, message.Kind == feedback.Error
 	}
 	if p.drives {
-		favorites := 0
-		for _, item := range p.items {
-			if item.file.Favorite {
-				favorites++
-			}
-		}
-		if favorites > 0 {
-			return fmt.Sprintf("%d favorites · %d drives", favorites, len(p.items)-favorites), false
-		}
-		return fmt.Sprintf("%d drives", len(p.items)), false
+		return "", false
 	}
 	if len(p.marks) > 0 {
-		return fmt.Sprintf("%d marked", len(p.marks)), false
+		var total int64
+		for row := range p.marks {
+			if row < 0 || row >= len(p.items) {
+				return "", false
+			}
+			file := p.items[row].file
+			if file.Directory || !file.SizeKnown {
+				return "", false
+			}
+			total += file.Bytes
+		}
+		return formatSize(total), false
 	}
-	return fmt.Sprintf("%d items", p.itemCount()), false
+	if p.selected < 0 || p.selected >= len(p.items) {
+		return "", false
+	}
+	item := p.items[p.selected]
+	if item.file.Directory || item.file.Parent || item.file.Path != "" {
+		return "", false
+	}
+	size, date := "", ""
+	if p.metadata != metadataSize && item.file.SizeKnown {
+		size = formatSize(item.file.Bytes)
+	}
+	if p.metadata != metadataModified && !item.file.Modified.IsZero() {
+		date = metadataModified.value(item)
+	}
+	if size != "" && date != "" {
+		return size + " · " + date, false
+	}
+	return size + date, false
 }
 
 func formatSize(bytes int64) string {
