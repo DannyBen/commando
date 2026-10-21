@@ -34,6 +34,7 @@ func TestStateStoreRoundTrip(t *testing.T) {
 			t.Fatalf("round trip %d: got=%+v want=%+v err=%v", i, got, want, err)
 		}
 		want.Window.Maximized = false
+		want.Window.Width, want.Window.Height = 100, 100
 		want.ActivePanel = 0
 		want.HelpHidden = false
 	}
@@ -51,6 +52,8 @@ func TestStateReadErrorsAndInvalidGeometry(t *testing.T) {
 		{"truncated", `{"activePanel":2,"panels":[`, true},
 		{"wrong type", `{"panels":"not a list"}`, true},
 		{"invalid dimensions", `{"window":{"width":-1,"height":480},"activePanel":2}`, false},
+		{"too narrow", `{"window":{"width":99,"height":480},"activePanel":2}`, false},
+		{"too short", `{"window":{"width":640,"height":99},"activePanel":2}`, false},
 		{"oversized dimensions", `{"window":{"width":2147483647,"height":480},"activePanel":2}`, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

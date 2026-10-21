@@ -61,7 +61,7 @@ func (t *windowTracker) set(value windowState) {
 
 func (s windowState) valid() bool {
 	// Reject corrupt dimensions before they reach a native API or renderer.
-	return s.Width > 0 && s.Height > 0 && s.Width <= 32768 && s.Height <= 32768 &&
+	return s.Width >= 100 && s.Height >= 100 && s.Width <= 32768 && s.Height <= 32768 &&
 		s.X >= -1<<30 && s.X <= 1<<30 && s.Y >= -1<<30 && s.Y <= 1<<30
 }
 
