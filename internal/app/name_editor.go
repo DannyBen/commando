@@ -422,7 +422,7 @@ func (v *view) nameContents(gtx layout.Context, metadata string, metaColor color
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.Y = 0
 			var trailing layout.Widget
-			if metadata != "" {
+			if metadata != "" && v.nameInteraction().kind != nameRename {
 				trailing = func(gtx layout.Context) layout.Dimensions {
 					return v.labelFor(contrastSecondary, gtx, metadata, v.appearance.TextSize, metaColor, text.End)
 				}
