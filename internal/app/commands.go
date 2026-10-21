@@ -25,9 +25,11 @@ type command struct {
 	bindings      [2]commandBinding
 	overrides     [2]bindingOverride
 	available     func(*view) bool
-	execute       func(*view) // Workspace actions can run without a keyboard binding.
-	paletteQuery  string      // Replace the search text while retaining the palette session.
-	toggleSetting string      // Boolean setting changed through shared live application and persistence.
+	execute       func(*view)      // Workspace actions can run without a keyboard binding.
+	paletteQuery  string           // Replace the search text while retaining the palette session.
+	toggleSetting string           // Boolean setting changed through shared live application and persistence.
+	soundEvent    interactionEvent // Empty means the default accepted-command click.
+	soundState    func(*view) bool // Boolean state: announce only when the result changes.
 }
 
 // Workspace-dependent commands join their category in catalogue order. The
@@ -183,14 +185,37 @@ func defaultCommands() []command {
 		case helpCommandID:
 			c.execute = func(v *view) {
 				v.helpHidden = !v.helpHidden
-				if v.helpHidden {
-					v.announceInteraction(eventHelpClosed)
-				} else {
-					v.announceInteraction(eventHelpOpened)
-				}
 			}
 		case "selection.clear_filter_or_marks":
 			c.bindings[0].Protected = true
+		}
+		switch c.id {
+		case "panel.follow_me":
+			*c = c.withSoundState(func(v *view) bool { return v.followMe }, eventEnabled)
+		case "view.sort_by_metadata":
+			*c = c.withSoundState(func(v *view) bool { return v.panels[v.active].sortByMetadata }, eventEnabled)
+		case "view.toggle_metadata_column":
+			*c = c.withSoundState(func(v *view) bool { return v.panels[v.active].metadata != metadataNone }, eventEnabled)
+		case helpCommandID:
+			*c = c.withSoundState(func(v *view) bool { return !v.helpHidden }, eventWidgetOpened)
+		case "panel.add_left", "panel.add_right", "panel.reopen_closed":
+			*c = c.withSound(eventWidgetOpened)
+		case "panel.close":
+			*c = c.withSound(eventWidgetClosed)
+		case "application.open_data_folder", "application.toggle_full_screen":
+			c.soundEvent = eventSoundOwned
+		case "file.edit", "entry.open", "entry.rename", "entry.copy", "entry.copy_paths", "entry.cut",
+			"entry.paste", "entry.paste_shortcut", "entry.duplicate", "entry.pack_zip", "entry.unpack_zip",
+			"entry.copy_to_panel", "entry.move_to_panel", "entry.copy_left", "entry.copy_right", "entry.move_left", "entry.move_right",
+			"entry.recycle", "entry.delete_permanently", "entry.new_file", "entry.new_folder", "entry.context_menu", "entry.properties",
+			"entry.calculate_size", "location.favorite", "programs.terminal_here", "programs.terminal_here_admin":
+			c.soundEvent = eventSoundOwned // Completion/session owns filesystem and native results.
+		case "navigation.parent_folder", "navigation.drives", "navigation.next_panel", "navigation.previous_panel",
+			"navigation.panel_left", "navigation.panel_right", "navigation.open_in_left_panel", "navigation.open_in_right_panel",
+			"navigation.first_entry", "navigation.last_entry", "navigation.page_up", "navigation.page_down",
+			"panel.move_left", "panel.move_right", "panel.increase_size", "panel.decrease_size", "panel.reset_size",
+			"view.refresh", "selection.clear_filter_or_marks":
+			c.soundEvent = eventSoundOwned // Accepted movement and cancellation report their own outcomes.
 		}
 	}
 	return catalogue
@@ -198,6 +223,13 @@ func defaultCommands() []command {
 
 func (c command) withPresentation(presentation func(*view) commandPresentation) command {
 	c.presentation = presentation
+	return c
+}
+
+func (c command) withSound(event interactionEvent) command { c.soundEvent = event; return c }
+
+func (c command) withSoundState(state func(*view) bool, event interactionEvent) command {
+	c.soundState, c.soundEvent = state, event
 	return c
 }
 
@@ -265,16 +297,43 @@ func (v *view) executeCommand(gtx layout.Context, c command) {
 	if !c.allowed(v) {
 		return
 	}
+	defer v.beginSoundAction()()
+	before := false
+	if c.soundState != nil {
+		before = c.soundState(v)
+	}
 	if c.paletteQuery != "" {
 		v.openPaletteQuery(gtx, c.paletteQuery)
 		return
 	}
+	accepted := false
 	if c.toggleSetting != "" {
 		v.toggleBooleanSetting(c.toggleSetting)
 	} else if c.execute != nil {
 		c.execute(v)
+		accepted = true
 	} else {
-		v.executeBuiltinCommand(gtx, c.id)
+		accepted = v.executeBuiltinCommand(gtx, c.id)
+	}
+	if c.soundState != nil {
+		after := c.soundState(v)
+		if after != before {
+			if c.soundEvent == eventWidgetOpened {
+				if after {
+					v.announceInteraction(eventWidgetOpened)
+				} else {
+					v.announceInteraction(eventWidgetClosed)
+				}
+			} else {
+				v.announceBoolean(after)
+			}
+		}
+	} else if accepted && c.soundEvent != eventSoundOwned {
+		event := c.soundEvent
+		if event == "" {
+			event = eventCommandActivated
+		}
+		v.announceInteraction(event)
 	}
 }
 

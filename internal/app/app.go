@@ -150,7 +150,9 @@ func Run() error {
 			native.configure(w, e)
 			if fullScreenRequested {
 				fullScreenRequested = false
-				native.toggleFullScreen(w)
+				if enabled, changed := native.toggleFullScreen(w); changed {
+					v.announceBoolean(enabled)
+				}
 			}
 			native.resizePanels(w, len(v.panels))
 			v.ownerWindow = native.owner()

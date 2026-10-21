@@ -44,7 +44,7 @@ func (v *view) startShortcutWidget(gtx layout.Context) {
 	if !shortcutFieldEditable(s, 0) {
 		s.selected = 1
 	}
-	v.interaction.finish(p)
+	v.interaction.finish(p) // Handoff to the shortcut editor; announce only its opening.
 	v.startInteraction(s)
 	v.focusInteraction(gtx)
 }

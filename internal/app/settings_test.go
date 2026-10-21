@@ -509,8 +509,12 @@ func TestSettingsAdjustmentsTickOnlyWhenValueChanges(t *testing.T) {
 			if len(recorded.played) != 2 {
 				t.Fatalf("expected two changes to tick, got %v", recorded.played)
 			}
-			for _, cue := range recorded.played {
-				if cue != sound.Navigation {
+			for i, cue := range recorded.played {
+				want := sound.Click
+				if tc.name == "boolean" {
+					want = []sound.Name{sound.Enabled, sound.Disabled}[i]
+				}
+				if cue != want {
 					t.Fatalf("adjustment cue: %v", cue)
 				}
 			}
@@ -708,7 +712,7 @@ func TestSettingsEscapeLeavesInputBeforeWidget(t *testing.T) {
 			if v.settingsInteraction() != s || s.editing || s.errorText != "" || v.settingText(field) != original || !router.Source().Focused(&v.focus) {
 				t.Fatal("Escape lost widget, retained draft, or failed to restore focus")
 			}
-			if len(recorded.played) != 1 || recorded.played[0] != sound.Cancel {
+			if len(recorded.played) != 1 || recorded.played[0] != sound.Closed {
 				t.Fatal("Escape did not play one cancellation cue")
 			}
 			send(key.Event{Name: key.NameEscape, State: key.Release})

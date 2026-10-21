@@ -78,7 +78,8 @@ type view struct {
 	favorites         []browser.Entry
 	closedPanels      []closedPanel
 	active            int
-	followMe          bool // Session-only broadcast of user browsing actions.
+	followMe          bool         // Session-only broadcast of user browsing actions.
+	soundAction       *soundAction // One winning cue per accepted input action.
 	focus             bool
 	frameSize         image.Point
 	helpHidden        bool

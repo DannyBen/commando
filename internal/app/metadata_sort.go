@@ -18,7 +18,7 @@ func (p *panel) compareEntries(a, b browser.Entry) int {
 		}
 		return 1
 	}
-	if !p.sortByMetadata || p.metadata == metadataNone || p.drives ||
+	if !p.metadataSortActive() ||
 		a.Parent || b.Parent || a.Directory != b.Directory {
 		return browser.CompareEntries(a, b)
 	}
@@ -58,6 +58,21 @@ func compareKnown(a, b bool) int {
 		return -1
 	}
 	return 1
+}
+
+func (p *panel) metadataSortActive() bool {
+	return p.sortByMetadata && p.metadata != metadataNone && !p.drives
+}
+
+func (p *panel) metadataSortHeading() string {
+	heading := p.metadata.heading()
+	if !p.metadataSortActive() {
+		return heading
+	}
+	if p.metadata == metadataExtension {
+		return "↑ " + heading
+	}
+	return "↓ " + heading
 }
 
 func (v *view) toggleMetadataSort() {

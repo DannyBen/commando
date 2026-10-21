@@ -17,9 +17,10 @@ type favoriteSession struct {
 	previous panel
 }
 
-func (s *favoriteSession) interactionPanel() int { return s.panel }
-func (*favoriteSession) holdsOperations() bool   { return true }
-func (*favoriteSession) blocksPanels() bool      { return true }
+func (s *favoriteSession) interactionPanel() int        { return s.panel }
+func (*favoriteSession) openingEvent() interactionEvent { return eventSoundOwned }
+func (*favoriteSession) holdsOperations() bool          { return true }
+func (*favoriteSession) blocksPanels() bool             { return true }
 
 func (v *view) favoritesDirectory() string {
 	if v.activeDataFolder == "" {
@@ -44,7 +45,7 @@ func (v *view) startFavorite(gtx layout.Context) {
 		return
 	}
 	if !v.loader.submit(loadRequest{panel: s.panel, homeDirectory: v.favoritesDirectory(), favoriteRead: s, action: actionBrowse}) {
-		v.interaction.finish(s)
+		v.finishInteraction(s)
 		return
 	}
 	p.loading = true
@@ -54,7 +55,7 @@ func (v *view) startFavorite(gtx layout.Context) {
 
 func (v *view) acceptFavoriteRead(result loadResult) {
 	s := result.request.favoriteRead
-	if !v.interaction.finish(s) {
+	if !v.finishInteraction(s) {
 		return
 	}
 	if result.err != nil {

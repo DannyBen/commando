@@ -33,6 +33,10 @@ func (v *view) applySoundSettings() {
 
 // Every semantic event shares this gate; profile names belong to settings UI.
 func (v *view) playSound(cue sound.Name) {
+	if action := v.soundAction; action != nil {
+		action.offer(cue, soundPriority(cue))
+		return
+	}
 	options := v.currentSoundSettings()
 	allowed := v.sounds != nil && options.enabled && options.volume > 0 && sound.Allows(cue, options.profile)
 	diagnostics.Record(diagnostics.Feedback, 0, "Sound", map[string]any{"cue": cue, "played": allowed, "profile": options.profile, "volume": options.volume})

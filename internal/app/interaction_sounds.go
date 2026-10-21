@@ -7,18 +7,18 @@ import "github.com/dannyben/commando/internal/sound"
 type interactionEvent string
 
 const (
+	eventSoundOwned          interactionEvent = "sound_owned" // The operation/session announces its outcome.
+	eventCommandActivated    interactionEvent = "command_activated"
+	eventEnabled             interactionEvent = "enabled"
+	eventDisabled            interactionEvent = "disabled"
+	eventWidgetClosed        interactionEvent = "widget_closed"
 	eventSelectionChanged    interactionEvent = "selection_changed"
 	eventValueChanged        interactionEvent = "value_changed"
 	eventPaletteOpened       interactionEvent = "palette_opened"
 	eventWidgetOpened        interactionEvent = "widget_opened"
 	eventQuestionOpened      interactionEvent = "question_opened"
-	eventHelpOpened          interactionEvent = "help_opened"
-	eventHelpClosed          interactionEvent = "help_closed"
-	eventFollowEnabled       interactionEvent = "follow_enabled"
-	eventFollowDisabled      interactionEvent = "follow_disabled"
 	eventEditStarted         interactionEvent = "edit_started"
 	eventEditConfirmed       interactionEvent = "edit_confirmed"
-	eventSettingsSaved       interactionEvent = "settings_saved"
 	eventWidgetReset         interactionEvent = "widget_reset"
 	eventDeleteStaged        interactionEvent = "delete_staged"
 	eventCancelled           interactionEvent = "cancelled"
@@ -33,21 +33,20 @@ const (
 // This is the application sound policy. An empty or unmapped cue is silent.
 // Shared interaction handlers report events; features do not select audio.
 var interactionSounds = map[interactionEvent]sound.Name{
+	eventCommandActivated:    sound.Click,
+	eventEnabled:             sound.Enabled,
+	eventDisabled:            sound.Disabled,
+	eventWidgetClosed:        sound.Closed,
 	eventSelectionChanged:    sound.Navigation,
-	eventValueChanged:        sound.Navigation,
-	eventPaletteOpened:       sound.Palette,
-	eventWidgetOpened:        sound.Settings,
-	eventQuestionOpened:      sound.Question,
-	eventHelpOpened:          sound.HelpOpened,
-	eventHelpClosed:          sound.HelpClosed,
-	eventFollowEnabled:       sound.FollowEnabled,
-	eventFollowDisabled:      sound.FollowDisabled,
-	eventEditStarted:         sound.Settings,
-	eventEditConfirmed:       sound.Settings,
-	eventSettingsSaved:       sound.Settings,
-	eventWidgetReset:         sound.Settings,
-	eventDeleteStaged:        sound.Settings,
-	eventCancelled:           sound.Cancel,
+	eventValueChanged:        sound.Click,
+	eventPaletteOpened:       sound.Opened,
+	eventWidgetOpened:        sound.Opened,
+	eventQuestionOpened:      sound.Opened,
+	eventEditStarted:         sound.Opened,
+	eventEditConfirmed:       sound.Closed,
+	eventWidgetReset:         sound.Click,
+	eventDeleteStaged:        sound.Click,
+	eventCancelled:           sound.Closed,
 	eventUnsavedChanges:      sound.MessageWarning,
 	eventDirectoryNavigation: sound.DirectoryNavigation,
 	eventMessageInfo:         sound.MessageInfo,
@@ -58,6 +57,10 @@ var interactionSounds = map[interactionEvent]sound.Name{
 
 func (v *view) announceInteraction(event interactionEvent) {
 	if cue := interactionSounds[event]; cue != "" {
+		if event == eventCancelled && v.soundAction != nil {
+			v.soundAction.offer(cue, 95) // Cancellation owns its accompanying Info result.
+			return
+		}
 		v.playSound(cue)
 	}
 }

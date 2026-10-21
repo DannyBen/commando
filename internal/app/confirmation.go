@@ -80,7 +80,8 @@ func (s *confirmationSession) releaseInvocationKeys(gtx layout.Context, previous
 	}
 }
 func (v *view) finishConfirmation(gtx layout.Context, s *confirmationSession, accept bool) {
-	if !v.interaction.finish(s) {
+	defer v.beginSoundAction()()
+	if !v.finishInteraction(s) {
 		return
 	}
 	diagnostics.Record(diagnostics.UI, 0, "ConfirmationResolved", map[string]any{"action": s.acceptLabel, "accepted": accept})

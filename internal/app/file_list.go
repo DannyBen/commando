@@ -41,14 +41,22 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
 					return v.filterContents(gtx, index)
 				}
-				heading := p.metadata.heading()
+				heading := p.metadataSortHeading()
 				if s := v.multiRenameInteraction(); s != nil && s.panel == index {
 					heading = ""
 				}
 				if p.drives {
 					heading = "FREE / TOTAL"
 				}
-				return v.columns(gtx, entry{name: "NAME", size: heading}, filename, metadata, v.appearance.SmallTextSize, metadataRole, false)
+				var trailing layout.Widget
+				if heading != "" {
+					trailing = func(gtx layout.Context) layout.Dimensions {
+						return v.labelFor(metadataRole, gtx, heading, v.appearance.SmallTextSize, metadata, text.End)
+					}
+				}
+				return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
+					return v.label(gtx, "NAME", v.appearance.SmallTextSize, filename, text.Start)
+				}, trailing)
 			}, false)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {

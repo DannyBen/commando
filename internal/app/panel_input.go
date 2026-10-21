@@ -89,7 +89,7 @@ func (v *view) stopLocation(gtx layout.Context) {
 	if !v.locationEditing() {
 		return
 	}
-	v.interaction.finish(v.interaction.current)
+	v.finishInteraction(v.interaction.current)
 	v.focusInteraction(gtx)
 }
 

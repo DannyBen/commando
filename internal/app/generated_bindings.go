@@ -12,8 +12,8 @@ import (
 func panelFocusCommand(number int) command {
 	index := number - 1
 	c := command{id: "panel.focus_" + strconv.Itoa(number), group: "Panel", name: "Focus " + strconv.Itoa(number),
-		available: func(v *view) bool { return index < len(v.panels) },
-		execute:   func(v *view) { v.switchPanelTo(index) }}
+		available:  func(v *view) bool { return index < len(v.panels) },
+		soundEvent: eventSoundOwned, execute: func(v *view) { v.switchPanelTo(index) }}
 	if number <= 9 {
 		c.bindings[0].Default = shortcut{Name: key.Name(strconv.Itoa(number)), Modifiers: key.ModAlt}
 	}

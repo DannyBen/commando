@@ -10,74 +10,12 @@ length_ms = 12
 waveform = "square"
 volume = 10
 
-[sounds.cancel]
-level = 4
-notes = [330]
-length_ms = 75
-waveform = "triangle"
-volume = 32
-
-[sounds.palette]
-level = 4
-notes = [392]
-length_ms = 45
-waveform = "triangle"
-volume = 24
-
-[sounds.settings]
-level = 4
-notes = [392, 523.25]
-length_ms = 35
-spacing_ms = 30
-waveform = "triangle"
-volume = 24
-
 [sounds.directoryNavigation]
 level = 5
 notes = [523.25]
 length_ms = 75
 waveform = "triangle"
 volume = 32
-
-[sounds.helpOpened]
-level = 4
-notes = [440, 587.33]
-length_ms = 35
-spacing_ms = 30
-waveform = "triangle"
-volume = 24
-
-[sounds.helpClosed]
-level = 4
-notes = [587.33, 440]
-length_ms = 35
-spacing_ms = 30
-waveform = "triangle"
-volume = 24
-
-[sounds.question]
-level = 4
-notes = [392, 493.88]
-length_ms = 65
-spacing_ms = 85
-waveform = "triangle"
-volume = 28
-
-[sounds.followEnabled]
-level = 4
-notes = [392, 659.25]
-length_ms = 35
-spacing_ms = 30
-waveform = "triangle"
-volume = 24
-
-[sounds.followDisabled]
-level = 4
-notes = [659.25, 392]
-length_ms = 35
-spacing_ms = 30
-waveform = "triangle"
-volume = 24
 
 [sounds.messageInfo]
 level = 3
@@ -152,3 +90,40 @@ notes = [392]
 length_ms = 45
 waveform = "triangle"
 volume = 28
+
+[sounds.click]
+level = 4
+notes = [220]
+length_ms = 12
+waveform = "square"
+volume = 10
+
+[sounds.enabled]
+level = 4
+notes = [659.25]
+length_ms = 55
+waveform = "triangle"
+volume = 24
+
+[sounds.disabled]
+level = 4
+notes = [440]
+length_ms = 55
+waveform = "triangle"
+volume = 24
+
+[sounds.opened]
+level = 4
+notes = [440, 659.25]
+length_ms = 55
+spacing_ms = 65
+waveform = "triangle"
+volume = 24
+
+[sounds.closed]
+level = 4
+notes = [659.25, 440]
+length_ms = 55
+spacing_ms = 65
+waveform = "triangle"
+volume = 24

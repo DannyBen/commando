@@ -91,7 +91,7 @@ func (s *paletteSession) filter(query string) {
 
 func (v *view) stopPalette(gtx layout.Context) {
 	if s := v.paletteInteraction(); s != nil {
-		v.interaction.finish(s)
+		v.finishInteraction(s)
 		v.focusInteraction(gtx)
 	}
 }
@@ -114,6 +114,7 @@ func (v *view) openPaletteQuery(gtx layout.Context, query string) {
 }
 
 func (v *view) choosePalette(gtx layout.Context) {
+	defer v.beginSoundAction()()
 	s := v.paletteInteraction()
 	if s == nil || s.selected < 0 || s.selected >= len(s.results) {
 		return
@@ -126,7 +127,8 @@ func (v *view) choosePalette(gtx layout.Context) {
 		v.executeCommand(gtx, command)
 		return
 	}
-	v.stopPalette(gtx)
+	// Dispatch is a handoff, not a user closing the palette.
+	v.interaction.finish(s)
 	v.dismissFeedback()
 	v.executeCommand(gtx, command)
 	if widget := v.settingsInteraction(); s.settingsMode && widget != nil {

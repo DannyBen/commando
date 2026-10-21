@@ -24,14 +24,14 @@ func TestHelpSoundsFollowTransitionsThroughKeyboardAndPalette(t *testing.T) {
 	send(pressed(key.NameF1))
 	send(pressed(key.NameF1), key.Event{Name: key.NameF1, State: key.Release})
 	send(pressed(key.NameF1), key.Event{Name: key.NameF1, State: key.Release})
-	if !slices.Equal(recorder.played, []sound.Name{sound.HelpClosed, sound.HelpOpened}) {
+	if !slices.Equal(recorder.played, []sound.Name{sound.Closed, sound.Opened}) {
 		t.Fatal("help transitions, repeats or releases played the wrong sounds", recorder.played)
 	}
 	send(pressed("`"))
 	send(replacePalette(v, "Toggle help"))
 	recorder.played = nil
 	send(pressed(key.NameReturn))
-	if !v.helpHidden || !slices.Equal(recorder.played, []sound.Name{sound.HelpClosed}) {
+	if !v.helpHidden || !slices.Equal(recorder.played, []sound.Name{sound.Closed}) {
 		t.Fatal("palette help toggle did not use the shared transition sound", recorder.played)
 	}
 }

@@ -167,7 +167,7 @@ func (v *view) previewMultiRename(s *multiRenameSession) {
 func (v *view) stopMultiRename(gtx layout.Context) {
 	s := v.multiRenameInteraction()
 	if s != nil && !s.pending {
-		v.interaction.finish(s)
+		v.finishInteraction(s)
 		v.focusInteraction(gtx)
 	}
 }

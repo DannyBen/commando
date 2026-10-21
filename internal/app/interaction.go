@@ -56,8 +56,23 @@ func (v *view) startInteraction(session interactionSession) bool {
 	if !v.interaction.begin(session) {
 		return false
 	}
+	event := eventWidgetOpened
 	if owner, ok := session.(interface{ openingEvent() interactionEvent }); ok {
-		v.announceInteraction(owner.openingEvent())
+		event = owner.openingEvent()
+	}
+	if v.soundAction == nil || !v.soundAction.handoff {
+		v.announceInteraction(event)
+	}
+	return true
+}
+
+func (v *view) finishInteraction(session interactionSession) bool {
+	if !v.interaction.finish(session) {
+		return false
+	}
+	// Work-only sessions opt out of both lifecycle cues with eventSoundOwned.
+	if owner, ok := session.(interface{ openingEvent() interactionEvent }); (v.soundAction == nil || !v.soundAction.handoff) && (!ok || owner.openingEvent() != eventSoundOwned) {
+		v.announceInteraction(eventWidgetClosed)
 	}
 	return true
 }
@@ -237,13 +252,14 @@ func (v *view) focusInteraction(gtx layout.Context) {
 // (restoring a draft viewport, cancelling a copy, returning to the source pane).
 // A submitted name mutation must finish before its editor can be left.
 func (v *view) cancelInteraction(gtx layout.Context) bool {
+	defer v.beginSoundAction()() // Mouse cancellation may also produce a footer result.
 	switch s := v.interaction.current.(type) {
 	case *sizeSession:
 		return false // Only Escape or closing cancels; retain ownership until completion.
 	case *multiRenameSession:
 		return false // The expression transaction has explicit Apply / Cancel actions.
 	case *favoriteSession:
-		v.interaction.finish(s)
+		v.finishInteraction(s)
 		v.panels[s.panel] = s.previous
 		v.focusInteraction(gtx)
 	case *confirmationSession:
@@ -273,6 +289,7 @@ func (v *view) cancelInteraction(gtx layout.Context) bool {
 // Escape uses the same session cancellation as other input routes, with one
 // semantic cue. Submitted name mutations remain protected until reconciliation.
 func (v *view) escape(gtx layout.Context) {
+	defer v.beginSoundAction()()
 	if s, ok := v.interaction.current.(*sizeSession); ok {
 		s.cancel()
 		return

@@ -45,7 +45,7 @@ func TestEscapePlaysOneCueAcrossInteractions(t *testing.T) {
 			v.sounds = recorded
 			send(pressed(key.NameEscape))
 			advance(time.Hour)
-			if len(recorded.played) != 1 || recorded.played[0] != sound.Cancel {
+			if len(recorded.played) != 1 || recorded.played[0] != sound.Closed {
 				t.Fatalf("Escape did not produce exactly one cancellation cue: %v", recorded.played)
 			}
 			if !v.interaction.idle() || v.panels[0].selected != selected || v.panels[0].prefix != "" || v.active != 0 {
@@ -86,14 +86,14 @@ func TestEscapeRemainsSilentWhileSubmittedNameIsProtected(t *testing.T) {
 	}
 }
 
-func TestMouseCancellationDoesNotPlayEscapeCue(t *testing.T) {
+func TestMouseCancellationAnnouncesOneSharedClose(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
 	recorded := &recordedSounds{}
 	v.sounds = recorded
 	var ops op.Ops
-	if !v.cancelInteraction(layout.Context{Ops: &ops}) || !v.interaction.idle() || len(recorded.played) != 0 {
-		t.Fatal("non-keyboard cancellation emitted an Escape sound")
+	if !v.cancelInteraction(layout.Context{Ops: &ops}) || !v.interaction.idle() || len(recorded.played) != 1 || recorded.played[0] != sound.Closed {
+		t.Fatal("mouse cancellation did not announce the shared close cue")
 	}
 }

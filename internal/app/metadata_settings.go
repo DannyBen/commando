@@ -33,7 +33,6 @@ func (v *view) toggleMetadataColumn() {
 	if p.sortByMetadata {
 		p.resort()
 	}
-	v.announceInteraction(eventValueChanged)
 }
 
 func (v *view) metadataColumnEnabled(column metadataColumn) bool {

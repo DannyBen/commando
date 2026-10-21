@@ -20,9 +20,10 @@ type sizeSession struct {
 	folders map[string]bool
 }
 
-func (s *sizeSession) interactionPanel() int { return s.panel }
-func (*sizeSession) holdsOperations() bool   { return true }
-func (*sizeSession) blocksPanels() bool      { return true }
+func (s *sizeSession) interactionPanel() int        { return s.panel }
+func (*sizeSession) openingEvent() interactionEvent { return eventSoundOwned }
+func (*sizeSession) holdsOperations() bool          { return true }
+func (*sizeSession) blocksPanels() bool             { return true }
 
 func calculateSizeReady(v *view) bool {
 	p := &v.panels[v.active]
@@ -48,7 +49,7 @@ func (v *view) startCalculateSize(gtx layout.Context) {
 		return
 	}
 	if !v.loader.submit(loadRequest{panel: s.panel, path: p.path, size: s, action: actionBrowse}) {
-		v.interaction.finish(s)
+		v.finishInteraction(s)
 		cancel()
 		return
 	}
@@ -60,7 +61,7 @@ func (v *view) startCalculateSize(gtx layout.Context) {
 func (v *view) acceptCalculateSize(result loadResult) {
 	s := result.request.size
 	defer s.cancel()
-	if !v.interaction.finish(s) {
+	if !v.finishInteraction(s) {
 		return
 	}
 	p := &v.panels[s.panel]

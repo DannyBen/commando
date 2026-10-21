@@ -20,7 +20,7 @@ func TestInteractionSoundMapUsesConfiguredCues(t *testing.T) {
 
 func TestSoundMapControlsSharedTextAndShortcutEditing(t *testing.T) {
 	beforeStart, beforeConfirm := interactionSounds[eventEditStarted], interactionSounds[eventEditConfirmed]
-	interactionSounds[eventEditStarted], interactionSounds[eventEditConfirmed] = sound.Palette, sound.Cancel
+	interactionSounds[eventEditStarted], interactionSounds[eventEditConfirmed] = sound.Enabled, sound.Disabled
 	t.Cleanup(func() {
 		interactionSounds[eventEditStarted], interactionSounds[eventEditConfirmed] = beforeStart, beforeConfirm
 	})
@@ -42,7 +42,7 @@ func TestSoundMapControlsSharedTextAndShortcutEditing(t *testing.T) {
 			}
 			recorder.played = nil
 			send(pressed(key.NameReturn))
-			if !slices.Equal(recorder.played, []sound.Name{sound.Palette}) {
+			if !slices.Equal(recorder.played, []sound.Name{sound.Enabled}) {
 				t.Fatal("shared edit start ignored central mapping", recorder.played)
 			}
 			recorder.played = nil
@@ -55,7 +55,7 @@ func TestSoundMapControlsSharedTextAndShortcutEditing(t *testing.T) {
 				}
 				send(pressed(key.NameReturn))
 			}
-			if !slices.Equal(recorder.played, []sound.Name{sound.Cancel}) {
+			if !slices.Equal(recorder.played, []sound.Name{sound.Disabled}) {
 				t.Fatal("shared edit confirmation ignored central mapping", recorder.played)
 			}
 		})
@@ -99,7 +99,7 @@ func TestImplicitWidgetCommitsPlayOnlyTheirEnclosingAction(t *testing.T) {
 	send(pressed(key.NameReturn))
 	recorder.played = nil
 	send(modified(key.NameReturn, key.ModCtrl))
-	if !slices.Equal(recorder.played, []sound.Name{sound.Settings}) {
+	if !slices.Equal(recorder.played, []sound.Name{sound.Closed}) {
 		t.Fatal("Save doubled field commit and save cues", recorder.played)
 	}
 }
@@ -125,7 +125,7 @@ func TestWidgetResetAndStagedDeleteShareActionFeedback(t *testing.T) {
 			s.actionsFocused, s.action = true, 2
 			recorder.played = nil
 			send(pressed(key.NameReturn))
-			if !slices.Equal(recorder.played, []sound.Name{sound.Settings}) || deletion && !s.deleted {
+			if !slices.Equal(recorder.played, []sound.Name{sound.Click}) || deletion && !s.deleted {
 				t.Fatal("accepted shared action did not produce one cue", recorder.played)
 			}
 			recorder.played = nil
@@ -154,7 +154,7 @@ func TestFailedSavesAndRestoredSessionsDoNotAnnounceSuccess(t *testing.T) {
 	}
 	s.pending = true
 	v.acceptSettingsSave(s, "", nil)
-	if v.paletteInteraction() != p || !slices.Equal(recorder.played, []sound.Name{sound.Settings}) {
+	if v.paletteInteraction() != p || !slices.Equal(recorder.played, []sound.Name{sound.Closed}) {
 		t.Fatal("restoring palette added an opening cue", recorder.played)
 	}
 	// A save carrying a footer message leaves its cue to the existing message owner.
@@ -164,8 +164,8 @@ func TestFailedSavesAndRestoredSessionsDoNotAnnounceSuccess(t *testing.T) {
 	recorder.played = nil
 	s.pending = true
 	v.acceptSettingsSave(s, "Restart Commando", nil)
-	if len(recorder.played) != 0 {
-		t.Fatal("message-producing save emitted a second success cue")
+	if !slices.Equal(recorder.played, []sound.Name{sound.MessageInfo}) {
+		t.Fatal("save result did not arbitrate its message against the close cue", recorder.played)
 	}
 	send()
 	if !slices.Equal(recorder.played, []sound.Name{sound.MessageInfo}) {
@@ -188,7 +188,7 @@ func TestShortcutNoOpAndRejectedEditsStaySilent(t *testing.T) {
 	send(pressed(key.NameReturn))
 	recorder.played = nil
 	send(modified("C", key.ModCtrl))
-	if !slices.Equal(recorder.played, []sound.Name{sound.Question}) || v.confirmationInteraction() == nil {
+	if !slices.Equal(recorder.played, []sound.Name{sound.Opened}) || v.confirmationInteraction() == nil {
 		t.Fatal("conflicting capture did not announce its question once", recorder.played)
 	}
 }

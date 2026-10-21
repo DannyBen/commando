@@ -158,6 +158,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		v.interactionKey(gtx, ke)
 		return
 	}
+	defer v.beginSoundAction()()
 	v.dismissFeedback()
 	v.suppressSpaceText = false
 	if v.settingsSelecting() && (ke.Name == key.NameReturn || ke.Name == key.NameEnter) && ke.Modifiers == key.ModCtrl {

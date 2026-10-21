@@ -292,7 +292,7 @@ func nativeModifiers() key.Modifiers {
 
 // Gio options run synchronously on the window thread. Keep capture suspended
 // across both the style change and placement restoration on leaving fullscreen.
-func (n *nativeWindow) toggleFullScreen(w *gioapp.Window) {
+func (n *nativeWindow) toggleFullScreen(w *gioapp.Window) (enabled, changed bool) {
 	var leaving, ready bool
 	w.Run(func() {
 		leaving = n.fullscreen
@@ -309,11 +309,11 @@ func (n *nativeWindow) toggleFullScreen(w *gioapp.Window) {
 		n.fullscreen, ready = true, true
 	})
 	if !ready {
-		return
+		return false, false
 	}
 	if !leaving {
 		w.Option(gioapp.Fullscreen.Option())
-		return
+		return true, true
 	}
 	w.Option(gioapp.Windowed.Option())
 	w.Run(func() {
@@ -323,4 +323,5 @@ func (n *nativeWindow) toggleFullScreen(w *gioapp.Window) {
 		n.fullscreen = false
 		n.capture(n.hwnd)
 	})
+	return false, true
 }

@@ -125,7 +125,7 @@ func (v *view) settingsCatalogue() []command {
 				available: func(v *view) bool {
 					return v.activeDataFolder != "" && v.loader != nil && v.canOfferInteraction(v.active, actionMutation)
 				},
-				execute: func(v *view) { v.saveThemeFile() }}))
+				soundEvent: eventSoundOwned, execute: func(v *view) { v.saveThemeFile() }}))
 			continue
 		}
 		if isThemeColorWidget(key) {
@@ -150,8 +150,8 @@ func (v *view) settingsCatalogue() []command {
 					}
 				}
 				catalogue = append(catalogue, v.resolveCommandBindings(command{id: id, group: group, name: name,
-					available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
-					execute:   func(v *view) { v.startCollectionWidget(key, index, name) }}))
+					available:  func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
+					soundEvent: eventSoundOwned, execute: func(v *view) { v.startCollectionWidget(key, index, name) }}))
 			}
 			add(-1, "New")
 			for i, row := range rows {
@@ -161,8 +161,9 @@ func (v *view) settingsCatalogue() []command {
 			continue
 		}
 		catalogue = append(catalogue, v.resolveCommandBindings(command{id: "settings." + key, group: settingsGroupLabel(widget.Parent), name: widget.Label,
-			available: func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
-			execute:   func(v *view) { v.startSettingsWidget(key) },
+			available:  func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
+			execute:    func(v *view) { v.startSettingsWidget(key) },
+			soundEvent: eventSoundOwned,
 		}))
 	}
 	slices.SortStableFunc(catalogue, func(a, b command) int {
@@ -423,7 +424,7 @@ func (v *view) previewSettingValue(key string, value settings.Value) {
 			if s := v.settingsInteraction(); (s == nil || !s.deferred) && v.previewSoundSetting(key) {
 				return
 			}
-			v.announceInteraction(eventValueChanged)
+			v.announceSettingChange(key, v.widgetValues().Get(c, key))
 		}
 	}
 }
@@ -572,6 +573,7 @@ func (v *view) applySettingDraft(gtx layout.Context) bool {
 	return true
 }
 func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
+	defer v.beginSoundAction()()
 	s := v.settingsInteraction()
 	if s == nil || s.pending {
 		return
@@ -665,20 +667,18 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		v.settingsValues = s.commit.Clone()
 		v.applySettings()
 	}
-	v.interaction.finish(s)
+	v.finishInteraction(s)
 	if save && s.afterSave != nil {
 		s.afterSave()
 		v.focusInteraction(gtx)
 		return
 	}
 	v.restoreWidgetPalette(s, save)
-	if save {
-		v.announceInteraction(eventSettingsSaved)
-	}
 	v.focusInteraction(gtx)
 }
 
 func (v *view) acceptSettingsSave(s *settingsSession, message string, err error) {
+	defer v.beginSoundAction()()
 	if v.settingsInteraction() != s {
 		return
 	}
@@ -693,7 +693,7 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 		v.settingsValues = s.commit.Clone()
 		v.applySettings()
 	}
-	v.interaction.finish(s)
+	v.finishInteraction(s)
 	if s.afterSave != nil {
 		s.afterSave()
 		return
@@ -701,8 +701,6 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 	v.restoreWidgetPalette(s, true)
 	if message != "" {
 		v.showFeedback(s.panel, feedback.Info, message)
-	} else {
-		v.announceInteraction(eventSettingsSaved)
 	}
 }
 

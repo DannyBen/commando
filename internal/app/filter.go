@@ -59,7 +59,7 @@ func (v *view) startFilter(gtx layout.Context) {
 
 func (v *view) stopFilter(gtx layout.Context) {
 	if s := v.filterInteraction(); s != nil {
-		v.interaction.finish(s)
+		v.finishInteraction(s)
 		v.focusInteraction(gtx)
 	}
 }
@@ -123,7 +123,8 @@ func (v *view) updateFilter(gtx layout.Context) {
 	for _, ke := range keys {
 		v.dismissFeedback()
 		if ke.Modifiers != 0 && ke.Name != key.NameTab {
-			v.stopFilter(gtx)
+			v.interaction.finish(v.filterInteraction()) // Handoff; the next command owns audio.
+			v.focusInteraction(gtx)
 			v.browseKey(gtx, ke)
 			return
 		}
@@ -133,7 +134,6 @@ func (v *view) updateFilter(gtx layout.Context) {
 			return
 		case key.NameReturn, key.NameEnter:
 			v.stopFilter(gtx)
-			v.announceInteraction(eventSelectionChanged)
 			return
 		case key.NameUpArrow, key.NameDownArrow:
 			delta := 1
@@ -142,7 +142,8 @@ func (v *view) updateFilter(gtx layout.Context) {
 			}
 			v.selectBrowsingRow(v.panels[v.active].selected+delta, false, true)
 		default:
-			v.stopFilter(gtx)
+			v.interaction.finish(v.filterInteraction())
+			v.focusInteraction(gtx)
 			v.browseKey(gtx, ke)
 			return
 		}

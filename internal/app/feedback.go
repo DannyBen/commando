@@ -17,6 +17,10 @@ import (
 
 func (v *view) showFeedback(index int, kind feedback.Kind, text string) {
 	v.panels[index].feedback.Show(kind, text)
+	if v.soundAction != nil {
+		v.playFeedbackSound(feedback.Frame{Kind: kind, Started: true})
+		v.panels[index].feedback.Acknowledge()
+	}
 }
 
 func (v *view) operationProgress(index int, text string) {

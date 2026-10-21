@@ -67,6 +67,7 @@ func TestNavigationEdgesAndEditorsStaySilent(t *testing.T) {
 			} else {
 				send(pressed(key.NameF2))
 			}
+			recorded.played = nil // Opening the editor has its own shared cue.
 			send(pressed(key.NameLeftArrow), pressed(key.NameRightArrow), pressed(key.NameUpArrow), pressed(key.NameDownArrow),
 				pressed(key.NameHome), pressed(key.NameEnd), pressed(key.NamePageUp), pressed(key.NamePageDown),
 				pressed(key.NameTab), modified(key.NameTab, key.ModShift))
@@ -83,7 +84,7 @@ func TestPaletteNavigationTicksWhileSearchEditingStaysSilent(t *testing.T) {
 	v.sounds = recorded
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
-	if len(recorded.played) != 1 || recorded.played[0] != sound.Palette {
+	if len(recorded.played) != 1 || recorded.played[0] != sound.Opened {
 		t.Fatalf("palette opening cue: %v", recorded.played)
 	}
 	recorded.played = nil
@@ -110,7 +111,7 @@ func TestPaletteOpeningCueForBothModes(t *testing.T) {
 		v.sounds = recorded
 		send, _ := panelInputFrames(v)
 		send(opening)
-		if v.paletteInteraction() == nil || len(recorded.played) != 1 || recorded.played[0] != sound.Palette {
+		if v.paletteInteraction() == nil || len(recorded.played) != 1 || recorded.played[0] != sound.Opened {
 			t.Fatalf("opening %v did not play one palette cue: %v", opening, recorded.played)
 		}
 	}
@@ -125,7 +126,7 @@ func TestPaletteTextOpeningDoesNotStopItsOwnCue(t *testing.T) {
 	// its text event opens settings search.
 	send(modified("2", key.ModShift), key.EditEvent{Text: "@"})
 	if v.paletteInteraction() == nil || v.commandSearch.Text() != "@" ||
-		len(recorded.played) != 1 || recorded.played[0] != sound.Palette || recorded.stops != 0 {
+		len(recorded.played) != 1 || recorded.played[0] != sound.Opened || recorded.stops != 0 {
 		t.Fatalf("settings opening played %v with %d stops", recorded.played, recorded.stops)
 	}
 }
@@ -138,6 +139,7 @@ func TestInlineNavigationPlaysOnceWithoutChangingFileSelection(t *testing.T) {
 	selected := v.panels[0].selected
 	v.startInlineActions(0, 4, "", "", []string{"First", "Second", "Third"}, nil, nil)
 	send()
+	recorded.played = nil
 	send(pressed(key.NameDownArrow), pressed(key.NameEnd), pressed(key.NameHome), pressed(key.NameUpArrow))
 	if len(recorded.played) != 3 || v.panels[0].selected != selected {
 		t.Fatal("inline navigation replayed sound or changed the underlying selection")
@@ -157,6 +159,7 @@ func TestTransferTargetNavigationPlaysOnceAndIgnoresEdges(t *testing.T) {
 	v.sounds = recorded
 	send, _ := panelInputFrames(v)
 	send(pressed(key.NameF5))
+	recorded.played = nil
 	send(pressed(key.NameRightArrow), pressed(key.NameRightArrow), pressed(key.NameTab), modified(key.NameTab, key.ModShift))
 	if v.active != 2 || v.inlineInteraction() == nil || len(recorded.played) != 3 {
 		t.Fatalf("transfer target navigation did not play once per move: %v", recorded.played)

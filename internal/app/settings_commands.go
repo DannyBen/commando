@@ -20,7 +20,7 @@ func (v *view) toggleBooleanSetting(field string) {
 	}
 	v.applySettings()
 	if !v.previewSoundSetting(field) {
-		v.announceInteraction(eventValueChanged)
+		v.announceSettingChange(field, v.settingsValues.Get(settings.CatalogueDefault, field))
 	}
 	if v.prepareSettingsSave == nil {
 		return // Previews do not persist settings.

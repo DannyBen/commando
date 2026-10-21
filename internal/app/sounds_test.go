@@ -16,11 +16,11 @@ import (
 )
 
 func TestSoundProfilesGateAllSemanticCues(t *testing.T) {
-	all := []sound.Name{sound.MessageError, sound.MessageWarning, sound.MessageInfo, sound.MessageSuccess, sound.Palette, sound.Settings, sound.Cancel, sound.Question, sound.HelpOpened, sound.HelpClosed, sound.Navigation, sound.DirectoryNavigation}
+	all := []sound.Name{sound.MessageError, sound.MessageWarning, sound.MessageInfo, sound.MessageSuccess, sound.Click, sound.Enabled, sound.Disabled, sound.Opened, sound.Closed, sound.Navigation, sound.DirectoryNavigation}
 	for _, tc := range []struct {
 		profile float64
 		count   int
-	}{{1, 1}, {2, 2}, {3, 4}, {4, 10}, {sound.All, 12}} {
+	}{{1, 1}, {2, 2}, {3, 4}, {4, 9}, {sound.All, 11}} {
 		v := newPreviewView()
 		recorder := &recordedSounds{}
 		v.sounds = recorder

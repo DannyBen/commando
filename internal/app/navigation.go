@@ -98,6 +98,7 @@ func (v *view) queueLoad(request loadRequest) bool {
 }
 
 func (v *view) pollLoads() {
+	defer v.beginSoundAction()() // Simultaneous completions announce the strongest result.
 	if v.loader == nil {
 		return
 	}
@@ -112,6 +113,7 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	defer v.beginSoundAction()()
 	if result.request.driveSpace != nil {
 		v.acceptDriveSpace(result)
 		return

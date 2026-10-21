@@ -410,7 +410,7 @@ func TestFollowTogglePlaysDistinctCuesAndRespectsMute(t *testing.T) {
 	send(modified("X", key.ModAlt))
 	send(key.Event{Name: "X", Modifiers: key.ModAlt, State: key.Release})
 	send(modified("X", key.ModAlt))
-	if len(recorder.played) != 2 || recorder.played[0] != sound.FollowEnabled || recorder.played[1] != sound.FollowDisabled {
+	if len(recorder.played) != 2 || recorder.played[0] != sound.Enabled || recorder.played[1] != sound.Disabled {
 		t.Fatal("toggle did not play exactly one distinct cue per change", recorder.played)
 	}
 	if err := v.settingsValues.Set(settings.CatalogueDefault, settingSoundEnabled, settings.Value{Bool: false}); err != nil {

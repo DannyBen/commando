@@ -141,7 +141,7 @@ func (v *view) stopName(gtx layout.Context) {
 		p.list.Position, p.reveal = r.previousPosition, r.previousReveal
 		p.rows = make(map[int]*fileRow)
 	}
-	v.interaction.finish(r)
+	v.finishInteraction(r)
 	if r.favorite != nil && !r.finished {
 		v.panels[r.panel] = r.favorite.previous
 	}

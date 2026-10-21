@@ -57,7 +57,7 @@ func (v *view) stopInlineActions() *inlineActionSession {
 		p.markRange = nil
 	}
 	p.rows = make(map[int]*fileRow)
-	v.interaction.finish(a)
+	v.finishInteraction(a)
 	return a
 }
 
@@ -123,6 +123,10 @@ func (v *view) inlineActionKey(gtx layout.Context, ke key.Event) {
 }
 
 func (v *view) navigateInlineActions(direction int, cycle bool) {
+	defer v.beginSoundAction()()
+	previousHandoff := v.soundAction.handoff
+	v.soundAction.handoff = true
+	defer func() { v.soundAction.handoff = previousHandoff }()
 	if navigate := v.inlineInteraction().navigate; navigate != nil {
 		previous := v.active
 		navigate(direction, cycle)

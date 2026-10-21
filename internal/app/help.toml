@@ -1346,7 +1346,7 @@ lines = [
 ["palette.view.sort_by_metadata"]
 lines = [
   "Switch between name order and sorting by the displayed file detail",
-  "Choose available columns in [settings:metadata].",
+  "The arrow before the metadata header shows its sort direction",
 ]
 
 ["palette.view.toggle_metadata_column"]

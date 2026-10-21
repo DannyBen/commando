@@ -2,7 +2,8 @@ package app
 
 import "gioui.org/layout"
 
-func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
+func (v *view) executeBuiltinCommand(gtx layout.Context, id string) (accepted bool) {
+	accepted = true
 	p := &v.panels[v.active]
 	switch id {
 	case "entry.calculate_size":
@@ -88,21 +89,21 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 		if id == "view.previous_metadata_column" {
 			direction = -1
 		}
-		p.setMetadataColumn(v.nextMetadataColumn(p.metadata, direction))
+		column := v.nextMetadataColumn(p.metadata, direction)
+		accepted = column != p.metadata
+		p.setMetadataColumn(column)
 		if p.sortByMetadata && !p.loading && v.interaction.idle() {
 			p.resort()
 		}
 	case "view.sort_by_metadata":
 		v.toggleMetadataSort()
 	case "view.toggle_metadata_column":
+		before := p.metadata
 		v.toggleMetadataColumn()
+		accepted = p.metadata != before
 	case "panel.follow_me":
 		v.followMe = !v.followMe
-		if v.followMe {
-			v.announceInteraction(eventFollowEnabled)
-		} else {
-			v.announceInteraction(eventFollowDisabled)
-		}
+		accepted = true
 	case "panel.move_left":
 		v.swapPanel(-1)
 	case "panel.increase_size":
@@ -114,24 +115,35 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) {
 	case "panel.move_right":
 		v.swapPanel(1)
 	case "panel.add_left":
-		v.addPanel(-1)
+		accepted = v.addPanel(-1)
 	case "panel.add_right":
-		v.addPanel(1)
+		accepted = v.addPanel(1)
 	case "panel.close":
+		count := len(v.panels)
 		v.closePanel()
+		accepted = len(v.panels) != count
 	case "panel.reopen_closed":
+		count := len(v.panels)
 		v.reopenPanel()
+		accepted = len(v.panels) != count
 	case "selection.toggle_mark":
+		accepted = !p.loading && p.markable(p.selected)
 		p.toggleMark(p.selected)
 	case "selection.toggle_mark_and_advance":
+		accepted = !p.loading && (p.markable(p.selected) || p.selected+1 < len(p.items))
 		p.toggleMark(p.selected)
 		v.selectBrowsingRow(p.selected+1, false, false)
 	case "selection.mark_all":
+		before := len(p.marks)
 		p.prefix = ""
 		p.markAll()
+		accepted = len(p.marks) != before
 	case "selection.clear_filter_or_marks":
 		v.escape(gtx)
 	case "application.command_palette":
 		v.startPalette(gtx)
+	default:
+		accepted = false
 	}
+	return
 }

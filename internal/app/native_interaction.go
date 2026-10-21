@@ -20,9 +20,10 @@ type nativeSession struct {
 	traceID    uint64
 }
 
-func (s *nativeSession) interactionPanel() int { return s.panel }
-func (*nativeSession) holdsOperations() bool   { return true }
-func (*nativeSession) blocksPanels() bool      { return true }
+func (s *nativeSession) interactionPanel() int        { return s.panel }
+func (*nativeSession) openingEvent() interactionEvent { return eventSoundOwned }
+func (*nativeSession) holdsOperations() bool          { return true }
+func (*nativeSession) blocksPanels() bool             { return true }
 
 type shellAction uint8
 
@@ -71,7 +72,8 @@ func (v *view) dispatchNative(invalidate func()) {
 }
 
 func (v *view) completeNative(completion shellCompletion) bool {
-	if !v.interaction.finish(completion.session) {
+	defer v.beginSoundAction()()
+	if !v.finishInteraction(completion.session) {
 		return false
 	}
 	traceShellCompletion(completion)
