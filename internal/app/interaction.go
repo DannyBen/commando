@@ -70,6 +70,11 @@ func (v *view) finishInteraction(session interactionSession) bool {
 	if !v.interaction.finish(session) {
 		return false
 	}
+	// A completed name mutation already announced its result on the worker
+	// completion. Closing its editor on the next frame must stay quiet.
+	if name, ok := session.(*nameSession); ok && name.finished {
+		return true
+	}
 	// Work-only sessions opt out of both lifecycle cues with eventSoundOwned.
 	if owner, ok := session.(interface{ openingEvent() interactionEvent }); (v.soundAction == nil || !v.soundAction.handoff) && (!ok || owner.openingEvent() != eventSoundOwned) {
 		v.announceInteraction(eventWidgetClosed)

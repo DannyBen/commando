@@ -95,6 +95,36 @@ func TestParentIconsUseActualParentPathAndSharedCache(t *testing.T) {
 	}
 }
 
+func TestFileIconCacheSeparatesFileAndFolderAtSamePath(t *testing.T) {
+	v := newPreviewView()
+	v.loader = newDirectoryLoader(browser.ReadLocation, nil)
+	defer v.loader.close()
+	v.loader.readFileIcon = func(string, int) image.Image {
+		return image.NewRGBA(image.Rect(0, 0, 16, 16))
+	}
+	var ops op.Ops
+	gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 24))}
+	row := func(gtx layout.Context) layout.Dimensions { return layout.Dimensions{Size: gtx.Constraints.Max} }
+	for _, directory := range []bool{false, true, false, true} {
+		v.fileIconWanted = nil
+		v.withFileIcon(gtx, &v.panels[0], entry{file: browser.Entry{Name: "reused", Directory: directory}}, false, row)
+		if len(v.fileIcons) < 2 {
+			if len(v.fileIconWanted) != 1 || v.fileIconWanted[0].directory != directory {
+				t.Fatal("file and folder reused the same cached icon")
+			}
+			v.submitFileIcons()
+			select {
+			case result := <-v.loader.results:
+				v.acceptFileIcons(result)
+			case <-time.After(3 * time.Second):
+				t.Fatal("icon load did not complete")
+			}
+		} else if len(v.fileIconWanted) != 0 {
+			t.Fatal("file or folder icon was not cached")
+		}
+	}
+}
+
 func TestIconsSettingsDefaultToggleCancelAndSave(t *testing.T) {
 	v := newPreviewView()
 	if !v.settingsValues.Get(settings.CatalogueDefault, settingIconsEnabled).Bool {

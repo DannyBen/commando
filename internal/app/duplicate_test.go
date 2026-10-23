@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -14,6 +15,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 func TestSingleDuplicateUsesInlineNameEditor(t *testing.T) {
@@ -78,9 +80,14 @@ func TestSingleDuplicateUsesInlineNameEditor(t *testing.T) {
 			if v.nameEditor.Text() != suggestion || !router.Source().Focused(&v.nameEditor) {
 				t.Fatal("Tab disturbed duplicate editor")
 			}
+			recorder := &recordedSounds{}
+			v.sounds = recorder
 			send(replaceCreate(v, custom), pressed(key.NameReturn))
 			waitCreated(t, v)
 			send()
+			if !slices.Equal(recorder.played, []sound.Name{sound.MessageSuccess}) {
+				t.Fatal("duplicate completion played competing cues", recorder.played)
+			}
 			if folder {
 				assertBatchFile(t, filepath.Join(root, custom, "nested", "file"), "nested")
 				assertBatchFile(t, filepath.Join(root, name, "nested", "file"), "nested")
