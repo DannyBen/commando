@@ -1,3 +1,6 @@
+export CHANGELOG_COMMIT_URL=https://github.com/dannyben/commando/commit/%h
+export CHANGELOG_COMPARE_URL=https://github.com/dannyben/commando/compare/%s
+
 PATH_add support/showroom
 export GOFLAGS='-tags=novulkan,nox11'
 export TODO_BACKUP=on
