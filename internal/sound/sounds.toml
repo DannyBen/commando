@@ -5,6 +5,7 @@
 
 [sounds.navigation]
 level = 5
+file = "tick.json"
 notes = [220]
 length_ms = 12
 waveform = "square"

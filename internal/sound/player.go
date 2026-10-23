@@ -23,7 +23,7 @@ type Player struct {
 func NewPlayer() *Player {
 	p := &Player{requests: make(chan playback, 1), stop: make(chan struct{}), done: make(chan struct{}), sounds: make(map[Name][]int16)}
 	for name, cue := range cues {
-		pcm, err := synthesize(cue.cue())
+		pcm, err := renderCue(name, cue)
 		if err != nil {
 			panic(string(name) + ": " + err.Error())
 		}

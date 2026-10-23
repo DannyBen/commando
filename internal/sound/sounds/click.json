@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "name": "Click",
+  "render": { "sample_rate": 48000, "channels": 1 },
+  "graph": {
+    "tone": {
+      "module": "oscillator",
+      "inputs": { "waveform": "sine", "frequency_hz": 220, "phase_cycles": 0 }
+    },
+    "envelope": {
+      "module": "envelope_ad",
+      "inputs": { "attack_ms": 2, "decay_ms": 10, "curve": "linear" }
+    },
+    "amp": {
+      "module": "amplifier",
+      "inputs": {
+        "audio": { "ref": "tone.audio" },
+        "envelope": { "ref": "envelope.control" },
+        "gain": 0.1
+      }
+    }
+  },
+  "output": { "audio": { "ref": "amp.audio" }, "duration_ms": 13 }
+}

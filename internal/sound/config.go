@@ -36,6 +36,7 @@ const All = -1
 
 type definition struct {
 	Level     int
+	File      string
 	Notes     []float64
 	LengthMS  int `toml:"length_ms"`
 	SpacingMS int `toml:"spacing_ms"`
