@@ -6,7 +6,7 @@ require (
 	gioui.org v0.10.4-0.20260929172608-3397eb8f4df4
 	github.com/BurntSushi/toml v1.6.0
 	github.com/go-text/typesetting v0.3.5
-	github.com/ui-sound-system/uss-go v0.0.0-20261023123223-d4a1e2631ee1
+	github.com/ui-sound-system/uss-go v0.0.0-20261024162150-0fd58eb848bb
 	golang.org/x/image v0.47.0
 	golang.org/x/sys v0.49.0
 )

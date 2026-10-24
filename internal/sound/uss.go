@@ -28,15 +28,15 @@ func renderCue(name Name, fallback definition) ([]int16, error) {
 	if err != nil {
 		return nil, err
 	}
-	return renderUSS(data)
+	return renderUSS(data, fallback.Inputs)
 }
 
-func renderUSS(data []byte) ([]int16, error) {
+func renderUSS(data []byte, inputs synth.Inputs) ([]int16, error) {
 	definition, err := synth.Parse(data)
 	if err != nil {
 		return nil, err
 	}
-	rendered, err := definition.Render(nil)
+	rendered, err := definition.Render(inputs)
 	if err != nil {
 		return nil, err
 	}

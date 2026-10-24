@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "name": "Tick",
-  "group": "Tick",
+  "name": "tick",
+  "group": "sounds",
   "render": {
     "sample_rate": 48000,
     "channels": 1
@@ -10,13 +10,15 @@
     "n0": {
       "module": "envelope_ahd",
       "inputs": {
-        "attack_ms": 3,
-        "hold_ms": {
-          "ref": "inputs.hold"
+        "attack_ms": {
+          "ref": "inputs.attack"
         },
-        "decay_ms": 10,
-        "attack_curve": "linear",
-        "decay_curve": -3
+        "hold_ms": 0,
+        "decay_ms": {
+          "ref": "inputs.body"
+        },
+        "attack_curve": 5,
+        "decay_curve": -6
       }
     },
     "n1": {
@@ -38,7 +40,7 @@
       }
     },
     "n3": {
-      "module": "lowpass",
+      "module": "amplifier",
       "inputs": {
         "audio": {
           "ref": "n2.audio"
@@ -46,160 +48,73 @@
         "envelope": {
           "ref": "n0.control"
         },
-        "cutoff_hz": {
-          "ref": "inputs.tone_cutoff"
-        },
-        "resonance": 0.707,
-        "amount": 0
+        "gain": {
+          "ref": "inputs.level"
+        }
       }
     },
     "n4": {
-      "module": "amplifier",
-      "inputs": {
-        "audio": {
-          "ref": "n3.audio"
-        },
-        "envelope": {
-          "ref": "n0.control"
-        },
-        "gain": 0.1
-      }
-    },
-    "n5": {
       "module": "place",
       "inputs": {
         "audio": {
-          "ref": "n4.audio"
+          "ref": "n3.audio"
         },
         "start_ms": 0,
         "duration_ms": {
           "ref": "n0.duration_ms"
         }
       }
-    },
-    "n6": {
-      "module": "envelope_ahd",
-      "inputs": {
-        "attack_ms": 1,
-        "hold_ms": 0,
-        "decay_ms": 10,
-        "attack_curve": "linear",
-        "decay_curve": "linear"
-      }
-    },
-    "n7": {
-      "module": "noise",
-      "inputs": {
-        "seed": 1
-      }
-    },
-    "n8": {
-      "module": "lowpass",
-      "inputs": {
-        "audio": {
-          "ref": "n7.audio"
-        },
-        "envelope": {
-          "ref": "n6.control"
-        },
-        "cutoff_hz": 3000,
-        "resonance": 0.707,
-        "amount": 0
-      }
-    },
-    "n9": {
-      "module": "amplifier",
-      "inputs": {
-        "audio": {
-          "ref": "n8.audio"
-        },
-        "envelope": {
-          "ref": "n6.control"
-        },
-        "gain": {
-          "ref": "inputs.click"
-        }
-      }
-    },
-    "n10": {
-      "module": "place",
-      "inputs": {
-        "audio": {
-          "ref": "n9.audio"
-        },
-        "start_ms": 0,
-        "duration_ms": {
-          "ref": "n6.duration_ms"
-        }
-      }
-    },
-    "n11": {
-      "module": "mix",
-      "inputs": {
-        "audio_a": {
-          "ref": "n5.audio"
-        },
-        "audio_b": {
-          "ref": "n10.audio"
-        },
-        "duration_a_ms": {
-          "ref": "n5.end_ms"
-        },
-        "duration_b_ms": {
-          "ref": "n10.end_ms"
-        }
-      }
     }
   },
   "output": {
     "audio": {
-      "ref": "n11.audio"
+      "ref": "n4.audio"
     },
     "duration_ms": {
-      "ref": "n11.duration_ms"
+      "ref": "n4.end_ms"
     }
   },
   "inputs": {
     "note": {
       "label": "Note",
       "type": "note",
-      "default": "D7",
+      "default": "A5",
       "range": [
-        "C4",
+        "C2",
         "C8"
       ]
     },
-    "click": {
-      "label": "Click",
+    "attack": {
+      "label": "Attack",
+      "type": "duration",
+      "default": 10,
+      "unit": "ms",
+      "range": [
+        0,
+        10
+      ],
+      "step": 1
+    },
+    "body": {
+      "label": "Decay duration",
+      "type": "duration",
+      "default": 50,
+      "unit": "ms",
+      "range": [
+        10,
+        100
+      ],
+      "step": 10
+    },
+    "level": {
+      "label": "Level",
       "type": "float",
-      "default": 0.05,
+      "default": 0.06,
       "range": [
         0,
         0.2
       ],
-      "step": 0.01
-    },
-    "hold": {
-      "label": "Hold",
-      "type": "duration",
-      "default": 5,
-      "unit": "ms",
-      "range": [
-        5,
-        40
-      ],
-      "step": 5
-    },
-    "tone_cutoff": {
-      "label": "Tone cutoff",
-      "type": "float",
-      "default": 2200,
-      "unit": "Hz",
-      "range": [
-        100,
-        6000
-      ],
-      "step": 100
+      "step": 0.005
     }
   }
 }
