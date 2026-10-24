@@ -2,6 +2,7 @@ package sound
 
 import (
 	"math"
+	"slices"
 	"testing"
 	"time"
 )
@@ -58,7 +59,7 @@ func TestOscillatorFrequencyVolumeAndNoteSpacing(t *testing.T) {
 			t.Fatal("note spacing was measured from note ends")
 		}
 	}
-	if pcm[samples(72*time.Millisecond)] == 0 {
+	if !slices.ContainsFunc(pcm[samples(71*time.Millisecond):samples(73*time.Millisecond)], func(sample int16) bool { return sample != 0 }) {
 		t.Fatal("second note missing")
 	}
 }

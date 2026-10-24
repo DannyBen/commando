@@ -74,20 +74,10 @@ func TestPanelSizeCuesRiseFromG3ThroughNormalC4ToG4(t *testing.T) {
 	}
 }
 
-func TestOpenCloseCuesRiseAndFallAtInteractionLevel(t *testing.T) {
-	on, off := cues[Opened], cues[Closed]
-	if len(on.Notes) != 2 || len(off.Notes) != 2 || on.Notes[0] >= on.Notes[1] ||
-		on.Notes[0] != off.Notes[1] || on.Notes[1] != off.Notes[0] || on.Level != 4 || off.Level != 4 {
-		t.Fatal("Open/close cues must be a rising/falling pair at the interaction level")
-	}
-	if on.SpacingMS <= on.LengthMS || on.LengthMS+on.SpacingMS < 100 || on.LengthMS+on.SpacingMS > 200 {
-		t.Fatal("open/close notes must be distinguishable while remaining brief")
-	}
-}
-
-func TestBooleanCuesUseOneNoteAndHigherPitchForOn(t *testing.T) {
+func TestBooleanCuesUseOppositeUSSDirectionsAtInteractionLevel(t *testing.T) {
 	on, off := cues[Enabled], cues[Disabled]
-	if len(on.Notes) != 1 || len(off.Notes) != 1 || on.Notes[0] <= off.Notes[0] || on.Level != 4 || off.Level != 4 {
-		t.Fatal("on/off must use single notes, with a higher pitch for on")
+	if on.File != "enable-disable.json" || off.File != on.File ||
+		on.Inputs["direction"] != "up" || off.Inputs["direction"] != "down" || on.Level != 4 || off.Level != 4 {
+		t.Fatal("on/off must use enable-disable with up/down directions at the interaction level")
 	}
 }

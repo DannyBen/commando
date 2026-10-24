@@ -5,6 +5,7 @@
 
 [sounds.navigation]
 level = 5
+file = "tick.json"
 notes = [220]
 length_ms = 12
 waveform = "square"
@@ -100,6 +101,8 @@ volume = 10
 
 [sounds.enabled]
 level = 4
+file = "enable-disable.json"
+inputs = { direction = "up" }
 notes = [659.25]
 length_ms = 55
 waveform = "triangle"
@@ -107,6 +110,8 @@ volume = 24
 
 [sounds.disabled]
 level = 4
+file = "enable-disable.json"
+inputs = { direction = "down" }
 notes = [440]
 length_ms = 55
 waveform = "triangle"
@@ -114,6 +119,8 @@ volume = 24
 
 [sounds.opened]
 level = 4
+file = "open-close.json"
+inputs = { direction = "up" }
 notes = [440, 659.25]
 length_ms = 55
 spacing_ms = 65
@@ -122,6 +129,8 @@ volume = 24
 
 [sounds.closed]
 level = 4
+file = "open-close.json"
+inputs = { direction = "down" }
 notes = [659.25, 440]
 length_ms = 55
 spacing_ms = 65

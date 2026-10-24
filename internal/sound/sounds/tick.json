@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "name": "tick",
+  "group": "sounds",
+  "render": {
+    "sample_rate": 48000,
+    "channels": 1
+  },
+  "graph": {
+    "n0": {
+      "module": "envelope_ahd",
+      "inputs": {
+        "attack_ms": {
+          "ref": "inputs.attack"
+        },
+        "hold_ms": 0,
+        "decay_ms": {
+          "ref": "inputs.body"
+        },
+        "attack_curve": 5,
+        "decay_curve": -6
+      }
+    },
+    "n1": {
+      "module": "note_frequency",
+      "inputs": {
+        "note": {
+          "ref": "inputs.note"
+        }
+      }
+    },
+    "n2": {
+      "module": "oscillator",
+      "inputs": {
+        "waveform": "sine",
+        "frequency_hz": {
+          "ref": "n1.hz"
+        },
+        "phase_cycles": 0
+      }
+    },
+    "n3": {
+      "module": "amplifier",
+      "inputs": {
+        "audio": {
+          "ref": "n2.audio"
+        },
+        "envelope": {
+          "ref": "n0.control"
+        },
+        "gain": {
+          "ref": "inputs.level"
+        }
+      }
+    },
+    "n4": {
+      "module": "place",
+      "inputs": {
+        "audio": {
+          "ref": "n3.audio"
+        },
+        "start_ms": 0,
+        "duration_ms": {
+          "ref": "n0.duration_ms"
+        }
+      }
+    }
+  },
+  "output": {
+    "audio": {
+      "ref": "n4.audio"
+    },
+    "duration_ms": {
+      "ref": "n4.end_ms"
+    }
+  },
+  "inputs": {
+    "note": {
+      "label": "Note",
+      "type": "note",
+      "default": "A5",
+      "range": [
+        "C2",
+        "C8"
+      ]
+    },
+    "attack": {
+      "label": "Attack",
+      "type": "duration",
+      "default": 10,
+      "unit": "ms",
+      "range": [
+        0,
+        10
+      ],
+      "step": 1
+    },
+    "body": {
+      "label": "Decay duration",
+      "type": "duration",
+      "default": 50,
+      "unit": "ms",
+      "range": [
+        10,
+        100
+      ],
+      "step": 10
+    },
+    "level": {
+      "label": "Level",
+      "type": "float",
+      "default": 0.06,
+      "range": [
+        0,
+        0.2
+      ],
+      "step": 0.005
+    }
+  }
+}

@@ -1,0 +1,345 @@
+{
+  "version": 1,
+  "name": "enable-disable",
+  "group": "Commando",
+  "render": {
+    "sample_rate": 48000,
+    "channels": 1
+  },
+  "graph": {
+    "n0": {
+      "module": "envelope_ahd",
+      "inputs": {
+        "attack_ms": 5,
+        "hold_ms": 10,
+        "decay_ms": 50,
+        "attack_curve": 3,
+        "decay_curve": -3
+      }
+    },
+    "n1": {
+      "module": "note_frequency",
+      "inputs": {
+        "note": "C6"
+      }
+    },
+    "n2": {
+      "module": "unison_oscillator",
+      "inputs": {
+        "waveform": "sine",
+        "frequency_hz": {
+          "ref": "n1.hz"
+        },
+        "phase_cycles": 0,
+        "voices": 2,
+        "spread_cents": 18
+      }
+    },
+    "n3": {
+      "module": "amplifier",
+      "inputs": {
+        "audio": {
+          "ref": "n2.audio"
+        },
+        "envelope": {
+          "ref": "n0.control"
+        },
+        "gain": 0.1
+      }
+    },
+    "n4": {
+      "module": "place",
+      "inputs": {
+        "audio": {
+          "ref": "n3.audio"
+        },
+        "start_ms": 0,
+        "duration_ms": {
+          "ref": "n0.duration_ms"
+        }
+      }
+    },
+    "n5": {
+      "module": "duration_lerp",
+      "inputs": {
+        "from_ms": {
+          "ref": "inputs.spacing"
+        },
+        "to_ms": {
+          "ref": "inputs.spacing"
+        },
+        "position": 0,
+        "multiplier": 1,
+        "offset_ms": 0
+      }
+    },
+    "n6": {
+      "module": "envelope_ahd",
+      "inputs": {
+        "attack_ms": 5,
+        "hold_ms": 10,
+        "decay_ms": 50,
+        "attack_curve": 3,
+        "decay_curve": -3
+      }
+    },
+    "n7": {
+      "module": "note_frequency",
+      "inputs": {
+        "note": "B6"
+      }
+    },
+    "n8": {
+      "module": "unison_oscillator",
+      "inputs": {
+        "waveform": "sine",
+        "frequency_hz": {
+          "ref": "n7.hz"
+        },
+        "phase_cycles": 0,
+        "voices": 2,
+        "spread_cents": 18
+      }
+    },
+    "n9": {
+      "module": "amplifier",
+      "inputs": {
+        "audio": {
+          "ref": "n8.audio"
+        },
+        "envelope": {
+          "ref": "n6.control"
+        },
+        "gain": 0.2
+      }
+    },
+    "n10": {
+      "module": "place",
+      "inputs": {
+        "audio": {
+          "ref": "n9.audio"
+        },
+        "start_ms": {
+          "ref": "n5.duration_ms"
+        },
+        "duration_ms": {
+          "ref": "n6.duration_ms"
+        }
+      }
+    },
+    "n11": {
+      "module": "mix",
+      "inputs": {
+        "audio_a": {
+          "ref": "n4.audio"
+        },
+        "audio_b": {
+          "ref": "n10.audio"
+        },
+        "duration_a_ms": {
+          "ref": "n4.end_ms"
+        },
+        "duration_b_ms": {
+          "ref": "n10.end_ms"
+        }
+      }
+    },
+    "n12": {
+      "module": "envelope_ahd",
+      "inputs": {
+        "attack_ms": 5,
+        "hold_ms": 10,
+        "decay_ms": 50,
+        "attack_curve": 3,
+        "decay_curve": -3
+      }
+    },
+    "n13": {
+      "module": "note_frequency",
+      "inputs": {
+        "note": "B6"
+      }
+    },
+    "n14": {
+      "module": "unison_oscillator",
+      "inputs": {
+        "waveform": "sine",
+        "frequency_hz": {
+          "ref": "n13.hz"
+        },
+        "phase_cycles": 0,
+        "voices": 2,
+        "spread_cents": 18
+      }
+    },
+    "n15": {
+      "module": "amplifier",
+      "inputs": {
+        "audio": {
+          "ref": "n14.audio"
+        },
+        "envelope": {
+          "ref": "n12.control"
+        },
+        "gain": 0.1
+      }
+    },
+    "n16": {
+      "module": "place",
+      "inputs": {
+        "audio": {
+          "ref": "n15.audio"
+        },
+        "start_ms": 0,
+        "duration_ms": {
+          "ref": "n12.duration_ms"
+        }
+      }
+    },
+    "n17": {
+      "module": "duration_lerp",
+      "inputs": {
+        "from_ms": {
+          "ref": "inputs.spacing"
+        },
+        "to_ms": {
+          "ref": "inputs.spacing"
+        },
+        "position": 0,
+        "multiplier": 1,
+        "offset_ms": 0
+      }
+    },
+    "n18": {
+      "module": "envelope_ahd",
+      "inputs": {
+        "attack_ms": 5,
+        "hold_ms": 10,
+        "decay_ms": 50,
+        "attack_curve": 3,
+        "decay_curve": -3
+      }
+    },
+    "n19": {
+      "module": "note_frequency",
+      "inputs": {
+        "note": "C6"
+      }
+    },
+    "n20": {
+      "module": "unison_oscillator",
+      "inputs": {
+        "waveform": "sine",
+        "frequency_hz": {
+          "ref": "n19.hz"
+        },
+        "phase_cycles": 0,
+        "voices": 2,
+        "spread_cents": 18
+      }
+    },
+    "n21": {
+      "module": "amplifier",
+      "inputs": {
+        "audio": {
+          "ref": "n20.audio"
+        },
+        "envelope": {
+          "ref": "n18.control"
+        },
+        "gain": 0.2
+      }
+    },
+    "n22": {
+      "module": "place",
+      "inputs": {
+        "audio": {
+          "ref": "n21.audio"
+        },
+        "start_ms": {
+          "ref": "n17.duration_ms"
+        },
+        "duration_ms": {
+          "ref": "n18.duration_ms"
+        }
+      }
+    },
+    "n23": {
+      "module": "mix",
+      "inputs": {
+        "audio_a": {
+          "ref": "n16.audio"
+        },
+        "audio_b": {
+          "ref": "n22.audio"
+        },
+        "duration_a_ms": {
+          "ref": "n16.end_ms"
+        },
+        "duration_b_ms": {
+          "ref": "n22.end_ms"
+        }
+      }
+    },
+    "n24": {
+      "module": "audio_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.direction"
+        },
+        "match": "up",
+        "if_true": {
+          "ref": "n11.audio"
+        },
+        "if_false": {
+          "ref": "n23.audio"
+        }
+      }
+    },
+    "n25": {
+      "module": "duration_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.direction"
+        },
+        "match": "up",
+        "if_true": {
+          "ref": "n11.duration_ms"
+        },
+        "if_false": {
+          "ref": "n23.duration_ms"
+        }
+      }
+    }
+  },
+  "output": {
+    "audio": {
+      "ref": "n24.value"
+    },
+    "duration_ms": {
+      "ref": "n25.value"
+    }
+  },
+  "inputs": {
+    "direction": {
+      "label": "Direction",
+      "type": "choice",
+      "default": "up",
+      "choices": [
+        "up",
+        "down"
+      ]
+    },
+    "spacing": {
+      "label": "Spacing",
+      "type": "duration",
+      "default": 60,
+      "unit": "ms",
+      "range": [
+        40,
+        80
+      ],
+      "step": 5
+    }
+  }
+}

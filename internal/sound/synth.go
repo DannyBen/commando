@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"math"
 	"time"
+
+	"github.com/ui-sound-system/uss-go/synth"
 )
 
-const sampleRate = 44100
+const sampleRate = synth.SampleRate
 
 type Waveform string
 
