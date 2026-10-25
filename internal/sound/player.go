@@ -1,13 +1,13 @@
 package sound
 
 import (
+	"io"
+	"math"
 	"sync"
 
 	"github.com/dannyben/commando/internal/diagnostics"
 	"github.com/ui-sound-system/uss-go/synth"
 )
-
-const bufferSamples = 512
 
 type playback struct {
 	name   Name
@@ -63,54 +63,90 @@ func (p *Player) Close() {
 	<-p.done
 }
 
-// Voice construction and trace writes stay off the device's audio thread.
+// The worker constructs voices and controls Oto; Oto owns device scheduling.
 func (p *Player) run() {
 	defer close(p.done)
-	commands := make(chan *voice, 1)
-	audioDone := make(chan struct{})
-	stats := &audioStatistics{}
-	go func() {
-		defer close(audioDone)
-		if err := runAudio(commands, p.stop, stats); err != nil {
-			diagnostics.Record(diagnostics.Feedback, 0, "AudioFailed", map[string]any{"error": err.Error()})
+	context, ready, err := sharedOutput()
+	if err != nil {
+		traceAudioError(err)
+		return
+	}
+	select {
+	case <-p.stop:
+		return
+	case <-ready:
+	}
+	if err := context.Err(); err != nil {
+		traceAudioError(err)
+		return
+	}
+	diagnostics.Record(diagnostics.Feedback, 0, "AudioOpened", map[string]any{"backend": "Oto", "sample_rate": sampleRate, "channels": 1})
+	p.runOutput(otoOutput{context})
+}
+
+type audioPlayback interface {
+	Play()
+	PauseAndStopReading()
+	SetVolume(float64)
+	Err() error
+}
+
+type audioOutput interface {
+	newPlayer(io.Reader) audioPlayback
+	err() error
+}
+
+func (p *Player) runOutput(output audioOutput) {
+	var active audioPlayback
+	var reader io.ReadCloser
+	stop := func() {
+		if active != nil {
+			// Pause alone permits read-ahead. Join the in-flight read before releasing
+			// the USS voice, and retain the player until it has been stopped.
+			active.PauseAndStopReading()
+			traceAudioError(active.Err())
+			reader.Close()
+			active, reader = nil, nil
 		}
-	}()
-	defer func() {
-		<-audioDone
-		select {
-		case pending := <-commands:
-			pending.close()
-		default:
-		}
-		stats.trace()
-	}()
+	}
+	defer stop()
 	for {
 		select {
 		case <-p.stop:
 			return
-		case <-audioDone:
-			return
 		case request := <-p.requests:
-			stats.trace()
-			var next *voice
-			if prepared := p.sounds[request.name]; prepared != nil && masterGain(request.volume) > 0 {
-				stream, err := prepared.Stream(cues[request.name].Inputs)
-				if err != nil {
-					diagnostics.Record(diagnostics.Feedback, 0, "AudioFailed", map[string]any{"error": err.Error()})
-				} else {
-					next = &voice{stream: stream, gain: masterGain(request.volume)}
-				}
+			stop()
+			if err := output.err(); err != nil {
+				traceAudioError(err)
+				return
 			}
-			replaceVoice(commands, next)
+			prepared := p.sounds[request.name]
+			gain := masterGain(request.volume)
+			if prepared == nil || gain == 0 {
+				continue
+			}
+			stream, err := prepared.Stream(cues[request.name].Inputs)
+			if err != nil {
+				traceAudioError(err)
+				continue
+			}
+			reader = stream.Float32LEReader()
+			active = output.newPlayer(reader)
+			active.SetVolume(float64(gain))
+			active.Play()
 		}
 	}
 }
 
-func replaceVoice(commands chan *voice, next *voice) {
-	select {
-	case pending := <-commands:
-		pending.close()
-	default:
+func masterGain(volume float64) float32 {
+	if !finite(volume) || volume <= 0 {
+		return 0
 	}
-	commands <- next
+	return float32(math.Min(volume, 100) / 100)
+}
+
+func traceAudioError(err error) {
+	if err != nil {
+		diagnostics.Record(diagnostics.Feedback, 0, "AudioFailed", map[string]any{"error": err.Error()})
+	}
 }
