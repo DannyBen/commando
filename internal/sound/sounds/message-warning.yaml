@@ -1,0 +1,41 @@
+parameters:
+  note_1:
+    default: E4
+    range: [C2, C8]
+  note_2:
+    default: B3
+    range: [C2, C8]
+  waveform:
+    default: triangle
+    choices: [sine, triangle, square, saw]
+  level:
+    default: 0.36
+    range: [0, 1]
+    step: 0.01
+    locked: true
+  body:
+    label: Decay duration
+    default: 87ms
+    range: [1ms, 300ms]
+    step: 1ms
+  spacing:
+    default: 80ms
+    range: [0ms, 300ms]
+    step: 1ms
+
+voices:
+  tone_1: &tone_1
+    note: $note_1
+    waveform: $waveform
+    level: $level
+    envelope:
+      type: segments
+      segments:
+      - {duration: 2ms, level: 0.82}
+      - {duration: $body, level: 0.0027, curve: -5}
+      - {duration: 1ms, level: 0}
+
+  tone_2:
+    <<: *tone_1
+    note: $note_2
+    start: $spacing

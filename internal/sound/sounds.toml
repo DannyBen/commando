@@ -13,6 +13,7 @@ volume = 10
 
 [sounds.directoryNavigation]
 level = 5
+file = "dir-change.json"
 notes = [523.25]
 length_ms = 75
 waveform = "triangle"
@@ -20,6 +21,7 @@ volume = 32
 
 [sounds.messageInfo]
 level = 3
+file = "message-info.json"
 notes = [440]
 length_ms = 75
 waveform = "triangle"
@@ -27,6 +29,7 @@ volume = 32
 
 [sounds.messageSuccess]
 level = 3
+file = "message-success.json"
 notes = [660, 880]
 length_ms = 60
 spacing_ms = 50
@@ -35,6 +38,7 @@ volume = 40
 
 [sounds.messageWarning]
 level = 2
+file = "message-warning.json"
 notes = [330, 247]
 length_ms = 90
 spacing_ms = 80
@@ -43,15 +47,18 @@ volume = 36
 
 [sounds.messageError]
 level = 1
+file = "message-error.json"
 notes = [165, 110]
 length_ms = 100
 spacing_ms = 85
 waveform = "square"
 volume = 24
 
-# Panel sizes 0.6, 0.8, 1, 1.2, 1.5 and 2: G3, A3, C4, D4, E4, G4.
+# Panel sizes 0.6, 0.8, 1, 1.2, 1.5 and 2 select indices -2 through 3.
 [sounds.panelSize06]
 level = 4
+file = "panel-size.json"
+inputs = { index = "-2" }
 notes = [196]
 length_ms = 45
 waveform = "triangle"
@@ -59,6 +66,8 @@ volume = 28
 
 [sounds.panelSize08]
 level = 4
+file = "panel-size.json"
+inputs = { index = "-1" }
 notes = [220]
 length_ms = 45
 waveform = "triangle"
@@ -66,6 +75,8 @@ volume = 28
 
 [sounds.panelSize10]
 level = 4
+file = "panel-size.json"
+inputs = { index = "0" }
 notes = [261.63]
 length_ms = 45
 waveform = "triangle"
@@ -73,6 +84,8 @@ volume = 28
 
 [sounds.panelSize12]
 level = 4
+file = "panel-size.json"
+inputs = { index = "1" }
 notes = [293.66]
 length_ms = 45
 waveform = "triangle"
@@ -80,6 +93,8 @@ volume = 28
 
 [sounds.panelSize15]
 level = 4
+file = "panel-size.json"
+inputs = { index = "2" }
 notes = [329.63]
 length_ms = 45
 waveform = "triangle"
@@ -87,6 +102,8 @@ volume = 28
 
 [sounds.panelSize20]
 level = 4
+file = "panel-size.json"
+inputs = { index = "3" }
 notes = [392]
 length_ms = 45
 waveform = "triangle"

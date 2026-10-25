@@ -65,10 +65,92 @@ func TestNavigationUsesTick(t *testing.T) {
 }
 
 func TestMissingUSSFileRetainsOriginalCue(t *testing.T) {
-	want, _ := synthesize(cues[MessageInfo].cue())
-	got, err := renderCue(MessageInfo, cues[MessageInfo])
+	fallback := cues[MessageInfo]
+	fallback.File = ""
+	want, _ := synthesize(fallback.cue())
+	got, err := renderCue(Name("missing"), fallback)
 	if err != nil || !slices.Equal(got, want) {
 		t.Fatal("missing JSON changed the original cue", err)
+	}
+}
+
+func TestEveryConfiguredCueUsesUSS(t *testing.T) {
+	for name, cue := range cues {
+		file := cue.File
+		if file == "" {
+			file = string(name) + ".json"
+		}
+		data, err := soundFiles.ReadFile("sounds/" + file)
+		if err != nil {
+			t.Fatalf("%s has no USS asset: %v", name, err)
+		}
+		want, err := renderUSS(data, cue.Inputs)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		got, err := renderCue(name, cue)
+		if err != nil || !slices.Equal(got, want) {
+			t.Fatalf("%s did not use USS: %v", name, err)
+		}
+		if !slices.ContainsFunc(got, func(sample int16) bool { return sample != 0 }) {
+			t.Fatalf("%s is silent", name)
+		}
+	}
+}
+
+func TestPanelSizesUseUSSIndices(t *testing.T) {
+	data, err := soundFiles.ReadFile("sounds/panel-size.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var previous []int16
+	for _, test := range []struct {
+		name  Name
+		index string
+		note  string
+	}{
+		{PanelSize06, "-2", "A3"},
+		{PanelSize08, "-1", "B3"},
+		{PanelSize10, "0", "D4"},
+		{PanelSize12, "1", "E4"},
+		{PanelSize15, "2", "F#4"},
+		{PanelSize20, "3", "A4"},
+	} {
+		cue := cues[test.name]
+		if cue.Level != 4 || cue.File != "panel-size.json" || cue.Inputs["index"] != test.index {
+			t.Fatalf("%s must select index %s at the interaction level", test.name, test.index)
+		}
+		want, err := renderUSS(data, synth.Inputs{"root": test.note, "index": "0"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := renderCue(test.name, cue)
+		if err != nil || !slices.Equal(got, want) {
+			t.Fatalf("%s did not render %s: %v", test.name, test.note, err)
+		}
+		if !slices.ContainsFunc(got, func(sample int16) bool { return sample != 0 }) || slices.Equal(previous, got) {
+			t.Fatal("panel size sounds must be audible and distinct")
+		}
+		previous = got
+	}
+}
+
+func TestDirectoryNavigationUsesUSS(t *testing.T) {
+	cue := cues[DirectoryNavigation]
+	if cue.Level != 5 || cue.File != "dir-change.json" {
+		t.Fatal("directory navigation must use dir-change at the navigation level")
+	}
+	data, err := soundFiles.ReadFile("sounds/dir-change.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := renderUSS(data, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := renderCue(DirectoryNavigation, cue)
+	if err != nil || !slices.Equal(got, want) {
+		t.Fatal("directory navigation did not render the exported sound", err)
 	}
 }
 

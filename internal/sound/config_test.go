@@ -57,7 +57,7 @@ func TestMasterVolumeScalesWithoutMutatingCachedAudio(t *testing.T) {
 	}
 }
 
-func TestPanelSizeCuesRiseFromG3ThroughNormalC4ToG4(t *testing.T) {
+func TestPanelSizeFallbacksRiseFromG3ThroughNormalC4ToG4(t *testing.T) {
 	previous := 0.0
 	for _, name := range []Name{PanelSize06, PanelSize08, PanelSize10, PanelSize12, PanelSize15, PanelSize20} {
 		cue := cues[name]

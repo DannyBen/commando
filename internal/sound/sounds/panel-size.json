@@ -1,0 +1,231 @@
+{
+  "version": 1,
+  "name": "panel-size",
+  "group": "Commando",
+  "render": {
+    "sample_rate": 48000,
+    "channels": 1
+  },
+  "graph": {
+    "n0": {
+      "module": "envelope_ahd",
+      "inputs": {
+        "attack_ms": 5,
+        "hold_ms": 0,
+        "decay_ms": 30,
+        "attack_curve": "linear",
+        "decay_curve": "linear"
+      }
+    },
+    "n1": {
+      "module": "number_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.index"
+        },
+        "match": "-2",
+        "if_true": -5,
+        "if_false": -3
+      }
+    },
+    "n2": {
+      "module": "number_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.index"
+        },
+        "match": "3",
+        "if_true": 7,
+        "if_false": {
+          "ref": "n1.value"
+        }
+      }
+    },
+    "n3": {
+      "module": "number_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.index"
+        },
+        "match": "2",
+        "if_true": 4,
+        "if_false": {
+          "ref": "n2.value"
+        }
+      }
+    },
+    "n4": {
+      "module": "number_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.index"
+        },
+        "match": "1",
+        "if_true": 2,
+        "if_false": {
+          "ref": "n3.value"
+        }
+      }
+    },
+    "n5": {
+      "module": "number_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.index"
+        },
+        "match": "0",
+        "if_true": 0,
+        "if_false": {
+          "ref": "n4.value"
+        }
+      }
+    },
+    "n6": {
+      "module": "transpose",
+      "inputs": {
+        "note": {
+          "ref": "inputs.root"
+        },
+        "semitones": {
+          "ref": "n5.value"
+        }
+      }
+    },
+    "n7": {
+      "module": "note_frequency",
+      "inputs": {
+        "note": {
+          "ref": "n6.note"
+        }
+      }
+    },
+    "n8": {
+      "module": "text_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.waveform"
+        },
+        "match": "square",
+        "if_true": "square",
+        "if_false": "saw"
+      }
+    },
+    "n9": {
+      "module": "text_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.waveform"
+        },
+        "match": "triangle",
+        "if_true": "triangle",
+        "if_false": {
+          "ref": "n8.value"
+        }
+      }
+    },
+    "n10": {
+      "module": "text_select",
+      "inputs": {
+        "selector": {
+          "ref": "inputs.waveform"
+        },
+        "match": "sine",
+        "if_true": "sine",
+        "if_false": {
+          "ref": "n9.value"
+        }
+      }
+    },
+    "n11": {
+      "module": "oscillator",
+      "inputs": {
+        "waveform": {
+          "ref": "n10.value"
+        },
+        "frequency_hz": {
+          "ref": "n7.hz"
+        },
+        "phase_cycles": 0
+      }
+    },
+    "n12": {
+      "module": "amplifier",
+      "inputs": {
+        "audio": {
+          "ref": "n11.audio"
+        },
+        "envelope": {
+          "ref": "n0.control"
+        },
+        "gain": {
+          "ref": "inputs.level"
+        }
+      }
+    },
+    "n13": {
+      "module": "place",
+      "inputs": {
+        "audio": {
+          "ref": "n12.audio"
+        },
+        "start_ms": 0,
+        "duration_ms": {
+          "ref": "n0.duration_ms"
+        }
+      }
+    }
+  },
+  "output": {
+    "audio": {
+      "ref": "n13.audio"
+    },
+    "duration_ms": {
+      "ref": "n13.end_ms"
+    }
+  },
+  "inputs": {
+    "root": {
+      "label": "Root",
+      "type": "note",
+      "default": "D4",
+      "range": [
+        "C3",
+        "C6"
+      ]
+    },
+    "waveform": {
+      "label": "Waveform",
+      "type": "choice",
+      "default": "triangle",
+      "choices": [
+        "sine",
+        "triangle",
+        "square",
+        "saw"
+      ]
+    },
+    "index": {
+      "label": "Index",
+      "type": "choice",
+      "default": "0",
+      "choices": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "-2",
+        "-1"
+      ]
+    },
+    "level": {
+      "label": "Level",
+      "type": "float",
+      "default": 0.28,
+      "range": [
+        0,
+        1
+      ],
+      "step": 0.01
+    }
+  }
+}
