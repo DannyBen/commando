@@ -37,7 +37,6 @@ func OpenFile(path string) error {
 	if err != nil {
 		return err
 	}
-	verb, _ := windows.UTF16PtrFromString("open")
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	// S_FALSE (1) also means COM was successfully initialized on this thread.
@@ -46,7 +45,9 @@ func OpenFile(path string) error {
 	}
 	defer windows.CoUninitialize()
 	const noAsync, noUI = 0x100, 0x400
-	info := shellExecuteInfo{mask: noAsync | noUI, verb: verb, file: file, directory: directory, show: windows.SW_SHOWNORMAL}
+	// A nil verb invokes the file type's default action, which may be "preview"
+	// for fonts rather than "open".
+	info := shellExecuteInfo{mask: noAsync | noUI, file: file, directory: directory, show: windows.SW_SHOWNORMAL}
 	info.size = uint32(unsafe.Sizeof(info))
 	result, _, err := shellExecuteEx.Call(uintptr(unsafe.Pointer(&info)))
 	runtime.KeepAlive(info)
