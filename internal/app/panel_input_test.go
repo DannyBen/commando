@@ -217,7 +217,7 @@ func TestTypingArrowsCycleMatchesAndRenewTimeout(t *testing.T) {
 		case "escape":
 			send(pressed(key.NameEscape), pressed(key.NameDownArrow))
 		case "timeout":
-			advance(prefixDelay)
+			advance(v.prefixResetDelay())
 			send(pressed(key.NameDownArrow))
 		case "shift":
 			send(modified(key.NameDownArrow, key.ModShift))
@@ -643,7 +643,7 @@ func TestBackspaceGoesUpAfterPrefixExpires(t *testing.T) {
 	waitLoaded(t, v, 0)
 	send, advance := panelInputFrames(v)
 	send(key.EditEvent{Text: "no"})
-	advance(prefixDelay)
+	advance(v.prefixResetDelay())
 	send(pressed(key.NameDeleteBackward))
 	waitLoaded(t, v, 0)
 	if p := &v.panels[0]; p.path != root || p.prefix != "" || p.items[p.selected].file.Name != "child" {

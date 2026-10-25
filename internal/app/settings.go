@@ -60,6 +60,7 @@ const (
 	settingLocationScrollEnabled = settingLocationScroll + ".enabled"
 	settingLocationScrollModel   = settingLocationScroll + ".animation"
 	settingLocationScrollSpeed   = settingLocationScroll + ".speed"
+	settingTypeToSelectDelay     = "feedback.type_to_select.reset_delay_seconds"
 	settingSoundEnabled          = "feedback.sounds.enabled"
 	settingSoundProfile          = "feedback.sounds.profile"
 	settingSoundVolume           = "feedback.sounds.master_volume"

@@ -691,6 +691,18 @@ control = "input"
 [feedback]
 label = "Interface"
 
+[feedback.type_to_select]
+label = "Type to select"
+title = "Type to select"
+
+[feedback.type_to_select.reset_delay_seconds]
+label = "Reset delay (seconds)"
+description = "Seconds of inactivity before typing starts a new filename prefix."
+control = "stepper-progress"
+min = 0.5
+max = 5.0
+step = 0.5
+
 [feedback.sounds]
 label = "Sound"
 title = "Sound"

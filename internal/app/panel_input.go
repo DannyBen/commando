@@ -13,16 +13,20 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
+	"github.com/dannyben/commando/internal/settings"
 )
 
-const prefixDelay = time.Second
+func (v *view) prefixResetDelay() time.Duration {
+	seconds := v.settingsValues.Get(settings.CatalogueDefault, settingTypeToSelectDelay).Number
+	return time.Duration(seconds * float64(time.Second))
+}
 
 func (v *view) expirePrefix(gtx layout.Context) {
 	p := &v.panels[v.active]
 	if p.prefix == "" {
 		return
 	}
-	until := p.prefixAt.Add(prefixDelay)
+	until := p.prefixAt.Add(v.prefixResetDelay())
 	if !gtx.Now.Before(until) {
 		p.prefix = ""
 	} else {
@@ -42,7 +46,7 @@ func (v *view) typeToSelect(text string, now time.Time) {
 		return
 	}
 	p.markRange = nil
-	if now.Sub(p.prefixAt) >= prefixDelay {
+	if now.Sub(p.prefixAt) >= v.prefixResetDelay() {
 		p.prefix = ""
 	}
 	fresh := p.prefix == ""

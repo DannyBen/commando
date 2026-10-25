@@ -133,6 +133,9 @@ ext = []
 path = ""
 args = "%SelectedFiles%"
 
+[feedback.type_to_select]
+reset_delay_seconds = 1.0
+
 [feedback.sounds]
 enabled = true
 profile = -1

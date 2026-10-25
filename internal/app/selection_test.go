@@ -180,7 +180,7 @@ func TestSpaceInFilenamePrefixAndEscapePriority(t *testing.T) {
 	send(pressed(key.NameEscape))
 	assertMarks(t, p)
 	send(key.EditEvent{Text: "alpha"})
-	advance(prefixDelay + time.Millisecond)
+	advance(v.prefixResetDelay() + time.Millisecond)
 	send(pressed(key.NameSpace), key.EditEvent{Text: " "})
 	assertMarks(t, p, 1)
 }

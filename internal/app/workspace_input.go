@@ -172,7 +172,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		return
 	}
 	p := &v.panels[v.active]
-	if ke.Name == key.NameDeleteBackward && ke.Modifiers == 0 && p.prefix != "" && gtx.Now.Before(p.prefixAt.Add(prefixDelay)) {
+	if ke.Name == key.NameDeleteBackward && ke.Modifiers == 0 && p.prefix != "" && gtx.Now.Before(p.prefixAt.Add(v.prefixResetDelay())) {
 		_, size := utf8.DecodeLastRuneInString(p.prefix)
 		p.prefix = p.prefix[:len(p.prefix)-size]
 		p.prefixAt, p.markRange = gtx.Now, nil
@@ -202,7 +202,7 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		return
 	}
 	// Plain arrows cycle prefix matches only while the typing state is active.
-	if ke.Modifiers == 0 && p.prefix != "" && gtx.Now.Before(p.prefixAt.Add(prefixDelay)) && (ke.Name == key.NameUpArrow || ke.Name == key.NameDownArrow) {
+	if ke.Modifiers == 0 && p.prefix != "" && gtx.Now.Before(p.prefixAt.Add(v.prefixResetDelay())) && (ke.Name == key.NameUpArrow || ke.Name == key.NameDownArrow) {
 		direction := 1
 		if ke.Name == key.NameUpArrow {
 			direction = -1

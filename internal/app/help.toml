@@ -156,6 +156,11 @@ lines = [
   "Choose whether and how long location-bar paths scroll",
 ]
 
+["palette.settings.feedback.type_to_select"]
+lines = [
+  "Configure the pause allowed between filename typing",
+]
+
 ["palette.settings.feedback.sounds"]
 lines = [
   "Choose which sounds play and how loud they are",
@@ -781,6 +786,18 @@ lines = [
 lines = [
   "For [key:file.edit], use %SelectedFiles% once as a whole argument.",
   "Each matching file is passed separately; quote other arguments with spaces.",
+]
+
+["settings.feedback.type_to_select"]
+lines = [
+  "Control how long filename typing stays active.",
+  "Changes preview immediately; Save keeps them.",
+]
+
+["settings.feedback.type_to_select.reset_delay_seconds"]
+lines = [
+  "Seconds of inactivity before typing starts a new filename prefix.",
+  "Choose 0.5 to 5 seconds in steps of 0.5.",
 ]
 
 ["settings.feedback.sounds"]
