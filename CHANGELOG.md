@@ -1,6 +1,22 @@
 Changelog
 ========================================
 
+v0.7.2 - 2026-10-25
+----------------------------------------
+
+- Integrate UI Sound System [`9b95763`](https://github.com/dannyben/commando/commit/9b95763)
+- Update some sounds with USS [`5e547f7`](https://github.com/dannyben/commando/commit/5e547f7)
+- Migrate all sounds to USS [`0d69eac`](https://github.com/dannyben/commando/commit/0d69eac)
+- Remove legacy sound player [`96a0458`](https://github.com/dannyben/commando/commit/96a0458)
+- Switch to USS audio stream [`0fcee5a`](https://github.com/dannyben/commando/commit/0fcee5a)
+-  Replace custom audio playback with Oto streaming from US [`86e99f3`](https://github.com/dannyben/commando/commit/86e99f3)
+- Select the new file on paste [`3827278`](https://github.com/dannyben/commando/commit/3827278)
+- Fix opens for files with non-open verbs [`5db97fb`](https://github.com/dannyben/commando/commit/5db97fb)
+- Reduce Open/Close sound occurrences [`21cbbee`](https://github.com/dannyben/commando/commit/21cbbee)
+- Open multiple files when marked [`820b3e2`](https://github.com/dannyben/commando/commit/820b3e2)
+- Compare [`v0.7.1..v0.7.2`](https://github.com/dannyben/commando/compare/v0.7.1..v0.7.2)
+
+
 v0.7.1 - 2026-10-23
 ----------------------------------------
 
