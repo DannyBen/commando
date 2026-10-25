@@ -2,7 +2,6 @@ package sound
 
 import (
 	"embed"
-	"fmt"
 	"math"
 
 	"github.com/ui-sound-system/uss-go/synth"
@@ -18,7 +17,7 @@ func finite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value
 //go:embed sounds/*.json
 var soundFiles embed.FS
 
-func renderCue(name Name, cue definition) ([]int16, error) {
+func prepareCue(name Name, cue definition) (*synth.Prepared, error) {
 	file := cue.File
 	if file == "" {
 		file = string(name) + ".json"
@@ -27,24 +26,19 @@ func renderCue(name Name, cue definition) ([]int16, error) {
 	if err != nil {
 		return nil, err
 	}
-	return renderUSS(data, cue.Inputs)
-}
-
-func renderUSS(data []byte, inputs synth.Inputs) ([]int16, error) {
-	definition, err := synth.Parse(data)
+	d, err := synth.Parse(data)
 	if err != nil {
 		return nil, err
 	}
-	rendered, err := definition.Render(inputs)
+	prepared, err := d.Prepare()
 	if err != nil {
 		return nil, err
 	}
-	if !finite(rendered.Peak) || rendered.Peak > 1 {
-		return nil, fmt.Errorf("sound clips at full master volume")
+	// Validate the configured variant without generating any samples.
+	voice, err := prepared.Stream(cue.Inputs)
+	if err != nil {
+		return nil, err
 	}
-	pcm := make([]int16, len(rendered.Samples))
-	for i, value := range rendered.Samples {
-		pcm[i] = int16(math.Round(float64(value) * 32767))
-	}
-	return pcm, nil
+	voice.Close()
+	return prepared, nil
 }

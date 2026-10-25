@@ -1,9 +1,13 @@
 package sound
 
 import (
-	"math"
 	"sync"
+
+	"github.com/dannyben/commando/internal/diagnostics"
+	"github.com/ui-sound-system/uss-go/synth"
 )
+
+const bufferSamples = 512
 
 type playback struct {
 	name   Name
@@ -17,17 +21,17 @@ type Player struct {
 	stop     chan struct{}
 	done     chan struct{}
 	once     sync.Once
-	sounds   map[Name][]int16
+	sounds   map[Name]*synth.Prepared
 }
 
 func NewPlayer() *Player {
-	p := &Player{requests: make(chan playback, 1), stop: make(chan struct{}), done: make(chan struct{}), sounds: make(map[Name][]int16)}
+	p := &Player{requests: make(chan playback, 1), stop: make(chan struct{}), done: make(chan struct{}), sounds: make(map[Name]*synth.Prepared)}
 	for name, cue := range cues {
-		pcm, err := renderCue(name, cue)
+		prepared, err := prepareCue(name, cue)
 		if err != nil {
 			panic(string(name) + ": " + err.Error())
 		}
-		p.sounds[name] = pcm
+		p.sounds[name] = prepared
 	}
 	go p.run()
 	return p
@@ -59,38 +63,54 @@ func (p *Player) Close() {
 	<-p.done
 }
 
+// Voice construction and trace writes stay off the device's audio thread.
 func (p *Player) run() {
 	defer close(p.done)
-	output, err := openOutput()
-	if err != nil {
-		return // An unavailable audio device must not affect file operations.
-	}
-	defer output.close()
+	commands := make(chan *voice, 1)
+	audioDone := make(chan struct{})
+	stats := &audioStatistics{}
+	go func() {
+		defer close(audioDone)
+		if err := runAudio(commands, p.stop, stats); err != nil {
+			diagnostics.Record(diagnostics.Feedback, 0, "AudioFailed", map[string]any{"error": err.Error()})
+		}
+	}()
+	defer func() {
+		<-audioDone
+		select {
+		case pending := <-commands:
+			pending.close()
+		default:
+		}
+		stats.trace()
+	}()
 	for {
 		select {
 		case <-p.stop:
 			return
+		case <-audioDone:
+			return
 		case request := <-p.requests:
-			pcm := scalePCM(p.sounds[request.name], request.volume)
-			if err := output.play(pcm); err != nil {
-				return
+			stats.trace()
+			var next *voice
+			if prepared := p.sounds[request.name]; prepared != nil && masterGain(request.volume) > 0 {
+				stream, err := prepared.Stream(cues[request.name].Inputs)
+				if err != nil {
+					diagnostics.Record(diagnostics.Feedback, 0, "AudioFailed", map[string]any{"error": err.Error()})
+				} else {
+					next = &voice{stream: stream, gain: masterGain(request.volume)}
+				}
 			}
+			replaceVoice(commands, next)
 		}
 	}
 }
 
-// Scale on the audio worker, leaving the cached cue and its relative volume
-// untouched. Master volume 100 preserves the original samples exactly.
-func scalePCM(pcm []int16, volume float64) []int16 {
-	if !finite(volume) || volume <= 0 {
-		return nil
+func replaceVoice(commands chan *voice, next *voice) {
+	select {
+	case pending := <-commands:
+		pending.close()
+	default:
 	}
-	if volume >= 100 {
-		return pcm
-	}
-	scaled := make([]int16, len(pcm))
-	for i, sample := range pcm {
-		scaled[i] = int16(math.Round(float64(sample) * volume / 100))
-	}
-	return scaled
+	commands <- next
 }

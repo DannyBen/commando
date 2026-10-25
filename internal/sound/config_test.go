@@ -2,7 +2,6 @@ package sound
 
 import (
 	"math"
-	"slices"
 	"strings"
 	"testing"
 )
@@ -38,18 +37,15 @@ file = "click.json"
 	}
 }
 
-func TestMasterVolumeScalesWithoutMutatingCachedAudio(t *testing.T) {
-	original := []int16{-32768, -1000, 0, 1000, 32767}
-	before := slices.Clone(original)
-	if got := scalePCM(original, 50); !slices.Equal(got, []int16{-16384, -500, 0, 500, 16384}) {
-		t.Fatal("half volume did not scale PCM", got)
-	}
-	if !slices.Equal(original, before) || !slices.Equal(scalePCM(original, 100), before) {
-		t.Fatal("master volume changed cached samples or full-volume playback")
-	}
-	for _, volume := range []float64{0, -1, math.NaN(), math.Inf(1)} {
-		if len(scalePCM(original, volume)) != 0 {
-			t.Fatal("invalid or zero volume was audible")
+func TestMasterVolumeBounds(t *testing.T) {
+	for _, test := range []struct {
+		volume float64
+		want   float32
+	}{
+		{50, .5}, {100, 1}, {200, 1}, {0, 0}, {-1, 0}, {math.NaN(), 0}, {math.Inf(1), 0},
+	} {
+		if got := masterGain(test.volume); got != test.want {
+			t.Fatalf("gain(%v)=%v, want %v", test.volume, got, test.want)
 		}
 	}
 }

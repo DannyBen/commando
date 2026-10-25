@@ -1,6 +1,8 @@
 package sound
 
 import (
+	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"testing"
@@ -238,4 +240,37 @@ func TestEnableDisableUsesUSSWithOppositeDirections(t *testing.T) {
 		}
 		previous = got
 	}
+}
+
+// Full rendering is reserved for asset validation in tests.
+func renderCue(name Name, cue definition) ([]int16, error) {
+	prepared, err := prepareCue(name, cue)
+	if err != nil {
+		return nil, err
+	}
+	rendered, err := prepared.Render(cue.Inputs)
+	return renderedPCM(rendered, err)
+}
+
+func renderUSS(data []byte, inputs synth.Inputs) ([]int16, error) {
+	definition, err := synth.Parse(data)
+	if err != nil {
+		return nil, err
+	}
+	rendered, err := definition.Render(inputs)
+	return renderedPCM(rendered, err)
+}
+
+func renderedPCM(rendered *synth.Sound, err error) ([]int16, error) {
+	if err != nil {
+		return nil, err
+	}
+	if !finite(rendered.Peak) || rendered.Peak > 1 {
+		return nil, fmt.Errorf("sound clips at full master volume")
+	}
+	pcm := make([]int16, len(rendered.Samples))
+	for i, value := range rendered.Samples {
+		pcm[i] = int16(math.Round(float64(value) * 32767))
+	}
+	return pcm, nil
 }

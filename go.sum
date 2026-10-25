@@ -17,6 +17,8 @@ github.com/ui-sound-system/uss-go v0.0.0-20261023123223-d4a1e2631ee1 h1:mZYuJRma
 github.com/ui-sound-system/uss-go v0.0.0-20261023123223-d4a1e2631ee1/go.mod h1:Tje+dBaJpR1afE3POSGqb2ADdsFALRfcAxlzPIOk/14=
 github.com/ui-sound-system/uss-go v0.0.0-20261024162150-0fd58eb848bb h1:khXG4kWAOG3b0N0fzZJsL14y+mdf4KiJAGurIBFdmv0=
 github.com/ui-sound-system/uss-go v0.0.0-20261024162150-0fd58eb848bb/go.mod h1:Tje+dBaJpR1afE3POSGqb2ADdsFALRfcAxlzPIOk/14=
+github.com/ui-sound-system/uss-go v0.0.0-20261025085602-68874306c1c3 h1:XiM5F+Rv0svYWxxgbWI5rdMCppFhCqidQBBXKaFVAmM=
+github.com/ui-sound-system/uss-go v0.0.0-20261025085602-68874306c1c3/go.mod h1:Tje+dBaJpR1afE3POSGqb2ADdsFALRfcAxlzPIOk/14=
 golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 h1:R84qjqJb5nVJMxqWYb3np9L5ZsaDtB+a39EqjV0JSUM=
 golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0/go.mod h1:S9Xr4PYopiDyqSyp5NjCrhFrqg6A5zA2E/iPHPhqnS8=
 golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0 h1:tMSqXTK+AQdW3LpCbfatHSRPHeW6+2WuxaVQuHftn80=
