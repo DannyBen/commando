@@ -83,6 +83,7 @@ func TestArchivePanelNavigationAndBrowsing(t *testing.T) {
 	if !p.sortByMetadata || p.archiveFolder != "." {
 		t.Fatal("metadata sorting discarded the archive boundary")
 	}
+	p.clearMarks() // Enter navigates the current folder only without marks.
 	selectName(t, p, "docs")
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)

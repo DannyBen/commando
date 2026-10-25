@@ -318,6 +318,33 @@ func (v *view) acceptLoad(result loadResult) {
 	}
 }
 
+// Enter and the palette act on marks; double-click still activates its row.
+func (v *view) openEntries() {
+	p := &v.panels[v.active]
+	if len(p.marks) == 0 || v.settingsSelecting() {
+		v.activateSelected()
+		return
+	}
+	if !openReady(v) {
+		return
+	}
+	var names, paths []string
+	for row, item := range p.items {
+		if p.marks[row] && p.markable(row) && !item.file.Directory && item.file.Name != "" {
+			if p.archiveFolder != "" {
+				names = append(names, item.file.Name)
+			} else {
+				paths = append(paths, p.entryPath(row))
+			}
+		}
+	}
+	if p.archiveFolder != "" {
+		v.openArchiveFiles(names)
+	} else {
+		v.openPaths(v.active, paths)
+	}
+}
+
 func (v *view) activateSelected() {
 	p := &v.panels[v.active]
 	if p.loading || p.selected < 0 || p.selected >= len(p.items) {
@@ -518,15 +545,21 @@ func (p *panel) locationPath() string {
 }
 
 func (v *view) openPath(index int, path string) {
-	if open := v.openFile; open != nil {
+	v.openPaths(index, []string{path})
+}
+
+func (v *view) openPaths(index int, paths []string) {
+	if open := v.openFile; open != nil && len(paths) > 0 {
 		post := v.backgroundFeedback(index)
 		go func() {
-			id := diagnostics.NextID()
-			diagnostics.Record(diagnostics.Shell, id, "OpenRequested", map[string]any{"path": path})
-			err := open(path)
-			diagnostics.Record(diagnostics.Shell, id, "OpenCompleted", map[string]any{"error": diagnostics.Error(err)})
-			if err != nil {
-				post(feedback.Error, "Failed to open")
+			for _, path := range paths {
+				id := diagnostics.NextID()
+				diagnostics.Record(diagnostics.Shell, id, "OpenRequested", map[string]any{"path": path})
+				err := open(path)
+				diagnostics.Record(diagnostics.Shell, id, "OpenCompleted", map[string]any{"error": diagnostics.Error(err)})
+				if err != nil {
+					post(feedback.Error, "Failed to open")
+				}
 			}
 		}()
 	}

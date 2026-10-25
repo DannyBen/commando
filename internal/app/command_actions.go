@@ -15,7 +15,7 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) (accepted bo
 	case "programs.terminal_here", "programs.terminal_here_admin":
 		v.openTerminal(id == "programs.terminal_here_admin")
 	case "entry.open":
-		v.activateSelected()
+		v.openEntries()
 	case "entry.rename":
 		v.startName(gtx, nameRename)
 	case "entry.copy":

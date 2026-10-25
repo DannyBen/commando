@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"github.com/dannyben/commando/internal/diagnostics"
 	"image"
 	"os"
@@ -273,7 +274,10 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 					continue
 				}
 				if request.archiveOpen != nil {
-					err := browser.OpenArchive(browser.Location{Path: request.path, Folder: request.archiveFolder}, request.archiveOpen.name, request.archiveOpen.open)
+					var err error
+					for _, name := range request.archiveOpen.names {
+						err = errors.Join(err, browser.OpenArchive(browser.Location{Path: request.path, Folder: request.archiveFolder}, name, request.archiveOpen.open))
+					}
 					publish(loadResult{request: request, err: err})
 					if invalidate != nil {
 						invalidate()

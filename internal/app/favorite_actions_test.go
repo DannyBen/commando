@@ -67,6 +67,7 @@ func TestHomeFavoriteRenameRetainsShortcutAndTarget(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(target, "child")); err != nil {
 		t.Fatal("rename changed the target folder", err)
 	}
+	p.clearMarks() // Unmarked Enter follows the current favorite into this panel.
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	if p.drives || p.path != target {

@@ -3,8 +3,8 @@ package app
 import "github.com/dannyben/commando/internal/feedback"
 
 type archiveOpenRequest struct {
-	name string
-	open func(string) error
+	names []string
+	open  func(string) error
 }
 
 func (v *view) openArchiveSelected() {
@@ -15,8 +15,16 @@ func (v *view) openArchiveSelected() {
 	if p.archiveFolder == "" || p.items[p.selected].file.Directory || v.settingsSelecting() {
 		return
 	}
+	v.openArchiveFiles([]string{p.items[p.selected].file.Name})
+}
+
+func (v *view) openArchiveFiles(names []string) {
+	if len(names) == 0 || !openReady(v) || !v.canStartInteraction(v.active, actionMutation) || v.openFile == nil || v.settingsSelecting() {
+		return
+	}
+	p := &v.panels[v.active]
 	request := loadRequest{panel: v.active, path: p.path, archiveFolder: p.archiveFolder,
-		archiveOpen: &archiveOpenRequest{name: p.items[p.selected].file.Name, open: v.openFile}}
+		archiveOpen: &archiveOpenRequest{names: names, open: v.openFile}}
 	if v.loader.submit(request) {
 		p.loading = true
 		v.operationProgress(v.active, "Opening archive file")

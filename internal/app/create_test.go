@@ -267,6 +267,7 @@ func TestRealCreateFolderPreservesMarksAndUpdatesPanels(t *testing.T) {
 	if message := p.feedback.Current(); message == nil || message.Kind != feedback.Success || message.Text != "Folder created" {
 		t.Fatal("creation did not leave success feedback")
 	}
+	p.clearMarks() // Navigate the new current folder instead of opening marked files.
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	send()

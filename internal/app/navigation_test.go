@@ -187,6 +187,7 @@ func TestNavigationWhileLoading(t *testing.T) {
 			close(release)
 		}
 	}()
+	v.panels[0].clearMarks()
 	v.panels[0].items[3].file = browser.Entry{Name: "commando", Directory: true}
 	_, press := navigationFrames(v)
 	press(key.NameReturn)

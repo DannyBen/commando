@@ -30,7 +30,7 @@ func TestArchiveOpenUsesCurrentFileAcrossInputRoutes(t *testing.T) {
 					name = "report.txt"
 				}
 				selectName(t, p, name)
-				if folder == "." {
+				if folder == "." && route == "double-click" {
 					p.marks = map[int]bool{1: true, len(p.items) - 1: true}
 				}
 				before, _ := os.ReadFile(filename)

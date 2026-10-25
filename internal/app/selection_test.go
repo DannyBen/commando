@@ -262,12 +262,12 @@ func TestSelectionKeysStayInLocationEditor(t *testing.T) {
 	}
 }
 
-func TestEnterOpensOnlyCurrentFile(t *testing.T) {
+func TestUnmarkedEnterOpensOnlyCurrentFile(t *testing.T) {
 	v := selectionView()
 	opened := make(chan string, 2)
 	v.openFile = func(path string) error { opened <- path; return nil }
 	send, _ := panelInputFrames(v)
-	send(modified("A", key.ModCtrl), pressed(key.NameDownArrow), pressed(key.NameReturn))
+	send(pressed(key.NameDownArrow), pressed(key.NameReturn))
 	select {
 	case path := <-opened:
 		if path != filepath.Join("/folder", "alpha beta.txt") {
@@ -276,9 +276,9 @@ func TestEnterOpensOnlyCurrentFile(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("Enter did not open current file")
 	}
-	assertMarks(t, &v.panels[0], 1, 2, 3, 4, 5)
+	assertMarks(t, &v.panels[0])
 	if len(opened) != 0 {
-		t.Fatal("Enter opened marked files")
+		t.Fatal("Enter opened more than the current file")
 	}
 	v.pollFeedback()
 	if v.panels[0].feedback.Current() != nil {

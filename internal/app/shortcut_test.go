@@ -31,7 +31,6 @@ func shortcutView(t *testing.T) (*view, string, string) {
 	p := &v.panels[0]
 	p.setFilter(".lnk")
 	selectName(t, p, "folder.LNK")
-	p.toggleMark(p.selected)
 	if p.items[p.selected].file.Directory || len(p.selectedPaths()) != 1 || p.selectedPaths()[0] != link {
 		t.Fatal("shortcut was reclassified or operations targeted its destination")
 	}
@@ -102,7 +101,7 @@ func TestNonFolderShortcutsKeepOriginalNativeOpening(t *testing.T) {
 			case <-time.After(3 * time.Second):
 				t.Fatal("shortcut did not fall back to native opening")
 			}
-			if p.path != filepath.Dir(link) || p.selected != selected || len(p.items) != count || len(p.marks) != 1 || !p.marks[selected] || p.filter != ".lnk" || p.list.Position.First != position.First || p.list.Position.Offset != position.Offset || p.navigating || p.err != nil || p.feedback.Current() != nil {
+			if p.path != filepath.Dir(link) || p.selected != selected || len(p.items) != count || len(p.marks) != 0 || p.filter != ".lnk" || p.list.Position.First != position.First || p.list.Position.Offset != position.Offset || p.navigating || p.err != nil || p.feedback.Current() != nil {
 				t.Fatal("native fallback changed listing, marks, filter or feedback")
 			}
 		})
@@ -126,7 +125,7 @@ func TestFolderShortcutReadFailureKeepsSourceListing(t *testing.T) {
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	send()
-	if p.path != filepath.Dir(link) || p.selected != selected || !p.marks[selected] || !errors.Is(p.err, os.ErrPermission) {
+	if p.path != filepath.Dir(link) || p.selected != selected || len(p.marks) != 0 || !errors.Is(p.err, os.ErrPermission) {
 		t.Fatal("failed folder shortcut changed source listing")
 	}
 	if message := p.feedback.Current(); message == nil || message.Text != "Access denied" {
