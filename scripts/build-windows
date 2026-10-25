@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+go test ./internal/sound -count=1
+
 mkdir -p dist
 
 version=$(go run ./tools/build-version.go)

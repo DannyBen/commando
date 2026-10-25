@@ -2,33 +2,32 @@ package sound
 
 import (
 	"embed"
-	"errors"
 	"fmt"
-	"io/fs"
 	"math"
 
 	"github.com/ui-sound-system/uss-go/synth"
 )
 
+const sampleRate = synth.SampleRate
+
+func finite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }
+
 // Files default to cue names; sounds.toml can select another file per cue.
-// They are embedded at build time; missing files retain the original cue.
+// Assets are embedded; build checks reject missing or invalid sounds.
 //
 //go:embed sounds/*.json
 var soundFiles embed.FS
 
-func renderCue(name Name, fallback definition) ([]int16, error) {
-	file := fallback.File
+func renderCue(name Name, cue definition) ([]int16, error) {
+	file := cue.File
 	if file == "" {
 		file = string(name) + ".json"
 	}
 	data, err := soundFiles.ReadFile("sounds/" + file)
-	if errors.Is(err, fs.ErrNotExist) && fallback.File == "" {
-		return synthesize(fallback.cue())
-	}
 	if err != nil {
 		return nil, err
 	}
-	return renderUSS(data, fallback.Inputs)
+	return renderUSS(data, cue.Inputs)
 }
 
 func renderUSS(data []byte, inputs synth.Inputs) ([]int16, error) {

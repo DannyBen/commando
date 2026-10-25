@@ -2,6 +2,10 @@ version: 2
 
 project_name: commando
 
+before:
+  hooks:
+    - go test ./internal/sound -count=1
+
 builds:
   - id: commando
     main: .

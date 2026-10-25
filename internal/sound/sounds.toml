@@ -1,155 +1,80 @@
 # Numeric levels are cumulative: 1 errors, 2 warnings, 3 notifications,
 # 4 interactions, 5 navigation. Off is 0; All bypasses the level comparison.
-# Notes are Hz; timings are milliseconds; volume is a percentage before master
-# volume. Spacing is measured between note starts. Edit and rebuild to tune.
 
 [sounds.navigation]
 level = 5
 file = "tick.json"
-notes = [220]
-length_ms = 12
-waveform = "square"
-volume = 10
 
 [sounds.directoryNavigation]
 level = 5
 file = "dir-change.json"
-notes = [523.25]
-length_ms = 75
-waveform = "triangle"
-volume = 32
 
 [sounds.messageInfo]
 level = 3
 file = "message-info.json"
-notes = [440]
-length_ms = 75
-waveform = "triangle"
-volume = 32
 
 [sounds.messageSuccess]
 level = 3
 file = "message-success.json"
-notes = [660, 880]
-length_ms = 60
-spacing_ms = 50
-waveform = "triangle"
-volume = 40
 
 [sounds.messageWarning]
 level = 2
 file = "message-warning.json"
-notes = [330, 247]
-length_ms = 90
-spacing_ms = 80
-waveform = "triangle"
-volume = 36
 
 [sounds.messageError]
 level = 1
 file = "message-error.json"
-notes = [165, 110]
-length_ms = 100
-spacing_ms = 85
-waveform = "square"
-volume = 24
 
 # Panel sizes 0.6, 0.8, 1, 1.2, 1.5 and 2 select indices -2 through 3.
 [sounds.panelSize06]
 level = 4
 file = "panel-size.json"
 inputs = { index = "-2" }
-notes = [196]
-length_ms = 45
-waveform = "triangle"
-volume = 28
 
 [sounds.panelSize08]
 level = 4
 file = "panel-size.json"
 inputs = { index = "-1" }
-notes = [220]
-length_ms = 45
-waveform = "triangle"
-volume = 28
 
 [sounds.panelSize10]
 level = 4
 file = "panel-size.json"
 inputs = { index = "0" }
-notes = [261.63]
-length_ms = 45
-waveform = "triangle"
-volume = 28
 
 [sounds.panelSize12]
 level = 4
 file = "panel-size.json"
 inputs = { index = "1" }
-notes = [293.66]
-length_ms = 45
-waveform = "triangle"
-volume = 28
 
 [sounds.panelSize15]
 level = 4
 file = "panel-size.json"
 inputs = { index = "2" }
-notes = [329.63]
-length_ms = 45
-waveform = "triangle"
-volume = 28
 
 [sounds.panelSize20]
 level = 4
 file = "panel-size.json"
 inputs = { index = "3" }
-notes = [392]
-length_ms = 45
-waveform = "triangle"
-volume = 28
 
 [sounds.click]
 level = 4
-notes = [220]
-length_ms = 12
-waveform = "square"
-volume = 10
 
 [sounds.enabled]
 level = 4
 file = "enable-disable.json"
 inputs = { direction = "up" }
-notes = [659.25]
-length_ms = 55
-waveform = "triangle"
-volume = 24
 
 [sounds.disabled]
 level = 4
 file = "enable-disable.json"
 inputs = { direction = "down" }
-notes = [440]
-length_ms = 55
-waveform = "triangle"
-volume = 24
 
 [sounds.opened]
 level = 4
 file = "open-close.json"
 inputs = { direction = "up" }
-notes = [440, 659.25]
-length_ms = 55
-spacing_ms = 65
-waveform = "triangle"
-volume = 24
 
 [sounds.closed]
 level = 4
 file = "open-close.json"
 inputs = { direction = "down" }
-notes = [659.25, 440]
-length_ms = 55
-spacing_ms = 65
-waveform = "triangle"
-volume = 24

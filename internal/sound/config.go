@@ -1,10 +1,9 @@
-// Package sound synthesizes semantic application cues from simple oscillators.
+// Package sound renders and plays semantic application cues through USS.
 package sound
 
 import (
 	_ "embed"
 	"fmt"
-	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -35,19 +34,9 @@ const (
 const All = -1
 
 type definition struct {
-	Level     int
-	File      string
-	Inputs    map[string]any
-	Notes     []float64
-	LengthMS  int `toml:"length_ms"`
-	SpacingMS int `toml:"spacing_ms"`
-	Waveform  Waveform
-	Volume    float64
-}
-
-func (d definition) cue() Cue {
-	return Cue{Notes: d.Notes, Length: time.Duration(d.LengthMS) * time.Millisecond,
-		Spacing: time.Duration(d.SpacingMS) * time.Millisecond, Waveform: d.Waveform, Volume: d.Volume}
+	Level  int
+	File   string
+	Inputs map[string]any
 }
 
 //go:embed sounds.toml
@@ -75,9 +64,6 @@ func parseDefinitions(data string) (map[Name]definition, error) {
 	for name, d := range config.Sounds {
 		if name == "" || d.Level <= 0 {
 			return nil, fmt.Errorf("sound %q needs a positive level", name)
-		}
-		if _, err := synthesize(d.cue()); err != nil {
-			return nil, fmt.Errorf("sound %q: %w", name, err)
 		}
 	}
 	return config.Sounds, nil

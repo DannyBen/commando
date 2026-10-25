@@ -21,18 +21,15 @@ func TestAllIncludesFutureLevelsAndUnknownCuesStaySilent(t *testing.T) {
 func TestSoundConfigurationRequiresPositiveLevelsAndKnownParameters(t *testing.T) {
 	const valid = `[sounds.example]
 level = 5
-notes = [440]
-length_ms = 12
-waveform = "triangle"
-volume = 10
+file = "click.json"
 `
 	for _, data := range []string{
 		strings.Replace(valid, "level = 5", "level = 0", 1),
 		strings.Replace(valid, "level = 5", "level = -1", 1),
 		strings.Replace(valid, "level = 5\n", "", 1),
 		strings.Replace(valid, "level = 5", "level = 1.5", 1),
-		strings.Replace(valid, "volume = 10", "volume = 101", 1),
-		strings.Replace(valid, "length_ms = 12", "length = 12", 1),
+		valid + "volume = 10\n",
+		valid + "notes = [440]\n",
 		"",
 	} {
 		if _, err := parseDefinitions(data); err == nil {
@@ -54,23 +51,6 @@ func TestMasterVolumeScalesWithoutMutatingCachedAudio(t *testing.T) {
 		if len(scalePCM(original, volume)) != 0 {
 			t.Fatal("invalid or zero volume was audible")
 		}
-	}
-}
-
-func TestPanelSizeFallbacksRiseFromG3ThroughNormalC4ToG4(t *testing.T) {
-	previous := 0.0
-	for _, name := range []Name{PanelSize06, PanelSize08, PanelSize10, PanelSize12, PanelSize15, PanelSize20} {
-		cue := cues[name]
-		if len(cue.Notes) != 1 || cue.Notes[0] <= previous {
-			t.Fatalf("size cue %s is not a single rising pitch", name)
-		}
-		previous = cue.Notes[0]
-		if cue.Level != 4 || cue.LengthMS != 45 || cue.Volume != 28 || cue.Waveform != Triangle {
-			t.Fatalf("size cue %s does not use the agreed sound profile", name)
-		}
-	}
-	if math.Abs(cues[PanelSize10].Notes[0]-261.6256) > 0.01 {
-		t.Fatal("normal size is not C4")
 	}
 }
 

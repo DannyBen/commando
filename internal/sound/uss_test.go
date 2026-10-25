@@ -64,13 +64,9 @@ func TestNavigationUsesTick(t *testing.T) {
 	}
 }
 
-func TestMissingUSSFileRetainsOriginalCue(t *testing.T) {
-	fallback := cues[MessageInfo]
-	fallback.File = ""
-	want, _ := synthesize(fallback.cue())
-	got, err := renderCue(Name("missing"), fallback)
-	if err != nil || !slices.Equal(got, want) {
-		t.Fatal("missing JSON changed the original cue", err)
+func TestMissingUSSFileIsRejected(t *testing.T) {
+	if _, err := renderCue(Name("missing"), definition{}); err == nil {
+		t.Fatal("missing implicit USS file accepted")
 	}
 }
 
