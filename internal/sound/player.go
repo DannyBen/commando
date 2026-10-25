@@ -1,12 +1,13 @@
 package sound
 
 import (
+	"bytes"
+	"encoding/binary"
 	"io"
 	"math"
 	"sync"
 
 	"github.com/dannyben/commando/internal/diagnostics"
-	"github.com/ui-sound-system/uss-go/synth"
 )
 
 type playback struct {
@@ -21,17 +22,21 @@ type Player struct {
 	stop     chan struct{}
 	done     chan struct{}
 	once     sync.Once
-	sounds   map[Name]*synth.Prepared
+	sounds   map[Name][]byte
 }
 
 func NewPlayer() *Player {
-	p := &Player{requests: make(chan playback, 1), stop: make(chan struct{}), done: make(chan struct{}), sounds: make(map[Name]*synth.Prepared)}
+	p := &Player{requests: make(chan playback, 1), stop: make(chan struct{}), done: make(chan struct{}), sounds: make(map[Name][]byte)}
 	for name, cue := range cues {
-		prepared, err := prepareCue(name, cue)
+		pcm, err := synthesize(cue.cue())
 		if err != nil {
 			panic(string(name) + ": " + err.Error())
 		}
-		p.sounds[name] = prepared
+		data, err := binary.Append(nil, binary.LittleEndian, pcm)
+		if err != nil {
+			panic(string(name) + ": " + err.Error())
+		}
+		p.sounds[name] = data
 	}
 	go p.run()
 	return p
@@ -63,7 +68,7 @@ func (p *Player) Close() {
 	<-p.done
 }
 
-// The worker constructs voices and controls Oto; Oto owns device scheduling.
+// The worker controls Oto players; Oto owns device scheduling.
 func (p *Player) run() {
 	defer close(p.done)
 	context, ready, err := sharedOutput()
@@ -98,15 +103,12 @@ type audioOutput interface {
 
 func (p *Player) runOutput(output audioOutput) {
 	var active audioPlayback
-	var reader io.ReadCloser
 	stop := func() {
 		if active != nil {
-			// Pause alone permits read-ahead. Join the in-flight read before releasing
-			// the USS voice, and retain the player until it has been stopped.
+			// Join any in-flight read before retiring the player.
 			active.PauseAndStopReading()
 			traceAudioError(active.Err())
-			reader.Close()
-			active, reader = nil, nil
+			active = nil
 		}
 	}
 	defer stop()
@@ -120,18 +122,12 @@ func (p *Player) runOutput(output audioOutput) {
 				traceAudioError(err)
 				return
 			}
-			prepared := p.sounds[request.name]
+			pcm := p.sounds[request.name]
 			gain := masterGain(request.volume)
-			if prepared == nil || gain == 0 {
+			if len(pcm) == 0 || gain == 0 {
 				continue
 			}
-			stream, err := prepared.Stream(cues[request.name].Inputs)
-			if err != nil {
-				traceAudioError(err)
-				continue
-			}
-			reader = stream.Float32LEReader()
-			active = output.newPlayer(reader)
+			active = output.newPlayer(bytes.NewReader(pcm))
 			active.SetVolume(float64(gain))
 			active.Play()
 		}

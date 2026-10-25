@@ -7,7 +7,6 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/ebitengine/oto/v3 v3.5.1
 	github.com/go-text/typesetting v0.3.5
-	github.com/ui-sound-system/uss-go v0.0.0-20261025100859-b8b79f3c5998
 	golang.org/x/image v0.47.0
 	golang.org/x/sys v0.49.0
 )

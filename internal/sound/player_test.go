@@ -3,7 +3,6 @@ package sound
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/ui-sound-system/uss-go/synth"
 	"io"
 	"sync"
 	"testing"
@@ -62,13 +61,17 @@ func (o *testOutput) newPlayer(r io.Reader) audioPlayback {
 }
 func testPlayer(t *testing.T) (*Player, *testOutput) {
 	t.Helper()
-	p := &Player{requests: make(chan playback, 1), stop: make(chan struct{}), done: make(chan struct{}), sounds: make(map[Name]*synth.Prepared)}
+	p := &Player{requests: make(chan playback, 1), stop: make(chan struct{}), done: make(chan struct{}), sounds: make(map[Name][]byte)}
 	for name, cue := range cues {
-		prepared, err := prepareCue(name, cue)
+		pcm, err := synthesize(cue.cue())
 		if err != nil {
 			t.Fatal(err)
 		}
-		p.sounds[name] = prepared
+		data, err := binary.Append(nil, binary.LittleEndian, pcm)
+		if err != nil {
+			t.Fatal(err)
+		}
+		p.sounds[name] = data
 	}
 	o := &testOutput{players: make(chan *testPlayback, 4)}
 	go func() { defer close(p.done); p.runOutput(o) }()
@@ -90,37 +93,44 @@ func nextPlayback(t *testing.T, o *testOutput) (*testPlayback, []byte) {
 	}
 	return nil, nil
 }
-func assertReaderClosed(t *testing.T, reader io.Reader) {
+func assertPlaybackStopped(t *testing.T, player *testPlayback) {
 	t.Helper()
-	var buffer [1]byte
-	if n, err := reader.Read(buffer[:]); n != 0 || err != io.EOF {
-		t.Fatal("retired synthesis reader remained live")
+	select {
+	case <-player.stopped:
+	default:
+		t.Fatal("retired player still reading")
 	}
 }
-func TestPlaybackUsesUSSReaderAndReplacesActiveSound(t *testing.T) {
+func TestPlaybackUsesCachedPCMAndReplacesActiveSound(t *testing.T) {
 	p, o := testPlayer(t)
+	before := bytes.Clone(p.sounds[Opened])
 	p.Play(Opened, 50)
 	first, packet := nextPlayback(t, o)
-	full, err := p.sounds[Opened].Render(cues[Opened].Inputs)
+	full, err := synthesize(cues[Opened].cue())
 	if err != nil {
 		t.Fatal(err)
 	}
 	var want bytes.Buffer
-	binary.Write(&want, binary.LittleEndian, full.Samples)
+	if err := binary.Write(&want, binary.LittleEndian, full); err != nil {
+		t.Fatal(err)
+	}
 	if !bytes.Equal(packet, want.Bytes()[:len(packet)]) || first.volume != .5 {
-		t.Fatal("playback did not use USS float PCM and master volume")
+		t.Fatal("playback did not use original PCM and master volume")
 	}
 	p.Play(Closed, 100)
 	second, _ := nextPlayback(t, o)
-	assertReaderClosed(t, first.reader)
+	assertPlaybackStopped(t, first)
 	if second.volume != 1 {
 		t.Fatal("replacement lost master volume")
 	}
 	p.Close()
 	p.Close()
-	assertReaderClosed(t, second.reader)
+	assertPlaybackStopped(t, second)
+	if !bytes.Equal(p.sounds[Opened], before) {
+		t.Fatal("playback changed the cached audio")
+	}
 }
-func TestStopJoinsReadingAndReleasesVoice(t *testing.T) {
+func TestStopJoinsReading(t *testing.T) {
 	p, o := testPlayer(t)
 	p.Play(Opened, 100)
 	active, _ := nextPlayback(t, o)
@@ -131,7 +141,7 @@ func TestStopJoinsReadingAndReleasesVoice(t *testing.T) {
 		t.Fatal("Stop did not stop source reads")
 	}
 	p.Close()
-	assertReaderClosed(t, active.reader)
+	assertPlaybackStopped(t, active)
 	select {
 	case <-o.players:
 		t.Fatal("Stop started another sound")

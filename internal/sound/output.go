@@ -20,7 +20,7 @@ var device struct {
 func sharedOutput() (*oto.Context, <-chan struct{}, error) {
 	device.once.Do(func() {
 		device.context, device.ready, device.err = oto.NewContext(&oto.NewContextOptions{
-			SampleRate: sampleRate, ChannelCount: 1, Format: oto.FormatFloat32LE,
+			SampleRate: sampleRate, ChannelCount: 1, Format: oto.FormatSignedInt16LE,
 			BufferSize: 20 * time.Millisecond, ApplicationName: "Commando",
 		})
 	})
@@ -32,6 +32,6 @@ type otoOutput struct{ context *oto.Context }
 func (o otoOutput) err() error { return o.context.Err() }
 func (o otoOutput) newPlayer(reader io.Reader) audioPlayback {
 	player := o.context.NewPlayer(reader)
-	player.SetBufferSize(sampleRate * 4 / 100) // 10 ms of source PCM.
+	player.SetBufferSize(sampleRate * 2 / 100) // 10 ms of source PCM.
 	return player
 }
