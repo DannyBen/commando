@@ -52,7 +52,7 @@ func TestShellClipboardPasteUsesSharedWorkerAndPreservesClipboard(t *testing.T) 
 			for _, item := range v.panels[1].items {
 				found = found || item.file.Name == "from-archive.txt"
 			}
-			if !found {
+			if !found || v.panels[1].items[v.panels[1].selected].file.Name != "from-archive.txt" || len(v.panels[1].marks) != 0 {
 				t.Fatal("destination panel was not reconciled")
 			}
 		})

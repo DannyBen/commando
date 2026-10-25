@@ -160,8 +160,8 @@ func TestClipboardCopiesMarkedMixedItemsIntoActiveFolder(t *testing.T) {
 		t.Fatal("paste used highlighted subfolder")
 	}
 	p := &v.panels[1]
-	if p.items[p.selected].file.Name != "highlighted" || len(p.marks) != 1 || !p.marks[p.selected] || v.active != 1 {
-		t.Fatal("paste changed selection, marks or focus")
+	if p.items[p.selected].file.Name != "folder" || len(p.marks) != 0 || v.active != 1 {
+		t.Fatal("paste did not clear destination marks/select the first sorted result while retaining focus")
 	}
 	current, _ := c.read()
 	if !reflect.DeepEqual(current, snapshot) || len(v.panels[0].marks) != 2 {
@@ -346,6 +346,12 @@ func TestClipboardUsesExternalSelectionAndKeepsCopyReusable(t *testing.T) {
 	if _, err := c.write(paths, false); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(target, "keep.txt"), []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	v.load(1, target, "keep.txt")
+	waitLoaded(t, v, 1)
+	v.panels[1].toggleMark(v.panels[1].selected)
 	v.active = 1
 	send, _ := panelInputFrames(v)
 	send(modified("V", key.ModCtrl))
@@ -353,6 +359,10 @@ func TestClipboardUsesExternalSelectionAndKeepsCopyReusable(t *testing.T) {
 	send()
 	if data, err := os.ReadFile(filepath.Join(target, "a.txt")); err != nil || string(data) != "alpha" {
 		t.Fatal("external clipboard selection not pasted")
+	}
+	p := &v.panels[1]
+	if p.items[p.selected].file.Name != "a.txt" || len(p.marks) != 0 {
+		t.Fatal("paste did not select the pasted file and clear destination marks")
 	}
 	current, err := c.read()
 	if err != nil || current.Move || !reflect.DeepEqual(current.Paths, paths) {

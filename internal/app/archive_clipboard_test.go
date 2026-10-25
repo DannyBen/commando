@@ -82,7 +82,7 @@ func TestArchiveClipboardCopiesReferencesThenPastesThroughSharedFlows(t *testing
 				}
 			}
 			current, err := c.read()
-			if err != nil || !reflect.DeepEqual(current, captured) || p.selected != selected || !maps.Equal(p.marks, marks) || destination.items[destination.selected].name != "keep.txt" || !destination.marks[destination.selected] || v.active != 1 || v.transferPending || v.mutationsBusy() {
+			if err != nil || !reflect.DeepEqual(current, captured) || p.selected != selected || !maps.Equal(p.marks, marks) || destination.items[destination.selected].name != "docs" || len(destination.marks) != 0 || v.active != 1 || v.transferPending || v.mutationsBusy() {
 				t.Fatal("paste changed clipboard or browsing state", err)
 			}
 			entries, err = os.ReadDir(filepath.Join(scratch, "Commando", "session"))

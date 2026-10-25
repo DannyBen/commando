@@ -109,10 +109,14 @@ func (v *view) pasteClipboard(shortcuts bool) {
 		return
 	}
 	p.loading, p.prefix, v.transferPending = true, "", true
+	var target *panelTransferTarget
+	if !shortcuts {
+		target = &panelTransferTarget{panel: v.active, location: p.location(), selectOnly: true}
+	}
 	// Capture the open destination, including archive subfolders.
 	archiveLocations := v.archiveOperationLocations()
 	// Windows owns the native transfer UI, including progress and cancellation.
-	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, archiveFolder: p.archiveFolder, transfer: &transferRequest{archiveLocations: archiveLocations, locations: v.fileOperationLocations(), owner: v.ownerWindow, shortcuts: shortcuts}}) {
+	if !v.loader.submit(loadRequest{panel: v.active, path: p.path, archiveFolder: p.archiveFolder, transfer: &transferRequest{target: target, archiveLocations: archiveLocations, locations: v.fileOperationLocations(), owner: v.ownerWindow, shortcuts: shortcuts}}) {
 		p.loading, v.transferPending = false, false
 	} else if p.archiveFolder != "" {
 		v.operationProgress(v.active, "Updating archive")

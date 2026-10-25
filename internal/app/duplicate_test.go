@@ -99,6 +99,13 @@ func TestSingleDuplicateUsesInlineNameEditor(t *testing.T) {
 			if !reflect.DeepEqual(current, before) || v.nameInteraction() != nil || v.transferPending || v.panels[0].items[v.panels[0].selected].name != custom {
 				t.Fatal("duplicate lost copy selection or changed clipboard")
 			}
+			wantMarks := 1
+			if paste {
+				wantMarks = 0
+			}
+			if len(v.panels[0].marks) != wantMarks {
+				t.Fatal("same-folder paste did not clear marks, or direct duplicate changed them")
+			}
 			if v.panels[2].items[v.panels[2].selected].name != "z.txt" || !v.panels[2].marks[v.panels[2].selected] {
 				t.Fatal("duplicate changed alias panel selection or marks")
 			}
@@ -186,8 +193,15 @@ func TestBatchDuplicateAndSameFolderCutPaste(t *testing.T) {
 			t.Fatal("batch duplicate or same-folder cut retained a choice")
 		}
 		current, _ := c.read()
-		if !reflect.DeepEqual(current, before) || len(v.panels[0].marks) != 2 {
-			t.Fatal("batch changed clipboard or source marks")
+		wantMarks := 2
+		if shortcut == "copy" {
+			wantMarks = 0
+			if v.panels[0].items[v.panels[0].selected].name != "folder - Copy" {
+				t.Fatal("same-folder paste did not select the first sorted copy")
+			}
+		}
+		if !reflect.DeepEqual(current, before) || len(v.panels[0].marks) != wantMarks {
+			t.Fatal("batch changed clipboard or did not apply the expected marks policy")
 		}
 		if shortcut == "cut" {
 			if v.panels[0].feedback.Current().Text != "Already in this folder" {
