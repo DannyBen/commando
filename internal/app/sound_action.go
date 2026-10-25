@@ -9,9 +9,10 @@ import (
 // the player. Nested commands share ownership; unrelated inputs never share a
 // time window or a timer. The player replaces active audio rather than mixing.
 type soundAction struct {
-	cue      sound.Name
-	priority int
-	handoff  bool // Moving an existing interaction is neither closing nor opening it.
+	cue          sound.Name
+	priority     int
+	widgetClosed bool // Generic cancellation must not replace an actual UI Close.
+	handoff      bool // Moving an existing interaction is neither closing nor opening it.
 }
 
 func (a *soundAction) offer(cue sound.Name, priority int) {

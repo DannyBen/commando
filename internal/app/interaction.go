@@ -56,10 +56,7 @@ func (v *view) startInteraction(session interactionSession) bool {
 	if !v.interaction.begin(session) {
 		return false
 	}
-	event := eventWidgetOpened
-	if owner, ok := session.(interface{ openingEvent() interactionEvent }); ok {
-		event = owner.openingEvent()
-	}
+	event := openingSoundEvent(session)
 	if v.soundAction == nil || !v.soundAction.handoff {
 		v.announceInteraction(event)
 	}
@@ -75,11 +72,26 @@ func (v *view) finishInteraction(session interactionSession) bool {
 	if name, ok := session.(*nameSession); ok && name.finished {
 		return true
 	}
-	// Work-only sessions opt out of both lifecycle cues with eventSoundOwned.
-	if owner, ok := session.(interface{ openingEvent() interactionEvent }); (v.soundAction == nil || !v.soundAction.handoff) && (!ok || owner.openingEvent() != eventSoundOwned) {
-		v.announceInteraction(eventWidgetClosed)
+	// Only sessions explicitly opening a UI element get a corresponding Close.
+	// Editing, inline choices and other sessions use the generic click fallback.
+	event := openingSoundEvent(session)
+	if (v.soundAction == nil || !v.soundAction.handoff) && event != eventSoundOwned {
+		closing := eventCommandActivated
+		switch event {
+		case eventWidgetOpened, eventPaletteOpened, eventQuestionOpened:
+			closing = eventWidgetClosed
+		}
+		v.announceInteraction(closing)
 	}
 	return true
+}
+
+// Open/Close is opt-in for actual widgets; ordinary sessions default to Click.
+func openingSoundEvent(session interactionSession) interactionEvent {
+	if owner, ok := session.(interface{ openingEvent() interactionEvent }); ok {
+		return owner.openingEvent()
+	}
+	return eventCommandActivated
 }
 
 // Only the owning session can end an interaction. A stale completion cannot

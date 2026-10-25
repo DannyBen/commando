@@ -42,11 +42,11 @@ var interactionSounds = map[interactionEvent]sound.Name{
 	eventPaletteOpened:       sound.Opened,
 	eventWidgetOpened:        sound.Opened,
 	eventQuestionOpened:      sound.Opened,
-	eventEditStarted:         sound.Opened,
-	eventEditConfirmed:       sound.Closed,
+	eventEditStarted:         sound.Click,
+	eventEditConfirmed:       sound.Click,
 	eventWidgetReset:         sound.Click,
 	eventDeleteStaged:        sound.Click,
-	eventCancelled:           sound.Closed,
+	eventCancelled:           sound.Click,
 	eventUnsavedChanges:      sound.MessageWarning,
 	eventDirectoryNavigation: sound.DirectoryNavigation,
 	eventMessageInfo:         sound.MessageInfo,
@@ -56,9 +56,15 @@ var interactionSounds = map[interactionEvent]sound.Name{
 }
 
 func (v *view) announceInteraction(event interactionEvent) {
+	if event == eventWidgetClosed && v.soundAction != nil {
+		v.soundAction.widgetClosed = true
+	}
 	if cue := interactionSounds[event]; cue != "" {
 		if event == eventCancelled && v.soundAction != nil {
-			v.soundAction.offer(cue, 95) // Cancellation owns its accompanying Info result.
+			// Preserve a real widget's Close; other cancellation owns its Info result.
+			if !v.soundAction.widgetClosed {
+				v.soundAction.offer(cue, 95)
+			}
 			return
 		}
 		v.playSound(cue)

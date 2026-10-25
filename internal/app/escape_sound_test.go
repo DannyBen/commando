@@ -12,7 +12,7 @@ import (
 )
 
 func TestEscapePlaysOneCueAcrossInteractions(t *testing.T) {
-	for _, context := range []string{"browsing", "prefix", "location", "rename", "create", "palette", "inline", "duplicate"} {
+	for _, context := range []string{"browsing", "prefix", "filter", "location", "rename", "multi-rename", "create", "palette", "inline", "duplicate"} {
 		t.Run(context, func(t *testing.T) {
 			v := newPreviewView()
 			send, advance := panelInputFrames(v)
@@ -21,9 +21,14 @@ func TestEscapePlaysOneCueAcrossInteractions(t *testing.T) {
 			case "prefix":
 				send(key.EditEvent{Text: "c"})
 				selected = v.panels[0].selected
+			case "filter":
+				send(pressed("/"), key.EditEvent{Text: "/"})
 			case "location":
 				send(modified("D", key.ModAlt))
 			case "rename":
+				v.panels[0].clearMarks()
+				send(pressed(key.NameF2))
+			case "multi-rename":
 				send(pressed(key.NameF2))
 			case "create":
 				send(newFolderKey())
@@ -45,7 +50,11 @@ func TestEscapePlaysOneCueAcrossInteractions(t *testing.T) {
 			v.sounds = recorded
 			send(pressed(key.NameEscape))
 			advance(time.Hour)
-			if len(recorded.played) != 1 || recorded.played[0] != sound.Closed {
+			want := sound.Click
+			if context == "palette" || context == "multi-rename" {
+				want = sound.Closed
+			}
+			if len(recorded.played) != 1 || recorded.played[0] != want {
 				t.Fatalf("Escape did not produce exactly one cancellation cue: %v", recorded.played)
 			}
 			if !v.interaction.idle() || v.panels[0].selected != selected || v.panels[0].prefix != "" || v.active != 0 {

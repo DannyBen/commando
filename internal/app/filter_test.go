@@ -81,7 +81,7 @@ func TestFilterEnterSound(t *testing.T) {
 			send(key.Event{Name: name, State: key.Release})
 			var want []sound.Name
 			if enabled {
-				want = []sound.Name{sound.Closed}
+				want = []sound.Name{sound.Click}
 			}
 			if !slices.Equal(recorded.played, want) {
 				t.Fatalf("key %s, sounds enabled %v: got %v, want %v", name, enabled, recorded.played, want)

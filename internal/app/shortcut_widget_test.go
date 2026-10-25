@@ -280,7 +280,7 @@ func TestShortcutWidgetSoundsForClearAndCapture(t *testing.T) {
 	send(pressed(key.NameDeleteForward))
 	send(pressed(key.NameReturn))
 	send(modified("Y", key.ModCtrl))
-	if !slices.Equal(recorder.played, []sound.Name{sound.Click, sound.Opened, sound.Closed}) {
+	if !slices.Equal(recorder.played, []sound.Name{sound.Click, sound.Click, sound.Click}) {
 		t.Fatal("clear and capture did not use the expected cues", recorder.played)
 	}
 	recorder.played = nil

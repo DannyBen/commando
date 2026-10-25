@@ -41,7 +41,7 @@ func TestLocationEditorUsesClickAndSingleNavigationCue(t *testing.T) {
 			send(modified("D", key.ModAlt))
 			recorder.played = nil
 			send(pressed(key.NameEscape))
-			if v.locationEditing() || !slices.Equal(recorder.played, []sound.Name{sound.Closed}) {
+			if v.locationEditing() || !slices.Equal(recorder.played, []sound.Name{sound.Click}) {
 				t.Fatal("location cancellation lost its single shared cue", recorder.played)
 			}
 		})
@@ -246,5 +246,62 @@ func TestInvalidWidgetTextDraftStaysSilent(t *testing.T) {
 	send(pressed(key.NameReturn))
 	if len(recorder.played) != 0 || !s.editing || s.errorText == "" {
 		t.Fatal("invalid text draft played a confirmation cue", recorder.played)
+	}
+}
+
+func TestInlineEditingUsesClickForStartAndCancel(t *testing.T) {
+	for _, editor := range []string{"filter", "rename", "create", "location", "inline"} {
+		t.Run(editor, func(t *testing.T) {
+			v := newPreviewView()
+			v.panels[0].clearMarks() // F2 must edit one name rather than open multi-rename.
+			recorder := &recordedSounds{}
+			v.sounds = recorder
+			send, _ := panelInputFrames(v)
+			switch editor {
+			case "filter":
+				send(pressed("/"), key.EditEvent{Text: "/"})
+			case "rename":
+				send(pressed(key.NameF2))
+			case "create":
+				send(newFolderKey())
+			case "location":
+				send(modified("D", key.ModAlt))
+			case "inline":
+				v.startInlineActions(0, 4, "", "", []string{"Choose"}, nil, nil)
+				send()
+			}
+			if !slices.Equal(recorder.played, []sound.Name{sound.Click}) {
+				t.Fatal("inline editing did not start with one click", recorder.played)
+			}
+			send(pressed(key.NameEscape))
+			if !v.interaction.idle() || !slices.Equal(recorder.played, []sound.Name{sound.Click, sound.Click}) {
+				t.Fatal("inline editing did not cancel with one click", recorder.played)
+			}
+		})
+	}
+}
+
+func TestWidgetEditingClicksWithoutClosingWidget(t *testing.T) {
+	v := newPreviewView()
+	recorder := &recordedSounds{}
+	v.sounds = recorder
+	send, _ := panelInputFrames(v)
+	v.startSettingsWidget("appearance.font")
+	send()
+	widget := v.settingsInteraction()
+	if widget == nil || !slices.Equal(recorder.played, []sound.Name{sound.Opened}) {
+		t.Fatal("settings widget did not open with Open", recorder.played)
+	}
+	recorder.played = nil
+	send(pressed(key.NameReturn))
+	send(pressed(key.NameReturn))
+	if v.settingsInteraction() != widget || widget.editing || !slices.Equal(recorder.played, []sound.Name{sound.Click, sound.Click}) {
+		t.Fatal("field editing used lifecycle cues or closed the widget", recorder.played)
+	}
+	recorder.played = nil
+	widget.actionsFocused, widget.action = true, 1 // Explicit Cancel closes a dirty widget.
+	send(pressed(key.NameReturn))
+	if v.settingsInteraction() != nil || !slices.Equal(recorder.played, []sound.Name{sound.Closed}) {
+		t.Fatal("closing the actual widget did not retain Close", recorder.played)
 	}
 }

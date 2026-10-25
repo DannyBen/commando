@@ -235,7 +235,7 @@ type soundTestSession struct{}
 
 func (*soundTestSession) interactionPanel() int { return 0 }
 
-func TestNewSessionsAutomaticallyUseSharedOpenClose(t *testing.T) {
+func TestNewSessionsDefaultToSharedClick(t *testing.T) {
 	v := newPreviewView()
 	recorder := &recordedSounds{}
 	v.sounds = recorder
@@ -246,7 +246,7 @@ func TestNewSessionsAutomaticallyUseSharedOpenClose(t *testing.T) {
 	if !v.finishInteraction(s) || v.finishInteraction(s) {
 		t.Fatal("invalid session completion")
 	}
-	if !slices.Equal(recorder.played, []sound.Name{sound.Opened, sound.Closed}) {
+	if !slices.Equal(recorder.played, []sound.Name{sound.Click, sound.Click}) {
 		t.Fatal("new session required feature-specific audio code", recorder.played)
 	}
 }
