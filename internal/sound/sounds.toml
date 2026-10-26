@@ -94,9 +94,9 @@ volume = 28
 [sounds.click]
 level = 4
 notes = [220]
-length_ms = 12
-waveform = "square"
-volume = 10
+length_ms = 24
+waveform = "sine"
+volume = 24
 
 [sounds.enabled]
 level = 4
