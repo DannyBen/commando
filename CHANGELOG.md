@@ -1,6 +1,15 @@
 Changelog
 ========================================
 
+v0.7.3 - 2026-10-26
+----------------------------------------
+
+- @Interface > Type to select [`304f330`](https://github.com/dannyben/commando/commit/304f330)
+- Revert USS back to internal synth functions via Oto [`0823ef9`](https://github.com/dannyben/commando/commit/0823ef9)
+- Separate click sound from tick sound [`75ed482`](https://github.com/dannyben/commando/commit/75ed482)
+- Compare [`v0.7.2..v0.7.3`](https://github.com/dannyben/commando/compare/v0.7.2..v0.7.3)
+
+
 v0.7.2 - 2026-10-25
 ----------------------------------------
 
