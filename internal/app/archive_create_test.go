@@ -64,8 +64,8 @@ func TestArchiveCreationUsesSharedEditorAndReconcilesPeers(t *testing.T) {
 			if p.archiveFolder != wantFolder || p.items[p.selected].name != "新しい.txt" || p.items[p.selected].file.Directory != folder || !v.interaction.idle() || v.mutationsBusy() {
 				t.Fatal("creation did not select new archive entry", p.archiveFolder, visibleNames(p))
 			}
-			if nested && len(p.marks) != 0 || !nested && !slices.Equal(p.selectedNames(), []string{"a2.txt"}) {
-				t.Fatal("creation did not preserve or clear listing-specific marks")
+			if len(p.marks) != 0 {
+				t.Fatal("creation retained marks in the active archive panel")
 			}
 			peer := &v.panels[1]
 			if peer.archiveFolder != "." || peer.items[peer.selected].name != "a10.txt" || !peer.marks[peer.selected] || !slices.Contains(visibleNames(peer), func() string {

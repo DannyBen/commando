@@ -294,6 +294,9 @@ func (v *view) acceptName(result loadResult) {
 			}
 		}
 	}
+	if result.created.Name != "" && (r.kind == nameCreateFile || r.kind == nameCreateFolder) {
+		v.panels[r.panel].clearMarks()
+	}
 	if result.request.duplicate != nil && result.transferred.Attempted {
 		refreshFailed := false
 		if result.request.archiveFolder != "" {

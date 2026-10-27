@@ -216,7 +216,7 @@ func TestCreateFolderReplacesStaleCachedEntry(t *testing.T) {
 	}
 }
 
-func TestRealCreateFolderPreservesMarksAndUpdatesPanels(t *testing.T) {
+func TestRealCreateFolderClearsMarksAndUpdatesPanels(t *testing.T) {
 	root, other := t.TempDir(), t.TempDir()
 	for _, name := range []string{"a.txt", "z.txt"} {
 		if err := os.WriteFile(filepath.Join(root, name), nil, 0600); err != nil {
@@ -247,16 +247,12 @@ func TestRealCreateFolderPreservesMarksAndUpdatesPanels(t *testing.T) {
 	if p.selected != 1 || !p.items[p.selected].file.Directory || p.items[p.selected].file.Modified.IsZero() {
 		t.Fatal("folder was not inserted in directory order with metadata")
 	}
-	for pi := 0; pi < 2; pi++ {
-		marked := &v.panels[pi]
-		if len(marked.marks) != 1 {
-			t.Fatal("creation lost existing marks")
-		}
-		for row := range marked.marks {
-			if marked.items[row].name != "z.txt" {
-				t.Fatal("creation moved a mark to the wrong item")
-			}
-		}
+	if len(p.marks) != 0 {
+		t.Fatal("creation retained marks in the active panel")
+	}
+	peer := &v.panels[1]
+	if len(peer.marks) != 1 || !peer.marks[peer.selected] {
+		t.Fatal("creation changed marks in another panel")
 	}
 	if v.panels[1].items[v.panels[1].selected].name != "z.txt" || !slices.Equal(v.panels[2].items, otherItems) {
 		t.Fatal("creation changed another panel's current item or unrelated listing")
@@ -267,7 +263,6 @@ func TestRealCreateFolderPreservesMarksAndUpdatesPanels(t *testing.T) {
 	if message := p.feedback.Current(); message == nil || message.Kind != feedback.Success || message.Text != "Folder created" {
 		t.Fatal("creation did not leave success feedback")
 	}
-	p.clearMarks() // Navigate the new current folder instead of opening marked files.
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	send()
@@ -370,6 +365,9 @@ func TestInlineFileCreationAndCollision(t *testing.T) {
 	if v.nameInteraction() == nil || !errors.Is(v.nameInteraction().err, fs.ErrExist) || v.nameEditor.ReadOnly {
 		t.Fatal("file collision did not retain an editable draft")
 	}
+	if len(v.panels[0].marks) != 1 || !v.panels[0].marks[v.panels[0].selected] {
+		t.Fatal("failed creation cleared existing marks")
+	}
 	if data, err := os.ReadFile(filepath.Join(root, "existing.txt")); err != nil || string(data) != "keep" {
 		t.Fatal("creation changed the existing file")
 	}
@@ -385,15 +383,12 @@ func TestInlineFileCreationAndCollision(t *testing.T) {
 	if data, err := os.ReadFile(filepath.Join(root, "a-new.txt")); err != nil || len(data) != 0 {
 		t.Fatal("new file was not empty")
 	}
-	for pi := range v.panels {
-		for row := range v.panels[pi].marks {
-			if v.panels[pi].items[row].name != "existing.txt" {
-				t.Fatal("creation changed mark identity")
-			}
-		}
-		if len(v.panels[pi].marks) != 1 {
-			t.Fatal("creation lost an existing mark")
-		}
+	if len(p.marks) != 0 {
+		t.Fatal("file creation retained marks in the active panel")
+	}
+	peer := &v.panels[1]
+	if len(peer.marks) != 1 || !peer.marks[peer.selected] || peer.items[peer.selected].name != "existing.txt" {
+		t.Fatal("file creation changed marks in another panel")
 	}
 	if v.panels[1].items[v.panels[1].selected].name != "existing.txt" {
 		t.Fatal("creation changed another panel's current file")

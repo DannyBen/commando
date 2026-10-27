@@ -67,8 +67,12 @@ func TestImagePasteNamesCapturedPNGAndReconcilesPanels(t *testing.T) {
 			continue
 		}
 		p := &v.panels[pi]
-		if len(p.marks) != 1 {
-			t.Fatal("marks changed")
+		wantMarks := 0
+		if pi == 2 {
+			wantMarks = 1
+		}
+		if len(p.marks) != wantMarks {
+			t.Fatal("creation left active marks or changed another panel's marks")
 		}
 		want := "capture.png"
 		if pi == 2 {
