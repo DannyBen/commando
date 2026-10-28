@@ -110,6 +110,7 @@ type view struct {
 	transferPending   bool
 	clipboardSequence func() uint32
 	toggleFullScreen  func()
+	resizeWindow      func(windowAxis, int)
 	ownerWindow       uintptr
 	pendingNameDraft  *loadResult
 	shellExecutor     func(shellRequest) shellCompletion

@@ -158,6 +158,10 @@ func defaultCommands() []command {
 		toggleSettingCommand("feedback.toggle_notification_animation", "Interface", "notification animation", settingNotificationAnimation),
 
 		cmd("application.toggle_full_screen", "Application", "Toggle full screen", key.NameReturn, key.ModAlt, func(v *view) bool { return v.toggleFullScreen != nil }),
+		cmd("application.increase_width", "Application", "Increase window width", "=", key.ModCtrl, windowSizingReady),
+		cmd("application.decrease_width", "Application", "Decrease window width", "-", key.ModCtrl, windowSizingReady),
+		cmd("application.increase_height", "Application", "Increase window height", "=", key.ModCtrl|key.ModShift, windowSizingReady),
+		cmd("application.decrease_height", "Application", "Decrease window height", "-", key.ModCtrl|key.ModShift, windowSizingReady),
 		cmd(helpCommandID, "Application", "Toggle help", key.NameF1, 0, nil),
 		cmd("application.command_palette", "Application", "Command palette", "`", 0, nil),
 		{id: "application.open_data_folder", group: "Application", name: "Open data folder",
@@ -172,6 +176,8 @@ func defaultCommands() []command {
 	for i := range catalogue {
 		c := &catalogue[i]
 		switch c.id {
+		case "application.increase_width", "application.increase_height":
+			c.bindings[1].Default = shortcut{Name: "+", Modifiers: c.bindings[0].Default.Modifiers}
 		case "panel.increase_size":
 			c.bindings[1].Default = shortcut{Name: "="}
 		case "entry.paste":
@@ -203,7 +209,8 @@ func defaultCommands() []command {
 			*c = c.withSound(eventWidgetOpened)
 		case "panel.close":
 			*c = c.withSound(eventWidgetClosed)
-		case "application.open_data_folder", "application.toggle_full_screen":
+		case "application.open_data_folder", "application.toggle_full_screen",
+			"application.increase_width", "application.decrease_width", "application.increase_height", "application.decrease_height":
 			c.soundEvent = eventSoundOwned
 		case "file.edit", "entry.open", "entry.rename", "entry.copy", "entry.copy_filenames", "entry.copy_paths", "entry.cut",
 			"entry.paste", "entry.paste_shortcut", "entry.duplicate", "entry.pack_zip", "entry.unpack_zip",
@@ -368,6 +375,8 @@ func clipboardReady(v *view) bool {
 func textClipboardReady(v *view) bool {
 	return panelReady(v) && v.actionAllowed(actionClipboard) && len(v.panels[v.active].selectedNames()) > 0
 }
+
+func windowSizingReady(v *view) bool { return v.resizeWindow != nil }
 
 func panelsCanSwap(v *view) bool {
 	if !v.actionAllowed(actionMutation) {

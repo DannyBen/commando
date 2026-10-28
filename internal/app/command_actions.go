@@ -6,6 +6,14 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) (accepted bo
 	accepted = true
 	p := &v.panels[v.active]
 	switch id {
+	case "application.increase_width":
+		v.resizeWindow(windowWidthAxis, 1)
+	case "application.decrease_width":
+		v.resizeWindow(windowWidthAxis, -1)
+	case "application.increase_height":
+		v.resizeWindow(windowHeightAxis, 1)
+	case "application.decrease_height":
+		v.resizeWindow(windowHeightAxis, -1)
 	case "entry.calculate_size":
 		v.startCalculateSize(gtx)
 	case "location.favorite":

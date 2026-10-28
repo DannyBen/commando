@@ -113,6 +113,10 @@ func Run() error {
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		fullScreenRequested := false
 		v.toggleFullScreen = func() { fullScreenRequested = !fullScreenRequested }
+		var resizeRequests []windowResizeRequest
+		v.resizeWindow = func(axis windowAxis, direction int) {
+			resizeRequests = append(resizeRequests, windowResizeRequest{axis, direction})
+		}
 		v.nativeKeys = keys
 		v.updateNativeBindings()
 		v.shellExecutor = native.shellExecutor(w)
@@ -154,6 +158,12 @@ func Run() error {
 					v.announceBoolean(enabled)
 				}
 			}
+			for _, request := range resizeRequests {
+				if native.resizeWindow(w, request) {
+					v.announceInteraction(eventValueChanged)
+				}
+			}
+			resizeRequests = resizeRequests[:0]
 			native.resizePanels(w, len(v.panels))
 			v.ownerWindow = native.owner()
 			v.dispatchNative(w.Invalidate)

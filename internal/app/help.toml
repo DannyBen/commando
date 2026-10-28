@@ -1001,6 +1001,26 @@ lines = [
   "Find commands, shortcuts and settings by typing their names",
 ]
 
+["palette.application.decrease_height"]
+lines = [
+  "Make the normal window shorter while keeping it centered",
+]
+
+["palette.application.decrease_width"]
+lines = [
+  "Make the normal window narrower while keeping it centered",
+]
+
+["palette.application.increase_height"]
+lines = [
+  "Make the normal window taller while keeping it centered",
+]
+
+["palette.application.increase_width"]
+lines = [
+  "Make the normal window wider while keeping it centered",
+]
+
 ["palette.application.open_data_folder"]
 lines = [
   "Open the folder containing Commando settings and saved state",

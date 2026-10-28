@@ -7,6 +7,26 @@ import (
 
 const minWindowWidth = 240 // Enough for one panel; a larger count can fit a constrained window.
 
+type windowAxis uint8
+
+const (
+	windowWidthAxis windowAxis = iota
+	windowHeightAxis
+)
+
+type windowResizeRequest struct {
+	axis      windowAxis
+	direction int
+}
+
+func centeredWindow(window, work image.Rectangle, width, height int) image.Rectangle {
+	width = max(1, min(width, work.Dx()))
+	height = max(1, min(height, work.Dy()))
+	x := max(work.Min.X, min(work.Max.X-width, window.Min.X+(window.Dx()-width)/2))
+	y := max(work.Min.Y, min(work.Max.Y-height, window.Min.Y+(window.Dy()-height)/2))
+	return image.Rect(x, y, x+width, y+height)
+}
+
 // The base width is independent of pane models. Future per-panel presets can
 // multiply this base while retaining the actual divider count and manual intent.
 type workspaceSizing struct {

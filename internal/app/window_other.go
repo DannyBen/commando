@@ -65,6 +65,32 @@ func (n *nativeWindow) resizePanels(w *gioapp.Window, count int) {
 	w.Option(gioapp.Size(unit.Dp(max(minWindowWidth, sizing.width())), unit.Dp(max(360, state.Height))))
 }
 
+func (n *nativeWindow) resizeWindow(w *gioapp.Window, request windowResizeRequest) bool {
+	if w == nil || n.mode != gioapp.Windowed {
+		return false
+	}
+	state := n.state.snapshot()
+	width, height := state.Width, state.Height
+	if width <= 0 || height <= 0 {
+		return false
+	}
+	switch request.axis {
+	case windowWidthAxis:
+		width = max(minWindowWidth, width+80*request.direction)
+	case windowHeightAxis:
+		height = max(360, height+48*request.direction)
+	}
+	if width == state.Width && height == state.Height {
+		return false
+	}
+	n.suppressWidth = true
+	w.Option(gioapp.Size(unit.Dp(width), unit.Dp(height)))
+	if request.axis == windowWidthAxis {
+		n.state.rememberPanelWidth(float64(width), true)
+	}
+	return true
+}
+
 func (*nativeWindow) owner() uintptr { return 0 }
 
 func (n *nativeWindow) toggleFullScreen(w *gioapp.Window) (enabled, changed bool) {

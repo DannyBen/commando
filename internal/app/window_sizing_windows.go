@@ -31,11 +31,11 @@ func (r nativeRect) rectangle() image.Rectangle {
 }
 
 type windowGeometry struct {
-	window, work image.Rectangle
-	clientWidth  int
-	scale        float64
-	monitor      uintptr
-	ordinary     bool
+	window, work              image.Rectangle
+	clientWidth, clientHeight int
+	scale                     float64
+	monitor                   uintptr
+	ordinary                  bool
 }
 
 // Read on the native window thread: WINDOWPLACEMENT uses workspace coordinates,
@@ -69,8 +69,47 @@ func (n *nativeWindow) geometry() (windowGeometry, bool) {
 	}
 	arranged, _, _ := isWindowArranged.Call(n.hwnd)
 	g := windowGeometry{window: outer.rectangle(), work: info.Work.rectangle(),
-		clientWidth: int(client.Right - client.Left), scale: float64(dpi) / 96, monitor: monitor, ordinary: !n.fullscreen && placement.ShowCmd == 1 && arranged == 0}
-	return g, g.clientWidth > 0 && g.work.Dx() > 0
+		clientWidth: int(client.Right - client.Left), clientHeight: int(client.Bottom - client.Top), scale: float64(dpi) / 96, monitor: monitor, ordinary: !n.fullscreen && placement.ShowCmd == 1 && arranged == 0}
+	return g, g.clientWidth > 0 && g.clientHeight > 0 && g.work.Dx() > 0 && g.work.Dy() > 0
+}
+
+func (n *nativeWindow) resizeWindow(w *gioapp.Window, request windowResizeRequest) bool {
+	if n.hwnd == 0 || w == nil {
+		return false
+	}
+	changed := false
+	w.Run(func() {
+		g, ok := n.geometry()
+		if !ok || !g.ordinary {
+			return
+		}
+		width, height := g.window.Dx(), g.window.Dy()
+		switch request.axis {
+		case windowWidthAxis:
+			width += int(math.Round(float64(80*request.direction) * g.scale))
+		case windowHeightAxis:
+			height += int(math.Round(float64(48*request.direction) * g.scale))
+		}
+		width = max(width, int(math.Round(float64(minWindowWidth)*g.scale))+g.window.Dx()-g.clientWidth)
+		height = max(height, int(math.Round(360*g.scale))+g.window.Dy()-g.clientHeight)
+		r := centeredWindow(g.window, g.work, width, height)
+		if r == g.window {
+			return
+		}
+		const noActivate, noZOrder = 0x0010, 0x0004
+		if ok, _, err := setWindowPos.Call(n.hwnd, 0, uintptr(r.Min.X), uintptr(r.Min.Y), uintptr(r.Dx()), uintptr(r.Dy()), noActivate|noZOrder); ok == 0 {
+			fmt.Fprintln(os.Stderr, "cannot resize window:", err)
+			return
+		}
+		if actual, ok := n.geometry(); ok {
+			changed = actual.window != g.window
+			if changed && request.axis == windowWidthAxis {
+				n.state.rememberPanelWidth(float64(actual.clientWidth)/actual.scale, true)
+				n.alignment, n.alignmentSet = windowAlignment(actual.window, actual.work), true
+			}
+		}
+	})
+	return changed
 }
 
 // Only an explicit sizing gesture can rewrite the base width. Programmatic

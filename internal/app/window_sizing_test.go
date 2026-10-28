@@ -48,3 +48,25 @@ func TestWindowGrowthAlignmentAndClamping(t *testing.T) {
 		}
 	}
 }
+
+func TestCenteredWindowResizeAndScreenClamping(t *testing.T) {
+	work := image.Rect(-1200, 0, 0, 1000)
+	window := image.Rect(-1000, 200, -400, 600)
+	for _, tc := range []struct {
+		width, height int
+		want          image.Rectangle
+	}{
+		{800, 400, image.Rect(-1100, 200, -300, 600)},
+		{600, 600, image.Rect(-1000, 100, -400, 700)},
+		{2000, 1200, work},
+		{400, 200, image.Rect(-900, 300, -500, 500)},
+	} {
+		if got := centeredWindow(window, work, tc.width, tc.height); got != tc.want {
+			t.Fatalf("centered resize = %v, want %v", got, tc.want)
+		}
+	}
+	nearEdge := image.Rect(-1200, 0, -600, 400)
+	if got := centeredWindow(nearEdge, work, 800, 600); got != image.Rect(-1200, 0, -400, 600) {
+		t.Fatal("resize did not clamp at work-area edge", got)
+	}
+}
