@@ -141,10 +141,10 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 	send, _ := panelInputFrames(v)
 	send(key.EditEvent{Text: "@"})
 	s := v.paletteInteraction()
-	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 25 {
+	if s == nil || v.commandSearch.Text() != "@" || !s.settingsMode || len(s.results) != 26 {
 		t.Fatal("@ did not open settings-only palette")
 	}
-	for i, label := range []string{"Appearance › Font", "Appearance › Icons", "Appearance › Padding › Horizontal", "Appearance › Padding › Vertical", "Application › Data folder", "Debug › Trace mask", "Guards › Delete confirmation", "Guards › Recycle confirmation", "Interface › Animations › Location bar", "Interface › Animations › Notifications", "Interface › Sound", "Interface › Type to select", "Programs › Editors › New", "Theme › Contrast guard", "Theme › Customize colors", "Theme › Effects", "Theme › File colors", "Theme › File colors › Selection", "Theme › File colors › Special files", "Theme › Generator", "Theme › Save", "Theme › Select", "View › Metadata columns", "View › Parent entry", "View › System files"} {
+	for i, label := range []string{"Appearance › Font", "Appearance › Icons", "Appearance › Padding › Horizontal", "Appearance › Padding › Vertical", "Application › Data folder", "Debug › Trace mask", "Guards › Delete confirmation", "Guards › Recycle confirmation", "Interface › Animations › Location bar", "Interface › Animations › Notifications", "Interface › Sound", "Interface › Type to select", "Programs › Editors › New", "Theme › Contrast guard", "Theme › Customize colors", "Theme › Effects", "Theme › File colors", "Theme › File colors › Selection", "Theme › File colors › Special files", "Theme › Generator", "Theme › Save", "Theme › Select", "View › Date display", "View › Metadata columns", "View › Parent entry", "View › System files"} {
 		if got := s.results[i].command.label(); got != label {
 			t.Fatalf("settings result %d = %q; want %q", i, got, label)
 		}

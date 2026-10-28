@@ -620,6 +620,13 @@ integer = true
 [view]
 label = "View"
 
+[view.date_display]
+label = "Date display"
+title = "Date display"
+description = "Show file times relative to now, or show local times and dates."
+control = "choice"
+choices = ["Time ago", "Calendar date"]
+
 [view.metadata_columns]
 label = "Metadata columns"
 title = "Metadata columns"

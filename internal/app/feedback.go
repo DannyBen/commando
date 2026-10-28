@@ -126,7 +126,11 @@ func (v *view) panelFooter(gtx layout.Context, index, height int) layout.Dimensi
 	if !frame.Next.IsZero() {
 		gtx.Execute(op.InvalidateCmd{At: frame.Next})
 	}
-	status, _ := p.status()
+	status, _ := p.statusAt(gtx.Now, v.dateDisplay())
+	if !gtx.Now.IsZero() && !p.drives && (p.metadata == metadataModified || p.metadata == metadataCreated ||
+		p.selected >= 0 && p.selected < len(p.items) && !p.items[p.selected].file.Modified.IsZero()) {
+		gtx.Execute(op.InvalidateCmd{At: gtx.Now.Add(time.Minute)})
+	}
 	if index == v.active && p.prefix != "" {
 		status = "> " + p.prefix
 	}

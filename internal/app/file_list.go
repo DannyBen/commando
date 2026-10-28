@@ -139,7 +139,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							metadata := ""
 							item := entry{file: browser.Entry{Name: v.nameEditor.Text(), Directory: v.nameInteraction().noun() == "folder"}}
 							if storedRow >= 0 {
-								metadata = p.metadata.value(p.displayEntry(p.items[storedRow]))
+								metadata = p.metadata.valueAt(p.displayEntry(p.items[storedRow]), v.dateDisplay(), gtx.Now)
 								item = p.items[storedRow]
 							}
 							return v.withRowIcon(gtx, p, item, false, storedRow < 0, func(gtx layout.Context) layout.Dimensions {
@@ -260,7 +260,7 @@ func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor 
 		return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.Y = 0
-				metadata := mode.value(item)
+				metadata := mode.valueAt(item, v.dateDisplay(), gtx.Now)
 				if drives {
 					metadata = item.size
 				}

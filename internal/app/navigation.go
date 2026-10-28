@@ -451,7 +451,10 @@ func (p *panel) itemCount() int {
 }
 
 func (p *panel) status() (string, bool) {
-	now := time.Now()
+	return p.statusAt(time.Now(), "Calendar date")
+}
+
+func (p *panel) statusAt(now time.Time, dateDisplay string) (string, bool) {
 	if message := p.feedback.Current(); message != nil {
 		return message.Text, message.Kind == feedback.Error
 	}
@@ -508,7 +511,7 @@ func (p *panel) status() (string, bool) {
 		size = formatSize(item.file.Bytes)
 	}
 	if p.metadata != metadataModified && !item.file.Modified.IsZero() {
-		date = metadataModified.value(item)
+		date = metadataModified.valueAt(item, dateDisplay, now)
 	}
 	if size != "" && date != "" {
 		return size + " · " + date, false

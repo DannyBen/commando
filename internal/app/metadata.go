@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -113,6 +114,57 @@ func (m metadataColumn) value(item entry) string {
 	default:
 		return ""
 	}
+}
+
+func (m metadataColumn) valueAt(item entry, display string, now time.Time) string {
+	if m != metadataModified && m != metadataCreated {
+		return m.value(item)
+	}
+	if item.file.Parent || item.name == ".." || item.file.Path != "" {
+		return ""
+	}
+	return formatDate(m.date(item.file), now, display)
+}
+
+func formatDate(date, now time.Time, display string) string {
+	if date.IsZero() {
+		return "?"
+	}
+	if now.IsZero() {
+		now = time.Now()
+	}
+	if display == "Calendar date" {
+		if age := now.Sub(date); age >= 0 && age < 24*time.Hour {
+			return date.Local().Format("15:04")
+		}
+		return date.Local().Format("2006-01-02")
+	}
+	age := now.Sub(date)
+	future := age < 0
+	if future {
+		age = -age
+	}
+	if age < time.Minute {
+		return "just now"
+	}
+	var count int
+	var unit string
+	switch {
+	case age < time.Hour:
+		count, unit = int(age/time.Minute), "m"
+	case age < 24*time.Hour:
+		count, unit = int(age/time.Hour), "h"
+	case age < 30*24*time.Hour:
+		count, unit = int(age/(24*time.Hour)), "d"
+	case age < 365*24*time.Hour:
+		count, unit = int(age/(30*24*time.Hour)), "mo"
+	default:
+		count, unit = int(age/(365*24*time.Hour)), "y"
+	}
+	if future {
+		return fmt.Sprintf("in %d%s", count, unit)
+	}
+	return fmt.Sprintf("%d%s ago", count, unit)
 }
 
 func (m metadataColumn) date(file browser.Entry) time.Time {

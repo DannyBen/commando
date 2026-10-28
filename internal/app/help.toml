@@ -191,6 +191,11 @@ lines = [
   "Choose which file details are available beside filenames",
 ]
 
+["palette.settings.view.date_display"]
+lines = [
+  "Show file timestamps as time ago or local times and dates",
+]
+
 ["palette.settings.view.show_parent_entry"]
 lines = [
   "Show a .. entry for navigating to the parent folder",
@@ -714,6 +719,11 @@ lines = [
 lines = [
   "Choose which file details can appear beside filenames.",
   "Switch the detail column with [key:view.next_metadata_column]; each panel keeps its choice.",
+]
+
+["settings.view.date_display"]
+lines = [
+  "Time ago is the default. Calendar date shows the time for the last 24 hours and a date for older files.",
 ]
 
 ["settings.view.metadata_columns.extension"]

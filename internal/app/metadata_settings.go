@@ -2,7 +2,14 @@ package app
 
 import "github.com/dannyben/commando/internal/settings"
 
-const settingMetadataColumns = "view.metadata_columns"
+const (
+	settingMetadataColumns = "view.metadata_columns"
+	settingDateDisplay     = "view.date_display"
+)
+
+func (v *view) dateDisplay() string {
+	return v.settingsValues.Get(settings.CatalogueDefault, settingDateDisplay).Text
+}
 
 func (p *panel) setMetadataColumn(column metadataColumn) {
 	if column == metadataNone && p.metadata != metadataNone {

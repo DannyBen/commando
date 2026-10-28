@@ -114,6 +114,7 @@ search = 8.0
 content = 14.0
 
 [view]
+date_display = "Time ago"
 show_protected_system_files = false
 show_parent_entry = false
 
