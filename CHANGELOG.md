@@ -1,6 +1,17 @@
 Changelog
 ========================================
 
+v0.7.4 - 2026-10-28
+----------------------------------------
+
+- Remove marks when creating a new file/folder [`2cb21ec`](https://github.com/dannyben/commando/commit/2cb21ec)
+- Ctrl+Shift+C to copy filenames [`81b0cfa`](https://github.com/dannyben/commando/commit/81b0cfa)
+- Add bindings to resize window [`0d3d2d5`](https://github.com/dannyben/commando/commit/0d3d2d5)
+- Show timestamps as timeago (configurable) [`7b841c2`](https://github.com/dannyben/commando/commit/7b841c2)
+- Add search [`7b4baac`](https://github.com/dannyben/commando/commit/7b4baac)
+- Compare [`v0.7.3..v0.7.4`](https://github.com/dannyben/commando/compare/v0.7.3..v0.7.4)
+
+
 v0.7.3 - 2026-10-26
 ----------------------------------------
 
