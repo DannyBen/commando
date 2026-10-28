@@ -53,6 +53,7 @@ type panel struct {
 	refreshNeeded       bool // Coalesced notification deferred until the listing is safe.
 	err                 error
 	filter              string
+	deep                *deepFilter
 	prefix              string
 	prefixAt            time.Time
 	feedback            feedback.Channel

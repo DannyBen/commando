@@ -242,7 +242,11 @@ func (v *view) helpContextIDs() []string {
 	case *multiRenameSession:
 		ids = append(ids, "editing.multi_rename", "editing")
 	case *filterSession:
-		ids = append(ids, "editing.filter", "editing")
+		if v.filterInteraction().deep {
+			ids = append(ids, "editing.deep_filter", "editing")
+		} else {
+			ids = append(ids, "editing.filter", "editing")
+		}
 	case *inlineActionSession:
 		if s.navigate != nil {
 			if len(s.options) > 1 {
@@ -363,6 +367,8 @@ func (v *view) escape(gtx layout.Context) {
 		p := &v.panels[v.active]
 		if p.prefix != "" {
 			p.prefix = ""
+		} else if p.deep != nil {
+			v.clearDeepSearch(v.active)
 		} else if p.filter != "" {
 			p.setFilter("")
 		} else {

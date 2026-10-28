@@ -3,6 +3,7 @@ package app
 import (
 	"image"
 	"image/color"
+	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/text"
@@ -80,6 +81,9 @@ func (v *view) multiRenameRow(gtx layout.Context, panel int, item entry, nameCol
 	s := v.multiRenameInteraction()
 	if s == nil || s.panel != panel {
 		item = v.panels[panel].displayEntry(item)
+		if d := v.panels[panel].deep; d != nil && strings.Contains(strings.ToLower(item.file.Name), strings.ToLower(d.query)) {
+			return v.deepRowContents(gtx, item, nameColor, metadataColor, v.panels[panel].metadata, roles, d.query)
+		}
 		return v.rowContents(gtx, item, nameColor, metadataColor, v.panels[panel].metadata, roles, v.panels[panel].drives)
 	}
 	bad := s.invalid[item.file.Name]

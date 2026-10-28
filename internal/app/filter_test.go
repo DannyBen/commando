@@ -52,7 +52,7 @@ func TestFilterFromPalette(t *testing.T) {
 	v := newPreviewView()
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
-	send(replacePalette(v, "Filter files"), pressed(key.NameReturn))
+	send(replacePalette(v, "Filter"), pressed(key.NameReturn))
 	if v.filterInteraction() == nil || v.filterEditor.Text() != "" {
 		t.Fatal("palette did not open the filter without an invocation text event")
 	}

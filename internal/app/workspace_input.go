@@ -16,6 +16,7 @@ func (v *view) update(gtx layout.Context) {
 	defer v.dismissUnhandledFeedbackKeys(gtx)
 	v.pollNative(gtx)
 	v.pollLoads()
+	v.resumeDeepSearches()
 	v.expireFolderSizes(time.Now())
 	v.pollFeedback()
 	if v.interaction.focusPending {

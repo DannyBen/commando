@@ -129,7 +129,7 @@ func TestMetadataSortKeysAndPalette(t *testing.T) {
 	if v.panels[0].metadata != metadataExtension || !slices.Equal(visibleNames(&v.panels[0])[5:7], []string{".env", "readme"}) {
 		t.Fatal("showing metadata did not resume sorting")
 	}
-	send(key.Event{Name: key.NameF3, Modifiers: key.ModCtrl, State: key.Release}, pressed(key.NameF3), modified(key.NameF3, key.ModCtrl|key.ModShift))
+	send(key.Event{Name: key.NameF3, Modifiers: key.ModCtrl, State: key.Release}, modified(key.NameF3, key.ModCtrl|key.ModShift))
 	if !v.panels[0].sortByMetadata {
 		t.Fatal("key release or another modifier toggled sorting")
 	}

@@ -92,6 +92,8 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) (accepted bo
 		v.refreshPanel()
 	case "view.filter_files":
 		v.startFilter(gtx)
+	case "view.deep_filter":
+		v.startDeepFilter(gtx)
 	case "view.hidden_files":
 		v.cycleVisibility()
 	case "view.next_metadata_column", "view.previous_metadata_column":

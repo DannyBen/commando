@@ -38,7 +38,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				if preview.textSelection {
 					return v.themePreviewSelection(gtx)
 				}
-				if p.filter != "" || v.filterInteraction() != nil && v.filterInteraction().panel == index {
+				if p.filter != "" || p.deep != nil || v.filterInteraction() != nil && v.filterInteraction().panel == index {
 					return v.filterContents(gtx, index)
 				}
 				heading := p.metadataSortHeading()
@@ -185,6 +185,13 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 func (v *view) emptyFolderContents(gtx layout.Context, index, rowHeight int) {
 	p := &v.panels[index]
 	label := p.emptyFolderLabel()
+	if d := p.deep; d != nil && d.searching {
+		due := d.started.Add(v.appearance.FeedbackProgressDelay)
+		if gtx.Now.Before(due) {
+			gtx.Execute(op.InvalidateCmd{At: due})
+			return
+		}
+	}
 	if label == "" {
 		return
 	}
@@ -203,6 +210,12 @@ func (v *view) emptyFolderContents(gtx layout.Context, index, rowHeight int) {
 }
 
 func (p *panel) emptyFolderLabel() string {
+	if p.deep != nil {
+		if p.deep.searching {
+			return "Searching…"
+		}
+		return "No matching entries"
+	}
 	if p.showParentEntry || p.drives || p.loading || p.err != nil || p.path == "" || len(p.items) != 0 {
 		return ""
 	}

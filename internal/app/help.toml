@@ -1373,6 +1373,12 @@ lines = [
   "Keep only filenames containing the text you enter",
 ]
 
+["palette.view.deep_filter"]
+lines = [
+  "Search this folder and its descendants for names containing your text",
+  "Enter starts the scan; Escape restores the ordinary folder view.",
+]
+
 ["palette.view.hidden_files"]
 lines = [
   "Switch between showing all files, hiding hidden files, and hiding dotfiles too",
@@ -1434,6 +1440,12 @@ lines = [
 lines = [
   "Show only filenames containing this text, ignoring letter case.",
   "Enter keeps the filter and returns to browsing; Escape clears it.",
+]
+
+["editing.deep_filter"]
+lines = [
+  "Enter starts a recursive name search without changing the list while typing.",
+  "Escape cancels the draft; Escape while browsing clears the search.",
 ]
 
 ["actions"]

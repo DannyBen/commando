@@ -124,11 +124,19 @@ func (v *view) choosePalette(gtx layout.Context) {
 		return
 	}
 	if command.paletteQuery != "" {
+		for i := range v.panels {
+			v.clearDeepSearch(i)
+		}
 		v.executeCommand(gtx, command)
 		return
 	}
 	// Dispatch is a handoff, not a user closing the palette.
 	v.interaction.finish(s)
+	if command.id != "view.deep_filter" {
+		for i := range v.panels {
+			v.clearDeepSearch(i)
+		}
+	}
 	v.dismissFeedback()
 	v.executeCommand(gtx, command)
 	if widget := v.settingsInteraction(); s.settingsMode && widget != nil {

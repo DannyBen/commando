@@ -52,6 +52,7 @@ type loadRequest struct {
 	driveSpace         *driveSpaceRequest
 	completion         *locationSession
 	fileDraft          *fileDraftRequest
+	deepSearch         *deepSearchRequest
 	themeLibrary       *settingsSession
 	icons              []fileIconKey
 }
@@ -88,6 +89,9 @@ type loadResult struct {
 	externalOpen             bool
 	fontFamilies             []string
 	pathMissing              bool
+	deepMatches              []string
+	deepDone                 bool
+	deepDirs                 []string
 	themes                   []themeSnapshot
 	icons                    []image.Image
 }
@@ -168,6 +172,10 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			case <-l.done:
 				return
 			case request := <-l.requests:
+				if request.deepSearch != nil {
+					l.runDeepSearch(request)
+					continue
+				}
 				group, name := request.traceKind()
 				id := diagnostics.NextID()
 				started := time.Now()

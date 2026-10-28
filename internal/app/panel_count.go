@@ -34,6 +34,10 @@ func (p panel) clone() panel {
 	p.prefix = ""
 	p.err = nil
 	p.reveal, p.loading, p.refreshing, p.refreshNeeded = false, false, false, false
+	if p.deep != nil {
+		p.deep = nil
+		p.refilter()
+	}
 	return p
 }
 
@@ -81,6 +85,7 @@ func (v *view) closePanel() {
 		return
 	}
 	index := v.active
+	v.clearDeepSearch(index)
 	closed := closedPanel{panel: v.panels[index], index: index, clipboardSequence: v.cutClipboard.Sequence}
 	if index < len(v.cutPanelPaths) {
 		closed.cutPath = v.cutPanelPaths[index]

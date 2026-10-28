@@ -241,7 +241,7 @@ func TestShortcutCaptureUsesTypedSymbolsForSpecialBindings(t *testing.T) {
 		press       key.Event
 	}{
 		{"Application Settings", "@", modified("2", key.ModShift)},
-		{"Filter files", "/", pressed("/")},
+		{"Filter", "/", pressed("/")},
 		{"Command palette", "`", pressed("`")},
 	} {
 		t.Run(tc.query, func(t *testing.T) {

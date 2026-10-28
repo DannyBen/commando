@@ -122,7 +122,11 @@ func (v *view) feedbackLabel(gtx layout.Context, content string, foreground colo
 
 func (v *view) panelFooter(gtx layout.Context, index, height int) layout.Dimensions {
 	p := &v.panels[index]
-	frame, ownsFooter := p.feedback.Frame(gtx.Now, v.appearance.Feedback)
+	channel := &p.feedback
+	if p.deep != nil && p.deep.searching {
+		channel = &p.deep.progress
+	}
+	frame, ownsFooter := channel.Frame(gtx.Now, v.appearance.Feedback)
 	if !frame.Next.IsZero() {
 		gtx.Execute(op.InvalidateCmd{At: frame.Next})
 	}

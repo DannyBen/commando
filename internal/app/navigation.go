@@ -114,6 +114,10 @@ func (v *view) pollLoads() {
 
 func (v *view) acceptLoad(result loadResult) {
 	defer v.beginSoundAction()()
+	if result.request.deepSearch != nil {
+		v.acceptDeepSearch(result)
+		return
+	}
 	if result.request.driveSpace != nil {
 		v.acceptDriveSpace(result)
 		return
@@ -235,6 +239,9 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	p.feedback.Complete()
+	if p.deep != nil && (result.directory.ArchiveFolder != "" || !deepContains(p.deep.root, result.directory.Path)) {
+		v.clearDeepSearch(result.request.panel)
+	}
 	refresh := result.request.refresh && p.sameLocation(result.directory)
 	if !p.sameLocation(result.directory) {
 		p.refreshNeeded = false

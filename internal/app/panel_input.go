@@ -197,6 +197,7 @@ func (v *view) submitLocation(gtx layout.Context) {
 	}
 	// Submission hands audio ownership to navigation; cancellation still uses
 	// stopLocation and the shared close cue.
+	v.clearDeepSearch(v.active)
 	v.interaction.finish(v.interaction.current)
 	v.focusInteraction(gtx)
 	v.queueLoad(loadRequest{panel: v.active, path: path, suggestedPath: suggestedPath, favoriteName: favoriteName, favoritesDirectory: v.favoritesDirectory(), explicitPath: true})

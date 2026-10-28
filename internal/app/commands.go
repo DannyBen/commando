@@ -118,7 +118,8 @@ func defaultCommands() []command {
 		cmd("navigation.page_down", "Navigation", "Page down", key.NamePageDown, 0, nil),
 
 		cmd("view.refresh", "View", "Refresh", "R", key.ModCtrl, func(v *view) bool { return panelReady(v) && v.loader != nil }),
-		cmd("view.filter_files", "View", "Filter files…", "/", 0, folderReady),
+		cmd("view.filter_files", "View", "Filter…", "/", 0, folderReady),
+		cmd("view.deep_filter", "View", "Search…", "*", 0, func(v *view) bool { return folderReady(v) && v.loader != nil && v.panels[v.active].nativeFolder() }),
 		cmd("view.hidden_files", "View", "Hidden files", "H", key.ModCtrl, folderReady),
 		toggleSettingCommand("view.toggle_parent_entry", "View", "parent entry", settingParentEntry),
 		toggleSettingCommand("view.toggle_protected_system_files", "View", "protected system files", settingProtectedSystem),
@@ -176,6 +177,8 @@ func defaultCommands() []command {
 	for i := range catalogue {
 		c := &catalogue[i]
 		switch c.id {
+		case "view.deep_filter":
+			c.bindings[1].Default = shortcut{Name: key.NameF3}
 		case "application.increase_width", "application.increase_height":
 			c.bindings[1].Default = shortcut{Name: "+", Modifiers: c.bindings[0].Default.Modifiers}
 		case "panel.increase_size":
@@ -304,6 +307,9 @@ func (v *view) executeCommand(gtx layout.Context, c command) {
 	}
 	if !c.allowed(v) {
 		return
+	}
+	if c.group == "Entry" && c.id != "entry.open" {
+		v.clearDeepSearch(v.active)
 	}
 	defer v.beginSoundAction()()
 	before := false

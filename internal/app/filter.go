@@ -1,6 +1,7 @@
 package app
 
 import (
+	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
@@ -14,6 +15,7 @@ import (
 // The query belongs to the panel; only editing it owns a foreground session.
 type filterSession struct {
 	panel int
+	deep  bool
 }
 
 func (s *filterSession) interactionPanel() int { return s.panel }
@@ -33,6 +35,9 @@ func (p *panel) shows(file browser.Entry) bool {
 		copy.System = false
 		visible = p.visibility.shows(copy)
 	}
+	if p.deep != nil {
+		return visible && p.deep.includes(filepath.Join(p.path, file.Name))
+	}
 	return visible && (file.Parent || p.filter == "" ||
 		strings.Contains(strings.ToLower(file.Name), strings.ToLower(p.filter)))
 }
@@ -51,9 +56,21 @@ func (v *view) startFilter(gtx layout.Context) {
 		return
 	}
 	p := &v.panels[v.active]
+	if p.deep != nil {
+		v.clearDeepSearch(v.active)
+	}
 	p.prefix = ""
 	v.filterEditor.SetText(p.filter)
 	v.filterEditor.SetCaret(0, utf8.RuneCountInString(p.filter))
+	v.focusInteraction(gtx)
+}
+
+func (v *view) startDeepFilter(gtx layout.Context) {
+	if !folderReady(v) || v.loader == nil || !v.panels[v.active].nativeFolder() || !v.startInteraction(&filterSession{panel: v.active, deep: true}) {
+		return
+	}
+	v.panels[v.active].prefix = ""
+	v.filterEditor.SetText("")
 	v.focusInteraction(gtx)
 }
 
@@ -74,7 +91,9 @@ func (v *view) updateFilterText(gtx layout.Context) {
 	}
 	query := v.filterEditor.Text()
 
-	v.panels[s.panel].setFilter(query)
+	if !s.deep {
+		v.panels[s.panel].setFilter(query)
+	}
 }
 
 func (v *view) updateFilter(gtx layout.Context) {
@@ -130,9 +149,20 @@ func (v *view) updateFilter(gtx layout.Context) {
 		}
 		switch ke.Name {
 		case key.NameEscape:
-			v.escape(gtx)
+			if s := v.filterInteraction(); s != nil && s.deep {
+				v.clearDeepSearch(s.panel)
+				v.stopFilter(gtx)
+			} else {
+				v.escape(gtx)
+			}
 			return
 		case key.NameReturn, key.NameEnter:
+			if s := v.filterInteraction(); s != nil && s.deep {
+				query := strings.TrimSpace(v.filterEditor.Text())
+				if query != "" {
+					v.startDeepSearch(s.panel, query)
+				}
+			}
 			v.stopFilter(gtx)
 			return
 		case key.NameUpArrow, key.NameDownArrow:
@@ -161,11 +191,19 @@ func (v *view) filterContents(gtx layout.Context, index int) layout.Dimensions {
 	}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return v.label(gtx, "/ ", v.appearance.SmallTextSize, fg, text.Start)
+			prompt := "/ "
+			if s := v.filterInteraction(); s != nil && s.panel == index && s.deep || p.deep != nil {
+				prompt = "* "
+			}
+			return v.label(gtx, prompt, v.appearance.SmallTextSize, fg, text.Start)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			if s := v.filterInteraction(); s != nil && s.panel == index {
-				editor := v.textEditor(&v.filterEditor, "Filter files")
+				hint := "Filter"
+				if s.deep {
+					hint = "Search"
+				}
+				editor := v.textEditor(&v.filterEditor, hint)
 				editor.TextSize = v.appearance.SmallTextSize
 				if v.followMe {
 					editor.Color = v.resolvedText(fg)
@@ -174,7 +212,11 @@ func (v *view) filterContents(gtx layout.Context, index int) layout.Dimensions {
 				}
 				return editor.Layout(gtx)
 			}
-			return v.label(gtx, p.filter, v.appearance.SmallTextSize, fg, text.Start)
+			query := p.filter
+			if p.deep != nil {
+				query = p.deep.query
+			}
+			return v.label(gtx, query, v.appearance.SmallTextSize, fg, text.Start)
 		}),
 	)
 }
