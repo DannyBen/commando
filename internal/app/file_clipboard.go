@@ -24,11 +24,27 @@ func (v *view) copySelectedPaths(gtx layout.Context) {
 			paths[i] = p.location().Child(name).String()
 		}
 	}
-	gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(strings.Join(paths, "\n")))})
 	message := "Path copied"
 	if len(paths) > 1 {
 		message = fmt.Sprintf("%d paths copied", len(paths))
 	}
+	v.copySelectionText(gtx, paths, message)
+}
+
+func (v *view) copySelectedFilenames(gtx layout.Context) {
+	if !v.interaction.idle() || !textClipboardReady(v) {
+		return
+	}
+	names := v.panels[v.active].selectedNames()
+	message := "Filename copied"
+	if len(names) > 1 {
+		message = fmt.Sprintf("%d filenames copied", len(names))
+	}
+	v.copySelectionText(gtx, names, message)
+}
+
+func (v *view) copySelectionText(gtx layout.Context, values []string, message string) {
+	gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(strings.Join(values, "\n")))})
 	v.showFeedback(v.active, feedback.Success, message)
 }
 

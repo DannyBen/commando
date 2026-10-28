@@ -20,6 +20,8 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) (accepted bo
 		v.startName(gtx, nameRename)
 	case "entry.copy":
 		v.clipboardSelected(false)
+	case "entry.copy_filenames":
+		v.copySelectedFilenames(gtx)
 	case "entry.copy_paths":
 		v.copySelectedPaths(gtx)
 	case "entry.cut":

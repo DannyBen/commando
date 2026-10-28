@@ -222,7 +222,7 @@ func TestPaletteOpeningDoesNotInsertBacktick(t *testing.T) {
 		t.Fatalf("opening inserted text: %q", v.commandSearch.Text())
 	}
 	send(key.EditEvent{Text: "rename"})
-	if s := v.paletteInteraction(); s == nil || s.query != "rename" || len(s.results) != 1 {
+	if s := v.paletteInteraction(); s == nil || s.query != "rename" || len(s.results) == 0 || s.results[0].command.id != "entry.rename" {
 		t.Fatal("opening swallowed subsequent search input")
 	}
 }

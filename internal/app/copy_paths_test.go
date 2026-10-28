@@ -47,7 +47,7 @@ func TestArchiveCopyPathsAndLocationRoundTrip(t *testing.T) {
 				send(replacePalette(v, "Entry Copy paths"))
 				send(pressed(key.NameReturn))
 			} else {
-				send(modified("C", key.ModCtrl|key.ModShift))
+				send(modified("C", key.ModCtrl|key.ModAlt))
 			}
 			mime, data, ok := router.WriteClipboard()
 			if !ok || mime != "application/text" || string(data) != strings.Join(want, "\n") {
@@ -103,7 +103,7 @@ func TestCopyPathsCurrentMarksAndPalette(t *testing.T) {
 				}
 				send(pressed(key.NameReturn))
 			} else {
-				send(modified("C", key.ModCtrl|key.ModShift))
+				send(modified("C", key.ModCtrl|key.ModAlt))
 			}
 			mime, data, ok := router.WriteClipboard()
 			if !ok || mime != "application/text" || string(data) != want {
@@ -141,13 +141,13 @@ func TestCopyPathsExcludedRowsBusyEditorsAndKeyRelease(t *testing.T) {
 		case "editor":
 			send(modified("D", key.ModAlt))
 		case "release":
-			send(key.Event{Name: "C", State: key.Release, Modifiers: key.ModCtrl | key.ModShift})
+			send(key.Event{Name: "C", State: key.Release, Modifiers: key.ModCtrl | key.ModAlt})
 			if _, _, ok := router.WriteClipboard(); ok {
 				t.Fatal("release copied paths")
 			}
 			continue
 		}
-		send(modified("C", key.ModCtrl|key.ModShift))
+		send(modified("C", key.ModCtrl|key.ModAlt))
 		if _, _, ok := router.WriteClipboard(); ok {
 			t.Fatalf("%s copied paths", mode)
 		}
@@ -162,7 +162,7 @@ func TestCopyPathsReplacesCutAppearanceThroughClipboardSequence(t *testing.T) {
 	v.cutClipboard = browser.FileClipboard{Move: true, Sequence: 10, Paths: p.selectedPaths()}
 	v.clipboardSequence = func() uint32 { return 10 }
 	router, send := clipboardFrames(v)
-	send(modified("C", key.ModCtrl|key.ModShift))
+	send(modified("C", key.ModCtrl|key.ModAlt))
 	if _, _, ok := router.WriteClipboard(); !ok {
 		t.Fatal("paths did not replace the clipboard")
 	}

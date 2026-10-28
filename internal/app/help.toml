@@ -1036,6 +1036,11 @@ lines = [
   "Copy marked entries or the current entry to the folder on the left",
 ]
 
+["palette.entry.copy_filenames"]
+lines = [
+  "Copy the filenames of marked entries or the current entry as text",
+]
+
 ["palette.entry.copy_paths"]
 lines = [
   "Copy the full paths of marked entries or the current entry as text",

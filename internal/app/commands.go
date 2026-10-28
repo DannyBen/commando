@@ -70,7 +70,8 @@ func defaultCommands() []command {
 		cmd("entry.open", "Entry", "Open", key.NameReturn, 0, openReady),
 		cmd("entry.rename", "Entry", "Rename…", key.NameF2, 0, renameReady),
 		cmd("entry.copy", "Entry", "Copy", "C", key.ModCtrl, copyReady),
-		cmd("entry.copy_paths", "Entry", "Copy paths", "C", key.ModCtrl|key.ModShift, textClipboardReady),
+		cmd("entry.copy_filenames", "Entry", "Copy filenames", "C", key.ModCtrl|key.ModShift, textClipboardReady),
+		cmd("entry.copy_paths", "Entry", "Copy paths", "C", key.ModCtrl|key.ModAlt, textClipboardReady),
 		cmd("entry.cut", "Entry", "Cut", "X", key.ModCtrl, clipboardReady),
 		cmd("entry.paste", "Entry", "Paste", "V", key.ModCtrl, pasteReady),
 		cmd("entry.paste_shortcut", "Entry", "Paste shortcut", "V", key.ModCtrl|key.ModShift, mutationReady),
@@ -204,7 +205,7 @@ func defaultCommands() []command {
 			*c = c.withSound(eventWidgetClosed)
 		case "application.open_data_folder", "application.toggle_full_screen":
 			c.soundEvent = eventSoundOwned
-		case "file.edit", "entry.open", "entry.rename", "entry.copy", "entry.copy_paths", "entry.cut",
+		case "file.edit", "entry.open", "entry.rename", "entry.copy", "entry.copy_filenames", "entry.copy_paths", "entry.cut",
 			"entry.paste", "entry.paste_shortcut", "entry.duplicate", "entry.pack_zip", "entry.unpack_zip",
 			"entry.copy_to_panel", "entry.move_to_panel", "entry.copy_left", "entry.copy_right", "entry.move_left", "entry.move_right",
 			"entry.recycle", "entry.delete_permanently", "entry.new_file", "entry.new_folder", "entry.context_menu", "entry.properties",
