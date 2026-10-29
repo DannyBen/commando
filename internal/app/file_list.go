@@ -277,7 +277,7 @@ func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor 
 				if drives {
 					metadata = item.size
 				}
-				return v.columns(gtx, entry{name: mode.displayName(item), size: metadata}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata, item.file.Directory && !item.file.Parent && !drives)
+				return v.columns(gtx, entry{name: mode.displayName(item), size: metadata}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata, item.file.Directory && !item.file.Parent && !drives, drives)
 			})
 		})
 	})(gtx)

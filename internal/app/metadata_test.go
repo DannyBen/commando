@@ -178,3 +178,22 @@ func TestTrailingMetadataUsesEachRowsContentWidth(t *testing.T) {
 		}
 	}
 }
+
+func TestDriveMetadataGivesLetterPriority(t *testing.T) {
+	v := newPreviewView()
+	var ops op.Ops
+	gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(100, 30))}
+	nameTruncated, metadataTruncated := false, false
+	label := func(value string, truncated *bool) layout.Widget {
+		return func(gtx layout.Context) layout.Dimensions {
+			dims, info := (widget.Label{MaxLines: 1}).LayoutDetailed(gtx, v.theme.Shaper,
+				font.Font{Typeface: v.theme.Face}, 16, value, op.CallOp{})
+			*truncated = info.Truncated != 0
+			return dims
+		}
+	}
+	v.nameFirstLayout(gtx, label(`C:\`, &nameTruncated), label("478.1 GB / 1.8 TB", &metadataTruncated))
+	if nameTruncated || !metadataTruncated {
+		t.Fatalf("narrow drive row truncated name=%v metadata=%v", nameTruncated, metadataTruncated)
+	}
+}

@@ -126,16 +126,20 @@ func (v *view) headerBand(gtx layout.Context, height int, bg color.NRGBA, conten
 	return layout.Dimensions{Size: size}
 }
 
-func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, metadataRole contrastRole, boldName bool) layout.Dimensions {
+func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, metadataRole contrastRole, boldName, prioritizeName bool) layout.Dimensions {
 	var metadata layout.Widget
 	if item.size != "" {
 		metadata = func(gtx layout.Context) layout.Dimensions {
 			return v.labelFor(metadataRole, gtx, item.size, size, secondary, text.End)
 		}
 	}
-	return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
+	name := func(gtx layout.Context) layout.Dimensions {
 		return v.labelStyle(item.name, size, v.resolvedText(fg), text.Start, boldName).Layout(gtx)
-	}, metadata)
+	}
+	if prioritizeName && metadata != nil {
+		return v.nameFirstLayout(gtx, name, metadata)
+	}
+	return v.trailingLayout(gtx, name, metadata)
 }
 
 func (v *view) columnLayout(gtx layout.Context, width int, name, metadata layout.Widget) layout.Dimensions {
@@ -160,6 +164,16 @@ func (v *view) trailingLayout(gtx layout.Context, name, metadata layout.Widget) 
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Flexed(1, name),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Left: unit.Dp(8)}.Layout(gtx, metadata)
+		}),
+	)
+}
+
+// Drive letters remain readable when their free/total space label is long.
+func (v *view) nameFirstLayout(gtx layout.Context, name, metadata layout.Widget) layout.Dimensions {
+	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+		layout.Rigid(name),
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: unit.Dp(8)}.Layout(gtx, metadata)
 		}),
 	)
