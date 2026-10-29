@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f3ef">
+    <title>Commando — Multi-panel file manager for Windows</title>
+    <meta name="description" content="Commando is a multi-panel file manager for Windows, with obsessive keyboard support, discoverable shortcuts, and a customizable workspace.">
+    <script>
+      try {
+        const saved = localStorage.getItem('commando-site-theme');
+        document.documentElement.dataset.theme = saved === 'light' || saved === 'dark'
+          ? saved : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      } catch {
+        document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+    </script>
+    <link rel="stylesheet" href="style.css">
+    <script src="features.js" defer></script>
+    <script src="site.js" defer></script>
+  </head>
+  <body>
+    <main class="page" id="top">
+      <div class="site-bar">
+        <h1>Commando <span class="separator" aria-hidden="true">/</span> Multi-panel file manager for Windows</h1>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme"><span class="theme-icon" aria-hidden="true"></span><span class="theme-name"></span></button>
+      </div>
+
+      <header class="hero">
+        <img class="logo" id="brand-logo" src="assets/logo-light.svg" alt="Commando" width="779" height="314">
+        <p class="tagline">The file terminal for power users with mouse issues.</p>
+        <p class="intro">Commando is a multi-panel file manager for Windows, with obsessive keyboard support, shortcuts you can actually discover, and a workspace you can make your own.</p>
+        <!-- Icons from GitHub Primer Octicons; see assets/octicons-license.txt. -->
+        <div class="hero-actions">
+          <div class="hero-action">
+            <a class="button primary" id="download-link" href="https://github.com/DannyBen/commando/releases/latest" aria-describedby="download-note"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M4.75 17.25a.75.75 0 0 1 .75.75v2.25c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V18a.75.75 0 0 1 1.5 0v2.25A1.75 1.75 0 0 1 18.25 22H5.75A1.75 1.75 0 0 1 4 20.25V18a.75.75 0 0 1 .75-.75Z"/><path d="M5.22 9.97a.749.749 0 0 1 1.06 0l4.97 4.969V2.75a.75.75 0 0 1 1.5 0v12.189l4.97-4.969a.749.749 0 1 1 1.06 1.06l-6.25 6.25a.749.749 0 0 1-1.06 0l-6.25-6.25a.749.749 0 0 1 0-1.06Z"/></svg><span>Download</span></a>
+            <span class="action-note" id="download-note">Latest ZIP</span>
+          </div>
+          <div class="hero-action">
+            <a class="button secondary" href="https://github.com/DannyBen/commando" aria-describedby="source-note"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10.226 17.284c-2.965-.36-5.054-2.493-5.054-5.256 0-1.123.404-2.336 1.078-3.144-.292-.741-.247-2.314.09-2.965.898-.112 2.111.36 2.83 1.01.853-.269 1.752-.404 2.853-.404 1.1 0 1.999.135 2.807.382.696-.629 1.932-1.1 2.83-.988.315.606.36 2.179.067 2.942.72.854 1.101 2 1.101 3.167 0 2.763-2.089 4.852-5.098 5.234.763.494 1.28 1.572 1.28 2.807v2.336c0 .674.561 1.056 1.235.786 4.066-1.55 7.255-5.615 7.255-10.646C23.5 6.188 18.334 1 11.978 1 5.62 1 .5 6.188.5 12.545c0 4.986 3.167 9.12 7.435 10.669.606.225 1.19-.18 1.19-.786V20.63a2.9 2.9 0 0 1-1.078.224c-1.483 0-2.359-.808-2.987-2.313-.247-.607-.517-.966-1.034-1.033-.27-.023-.359-.135-.359-.27 0-.27.45-.471.898-.471.652 0 1.213.404 1.797 1.235.45.651.921.943 1.483.943.561 0 .92-.202 1.437-.719.382-.381.674-.718.944-.943"/></svg><span>Source code</span></a>
+            <span class="action-note" id="source-note">on GitHub</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="content-section cinema" aria-labelledby="panels-title">
+        <div class="section-heading">
+          <p class="eyebrow">01 / Highlights / Multi-panel</p>
+          <h2 id="panels-title">One panel or many</h2>
+          <p>Open several folders side by side, each with its own selection, marks, and view.</p>
+        </div>
+        <figure class="movie">
+          <video autoplay muted loop playsinline preload="auto" src="assets/panels-light.mp4" poster="assets/panels-light.jpg" data-light-src="assets/panels-light.mp4" data-dark-src="assets/panels-dark.mp4" data-light-poster="assets/panels-light.jpg" data-dark-poster="assets/panels-dark.jpg" aria-label="Commando expanding and rearranging file panels">Your browser does not support video playback.</video>
+          <figcaption>Use shortcuts to <strong>add, close, or resize panels</strong> as you work. <strong>Copy and move files</strong> directly between panels. Turn on <strong>Follow Me</strong> to synchronize browsing and selections.</figcaption>
+        </figure>
+      </section>
+
+      <section class="content-section cinema" aria-labelledby="themes-title">
+        <div class="section-heading">
+          <p class="eyebrow">02 / Highlights / Themes</p>
+          <h2 id="themes-title">Deep customization, made easy</h2>
+          <p>Generate new palettes effortlessly, from quiet neutrals to unapologetic neon vibes.</p>
+        </div>
+        <figure class="movie">
+          <video autoplay muted loop playsinline preload="auto" src="assets/themes-light.mp4" poster="assets/themes-light.jpg" data-light-src="assets/themes-light.mp4" data-dark-src="assets/themes-dark.mp4" data-light-poster="assets/themes-light.jpg" data-dark-poster="assets/themes-dark.jpg" aria-label="Commando generating and adjusting themes">Your browser does not support video playback.</video>
+          <figcaption>Start with the <strong>theme generator</strong>, then fine-tune individual colors. Choose your <strong>font family and size</strong>, adjust spacing, enable <strong>automatic file colors</strong>, and show or hide icons and metadata columns.</figcaption>
+        </figure>
+      </section>
+
+      <section class="content-section cinema" aria-labelledby="commands-title">
+        <div class="section-heading">
+          <p class="eyebrow">03 / Highlights / Keyboard</p>
+          <h2 id="commands-title">Designed for keyboard control</h2>
+          <p>Navigation, selection, filtering, and file operations all work from the keyboard.</p>
+        </div>
+        <figure class="movie">
+          <video autoplay muted loop playsinline preload="auto" src="assets/commands-light.mp4" poster="assets/commands-light.jpg" data-light-src="assets/commands-light.mp4" data-dark-src="assets/commands-dark.mp4" data-light-poster="assets/commands-light.jpg" data-dark-poster="assets/commands-dark.jpg" aria-label="Commando searching its command palette and customizing shortcuts">Your browser does not support video playback.</video>
+          <figcaption>Work <strong>entirely from the keyboard</strong>—navigate, select, manage files, and change settings. The <strong>command palette</strong> shows available commands and shortcuts; <strong>edit bindings in place</strong> or search by name instead of memorizing them.</figcaption>
+        </figure>
+      </section>
+
+      <section class="content-section features" id="features" aria-labelledby="features-title">
+        <div class="section-heading">
+          <p class="eyebrow">04 / Features</p>
+          <h2 id="features-title">Find what you can do.</h2>
+          <p>The same commands and settings you can find inside Commando.</p>
+        </div>
+        <div class="feature-palette">
+          <div class="palette-header">
+            <div class="search-bar">
+              <span class="search-icon" aria-hidden="true">⌕</span>
+              <label class="visually-hidden" for="feature-search">Search features</label>
+              <input id="feature-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search features, commands, settings…">
+              <kbd aria-label="Press slash to search">/</kbd>
+            </div>
+            <div class="results-bar"><span>FEATURES</span><span id="result-count" aria-live="polite"></span></div>
+          </div>
+          <ul class="feature-list" id="feature-list"></ul>
+          <p class="empty-state" id="empty-state" hidden>No matching features. Try another term.</p>
+        </div>
+      </section>
+      <footer class="site-footer">
+        <span>Commando for Windows</span>
+        <nav aria-label="Footer">
+          <a id="footer-download-link" href="https://github.com/DannyBen/commando/releases/latest">Download</a>
+          <a href="https://github.com/DannyBen/commando">Source code</a>
+          <a href="#top">Back to top ↑</a>
+        </nav>
+      </footer>
+    </main>
+  </body>
+</html>
