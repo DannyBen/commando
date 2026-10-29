@@ -76,6 +76,7 @@ try {
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   document.querySelector('#brand-logo').src = `assets/logo-${theme}.svg`;
+  document.querySelector('#overview-image').src = `assets/overview-${theme}.png`;
   document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0b0d12' : '#f5f3ef';
   themeToggle.querySelector('.theme-icon').textContent = theme === 'dark' ? '☾' : '☀';
   themeToggle.querySelector('.theme-name').textContent = `${theme === 'dark' ? 'Dark' : 'Light'} theme`;
