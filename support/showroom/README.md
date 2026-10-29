@@ -2,7 +2,9 @@
 
 Generate Commando showcase screenshots, video masters, MP4 previews and GIFs
 from scripted scenes. Configuration lives in `config/`; generated files stay in
-the locally ignored `out/` directory.
+the locally ignored `out/` directory. Run `showroom publish` after capturing and
+encoding to copy the overview screenshots, MP4 previews, and JPEG posters into
+`../../site/assets/`. The site owns its logo and social image separately.
 
 ## Dependencies
 
@@ -23,4 +25,12 @@ External executables must be available on `PATH`.
 
 ```sh
 showroom --help
+showroom shot overview
+showroom shot panels
+showroom shot themes
+showroom shot commands
+showroom vid panels
+showroom vid themes
+showroom vid commands
+showroom publish
 ```

@@ -4,6 +4,7 @@ density 2
 
 # A working three-panel backdrop, with the current file away from the edges.
 press 'Esc'
+press 'F1'
 press 'Ctrl+Shift+M'
 press 'Home'
 press 'Down', times: 8

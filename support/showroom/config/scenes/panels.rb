@@ -2,6 +2,7 @@
 
 # Multi-panel. Because two is never enough.
 # Start with the familiar two-panel layout, then bring Downloads into the job.
+press 'F1'
 press 'Right'
 press 'Ctrl+W'
 wait 400

@@ -2,6 +2,7 @@
 
 # Keep the same working view behind the generator throughout the sequence.
 press 'Esc'
+press 'F1'
 press 'Ctrl+Shift+M'
 press 'Home'
 press 'Down', times: 8

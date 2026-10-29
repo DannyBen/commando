@@ -4,6 +4,7 @@ require 'docopt_ng'
 require_relative 'runner'
 require_relative 'video'
 require_relative 'gif'
+require_relative 'publish'
 
 module Showroom
   # Docopt owns help and argument validation; commands dispatch independently.
@@ -15,12 +16,14 @@ module Showroom
         showroom shot [SCENE]
         showroom vid [SCENE]
         showroom gif [SCENE]
+        showroom publish
         showroom (-h | --help)
 
       Commands:
         shot   Capture screenshots using the Go renderer.
         vid    Assemble existing screenshots; never runs the renderer.
         gif    Convert existing video masters using Gifski.
+        publish  Copy current showcase media to the site.
 
       Arguments:
         SCENE  Scene name without an extension [default: workspace].
@@ -55,6 +58,8 @@ module Showroom
         Runner.new(root).run("config/scenes/#{scene}.rb")
       elsif args['vid']
         Video.new(root).run(scene)
+      elsif args['publish']
+        Publish.new(root).run
       else
         Gif.new(root).run(scene)
       end
