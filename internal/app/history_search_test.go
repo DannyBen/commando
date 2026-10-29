@@ -103,7 +103,10 @@ func TestHistorySearchPrunesMissingFolder(t *testing.T) {
 		t.Fatalf("stale history entry remains: %v", v.visited)
 	}
 	send()
-	if v.panels[0].loading {
-		t.Fatal("stale entry retriggered a directory read")
+	// Another saved path can also match the fuzzy query, especially when its
+	// Windows temp root contains the letters in "comm". Only the stale target
+	// must stay out of subsequent search results.
+	if s := v.interaction.current.(*locationSession); samePath(s.searchTarget, missing) {
+		t.Fatal("stale entry was selected again")
 	}
 }
