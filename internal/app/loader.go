@@ -51,6 +51,8 @@ type loadRequest struct {
 	folderCacheLoad    bool
 	driveSpace         *driveSpaceRequest
 	completion         *locationSession
+	historySearch      *locationSession
+	historyVisit       bool
 	fileDraft          *fileDraftRequest
 	deepSearch         *deepSearchRequest
 	themeLibrary       *settingsSession

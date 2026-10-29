@@ -41,10 +41,11 @@ func (v *view) dispatchTextShortcut(gtx layout.Context, text string) bool {
 	for _, c := range v.shortcutCommands() {
 		for slot := range c.bindings {
 			trigger := c.effectiveShortcut(slot).textTrigger()
-			if trigger == "" || text != trigger && (c.paletteQuery == "" || !strings.HasPrefix(text, trigger)) {
+			prefixed := c.paletteQuery != "" || c.locationQuery != ""
+			if trigger == "" || text != trigger && (!prefixed || !strings.HasPrefix(text, trigger)) {
 				continue
 			}
-			if c.paletteQuery != "" && !v.interaction.idle() {
+			if prefixed && !v.interaction.idle() {
 				continue
 			}
 			// A palette query command may receive its prefix and initial search
@@ -52,6 +53,8 @@ func (v *view) dispatchTextShortcut(gtx layout.Context, text string) bool {
 			v.executeCommand(gtx, c)
 			if c.paletteQuery != "" && v.paletteInteraction() != nil {
 				v.openPaletteQuery(gtx, c.paletteQuery+strings.TrimPrefix(text, trigger))
+			} else if c.locationQuery != "" && v.locationEditing() {
+				v.openLocationQuery(gtx, c.locationQuery+strings.TrimPrefix(text, trigger))
 			}
 			return true
 		}

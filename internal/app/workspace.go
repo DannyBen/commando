@@ -76,6 +76,7 @@ type view struct {
 	appearance        Theme
 	theme             *material.Theme
 	panels            []panel
+	visited           visitedFolders
 	favorites         []browser.Entry
 	closedPanels      []closedPanel
 	active            int

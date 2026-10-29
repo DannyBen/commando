@@ -15,7 +15,7 @@ type shortcut struct {
 }
 
 func (s shortcut) textTrigger() string {
-	if s.Modifiers == 0 && (s.Name == "/" || s.Name == "*" || s.Name == "@" || s.Name == "`" || s.Name == "[" || s.Name == "]" || s.Name == "{" || s.Name == "}" || s.Name == "+" || s.Name == "=" || s.Name == "-") {
+	if s.Modifiers == 0 && (s.Name == "/" || s.Name == "*" || s.Name == "@" || s.Name == ">" || s.Name == "`" || s.Name == "[" || s.Name == "]" || s.Name == "{" || s.Name == "}" || s.Name == "+" || s.Name == "=" || s.Name == "-") {
 		return string(s.Name)
 	}
 	return ""

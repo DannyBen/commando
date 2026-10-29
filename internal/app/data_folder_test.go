@@ -84,6 +84,7 @@ func TestDataFolderCopyAndManualRestart(t *testing.T) {
 			write(base, "shell-menu.jsonl", "source diagnostic")
 			write(base, "transfer-trace-test.jsonl", "transfer diagnostic")
 			write(base, "trace-log.jsonl", "diagnostic")
+			write(base, visitedFoldersFile, `["visited"]`)
 			write(base, "unrelated.txt", "leave here")
 			write(target, "shell-menu.jsonl", "existing diagnostic")
 			message, err := store.save(values, state)
@@ -94,6 +95,7 @@ func TestDataFolderCopyAndManualRestart(t *testing.T) {
 			assertBatchFile(t, filepath.Join(base, "shell-menu.jsonl"), "source diagnostic")
 			assertBatchFile(t, filepath.Join(target, "transfer-trace-test.jsonl"), "transfer diagnostic")
 			assertBatchFile(t, filepath.Join(target, "trace-log.jsonl"), "diagnostic")
+			assertBatchFile(t, filepath.Join(target, visitedFoldersFile), `["visited"]`)
 			for _, name := range []string{"unrelated.txt", dataFolderPointer} {
 				if _, err := os.Lstat(filepath.Join(target, name)); !errors.Is(err, os.ErrNotExist) {
 					t.Fatalf("copied %s: %v", name, err)

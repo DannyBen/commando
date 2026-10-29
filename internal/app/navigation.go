@@ -188,6 +188,9 @@ func (v *view) acceptLoad(result loadResult) {
 		v.acceptEditorLaunch(result)
 		return
 	}
+	if v.acceptHistorySearch(result) {
+		return
+	}
 	if result.request.settingsSave != nil {
 		request := result.request.settingsSave
 		if request.complete != nil {
@@ -235,8 +238,14 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	if result.err != nil {
+		if result.request.historyVisit && os.IsNotExist(result.err) {
+			v.visited.forget(result.request.path)
+		}
 		v.showFeedback(result.request.panel, feedback.Error, readError(result.err))
 		return
+	}
+	if result.request.historySearch == nil && !result.request.refresh && !result.directory.Drives && result.directory.ArchiveFolder == "" {
+		v.visited.remember(result.directory.Path)
 	}
 	p.feedback.Complete()
 	if p.deep != nil && (result.directory.ArchiveFolder != "" || !deepContains(p.deep.root, result.directory.Path)) {

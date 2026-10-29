@@ -27,6 +27,7 @@ type command struct {
 	available     func(*view) bool
 	execute       func(*view)      // Workspace actions can run without a keyboard binding.
 	paletteQuery  string           // Replace the search text while retaining the palette session.
+	locationQuery string           // Open the location editor with fixed search syntax.
 	toggleSetting string           // Boolean setting changed through shared live application and persistence.
 	soundEvent    interactionEvent // Empty means the default accepted-command click.
 	soundState    func(*view) bool // Boolean state: announce only when the result changes.
@@ -119,6 +120,8 @@ func defaultCommands() []command {
 
 		cmd("view.refresh", "View", "Refresh", "R", key.ModCtrl, func(v *view) bool { return panelReady(v) && v.loader != nil }),
 		cmd("view.filter_files", "View", "Filter…", "/", 0, folderReady),
+		{id: "view.history_jump", group: "View", name: "History jump…",
+			bindings: [2]commandBinding{{Default: shortcut{Name: ">"}}}, locationQuery: ">"},
 		cmd("view.deep_filter", "View", "Search…", "*", 0, func(v *view) bool { return folderReady(v) && v.loader != nil && v.panels[v.active].nativeFolder() }),
 		cmd("view.hidden_files", "View", "Hidden files", "H", key.ModCtrl, folderReady),
 		toggleSettingCommand("view.toggle_parent_entry", "View", "parent entry", settingParentEntry),
@@ -318,6 +321,10 @@ func (v *view) executeCommand(gtx layout.Context, c command) {
 	}
 	if c.paletteQuery != "" {
 		v.openPaletteQuery(gtx, c.paletteQuery)
+		return
+	}
+	if c.locationQuery != "" {
+		v.openLocationQuery(gtx, c.locationQuery)
 		return
 	}
 	accepted := false

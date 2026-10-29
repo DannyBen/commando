@@ -89,6 +89,18 @@ func (v *view) startLocation(gtx layout.Context) {
 	v.focusInteraction(gtx)
 }
 
+func (v *view) openLocationQuery(gtx layout.Context, query string) {
+	if !v.locationEditing() {
+		v.startLocation(gtx)
+	}
+	if !v.locationEditing() {
+		return
+	}
+	v.location.SetText(query)
+	v.location.SetCaret(utf8.RuneCountInString(query), utf8.RuneCountInString(query))
+	v.focusInteraction(gtx)
+}
+
 func (v *view) stopLocation(gtx layout.Context) {
 	if !v.locationEditing() {
 		return
@@ -139,8 +151,11 @@ func (v *view) updateLocation(gtx layout.Context) {
 			submitted = true
 		}
 	}
-	v.updateLocationCompletion()
 	s := v.interaction.current.(*locationSession)
+	searching := v.updateHistorySearch(gtx, s)
+	if !searching {
+		v.updateLocationCompletion()
+	}
 	for _, ke := range keys {
 		v.dismissFeedback()
 		switch ke.Name {
@@ -148,16 +163,25 @@ func (v *view) updateLocation(gtx layout.Context) {
 			v.escape(gtx)
 			return
 		case key.NameReturn, key.NameEnter:
-			v.submitLocation(gtx)
+			if searching {
+				v.submitHistorySearch(gtx, s)
+			} else {
+				v.submitLocation(gtx)
+			}
 			return
 		case "D":
 			v.location.SetCaret(0, utf8.RuneCountInString(v.location.Text()))
 			v.updateLocationCompletion()
 		case key.NameTab:
-			if ke.Modifiers == 0 && v.acceptLocationSuggestion() {
+			if searching && ke.Modifiers == 0 {
+				v.cycleHistorySearch(gtx, s)
+			} else if !searching && ke.Modifiers == 0 && v.acceptLocationSuggestion() {
 				v.updateLocationCompletion()
 			}
 		case key.NameUpArrow, key.NameDownArrow:
+			if searching {
+				continue
+			}
 			direction := 1
 			if ke.Name == key.NameUpArrow {
 				direction = -1
@@ -167,7 +191,9 @@ func (v *view) updateLocation(gtx layout.Context) {
 			}
 		}
 	}
-	if submitted {
+	if submitted && searching {
+		v.submitHistorySearch(gtx, s)
+	} else if submitted {
 		v.submitLocation(gtx)
 	}
 }

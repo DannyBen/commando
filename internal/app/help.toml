@@ -1373,6 +1373,12 @@ lines = [
   "Keep only filenames containing the text you enter",
 ]
 
+["palette.view.history_jump"]
+lines = [
+  "Search visited folders by name or path using > in the location bar.",
+  "The matching folder is selected in its parent; Tab cycles, Enter opens.",
+]
+
 ["palette.view.deep_filter"]
 lines = [
   "Search this folder and its descendants for names containing your text",
@@ -1426,8 +1432,8 @@ lines = [
 
 ["editing.location"]
 lines = [
-  "Enter a path or favorite name; Tab completes, arrows choose another match.",
-  "Enter opens the path; Escape keeps the current folder.",
+  "Enter a path or favorite; Tab completes. Type >name to search visited folders; Tab cycles.",
+  "Enter opens the selected folder; Escape keeps the folder shown.",
 ]
 
 ["editing.name"]

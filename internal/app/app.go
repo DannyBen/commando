@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"slices"
 	"time"
 
 	gioapp "gioui.org/app"
@@ -69,6 +70,10 @@ func Run() error {
 	if stateErr != nil {
 		fmt.Fprintln(os.Stderr, "cannot load state:", stateErr)
 	}
+	visited, visitedErr := loadVisitedFolders(dataDir)
+	if visitedErr != nil {
+		fmt.Fprintln(os.Stderr, "cannot load visited folders:", visitedErr)
+	}
 	locations, err := startingLocations(flag.Args(), saved.Panels)
 	if err != nil {
 		return err
@@ -96,6 +101,7 @@ func Run() error {
 			gioapp.MinSize(unit.Dp(minWindowWidth), unit.Dp(360)))
 		w.Option(native.options()...)
 		v := newLocationView(locations, saved.ActivePanel, w.Invalidate, dataDir)
+		v.visited = visited
 		v.helpHidden = saved.HelpHidden
 		v.defaultDataFolder = baseDir
 		v.activeDataFolder = dataDir
@@ -108,7 +114,13 @@ func Run() error {
 		v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
 			state := v.sessionState(tracker.snapshot())
 			state.PanelWidth = tracker.sizingSnapshot().baseWidth
-			return func() (string, error) { return store.save(values, state) }
+			visited := slices.Clone(v.visited)
+			return func() (string, error) {
+				if err := saveVisitedFolders(dataDir, visited); err != nil {
+					return "", err
+				}
+				return store.save(values, state)
+			}
 		}
 		v.monitor = newDirectoryMonitor(browser.WatchDirectory, w.Invalidate)
 		fullScreenRequested := false
@@ -141,6 +153,9 @@ func Run() error {
 				result := e.Err
 				if err := saveState(dataDir, state); err != nil {
 					result = errors.Join(e.Err, fmt.Errorf("cannot save state: %w", err))
+				}
+				if err := saveVisitedFolders(dataDir, v.visited); err != nil {
+					result = errors.Join(result, fmt.Errorf("cannot save visited folders: %w", err))
 				}
 				diagnostics.Record(diagnostics.Lifecycle, 0, "Shutdown", map[string]any{"error": diagnostics.Error(result)})
 				diagnostics.Close()

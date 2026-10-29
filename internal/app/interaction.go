@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"time"
+
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
@@ -114,6 +116,13 @@ func (c *interactionController) protectsListing(panel int) bool {
 
 type locationSession struct {
 	panel                       int
+	searchQuery, searchTarget   string
+	searchResolved              string
+	searchFailed                string
+	searchMatches               []string
+	searchSelected              int
+	searchDue                   time.Time
+	searchAccept                string
 	completion                  inlineCompletion
 	completionPath, pendingPath string
 	completionLoaded            bool
