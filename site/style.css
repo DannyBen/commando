@@ -239,3 +239,13 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     .keys { flex-wrap: wrap; }
   }
 }
+
+@media (max-width: 500px) {
+  .overview, .movie, .feature-palette {
+    width: calc(100% + 48px);
+    margin-inline: -24px;
+    border-radius: 0;
+  }
+
+  .palette-header, .search-bar { border-radius: 0; }
+}

@@ -102,6 +102,25 @@ systemTheme.addEventListener('change', event => {
   if (!themeOverride) applyTheme(event.matches ? 'dark' : 'light');
 });
 
+const featurePalette = document.querySelector('.feature-palette');
+let themeFadeFrame = 0;
+
+function updateThemeToggleVisibility() {
+  themeFadeFrame = 0;
+  const distance = featurePalette.getBoundingClientRect().top;
+  const opacity = Math.max(0, Math.min(1, (distance - 64) / 240));
+  themeToggle.style.opacity = opacity;
+  themeToggle.inert = opacity === 0;
+}
+
+function queueThemeToggleVisibility() {
+  if (!themeFadeFrame) themeFadeFrame = requestAnimationFrame(updateThemeToggleVisibility);
+}
+
+window.addEventListener('scroll', queueThemeToggleVisibility, {passive: true});
+window.addEventListener('resize', queueThemeToggleVisibility);
+updateThemeToggleVisibility();
+
 const latestZipCacheKey = 'commando-site-latest-zip';
 const latestZipCacheAge = 60 * 60 * 1000;
 
