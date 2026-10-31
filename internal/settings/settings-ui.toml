@@ -749,7 +749,7 @@ description = "Pause after typing before previewing a history match. Enter opens
 control = "stepper-progress"
 min = 0
 max = 2000
-step = 100
+step = 50
 integer = true
 
 [feedback.sounds]

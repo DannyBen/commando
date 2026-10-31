@@ -31,7 +31,7 @@ func TestHistoryWidgetPreviewCancelSaveAndReset(t *testing.T) {
 		t.Fatal("history widget did not offer the agreed controls")
 	}
 	send(pressed(key.NameRightArrow), pressed(key.NameDownArrow), pressed(key.NameRightArrow))
-	if v.settingsValues.Get(settings.CatalogueDefault, settingSaveHistory).Bool || v.historySearchDelay() != 500*time.Millisecond {
+	if v.settingsValues.Get(settings.CatalogueDefault, settingSaveHistory).Bool || v.historySearchDelay() != 450*time.Millisecond {
 		t.Fatal("keyboard edits were not previewed")
 	}
 	if output := os.Getenv("COMMANDO_PREVIEW_HISTORY"); output != "" {
@@ -47,13 +47,13 @@ func TestHistoryWidgetPreviewCancelSaveAndReset(t *testing.T) {
 	send(pressed(key.NameEscape)) // Return from settings search to browsing.
 	v.startSettingsWidget(settingHistory)
 	v.adjustSetting(settingSaveHistory, 0)
-	for range 30 {
+	for range 50 {
 		v.adjustSetting(settingHistoryMatchDelay, 1)
 	}
 	if v.historySearchDelay() != 2*time.Second {
 		t.Fatal("match delay did not stop at 2000 ms")
 	}
-	for range 30 {
+	for range 50 {
 		v.adjustSetting(settingHistoryMatchDelay, -1)
 	}
 	if v.historySearchDelay() != 0 {

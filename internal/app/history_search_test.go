@@ -18,7 +18,7 @@ func TestHistorySearchConfiguredDelayAndImmediateEnter(t *testing.T) {
 		enter bool
 	}{
 		{"zero", 0, false},
-		{"short", 100 * time.Millisecond, false},
+		{"short", 50 * time.Millisecond, false},
 		{"long", 1500 * time.Millisecond, false},
 		{"maximum", 2 * time.Second, false},
 		{"Enter", 2 * time.Second, true},
