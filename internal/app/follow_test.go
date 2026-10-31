@@ -317,22 +317,24 @@ func TestFollowPreview(t *testing.T) {
 	}
 }
 
-func TestFollowHeaderUsesFileSelectionColorsAndRestoresOrdinaryHeader(t *testing.T) {
+func TestFollowHeaderUsesIndependentOffsetAndRestoresOrdinaryHeader(t *testing.T) {
 	for _, theme := range builtInThemes {
 		v := selectionView()
 		v.settingsValues = theme.values.Clone()
 		v.applySettings()
 		for _, offset := range []float64{-0.12, 0.12} {
 			colors := *v.appearance.FilenameColors
-			colors.activeBackgroundLightnessOffset = offset
+			_ = v.settingsValues.Set(settings.CatalogueDefault, settingHeaderOffset, settings.Value{Number: offset * 100})
 			colors.enabled = false // Follow colors remain semantic with auto colors off.
 			v.appearance.FilenameColors = &colors
 			v.followMe = true
 			for i := range v.panels {
 				background, filename, metadata := v.metadataHeaderColors(i)
-				want := colors.activeBackground(oklchFromRGB(v.followColor(i))).rgb()
+				value := oklchFromRGB(v.followColor(i))
+				value.l = clampLightness(value.l + offset)
+				want := value.rgb()
 				if background != want || filename != v.appearance.Colors.Surface || metadata != filename {
-					t.Fatalf("%s: header ignored the file-selection offset or selected text treatment", theme.name)
+					t.Fatalf("%s: header ignored its own offset or selected text treatment", theme.name)
 				}
 			}
 		}

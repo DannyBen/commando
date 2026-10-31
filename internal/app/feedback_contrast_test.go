@@ -13,7 +13,7 @@ import (
 	"github.com/dannyben/commando/internal/settings"
 )
 
-func TestNotificationFooterUsesSelectionColorsAndReadableText(t *testing.T) {
+func TestNotificationFooterUsesIndependentOffsetAndReadableText(t *testing.T) {
 	for _, theme := range builtInThemes {
 		for _, guarded := range []bool{false, true} {
 			v := newPreviewView()
@@ -26,9 +26,11 @@ func TestNotificationFooterUsesSelectionColorsAndReadableText(t *testing.T) {
 				feedback.Warning: palette.Warning, feedback.Error: palette.Error,
 			} {
 				background, foreground := v.notificationColors(kind)
-				wantBackground, wantText := v.appearance.filenameSelectionColors(oklchFromRGB(raw))
+				value := oklchFromRGB(raw)
+				value.l = clampLightness(value.l + v.settingsValues.Get(settings.CatalogueDefault, settingFooterOffset).Number/100)
+				wantBackground, wantText := value.rgb(), v.appearance.Colors.Surface
 				if background != wantBackground || foreground != wantText {
-					t.Fatal("notification did not reuse semantic color and file-selection treatment")
+					t.Fatal("notification ignored its semantic color or footer offset")
 				}
 				displayed := v.resolvedTextFor(contrastPrimary, foreground, background)
 				if !guarded && displayed != foreground {

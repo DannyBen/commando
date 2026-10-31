@@ -21,7 +21,7 @@ import (
 )
 
 func (v *view) restoreSettings(values settings.Values, err error) {
-	v.settingsValues = values
+	v.settingsValues = restoreLegacyBandOffsets(values)
 	v.applySettings()
 	if err == nil {
 		return

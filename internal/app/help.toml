@@ -166,6 +166,16 @@ lines = [
   "Choose whether visited folders survive restarts and how quickly matches appear",
 ]
 
+["palette.settings.appearance.theme.active_header_colors"]
+lines = [
+  "Adjust Follow me header background colors",
+]
+
+["palette.settings.appearance.theme.active_footer_colors"]
+lines = [
+  "Adjust notification footer background colors",
+]
+
 ["palette.settings.feedback.sounds"]
 lines = [
   "Choose which sounds play and how loud they are",
@@ -831,6 +841,30 @@ lines = [
 lines = [
   "Wait 0 to 2000 milliseconds after typing before previewing a match; default 400.",
   "0 previews immediately. Enter opens a match without waiting.",
+]
+
+["settings.appearance.theme.active_header_colors"]
+lines = [
+  "Adjust the colored headers shown by [key:panel.follow_me].",
+  "Preview: Lead uses Info, Match uses Success, and Miss uses Error.",
+]
+
+["settings.appearance.theme.active_header_colors.lightness_points"]
+lines = [
+  "Shift Follow me header background lightness relative to its status color.",
+  "Positive lightens; negative darkens. File selections and footers have separate offsets.",
+]
+
+["settings.appearance.theme.active_footer_colors"]
+lines = [
+  "Adjust the colored footers used for notifications.",
+  "Info, Success, Warning and Error keep their shared theme colors.",
+]
+
+["settings.appearance.theme.active_footer_colors.lightness_points"]
+lines = [
+  "Shift notification background lightness relative to its status color.",
+  "Positive lightens; negative darkens. Ordinary status and progress footers keep their colors.",
 ]
 
 ["settings.feedback.sounds"]

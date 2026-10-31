@@ -16,6 +16,7 @@ import (
 // A passive presentation of otherwise transient theme states. It never owns
 // input or writes to panel selection, marks, filters, feedback or the clipboard.
 type panelPreview struct {
+	activeHeader  bool
 	textSelection bool
 	messages      []feedback.Kind
 	rows          []previewFileRow
@@ -31,6 +32,10 @@ func (v *view) settingsPanelPreview(index int) panelPreview {
 		return panelPreview{textSelection: true, rows: themePreviewRows(), messages: []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}}
 	}
 	switch group {
+	case settingActiveHeader:
+		return panelPreview{activeHeader: true}
+	case settingActiveFooter:
+		return panelPreview{messages: []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}}
 	case "appearance.autocolor":
 		return panelPreview{rows: autoColorPreviewRows()}
 	case "appearance.autocolor.selection":
@@ -153,11 +158,23 @@ func (v *view) themePreviewSelection(gtx layout.Context) layout.Dimensions {
 }
 
 func (preview panelPreview) footer(v *view, gtx layout.Context, height int) layout.Dimensions {
+	return preview.bands(v, gtx, height, settingFooterOffset)
+}
+
+func (preview panelPreview) header(v *view, gtx layout.Context, height int) layout.Dimensions {
+	preview.messages = []feedback.Kind{feedback.Info, feedback.Success, feedback.Error}
+	return preview.bands(v, gtx, height, settingHeaderOffset)
+}
+
+func (preview panelPreview) bands(v *view, gtx layout.Context, height int, offsetKey string) layout.Dimensions {
 	children := make([]layout.FlexChild, 0, len(preview.messages))
 	for i, kind := range preview.messages {
 		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			label := map[feedback.Kind]string{feedback.Error: "Error", feedback.Success: "Success", feedback.Warning: "Warning", feedback.Info: "Info"}[kind]
-			background, foreground := v.notificationColors(kind)
+			if offsetKey == settingHeaderOffset {
+				label = map[feedback.Kind]string{feedback.Info: "Lead", feedback.Success: "Match", feedback.Error: "Miss"}[kind]
+			}
+			background, foreground := v.activeBandColors(v.feedbackColor(kind), offsetKey)
 			// Keep normal outer margins, with only a small gap between samples.
 			inset := layout.Inset{Left: 2, Right: 2}
 			if i == 0 {

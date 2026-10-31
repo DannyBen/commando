@@ -29,6 +29,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 			return v.layoutLocationBar(gtx, index, v.locationBarHeight(gtx, textHeight))
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if preview.activeHeader {
+				return preview.header(v, gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)))
+			}
 			background, filename, metadata := v.metadataHeaderColors(index)
 			metadataRole := contrastSecondary
 			if v.followMe {

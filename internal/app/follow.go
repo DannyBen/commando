@@ -10,7 +10,7 @@ func (v *view) metadataHeaderColors(index int) (background, filename, metadata c
 	if !v.followMe {
 		return theme.Colors.Surface, theme.Colors.Filename, theme.Colors.Metadata
 	}
-	background, filename = theme.filenameSelectionColors(oklchFromRGB(v.followColor(index)))
+	background, filename = v.activeBandColors(v.followColor(index), settingHeaderOffset)
 	return background, filename, filename
 }
 

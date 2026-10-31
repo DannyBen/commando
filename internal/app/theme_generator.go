@@ -28,6 +28,7 @@ type themeRecipe struct {
 	Modes map[string]struct {
 		Background, Text, Direction, Filename float64
 		FilenameSelectionOffset               float64  `toml:"filename_selection_offset"`
+		ActiveBandOffset                      float64  `toml:"active_band_offset"`
 		LightnessSpread                       float64  `toml:"lightness_spread"`
 		SelectionLightness                    *float64 `toml:"selection_lightness"`
 		EdgeLightness                         *float64 `toml:"edge_lightness"`
@@ -111,6 +112,9 @@ func parseThemeRecipe(source string) (themeRecipe, error) {
 		}
 		if !finite(m.FilenameSelectionOffset) || math.Abs(m.FilenameSelectionOffset) > 100 {
 			return r, fmt.Errorf("invalid filename selection offset: %s", name)
+		}
+		if !finite(m.ActiveBandOffset) || math.Abs(m.ActiveBandOffset) > 100 {
+			return r, fmt.Errorf("invalid active band offset: %s", name)
 		}
 		for _, n := range []*float64{m.SelectionLightness, m.EdgeLightness} {
 			if n != nil && (!finite(*n) || *n < 0 || *n > 100) {
@@ -251,6 +255,8 @@ func (v *view) generateTheme() {
 		settingLightness:          m.Filename,
 		settingSaturation:         min(defaultThemeRecipe.Files.SaturationMax, defaultThemeRecipe.Files.Saturation*math.Pow(get("vibrance").Number/50, defaultThemeRecipe.Response.VibranceExponent)),
 		settingSelectionLightness: m.FilenameSelectionOffset,
+		settingHeaderOffset:       m.ActiveBandOffset,
+		settingFooterOffset:       m.ActiveBandOffset,
 		settingCutLightness:       -m.Direction * defaultThemeRecipe.Files.CutOffset,
 		settingHiddenLightness:    -m.Direction * defaultThemeRecipe.Files.HiddenOffset,
 		settingDotfileLightness:   -m.Direction * defaultThemeRecipe.Files.DotfileOffset,

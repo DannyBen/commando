@@ -101,18 +101,20 @@ func (v *view) dismissUnhandledFeedbackKeys(gtx layout.Context) {
 }
 
 func (v *view) notificationColors(kind feedback.Kind) (background, text color.NRGBA) {
-	var fg color.NRGBA
+	return v.activeBandColors(v.feedbackColor(kind), settingFooterOffset)
+}
+
+func (v *view) feedbackColor(kind feedback.Kind) color.NRGBA {
 	switch kind {
 	case feedback.Success:
-		fg = v.appearance.Colors.Success
+		return v.appearance.Colors.Success
 	case feedback.Warning:
-		fg = v.appearance.Colors.Warning
+		return v.appearance.Colors.Warning
 	case feedback.Error:
-		fg = v.appearance.Colors.Error
+		return v.appearance.Colors.Error
 	default:
-		fg = v.appearance.Colors.Info
+		return v.appearance.Colors.Info
 	}
-	return v.appearance.filenameSelectionColors(oklchFromRGB(fg))
 }
 
 // Notification text and the counter share the selected-row contrast treatment.

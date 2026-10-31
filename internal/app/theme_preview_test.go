@@ -267,7 +267,7 @@ func TestSettingsPanelPreviewRenders(t *testing.T) {
 		t.Skip("optional settings panel previews")
 	}
 	for _, theme := range builtInThemes {
-		for _, group := range []string{settingThemeGenerator, settingThemeSelect, settingThemeCustomize, "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
+		for _, group := range []string{settingActiveHeader, settingActiveFooter, settingThemeGenerator, settingThemeSelect, settingThemeCustomize, "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
 			for _, enabled := range []bool{false, true} {
 				v := newPreviewView()
 				v.settingsValues = theme.values.Clone()

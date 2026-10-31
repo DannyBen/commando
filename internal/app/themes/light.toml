@@ -1,5 +1,11 @@
 # Built-in Light: complete color snapshot, independent of generator settings.
 
+[appearance.theme.active_header_colors]
+lightness_points = 20
+
+[appearance.theme.active_footer_colors]
+lightness_points = 20
+
 [appearance.theme.effects]
 dimmed_text_opacity = 70
 hover_strength = 8

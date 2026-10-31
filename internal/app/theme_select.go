@@ -26,7 +26,8 @@ type themeSnapshot struct {
 var builtInThemes = mustBuiltInThemes()
 
 func themeSnapshotKey(key string) bool {
-	return strings.HasPrefix(key, themeSettingPrefix) || strings.HasPrefix(key, "appearance.autocolor.") || strings.HasPrefix(key, settingThemeEffects+".")
+	return strings.HasPrefix(key, themeSettingPrefix) || strings.HasPrefix(key, "appearance.autocolor.") || strings.HasPrefix(key, settingThemeEffects+".") ||
+		strings.HasPrefix(key, settingActiveHeader+".") || strings.HasPrefix(key, settingActiveFooter+".")
 }
 
 func parseThemeSnapshot(data []byte) (settings.Values, error) {
@@ -35,6 +36,7 @@ func parseThemeSnapshot(data []byte) (settings.Values, error) {
 	if err != nil {
 		return settings.Values{}, err
 	}
+	values = restoreLegacyBandOffsets(values)
 	for _, d := range c.Settings {
 		included := themeSnapshotKey(d.Key)
 		if included != values.Overridden(d.Key) {

@@ -8,6 +8,8 @@
 # Mode filename values set Auto Colors separately from semantic text colors.
 # filename_selection_offset is signed, in lightness points; it moves the
 # selected-row background toward the surface from the filename color.
+# active_band_offset gives headers and footers the same mode-specific lightness
+# adjustment over the semantic palette, without extra random colors.
 #   Vibrance: 0–100; 50 uses the recipe's saturation, 0 is grayscale.
 #   Dynamics: 1–100; opens each property's random range from zero to full width.
 #   Color Shift: 0–359 degrees; rotates the whole generated palette afterward.
@@ -32,6 +34,7 @@ text = 96
 direction = 1
 filename = 55
 filename_selection_offset = -16
+active_band_offset = -16
 lightness_spread = 0.35
 # Anchor accents independently of the near-black surface; their random ranges
 # still use lightness_spread. Omit to inherit their normal color rules.
@@ -44,6 +47,7 @@ text = 94
 direction = 1
 filename = 65
 filename_selection_offset = -16
+active_band_offset = -16
 lightness_spread = 1.0
 
 [modes.Midtone]
@@ -52,6 +56,7 @@ text = 98
 direction = 1
 filename = 80
 filename_selection_offset = -16
+active_band_offset = -16
 lightness_spread = 1.0
 
 [modes.Light]
@@ -60,6 +65,7 @@ text = 18
 direction = -1
 filename = 36
 filename_selection_offset = 16
+active_band_offset = 16
 lightness_spread = 1.0
 
 [modes.White]
@@ -68,6 +74,7 @@ text = 35
 direction = -1
 filename = 31
 filename_selection_offset = 20
+active_band_offset = 20
 lightness_spread = 0.35
 
 # Color rules:

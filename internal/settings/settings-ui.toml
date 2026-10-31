@@ -129,6 +129,30 @@ label = "Theme"
 [appearance.theme.colors]
 label = "Colors"
 
+[appearance.theme.active_header_colors]
+label = "Active header colors"
+title = "Active header colors"
+
+[appearance.theme.active_header_colors.lightness_points]
+label = "Background lightness offset"
+description = "Adjust Follow me header backgrounds relative to their status colors."
+control = "stepper-progress"
+min = -100.0
+max = 100.0
+step = 1.0
+
+[appearance.theme.active_footer_colors]
+label = "Active footer colors"
+title = "Active footer colors"
+
+[appearance.theme.active_footer_colors.lightness_points]
+label = "Background lightness offset"
+description = "Adjust notification footer backgrounds relative to their status colors."
+control = "stepper-progress"
+min = -100.0
+max = 100.0
+step = 1.0
+
 [appearance.theme.effects]
 label = "Effects"
 title = "Effects"
