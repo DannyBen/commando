@@ -8,9 +8,12 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"github.com/dannyben/commando/internal/settings"
 )
 
-const historySearchDelay = 400 * time.Millisecond
+func (v *view) historySearchDelay() time.Duration {
+	return time.Duration(v.settingsValues.Get(settings.CatalogueDefault, settingHistoryMatchDelay).Number) * time.Millisecond
+}
 
 func historyQuery(text string) (string, bool) {
 	if !strings.HasPrefix(text, ">") {
@@ -35,7 +38,7 @@ func (v *view) updateHistorySearch(gtx layout.Context, s *locationSession) bool 
 		s.searchQuery, s.searchTarget, s.searchResolved, s.searchFailed = query, "", "", ""
 		s.searchMatches = nil
 		s.searchSelected = 0
-		s.searchDue = gtx.Now.Add(historySearchDelay)
+		s.searchDue = gtx.Now.Add(v.historySearchDelay())
 	}
 	if query == "" {
 		return true

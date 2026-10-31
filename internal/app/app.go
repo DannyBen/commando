@@ -70,7 +70,7 @@ func Run() error {
 	if stateErr != nil {
 		fmt.Fprintln(os.Stderr, "cannot load state:", stateErr)
 	}
-	visited, visitedErr := loadVisitedFolders(dataDir)
+	visited, visitedErr := loadVisitedFolders(dataDir, settingsValues.Get(settings.CatalogueDefault, settingSaveHistory).Bool)
 	if visitedErr != nil {
 		fmt.Fprintln(os.Stderr, "cannot load visited folders:", visitedErr)
 	}
@@ -116,7 +116,7 @@ func Run() error {
 			state.PanelWidth = tracker.sizingSnapshot().baseWidth
 			visited := slices.Clone(v.visited)
 			return func() (string, error) {
-				if err := saveVisitedFolders(dataDir, visited); err != nil {
+				if err := saveVisitedFolders(dataDir, visited, values.Get(settings.CatalogueDefault, settingSaveHistory).Bool); err != nil {
 					return "", err
 				}
 				return store.save(values, state)
@@ -154,7 +154,11 @@ func Run() error {
 				if err := saveState(dataDir, state); err != nil {
 					result = errors.Join(e.Err, fmt.Errorf("cannot save state: %w", err))
 				}
-				if err := saveVisitedFolders(dataDir, v.visited); err != nil {
+				historySettings := v.settingsValues
+				if s := v.settingsWidget(); s != nil {
+					historySettings = s.before // Closing without Save discards the widget preview.
+				}
+				if err := saveVisitedFolders(dataDir, v.visited, historySettings.Get(settings.CatalogueDefault, settingSaveHistory).Bool); err != nil {
 					result = errors.Join(result, fmt.Errorf("cannot save visited folders: %w", err))
 				}
 				diagnostics.Record(diagnostics.Lifecycle, 0, "Shutdown", map[string]any{"error": diagnostics.Error(result)})

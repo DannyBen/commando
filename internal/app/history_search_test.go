@@ -8,7 +8,65 @@ import (
 	"unicode/utf8"
 
 	"gioui.org/io/key"
+	"github.com/dannyben/commando/internal/settings"
 )
+
+func TestHistorySearchConfiguredDelayAndImmediateEnter(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		delay time.Duration
+		enter bool
+	}{
+		{"zero", 0, false},
+		{"short", 100 * time.Millisecond, false},
+		{"long", 1500 * time.Millisecond, false},
+		{"maximum", 2 * time.Second, false},
+		{"Enter", 2 * time.Second, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := resolvedTempDir(t)
+			target := filepath.Join(root, "parent", "history-target")
+			if err := os.MkdirAll(target, 0700); err != nil {
+				t.Fatal(err)
+			}
+			v := newBrowserView([]string{root}, nil)
+			t.Cleanup(v.finishOperations)
+			waitLoaded(t, v, 0)
+			if err := v.settingsValues.Set(settings.CatalogueDefault, settingHistoryMatchDelay, settings.Value{Number: float64(tc.delay / time.Millisecond)}); err != nil {
+				t.Fatal(err)
+			}
+			if err := v.settingsValues.Set(settings.CatalogueDefault, settingSaveHistory, settings.Value{Bool: false}); err != nil {
+				t.Fatal(err)
+			}
+			v.visited.remember(target)
+			send, advance := panelInputFrames(v)
+			send(modified("D", key.ModAlt))
+			query := ">historytarget"
+			send(key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.location.Text())}, Text: query},
+				key.SelectionEvent{Start: len(query), End: len(query)})
+			p := &v.panels[0]
+			if tc.enter {
+				send(pressed(key.NameReturn))
+				waitLoaded(t, v, 0)
+				if p.path != target || v.locationEditing() {
+					t.Fatal("Enter waited for the configured delay")
+				}
+				return
+			}
+			if tc.delay > 0 {
+				advance(tc.delay - time.Millisecond)
+				if p.path != root || p.loading {
+					t.Fatal("search read a directory before the configured deadline")
+				}
+				advance(time.Millisecond)
+			}
+			waitLoaded(t, v, 0)
+			if p.path != filepath.Dir(target) || p.items[p.selected].file.Name != filepath.Base(target) {
+				t.Fatal("session history did not preview its match at the configured deadline")
+			}
+		})
+	}
+}
 
 func TestHistorySearchShowsParentAndEnterOpensFolder(t *testing.T) {
 	root := t.TempDir()
@@ -34,7 +92,7 @@ func TestHistorySearchShowsParentAndEnterOpensFolder(t *testing.T) {
 	if v.panels[0].path != root || v.panels[0].loading {
 		t.Fatal("search read a directory before debounce")
 	}
-	advance(historySearchDelay - time.Millisecond)
+	advance(v.historySearchDelay() - time.Millisecond)
 	if v.panels[0].path != root || v.panels[0].loading {
 		t.Fatal("search read a directory before its deadline")
 	}
@@ -74,7 +132,7 @@ func TestHistorySearchEscapeKeepsDisplayedParent(t *testing.T) {
 	query := ">comm"
 	send(key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.location.Text())}, Text: query},
 		key.SelectionEvent{Start: utf8.RuneCountInString(query), End: utf8.RuneCountInString(query)})
-	advance(historySearchDelay)
+	advance(v.historySearchDelay())
 	waitLoaded(t, v, 0)
 	send(pressed(key.NameEscape))
 	if v.panels[0].path != filepath.Dir(target) || v.locationEditing() {
@@ -97,7 +155,7 @@ func TestHistorySearchPrunesMissingFolder(t *testing.T) {
 	query := ">comm"
 	send(key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.location.Text())}, Text: query},
 		key.SelectionEvent{Start: utf8.RuneCountInString(query), End: utf8.RuneCountInString(query)})
-	advance(historySearchDelay)
+	advance(v.historySearchDelay())
 	waitLoaded(t, v, 0)
 	if len(v.visited) != 1 || v.visited[0] != root {
 		t.Fatalf("stale history entry remains: %v", v.visited)

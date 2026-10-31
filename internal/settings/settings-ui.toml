@@ -710,6 +710,24 @@ min = 0.5
 max = 5.0
 step = 0.5
 
+[feedback.history]
+label = "History"
+title = "History"
+
+[feedback.history.save_history]
+label = "Save history"
+description = "Keep visited folders across restarts. Off uses session history and leaves the saved file untouched."
+control = "toggle"
+
+[feedback.history.match_delay_ms]
+label = "Match delay (ms)"
+description = "Pause after typing before previewing a history match. Enter opens a match immediately."
+control = "stepper-progress"
+min = 0
+max = 2000
+step = 100
+integer = true
+
 [feedback.sounds]
 label = "Sound"
 title = "Sound"

@@ -1,12 +1,52 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 )
+
+func TestVisitedFoldersDisabledLeavesDiskUntouched(t *testing.T) {
+	for _, filename := range []string{visitedFoldersFile, previousVisitedFoldersFile} {
+		t.Run(filename, func(t *testing.T) {
+			dataDir := t.TempDir()
+			path := filepath.Join(dataDir, filename)
+			before := []byte("invalid history must not be read or replaced")
+			if err := os.WriteFile(path, before, 0600); err != nil {
+				t.Fatal(err)
+			}
+			history, err := loadVisitedFolders(dataDir, false)
+			if err != nil || len(history) != 0 {
+				t.Fatal("disabled history loaded persisted paths", history, err)
+			}
+			history.remember(filepath.Join(dataDir, "session-folder"))
+			if history.best("session-folder") == "" {
+				t.Fatal("disabled persistence prevented session history")
+			}
+			if err := saveVisitedFolders(dataDir, history, false); err != nil {
+				t.Fatal(err)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(before, after) {
+				t.Fatal("disabled history changed the existing file", err)
+			}
+			entries, err := os.ReadDir(dataDir)
+			if err != nil || len(entries) != 1 {
+				t.Fatal("disabled history created files", entries, err)
+			}
+		})
+	}
+	missing := filepath.Join(t.TempDir(), "missing")
+	if err := saveVisitedFolders(missing, nil, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(missing); !os.IsNotExist(err) {
+		t.Fatal("disabled history created its data folder", err)
+	}
+}
 
 func TestVisitedFoldersPersistAndRank(t *testing.T) {
 	root := t.TempDir()
@@ -19,10 +59,10 @@ func TestVisitedFoldersPersistAndRank(t *testing.T) {
 	if len(history) != 2 || history[0] != commando || history.best("gcom") != commando || history.best("comm") != commando {
 		t.Fatalf("history order or fuzzy match: %v", history)
 	}
-	if err := saveVisitedFolders(root, history); err != nil {
+	if err := saveVisitedFolders(root, history, true); err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := loadVisitedFolders(root)
+	loaded, err := loadVisitedFolders(root, true)
 	if err != nil || len(loaded) != 2 || loaded[0] != commando || loaded[1] != commands {
 		t.Fatalf("saved history = %v, %v", loaded, err)
 	}
@@ -56,10 +96,10 @@ func TestVisitedFoldersSkipRoots(t *testing.T) {
 		t.Fatalf("root was remembered: %v", history)
 	}
 	dataDir := t.TempDir()
-	if err := saveVisitedFolders(dataDir, visitedFolders{root, child}); err != nil {
+	if err := saveVisitedFolders(dataDir, visitedFolders{root, child}, true); err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := loadVisitedFolders(dataDir)
+	loaded, err := loadVisitedFolders(dataDir, true)
 	if err != nil || len(loaded) != 1 || loaded[0] != child {
 		t.Fatalf("persisted root was restored: %v, %v", loaded, err)
 	}
@@ -75,11 +115,11 @@ func TestVisitedFoldersReadsPreviousFilename(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dataDir, previousVisitedFoldersFile), data, 0600); err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := loadVisitedFolders(dataDir)
+	loaded, err := loadVisitedFolders(dataDir, true)
 	if err != nil || len(loaded) != 1 || loaded[0] != path {
 		t.Fatalf("previous history was lost: %v, %v", loaded, err)
 	}
-	if err := saveVisitedFolders(dataDir, loaded); err != nil {
+	if err := saveVisitedFolders(dataDir, loaded, true); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dataDir, visitedFoldersFile)); err != nil {

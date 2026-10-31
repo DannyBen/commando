@@ -17,7 +17,10 @@ const previousVisitedFoldersFile = "visited-folders.json"
 
 type visitedFolders []string // Most recently visited first.
 
-func loadVisitedFolders(dataDir string) (visitedFolders, error) {
+func loadVisitedFolders(dataDir string, enabled bool) (visitedFolders, error) {
+	if !enabled {
+		return nil, nil
+	}
 	data, err := os.ReadFile(filepath.Join(dataDir, visitedFoldersFile))
 	if errors.Is(err, os.ErrNotExist) {
 		data, err = os.ReadFile(filepath.Join(dataDir, previousVisitedFoldersFile))
@@ -39,7 +42,10 @@ func loadVisitedFolders(dataDir string) (visitedFolders, error) {
 	return history, nil
 }
 
-func saveVisitedFolders(dataDir string, history visitedFolders) error {
+func saveVisitedFolders(dataDir string, history visitedFolders, enabled bool) error {
+	if !enabled {
+		return nil
+	}
 	if err := os.MkdirAll(dataDir, 0700); err != nil {
 		return err
 	}

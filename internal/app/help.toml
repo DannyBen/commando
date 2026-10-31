@@ -161,6 +161,11 @@ lines = [
   "Configure the pause allowed between filename typing",
 ]
 
+["palette.settings.feedback.history"]
+lines = [
+  "Choose whether visited folders survive restarts and how quickly matches appear",
+]
+
 ["palette.settings.feedback.sounds"]
 lines = [
   "Choose which sounds play and how loud they are",
@@ -808,6 +813,24 @@ lines = [
 lines = [
   "Seconds of inactivity before typing starts a new filename prefix.",
   "Choose 0.5 to 5 seconds in steps of 0.5.",
+]
+
+["settings.feedback.history"]
+lines = [
+  "Configure visited-folder history for [key:view.history_jump].",
+  "Save keeps changes; Cancel restores the previous settings.",
+]
+
+["settings.feedback.history.save_history"]
+lines = [
+  "Keep visited folders across restarts. Off skips loading and saving history.",
+  "Session history still works; the existing saved file stays untouched.",
+]
+
+["settings.feedback.history.match_delay_ms"]
+lines = [
+  "Wait 0 to 2000 milliseconds after typing before previewing a match; default 400.",
+  "0 previews immediately. Enter opens a match without waiting.",
 ]
 
 ["settings.feedback.sounds"]
