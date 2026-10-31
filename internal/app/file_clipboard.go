@@ -127,7 +127,7 @@ func (v *view) pasteClipboard(shortcuts bool) {
 	p.loading, p.prefix, v.transferPending = true, "", true
 	var target *panelTransferTarget
 	if !shortcuts {
-		target = &panelTransferTarget{panel: v.active, location: p.location(), selectOnly: true}
+		target = &panelTransferTarget{panel: v.active, location: p.location()}
 	}
 	// Capture the open destination, including archive subfolders.
 	archiveLocations := v.archiveOperationLocations()

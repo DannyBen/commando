@@ -6,12 +6,11 @@ import (
 )
 
 type panelTransferTarget struct {
-	panel      int
-	location   browser.Location
-	selectOnly bool // Clipboard paste selects a result without marking the batch.
+	panel    int
+	location browser.Location
 }
 
-// Only the chosen destination adopts the batch selection; other open views
+// Only the chosen destination selects a result; other open views
 // retain their independently reconciled state.
 func (v *view) revealPanelTransfer(target *panelTransferTarget, result loadResult) {
 	if target == nil || len(result.transferred.Items) == 0 || target.panel >= len(v.panels) || target.panel >= len(result.panelUpdates) || result.panelUpdates[target.panel].err != nil {
@@ -26,16 +25,10 @@ func (v *view) revealPanelTransfer(target *panelTransferTarget, result loadResul
 		names[p.entryKey(item.Entry.Name)] = true
 	}
 	p.clearMarks()
-	p.marks = make(map[int]bool)
 	for row, item := range p.items {
 		if !item.file.Parent && names[p.entryKey(item.file.Name)] {
-			if len(p.marks) == 0 {
-				p.selected, p.reveal = row, true
-				if target.selectOnly {
-					return
-				}
-			}
-			p.marks[row] = true
+			p.selected, p.reveal = row, true
+			return
 		}
 	}
 }

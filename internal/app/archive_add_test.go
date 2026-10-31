@@ -101,8 +101,8 @@ func TestPanelCopiesIntoArchiveUseSharedFlowAndPreservePanels(t *testing.T) {
 			if marked {
 				names = []string{"added", "new.txt"}
 			}
-			if destination.items[destination.selected].file.Name != names[0] || !slices.Equal(destination.selectedNames(), names) {
-				t.Fatal("ZIP panel did not replace its marks and selection with the copied batch")
+			if destination.items[destination.selected].file.Name != names[0] || len(destination.marks) != 0 {
+				t.Fatal("ZIP panel did not select the first result without marks")
 			}
 			if p.selected != selected || !maps.Equal(p.marks, marks) || v.active != resultPanel || v.transferPending || v.mutationsBusy() {
 				t.Fatal("copy changed source state, focus or retained busy state")

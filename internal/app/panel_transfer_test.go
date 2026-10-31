@@ -33,7 +33,7 @@ func forbidTransferClipboard(t *testing.T, v *view) {
 	}
 }
 
-func TestDirectPanelTransferRevealsAndSelectsDestinationBatch(t *testing.T) {
+func TestDirectPanelTransferRevealsDestinationWithoutMarking(t *testing.T) {
 	for _, direction := range []int{-1, 1} {
 		for _, move := range []bool{false, true} {
 			t.Run(fmt.Sprintf("direction=%d/move=%t", direction, move), func(t *testing.T) {
@@ -81,8 +81,8 @@ func TestDirectPanelTransferRevealsAndSelectsDestinationBatch(t *testing.T) {
 				}
 				waitLoaded(t, v, sourcePanel)
 				send()
-				if v.active != sourcePanel || p.items[p.selected].name != "zz-1.txt" || !slices.Equal(p.selectedNames(), []string{"zz-1.txt", "zz-2.txt"}) {
-					t.Fatal("transfer did not replace destination marks/select the first sorted result while retaining focus")
+				if v.active != sourcePanel || p.items[p.selected].name != "zz-1.txt" || len(p.marks) != 0 {
+					t.Fatal("transfer did not clear destination marks/select the first sorted result while retaining focus")
 				}
 				if p.list.Position.First == 0 || p.selected < p.list.Position.First || p.selected >= p.list.Position.First+p.list.Position.Count {
 					t.Fatal("offscreen result was not brought into view", p.selected, p.list.Position)
@@ -90,6 +90,11 @@ func TestDirectPanelTransferRevealsAndSelectsDestinationBatch(t *testing.T) {
 				send(pressed(next))
 				if v.active != targetPanel || p.items[p.selected].name != "zz-1.txt" {
 					t.Fatal("switching panels lost the transferred selection")
+				}
+				selectName(t, p, "old-00.txt")
+				send(pressed(insertKey))
+				if names, _ := p.removalSelection(); !slices.Equal(names, []string{"old-00.txt"}) {
+					t.Fatal("later deletion included an unmarked transfer result", names)
 				}
 			})
 		}
@@ -258,8 +263,13 @@ func TestPanelTransferCapturedSelectionAndOpenFolderDestination(t *testing.T) {
 			if marked {
 				names = []string{"folder", "a.txt"}
 			}
-			if p := &v.panels[1]; p.items[p.selected].name != names[0] || !slices.Equal(p.selectedNames(), names) {
-				t.Fatal("destination did not replace its selection with the transferred batch")
+			if p := &v.panels[1]; p.items[p.selected].name != names[0] || len(p.marks) != 0 {
+				t.Fatal("destination did not select the first result without marks")
+			}
+			selectName(t, &v.panels[1], "highlighted")
+			send(pressed(insertKey))
+			if names, _ := v.panels[1].removalSelection(); !slices.Equal(names, []string{"highlighted"}) {
+				t.Fatal("later deletion included an unmarked transfer result", names)
 			}
 			if p := &v.panels[2]; p.items[p.selected].name != "z.txt" || !p.marks[p.selected] {
 				t.Fatal("completion changed the other panel's current item/mark")
@@ -295,7 +305,7 @@ func TestPanelTransferCancelledOrFailedBatchKeepsPartialResults(t *testing.T) {
 		waitLoaded(t, v, 1)
 		send()
 		assertBatchFile(t, filepath.Join(target, "folder", "nested", "file"), "nested")
-		if p := &v.panels[1]; p.items[p.selected].name != "folder" || !slices.Equal(p.selectedNames(), []string{"folder"}) {
+		if p := &v.panels[1]; p.items[p.selected].name != "folder" || len(p.marks) != 0 {
 			t.Fatal("partial transfer did not select only its successful item")
 		}
 		assertBatchFile(t, filepath.Join(source, "a.txt"), "alpha")
@@ -413,8 +423,8 @@ func TestPanelTransferSameFolderAliasesReuseDuplicateAndMoveNoOp(t *testing.T) {
 			waitCreated(t, v)
 			send()
 			assertBatchFile(t, filepath.Join(root, "a - Copy.txt"), "alpha")
-			if p := &v.panels[2]; !slices.Equal(p.selectedNames(), []string{"a - Copy.txt"}) || !p.marks[p.selected] {
-				t.Fatal("same-folder copy did not mark and select its result")
+			if p := &v.panels[2]; !slices.Equal(p.selectedNames(), []string{"a - Copy.txt"}) || len(p.marks) != 0 {
+				t.Fatal("same-folder copy did not select its result without marks")
 			}
 		}
 		assertBatchFile(t, filepath.Join(root, "a.txt"), "alpha")

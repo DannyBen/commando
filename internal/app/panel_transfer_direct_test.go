@@ -85,8 +85,8 @@ func TestDirectPanelTransfersUseNeighborAndRetainSource(t *testing.T) {
 				if marked {
 					names = []string{"folder", "a.txt"}
 				}
-				if p := &v.panels[targetIndex]; p.items[p.selected].file.Name != names[0] || !slices.Equal(p.selectedNames(), names) {
-					t.Fatal("destination did not select and mark the transferred batch")
+				if p := &v.panels[targetIndex]; p.items[p.selected].file.Name != names[0] || len(p.marks) != 0 {
+					t.Fatal("destination did not select the first result without marks")
 				}
 				if !move {
 					assertBatchFile(t, filepath.Join(root, "a.txt"), "alpha")
