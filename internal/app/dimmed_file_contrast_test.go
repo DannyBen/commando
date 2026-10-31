@@ -86,7 +86,7 @@ func TestDimmedFileRendererUsesSameRoleForNameAndMetadata(t *testing.T) {
 		var ops op.Ops
 		gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 40))}
 		v.fileRowSurface(gtx, gtx.Constraints.Max, bg, color.NRGBA{}, func(gtx layout.Context) layout.Dimensions {
-			return v.rowContents(gtx, entry{name: file.Name, size: "1 KB", file: file}, name, metadata, mode, v.appearance.entryTextRoles(file, false, false), false)
+			return v.rowContents(gtx, entry{name: file.Name, size: "1 KB", file: file}, name, metadata, mode, v.appearance.entryTextRoles(file, false, false), false, nil)
 		})
 		dimKey := textContrastPair{name, bg, themeContrastRules[contrastDimmedFile], color.NRGBA{}}
 		if _, ok := v.textContrast[dimKey]; !ok {

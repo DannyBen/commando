@@ -792,6 +792,31 @@ label = "Location bar"
 title = "Location bar"
 category = "Animations"
 
+[feedback.filenames]
+label = "Filenames"
+title = "Filenames"
+category = "Animations"
+
+[feedback.filenames.enabled]
+label = "Enabled"
+description = "Scroll truncated names only while the current file row has browsing focus."
+control = "toggle"
+
+[feedback.filenames.animation]
+label = "Animation"
+description = "Reverse at the ends, or repeat the filename in a continuous ticker."
+control = "choice"
+choices = ["Ping Pong", "Ticker"]
+
+[feedback.filenames.speed]
+label = "Speed"
+description = "Movement speed from 1 to 10; 5 is normal and 10 is twice as fast."
+control = "stepper-progress"
+min = 1
+max = 10
+step = 1
+integer = true
+
 [feedback.location_bar.enabled]
 label = "Enabled"
 description = "Scroll long paths in the active location bar."

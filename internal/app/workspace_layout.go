@@ -126,7 +126,7 @@ func (v *view) headerBand(gtx layout.Context, height int, bg color.NRGBA, conten
 	return layout.Dimensions{Size: size}
 }
 
-func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, metadataRole contrastRole, boldName, prioritizeName bool) layout.Dimensions {
+func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA, size unit.Sp, metadataRole contrastRole, boldName, prioritizeName bool, scroll *textMarquee) layout.Dimensions {
 	var metadata layout.Widget
 	if item.size != "" {
 		metadata = func(gtx layout.Context) layout.Dimensions {
@@ -134,7 +134,9 @@ func (v *view) columns(gtx layout.Context, item entry, fg, secondary color.NRGBA
 		}
 	}
 	name := func(gtx layout.Context) layout.Dimensions {
-		return v.labelStyle(item.name, size, v.resolvedText(fg), text.Start, boldName).Layout(gtx)
+		return v.scrollingText(gtx, scroll, item.name, settingFilenameScroll, func(gtx layout.Context, content string) layout.Dimensions {
+			return v.labelStyle(content, size, v.resolvedText(fg), text.Start, boldName).Layout(gtx)
+		})
 	}
 	if prioritizeName && metadata != nil {
 		return v.nameFirstLayout(gtx, name, metadata)

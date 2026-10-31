@@ -160,6 +160,11 @@ enabled = true
 animation = "Ping Pong"
 speed = 5
 
+[feedback.filenames]
+enabled = true
+animation = "Ping Pong"
+speed = 5
+
 
 [guards.recycle_confirmation]
 single_files = "OFF"

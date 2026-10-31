@@ -77,14 +77,14 @@ func (v *view) layoutMultiRename(gtx layout.Context, s *multiRenameSession) layo
 
 // Preview renders the resulting name in place. Only inserted characters use
 // secondary text; deleted characters have no display representation.
-func (v *view) multiRenameRow(gtx layout.Context, panel int, item entry, nameColor, metadataColor color.NRGBA, roles fileTextRoles) layout.Dimensions {
+func (v *view) multiRenameRow(gtx layout.Context, panel int, item entry, nameColor, metadataColor color.NRGBA, roles fileTextRoles, scroll *textMarquee) layout.Dimensions {
 	s := v.multiRenameInteraction()
 	if s == nil || s.panel != panel {
 		item = v.panels[panel].displayEntry(item)
 		if d := v.panels[panel].deep; d != nil && strings.Contains(strings.ToLower(item.file.Name), strings.ToLower(d.query)) {
-			return v.deepRowContents(gtx, item, nameColor, metadataColor, v.panels[panel].metadata, roles, d.query)
+			return v.deepRowContents(gtx, item, nameColor, metadataColor, v.panels[panel].metadata, roles, d.query, scroll)
 		}
-		return v.rowContents(gtx, item, nameColor, metadataColor, v.panels[panel].metadata, roles, v.panels[panel].drives)
+		return v.rowContents(gtx, item, nameColor, metadataColor, v.panels[panel].metadata, roles, v.panels[panel].drives, scroll)
 	}
 	bad := s.invalid[item.file.Name]
 	if bad {
@@ -92,7 +92,7 @@ func (v *view) multiRenameRow(gtx layout.Context, panel int, item entry, nameCol
 	}
 	spans, changed := s.spans[item.file.Name]
 	if !changed {
-		return v.rowContents(gtx, item, nameColor, metadataColor, metadataNone, roles, false)
+		return v.rowContents(gtx, item, nameColor, metadataColor, metadataNone, roles, false, nil)
 	}
 	return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {

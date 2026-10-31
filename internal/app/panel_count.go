@@ -27,6 +27,7 @@ func (p panel) clone() panel {
 	p.rows = make(map[int]*fileRow)
 	p.emptySpace = nil
 	p.locationBar = nil
+	p.filenameScroll, p.filenameScrollID = textMarquee{}, ""
 	p.marks, p.markRange = nil, nil
 	p.list = widget.List{List: layout.List{Axis: layout.Vertical, Position: p.list.Position}}
 	p.feedback = feedback.Channel{}
@@ -87,6 +88,7 @@ func (v *view) closePanel() {
 	index := v.active
 	v.clearDeepSearch(index)
 	closed := closedPanel{panel: v.panels[index], index: index, clipboardSequence: v.cutClipboard.Sequence}
+	closed.panel.filenameScroll, closed.panel.filenameScrollID = textMarquee{}, ""
 	if index < len(v.cutPanelPaths) {
 		closed.cutPath = v.cutPanelPaths[index]
 		v.cutPanelPaths = slices.Delete(v.cutPanelPaths, index, index+1)

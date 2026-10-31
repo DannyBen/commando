@@ -156,6 +156,11 @@ lines = [
   "Choose whether and how long location-bar paths scroll",
 ]
 
+["palette.settings.feedback.filenames"]
+lines = [
+  "Choose whether and how truncated filenames scroll",
+]
+
 ["palette.settings.feedback.type_to_select"]
 lines = [
   "Configure the pause allowed between filename typing",
@@ -906,6 +911,30 @@ lines = [
 lines = [
   "Animate long paths in the active location bar.",
   "Changes preview immediately; Save keeps them.",
+]
+
+["settings.feedback.filenames"]
+lines = [
+  "Scroll long names only on the current row with browsing focus.",
+  "Scrolling pauses in these controls; return to files to see your changes.",
+]
+
+["settings.feedback.filenames.enabled"]
+lines = [
+  "Reveal a truncated filename after one second of browsing focus.",
+  "Editors, dialogs, inactive panels and focus loss reset the name to its beginning.",
+]
+
+["settings.feedback.filenames.animation"]
+lines = [
+  "Ping Pong reverses direction and pauses at each end.",
+  "Ticker repeats the filename with a separator and scrolls continuously.",
+]
+
+["settings.feedback.filenames.speed"]
+lines = [
+  "Choose movement speed from 1 to 10; 5 is normal.",
+  "Filename and location-bar animation settings are independent.",
 ]
 
 ["settings.feedback.location_bar.enabled"]

@@ -2,15 +2,10 @@ package app
 
 import (
 	"fmt"
-	"image"
 	"image/color"
 
-	"gioui.org/f32"
 	"gioui.org/layout"
-	"gioui.org/op"
-	"gioui.org/op/clip"
 	"gioui.org/text"
-	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/settings"
 )
 
@@ -88,30 +83,7 @@ func (v *view) layoutLocationBar(gtx layout.Context, index, height int) layout.D
 }
 
 func (v *view) scrollingLocation(gtx layout.Context, p *panel, fg color.NRGBA) layout.Dimensions {
-	path := p.locationLabel()
-	full := gtx
-	full.Constraints = layout.Constraints{Max: image.Pt(1_000_000, gtx.Constraints.Max.Y)}
-	// Shape the complete string once, then translate its drawing operations.
-	macro := op.Record(gtx.Ops)
-	dims := v.label(full, path, v.appearance.TextSize, fg, text.Start)
-	drawing := macro.Stop()
-	width := gtx.Constraints.Max.X
-	c := settings.CatalogueDefault
-	ticker := dims.Size.X > width && v.settingsValues.Get(c, settingLocationScrollModel).Text == "Ticker"
-	if ticker {
-		macro = op.Record(gtx.Ops)
-		dims = v.label(full, path+" • ", v.appearance.TextSize, fg, text.Start)
-		drawing = macro.Stop()
-	}
-	speed := textScrollSpeed * unit.Dp(v.settingsValues.Get(c, settingLocationScrollSpeed).Number/5)
-	offset := p.locationScroll.offsetWith(gtx, path, width, dims.Size.X, speed, ticker)
-	defer clip.Rect{Max: image.Pt(width, dims.Size.Y)}.Push(gtx.Ops).Pop()
-	defer op.Affine(f32.Affine2D{}.Offset(f32.Pt(-offset, 0))).Push(gtx.Ops).Pop()
-	drawing.Add(gtx.Ops)
-	if ticker {
-		defer op.Offset(image.Pt(dims.Size.X, 0)).Push(gtx.Ops).Pop()
-		drawing.Add(gtx.Ops)
-	}
-	dims.Size.X = width
-	return dims
+	return v.scrollingText(gtx, &p.locationScroll, p.locationLabel(), settingLocationScroll, func(gtx layout.Context, content string) layout.Dimensions {
+		return v.label(gtx, content, v.appearance.TextSize, fg, text.Start)
+	})
 }

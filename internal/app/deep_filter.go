@@ -168,7 +168,7 @@ func (l *directoryLoader) runDeepSearch(request loadRequest) {
 	}
 }
 
-func (v *view) deepRowContents(gtx layout.Context, item entry, nameColor, metadataColor color.NRGBA, mode metadataColumn, roles fileTextRoles, query string) layout.Dimensions {
+func (v *view) deepRowContents(gtx layout.Context, item entry, nameColor, metadataColor color.NRGBA, mode metadataColumn, roles fileTextRoles, query string, scroll *textMarquee) layout.Dimensions {
 	name := mode.displayName(item)
 	if !strings.Contains(strings.ToLower(name), strings.ToLower(query)) {
 		name = item.name
@@ -196,7 +196,9 @@ func (v *view) deepRowContents(gtx layout.Context, item entry, nameColor, metada
 					}
 				}
 				return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
-					return v.highlightedLabelBold(gtx, name, indices, v.appearance.TextSize, nameColor, item.file.Directory)
+					return v.scrollingText(gtx, scroll, name, settingFilenameScroll, func(gtx layout.Context, content string) layout.Dimensions {
+						return v.highlightedLabelBold(gtx, content, indices, v.appearance.TextSize, nameColor, item.file.Directory)
+					})
 				}, trailing)
 			})
 		})

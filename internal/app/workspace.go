@@ -36,6 +36,8 @@ type panel struct {
 	emptySpace          *fileRow
 	locationBar         *clickTarget
 	locationScroll      textMarquee
+	filenameScroll      textMarquee
+	filenameScrollID    string
 	list                widget.List
 	selected            int
 	selectionAnchor     image.Point

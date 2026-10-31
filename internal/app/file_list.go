@@ -20,6 +20,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 		gtx = gtx.Disabled()
 	}
 	p := &v.panels[index]
+	scrollFilename := v.prepareFilenameScroll(gtx, index)
 	preview := v.settingsPanelPreview(index)
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
 	smallTextHeight := v.textHeight(gtx, v.appearance.SmallTextSize)
@@ -150,7 +151,11 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 							})
 						}
 						return v.withFileIcon(gtx, p, p.items[storedRow], cut, func(gtx layout.Context) layout.Dimensions {
-							return v.multiRenameRow(gtx, index, p.items[storedRow], nameColor, sizeColor, v.appearance.entryTextRoles(p.items[storedRow].file, active, cut))
+							var scroll *textMarquee
+							if scrollFilename && storedRow == p.selected {
+								scroll = &p.filenameScroll
+							}
+							return v.multiRenameRow(gtx, index, p.items[storedRow], nameColor, sizeColor, v.appearance.entryTextRoles(p.items[storedRow].file, active, cut), scroll)
 						})
 					})
 				}
@@ -271,7 +276,7 @@ func (v *view) fileRowSurface(gtx layout.Context, size image.Point, background, 
 	return v.textOn(background, content)(gtx)
 }
 
-func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn, roles fileTextRoles, drives bool) layout.Dimensions {
+func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor color.NRGBA, mode metadataColumn, roles fileTextRoles, drives bool, scroll *textMarquee) layout.Dimensions {
 	return v.textAs(roles.filename, func(gtx layout.Context) layout.Dimensions {
 		return v.contentInset().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -280,7 +285,7 @@ func (v *view) rowContents(gtx layout.Context, item entry, nameColor, sizeColor 
 				if drives {
 					metadata = item.size
 				}
-				return v.columns(gtx, entry{name: mode.displayName(item), size: metadata}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata, item.file.Directory && !item.file.Parent && !drives, drives)
+				return v.columns(gtx, entry{name: mode.displayName(item), size: metadata}, nameColor, sizeColor, v.appearance.TextSize, roles.metadata, item.file.Directory && !item.file.Parent && !drives, drives, scroll)
 			})
 		})
 	})(gtx)

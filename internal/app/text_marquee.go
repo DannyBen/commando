@@ -1,13 +1,49 @@
 package app
 
 import (
+	"image"
 	"math"
 	"time"
 
+	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/unit"
+	"github.com/dannyben/commando/internal/settings"
 )
+
+// Shape the complete label before clipping, preserving styled text and keeping
+// surrounding icons, metadata and row surfaces stationary.
+func (v *view) scrollingText(gtx layout.Context, scroll *textMarquee, content, group string, label func(layout.Context, string) layout.Dimensions) layout.Dimensions {
+	if scroll == nil {
+		return label(gtx, content)
+	}
+	full := gtx
+	full.Constraints = layout.Constraints{Max: image.Pt(1_000_000, gtx.Constraints.Max.Y)}
+	macro := op.Record(gtx.Ops)
+	dims := label(full, content)
+	drawing := macro.Stop()
+	width := gtx.Constraints.Max.X
+	c := settings.CatalogueDefault
+	ticker := dims.Size.X > width && v.settingsValues.Get(c, group+".animation").Text == "Ticker"
+	if ticker {
+		macro = op.Record(gtx.Ops)
+		dims = label(full, content+" • ")
+		drawing = macro.Stop()
+	}
+	speed := textScrollSpeed * unit.Dp(v.settingsValues.Get(c, group+".speed").Number/5)
+	offset := scroll.offsetWith(gtx, content, width, dims.Size.X, speed, ticker)
+	defer clip.Rect{Max: image.Pt(width, dims.Size.Y)}.Push(gtx.Ops).Pop()
+	defer op.Affine(f32.Affine2D{}.Offset(f32.Pt(-offset, 0))).Push(gtx.Ops).Pop()
+	drawing.Add(gtx.Ops)
+	if ticker {
+		defer op.Offset(image.Pt(dims.Size.X, 0)).Push(gtx.Ops).Pop()
+		drawing.Add(gtx.Ops)
+	}
+	dims.Size.X = width
+	return dims
+}
 
 type textMarquee struct {
 	content          string
