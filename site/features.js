@@ -1,6 +1,6 @@
 // Public feature catalogue. Match command titles and default keys to internal/app/commands.go,
 // and setting results to internal/app/help.toml. Focus 3–8 share the pattern described under Focus 9;
-// editor-rule results are named dynamically from each user's extensions.
+// program-rule results are named dynamically from each user's extensions.
 // Search adds each row's visible text to these extra terms.
 window.commandoFeatures = [
   {
@@ -51,6 +51,7 @@ window.commandoFeatures = [
     category: "File operations",
     items: [
       {id: "file.edit", title: "File › Edit", keys: ["F4"], description: "Open marked files or the current file using your configured editor rules.", search: "editor text code modify"},
+      {id: "file.compare", title: "File › Compare…", keys: ["Ctrl+Alt+V"], description: "Choose another file in the same or another panel and open both in your configured compare program.", search: "diff differences comparison tool current highlighted file"},
       {id: "entry.open", title: "Entry › Open", keys: ["Enter"], description: "Open a folder, browse a ZIP archive, or launch a file in its default app.", search: "zip archive enter return browse launch run file folder"},
       {id: "entry.rename", title: "Entry › Rename…", keys: ["F2"], description: "Rename one entry or use an expression to rename multiple marked entries.", search: "bulk batch expression change name"},
       {id: "entry.copy", title: "Entry › Copy", keys: ["Ctrl+C"], description: "Copy marked entries or the current entry to the clipboard.", search: "clipboard files folders"},
@@ -131,6 +132,8 @@ window.commandoFeatures = [
     items: [
       {id: "programs.terminal_here", title: "Programs › Terminal here", keys: ["Ctrl+T"], description: "Open a terminal in the active panel's folder.", search: "shell console powershell command prompt cmd"},
       {id: "programs.terminal_here_admin", title: "Programs › Terminal here (Admin)", query: "terminal admin", description: "Open an administrator terminal in the active panel's folder.", search: "elevated shell powershell cmd"},
+      {id: "settings.programs.compare.new", kind: "setting", title: "Programs › Compare › New", query: "@compare new", description: "Add a compare rule for source-file extensions or a fallback program, with arguments for both files.", search: "diff comparison executable firstfile secondfile custom"},
+      {id: "settings.programs.compare.rules", kind: "setting", title: "Programs › Compare › [file types]", query: "@compare", description: "Existing compare rules appear by their source-file extensions; open one to change or remove it.", search: "diff comparison edit delete program arguments"},
       {id: "settings.programs.editors.new", kind: "setting", title: "Programs › Editors › New", query: "@editors new", description: "Add an editor rule for file extensions or a fallback editor, with a program and arguments.", search: "file association open with custom executable"},
       {id: "settings.programs.editors.rules", kind: "setting", title: "Programs › Editors › [file types]", query: "@editors", description: "Existing editor rules appear by their extensions; open one to change or remove it.", search: "edit delete file association open with custom"},
     ],
