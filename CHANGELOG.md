@@ -1,6 +1,27 @@
 Changelog
 ========================================
 
+v0.7.6 - 2026-11-04
+----------------------------------------
+
+- End behaves like tab in location autocomplete [`f6f4983`](https://github.com/dannyben/commando/commit/f6f4983)
+- Fix overlapping sound on confirmations [`90a79ad`](https://github.com/dannyben/commando/commit/90a79ad)
+- Settings > Programs > Compare [`df093c6`](https://github.com/dannyben/commando/commit/df093c6)
+- Align floaters with filename [`a6428e5`](https://github.com/dannyben/commando/commit/a6428e5)
+- Compare [`v0.7.5..v0.7.6`](https://github.com/dannyben/commando/compare/v0.7.5..v0.7.6)
+
+
+v0.7.5 - 2026-10-31
+----------------------------------------
+
+- Add history fuzzy jump [`6aec4e9`](https://github.com/dannyben/commando/commit/6aec4e9)
+- Fix drive letters being trimmedon narrow view [`15f7ec5`](https://github.com/dannyben/commando/commit/15f7ec5)
+- Fix unwanted selection marks when copying/moving files [`49e0831`](https://github.com/dannyben/commando/commit/49e0831)
+- @Interface > History [`a17f529`](https://github.com/dannyben/commando/commit/a17f529)
+- @Theme > Acrive header/footer [`6c563cb`](https://github.com/dannyben/commando/commit/6c563cb)
+- Compare [`v0.7.4..v0.7.5`](https://github.com/dannyben/commando/compare/v0.7.4..v0.7.5)
+
+
 v0.7.4 - 2026-10-28
 ----------------------------------------
 
