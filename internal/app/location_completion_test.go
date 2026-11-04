@@ -152,6 +152,42 @@ func TestLocationCompletionPathsQuotesAndQuietFailures(t *testing.T) {
 	}
 }
 
+func TestLocationCompletionEndAcceptsSelectedSuggestionAndRetainsEditorKeys(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"report2", "report10"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	v := newBrowserView([]string{root}, nil)
+	t.Cleanup(v.finishOperations)
+	waitLoaded(t, v, 0)
+	send, _ := panelInputFrames(v)
+	send(modified("D", key.ModAlt))
+	send(key.EditEvent{Range: key.Range{End: utf8.RuneCountInString(v.location.Text())}, Text: "re"}, key.SelectionEvent{Start: 2, End: 2})
+	waitLocationCompletion(t, v)
+	send()
+	send(pressed(key.NameDownArrow), pressed(key.NameEnd))
+	if !v.locationEditing() || v.location.Text() != "report10"+string(filepath.Separator) || v.panels[0].path != root {
+		t.Fatal("End did not accept the selected suggestion without navigating", v.location.Text())
+	}
+	send(modified("Z", key.ModCtrl))
+	if v.location.Text() != "re" {
+		t.Fatal("End completion broke native Undo", v.location.Text())
+	}
+	// A selection hides completion; End must still move the native caret.
+	send(key.SelectionEvent{Start: 0, End: 1})
+	send(pressed(key.NameEnd))
+	start, end := v.location.Selection()
+	if v.location.Text() != "re" || start != 2 || end != 2 {
+		t.Fatal("End without a visible suggestion lost native editing", v.location.Text(), start, end)
+	}
+	send(modified(key.NameEnd, key.ModShift))
+	if v.location.Text() != "re" {
+		t.Fatal("Shift+End accepted a suggestion")
+	}
+}
+
 func TestLocationCompletionDiscardsOldDirectoryAndSession(t *testing.T) {
 	root := t.TempDir()
 	v := newPreviewView()

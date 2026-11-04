@@ -9,6 +9,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -110,17 +111,21 @@ func (v *view) stopLocation(gtx layout.Context) {
 }
 
 func (v *view) updateLocation(gtx layout.Context) {
+	filters := []event.Filter{
+		key.Filter{Focus: &v.location, Name: key.NameTab, Optional: key.ModShift},
+		key.Filter{Focus: &v.location, Name: key.NameUpArrow},
+		key.Filter{Focus: &v.location, Name: key.NameDownArrow},
+		key.Filter{Focus: &v.location, Name: key.NameReturn},
+		key.Filter{Focus: &v.location, Name: key.NameEnter},
+		key.Filter{Focus: &v.location, Name: key.NameEscape},
+		key.Filter{Focus: &v.location, Name: "D", Required: key.ModAlt},
+	}
+	if v.interaction.current.(*locationSession).completion.suffix() != "" {
+		filters = append(filters, key.Filter{Focus: &v.location, Name: key.NameEnd})
+	}
 	var keys []key.Event
 	for {
-		e, ok := gtx.Event(
-			key.Filter{Focus: &v.location, Name: key.NameTab, Optional: key.ModShift},
-			key.Filter{Focus: &v.location, Name: key.NameUpArrow},
-			key.Filter{Focus: &v.location, Name: key.NameDownArrow},
-			key.Filter{Focus: &v.location, Name: key.NameReturn},
-			key.Filter{Focus: &v.location, Name: key.NameEnter},
-			key.Filter{Focus: &v.location, Name: key.NameEscape},
-			key.Filter{Focus: &v.location, Name: "D", Required: key.ModAlt},
-		)
+		e, ok := gtx.Event(filters...)
 		if !ok {
 			break
 		}
@@ -172,8 +177,8 @@ func (v *view) updateLocation(gtx layout.Context) {
 		case "D":
 			v.location.SetCaret(0, utf8.RuneCountInString(v.location.Text()))
 			v.updateLocationCompletion()
-		case key.NameTab:
-			if searching && ke.Modifiers == 0 {
+		case key.NameTab, key.NameEnd:
+			if searching && ke.Name == key.NameTab && ke.Modifiers == 0 {
 				v.cycleHistorySearch(gtx, s)
 			} else if !searching && ke.Modifiers == 0 && v.acceptLocationSuggestion() {
 				v.updateLocationCompletion()
