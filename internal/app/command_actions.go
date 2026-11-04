@@ -20,6 +20,8 @@ func (v *view) executeBuiltinCommand(gtx layout.Context, id string) (accepted bo
 		v.startFavorite(gtx)
 	case "file.edit":
 		v.editSelectedFiles()
+	case "file.compare":
+		v.compareSelectedFile()
 	case "programs.terminal_here", "programs.terminal_here_admin":
 		v.openTerminal(id == "programs.terminal_here_admin")
 	case "entry.open":

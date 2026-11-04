@@ -56,8 +56,8 @@ func bindingCommands(values settings.Values) []command {
 func dynamicBindingDefinition(field string) (settings.Definition, bool) {
 	for slot := range 2 {
 		id := strings.TrimPrefix(strings.TrimSuffix(field, ".shortcut_"+strconv.Itoa(slot+1)), "keybindings.")
-		if ruleID, ok := editorRuleBindingID(id); ok && field == bindingSettingKey(id, slot) {
-			return bindingDefinition(command{id: editorRuleCommandPrefix + ruleID}, slot), true
+		if _, ok := programRuleCollection(id); ok && field == bindingSettingKey(id, slot) {
+			return bindingDefinition(command{id: id}, slot), true
 		}
 		if number, ok := panelFocusNumber(id); ok && field == bindingSettingKey(id, slot) {
 			return bindingDefinition(panelFocusCommand(number), slot), true
@@ -68,21 +68,28 @@ func dynamicBindingDefinition(field string) (settings.Definition, bool) {
 
 const editorRuleCommandPrefix = "settings.programs.editors.rules."
 
-func editorRuleBindingID(commandID string) (string, bool) {
-	id := strings.TrimPrefix(commandID, editorRuleCommandPrefix)
-	return id, strings.HasPrefix(commandID, editorRuleCommandPrefix) && settings.ValidIdentity(id)
+func programRuleCollection(commandID string) (string, bool) {
+	for _, collection := range []string{settings.EditorCollection, settings.CompareCollection} {
+		prefix := "settings." + collection + ".rules."
+		if strings.HasPrefix(commandID, prefix) && settings.ValidIdentity(strings.TrimPrefix(commandID, prefix)) {
+			return collection, true
+		}
+	}
+	return "", false
 }
 
 func pruneRuleBindings(values *settings.Values) {
-	live := map[string]bool{}
-	for _, row := range values.Collection(settings.EditorCollection) {
-		id, _ := row["id"].(string)
-		live[id] = true
-	}
-	prefix := "keybindings." + editorRuleCommandPrefix
-	for id := range values.Item(strings.TrimSuffix(prefix, ".")) {
-		if !live[id] {
-			values.Reset(prefix + id)
+	for _, collection := range []string{settings.EditorCollection, settings.CompareCollection} {
+		live := map[string]bool{}
+		for _, row := range values.Collection(collection) {
+			id, _ := row["id"].(string)
+			live[id] = true
+		}
+		prefix := "keybindings.settings." + collection + ".rules."
+		for id := range values.Item(strings.TrimSuffix(prefix, ".")) {
+			if !live[id] {
+				values.Reset(prefix + id)
+			}
 		}
 	}
 }

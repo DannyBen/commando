@@ -68,6 +68,7 @@ var commands = defaultCommands()
 func defaultCommands() []command {
 	catalogue := []command{
 		cmd("file.edit", "File", "Edit", key.NameF4, 0, editorReady),
+		cmd("file.compare", "File", "Compare…", "V", key.ModCtrl|key.ModAlt, compareReady),
 		cmd("entry.open", "Entry", "Open", key.NameReturn, 0, openReady),
 		cmd("entry.rename", "Entry", "Rename…", key.NameF2, 0, renameReady),
 		cmd("entry.copy", "Entry", "Copy", "C", key.ModCtrl, copyReady),
@@ -218,7 +219,7 @@ func defaultCommands() []command {
 		case "application.open_data_folder", "application.toggle_full_screen",
 			"application.increase_width", "application.decrease_width", "application.increase_height", "application.decrease_height":
 			c.soundEvent = eventSoundOwned
-		case "file.edit", "entry.open", "entry.rename", "entry.copy", "entry.copy_filenames", "entry.copy_paths", "entry.cut",
+		case "file.edit", "file.compare", "entry.open", "entry.rename", "entry.copy", "entry.copy_filenames", "entry.copy_paths", "entry.cut",
 			"entry.paste", "entry.paste_shortcut", "entry.duplicate", "entry.pack_zip", "entry.unpack_zip",
 			"entry.copy_to_panel", "entry.move_to_panel", "entry.copy_left", "entry.copy_right", "entry.move_left", "entry.move_right",
 			"entry.recycle", "entry.delete_permanently", "entry.new_file", "entry.new_folder", "entry.context_menu", "entry.properties",

@@ -16,6 +16,7 @@ import (
 type inlineActionSession struct {
 	panel, row, selected int
 	subjectRow           int // Optional preceding file row, kept visible with its actions.
+	fileTarget           *fileTargeting
 	headers              []string
 	options              []string
 	choose               func(int)
@@ -52,7 +53,7 @@ func (v *view) stopInlineActions(accept bool) *inlineActionSession {
 	a := v.inlineInteraction()
 	p := &v.panels[a.panel]
 	p.list.Position, p.reveal = a.previousPosition, a.previousReveal
-	if a.subjectRow >= 0 && a.subjectRow < len(p.items) {
+	if a.fileTarget == nil && a.subjectRow >= 0 && a.subjectRow < len(p.items) {
 		p.selected, p.reveal = a.subjectRow, true
 		p.markRange = nil
 	}
@@ -92,6 +93,9 @@ func (v *view) inlineActionKey(gtx layout.Context, ke key.Event) {
 		return
 	}
 	if ke.Modifiers != 0 {
+		return
+	}
+	if a.fileTarget != nil && v.moveFileTarget(ke.Name) {
 		return
 	}
 	previous := a.selected
@@ -158,6 +162,9 @@ func (v *view) clickInlineAction(gtx layout.Context, panel, row int) {
 	v.active = panel
 	if option := row - a.row - len(a.headers); option >= 0 && option < len(a.options) {
 		a.selected = option
+		if a.fileTarget != nil {
+			v.chooseInlineAction()
+		}
 	}
 	gtx.Execute(key.FocusCmd{Tag: &v.focus})
 }

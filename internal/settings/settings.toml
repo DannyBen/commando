@@ -140,6 +140,12 @@ ext = []
 path = ""
 args = "%SelectedFiles%"
 
+[[programs.compare]]
+id = ""
+ext = []
+path = ""
+args = "%FirstFile% %SecondFile%"
+
 [feedback.type_to_select]
 reset_delay_seconds = 1.0
 

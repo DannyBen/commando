@@ -123,6 +123,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 						bg = v.appearance.Colors.NameRow
 					} else {
 						active = storedRow == p.selected && index == v.active && transient < 0 && !p.navigating
+						if a := v.inlineInteraction(); a != nil && a.fileTarget != nil && a.panel == index {
+							active = storedRow == a.subjectRow
+						}
 						state := p.rows[row].state(gtx, active)
 						active = state.selectedAppearance()
 						if s := v.multiRenameInteraction(); s != nil && s.panel == index {
@@ -136,6 +139,9 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					if naming && v.nameInteraction().draft() {
 						edge = v.appearance.Colors.InlineEdge
 					} else if p.marks[storedRow] || (storedRow == p.selected && index != v.active) {
+						edge = v.appearance.Colors.Edge
+					}
+					if a := v.inlineInteraction(); a != nil && a.fileTarget != nil && a.fileTarget.sourcePanel == index && samePath(p.nativeFilePath(storedRow), a.fileTarget.sourcePath) {
 						edge = v.appearance.Colors.Edge
 					}
 					return v.fileRowSurface(gtx, size, bg, edge, func(gtx layout.Context) layout.Dimensions {

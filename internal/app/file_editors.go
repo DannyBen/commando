@@ -13,6 +13,18 @@ import (
 type editorRequest struct {
 	launches  []settings.EditorLaunch
 	unmatched int
+	compare   bool
+}
+
+func (p *panel) nativeFilePath(row int) string {
+	if !p.nativeFolder() || p.loading || row < 0 || row >= len(p.items) {
+		return ""
+	}
+	item := p.items[row].file
+	if item.Parent || item.Directory || item.Path != "" {
+		return ""
+	}
+	return filepath.Join(p.path, item.Name)
 }
 
 func (p *panel) selectedEditorFiles() []string {
@@ -49,7 +61,7 @@ func (v *view) editSelectedFiles() {
 		v.showFeedback(v.active, feedback.Warning, "No matching editor")
 		return
 	}
-	request := loadRequest{panel: v.active, path: p.path, editor: &editorRequest{launches, unmatched}}
+	request := loadRequest{panel: v.active, path: p.path, editor: &editorRequest{launches: launches, unmatched: unmatched}}
 	if v.loader.submit(request) {
 		p.loading = true
 	}
@@ -57,6 +69,18 @@ func (v *view) editSelectedFiles() {
 func (v *view) acceptEditorLaunch(result loadResult) {
 	p := &v.panels[result.request.panel]
 	p.loading = false
+	if result.request.editor.compare {
+		if result.err != nil {
+			message := "Cannot start compare program"
+			if errors.Is(result.err, os.ErrPermission) {
+				message = "Compare program access denied"
+			}
+			v.showFeedback(result.request.panel, feedback.Error, message)
+		} else {
+			v.showFeedback(result.request.panel, feedback.Success, "Files sent to compare program")
+		}
+		return
+	}
 	switch {
 	case result.err != nil:
 		message := "Cannot start editor"

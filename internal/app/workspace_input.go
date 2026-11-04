@@ -78,6 +78,13 @@ panelInput:
 				if storedRow < 0 {
 					continue
 				}
+				if a := v.inlineInteraction(); a != nil && a.fileTarget != nil {
+					if click.Modifiers == 0 {
+						v.retargetFile(pi, storedRow)
+						v.focusInteraction(gtx)
+					}
+					break panelInput
+				}
 				favoriteNaming := v.nameInteraction() != nil && v.nameInteraction().kind == nameFavorite
 				if !v.cancelInteraction(gtx) {
 					continue

@@ -27,10 +27,10 @@ func bindingSettingsCatalogue() settings.Catalogue {
 	catalogue.DynamicDefinition = dynamicBindingDefinition
 	catalogue.DynamicGroup = func(group string) bool {
 		commandID := strings.TrimPrefix(group, "keybindings.")
-		if commandID == strings.TrimSuffix(editorRuleCommandPrefix, ".") {
+		if commandID == "settings."+settings.EditorCollection+".rules" || commandID == "settings."+settings.CompareCollection+".rules" {
 			return true
 		}
-		if _, ok := editorRuleBindingID(commandID); ok {
+		if _, ok := programRuleCollection(commandID); ok {
 			return true
 		}
 		_, ok := panelFocusNumber(commandID)

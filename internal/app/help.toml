@@ -1562,3 +1562,33 @@ lines = [
   "Choose a target panel with Left/Right.",
   "Up/Down chooses an action; Enter confirms; Escape cancels.",
 ]
+
+["palette.file.compare"]
+lines = [
+  "Compare the current file with another file, ignoring batch marks.",
+  "Configure extension rules in [settings:compare].",
+]
+
+["palette.settings.programs.compare.new"]
+lines = ["Add a compare program for source-file extensions, or * as a fallback."]
+
+["palette.settings.programs.compare.rules"]
+lines = ["Edit this compare program's extensions, executable and arguments."]
+
+["settings.programs.compare"]
+lines = ["Choose a compare program for each source-file extension, or use * as a fallback."]
+
+["settings.programs.compare.ext"]
+lines = ["Enter space-separated source-file extensions, or * for all other files."]
+
+["settings.programs.compare.path"]
+lines = ["Choose the compare executable, or enter its path."]
+
+["settings.programs.compare.args"]
+lines = ["Use %FirstFile% and %SecondFile% once each as whole arguments."]
+
+["actions.target_file"]
+lines = [
+  "Up/Down moves the highlighted comparison target; Left/Right or Tab changes panels.",
+  "Click a file to target it; Enter or Compare launches; Escape cancels.",
+]

@@ -117,6 +117,9 @@ func (c *interactionController) finish(session interactionSession) bool {
 }
 
 func (c *interactionController) protectsListing(panel int) bool {
+	if a, ok := c.current.(*inlineActionSession); ok && a.fileTarget != nil && a.fileTarget.sourcePanel == panel {
+		return true
+	}
 	if owner, ok := c.current.(interface{ protectsListing() bool }); ok && !owner.protectsListing() {
 		return false
 	}
@@ -266,6 +269,9 @@ func (v *view) helpContextIDs() []string {
 			ids = append(ids, "editing.filter", "editing")
 		}
 	case *inlineActionSession:
+		if s.fileTarget != nil {
+			ids = append(ids, "actions.target_file")
+		}
 		if s.navigate != nil {
 			if len(s.options) > 1 {
 				ids = append(ids, "actions.target_panel.choices")

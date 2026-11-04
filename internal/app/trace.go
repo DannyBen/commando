@@ -65,6 +65,9 @@ func (r loadRequest) traceKind() (diagnostics.Mask, string) {
 	case r.archiveOpen != nil:
 		return diagnostics.Shell, "archive_open"
 	case r.editor != nil:
+		if r.editor.compare {
+			return diagnostics.Shell, "compare"
+		}
 		return diagnostics.Shell, "editor"
 	case r.shortcut:
 		return diagnostics.Shell, "shortcut"

@@ -32,11 +32,14 @@ func settingsFooter(s *settingsSession) widgetFooter {
 			hint = "Press shortcut · Esc Cancel"
 		}
 	}
-	if field.Key == settings.EditorCollection+".ext" {
+	if field.Key == settings.EditorCollection+".ext" || field.Key == settings.CompareCollection+".ext" {
 		hint = "Space-separated extensions · * Fallback"
 	}
 	if field.Key == settings.EditorCollection+".args" {
 		hint = "%SelectedFiles% · One launch per rule"
+	}
+	if field.Key == settings.CompareCollection+".args" {
+		hint = "%FirstFile% Source · %SecondFile% Target"
 	}
 	if s.selecting {
 		hint = "Browse panels · Ctrl+Enter Save · Esc Return"

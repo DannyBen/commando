@@ -612,8 +612,8 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 			rows = append(rows[:s.item], rows[s.item+1:]...)
 		} else {
 			row := s.draft.Item(s.collection)
-			if s.collection == settings.EditorCollection {
-				if err := settings.NormalizeEditor(row); err != nil {
+			if s.collection == settings.EditorCollection || s.collection == settings.CompareCollection {
+				if err := settings.NormalizeProgram(row, s.collection); err != nil {
 					s.errorText = err.Error()
 					return
 				}

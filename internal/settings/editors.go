@@ -8,7 +8,9 @@ import (
 )
 
 const EditorCollection = "programs.editors"
+const CompareCollection = "programs.compare"
 const SelectedFilesToken = "%SelectedFiles%"
+const FirstFileToken, SecondFileToken = "%FirstFile%", "%SecondFile%"
 
 type EditorRule struct {
 	Extensions []string
@@ -17,8 +19,12 @@ type EditorRule struct {
 }
 
 func (v Values) EditorRules() []EditorRule {
+	return v.ProgramRules(EditorCollection)
+}
+
+func (v Values) ProgramRules(collection string) []EditorRule {
 	var rules []EditorRule
-	for _, row := range v.Collection(EditorCollection) {
+	for _, row := range v.Collection(collection) {
 		ext, _ := row["ext"].([]string)
 		program, _ := row["path"].(string)
 		args, _ := row["args"].(string)
@@ -29,6 +35,10 @@ func (v Values) EditorRules() []EditorRule {
 
 // NormalizeEditor validates a complete draft before it becomes a launch rule.
 func NormalizeEditor(row map[string]any) error {
+	return NormalizeProgram(row, EditorCollection)
+}
+
+func NormalizeProgram(row map[string]any, collection string) error {
 	ext, _ := row["ext"].([]string)
 	if len(ext) == 0 {
 		return fmt.Errorf("Enter extensions or *")
@@ -51,10 +61,16 @@ func NormalizeEditor(row map[string]any) error {
 	program, _ := row["path"].(string)
 	program = strings.TrimSpace(program)
 	if program == "" {
-		return fmt.Errorf("Choose an editor program")
+		return fmt.Errorf("Choose a program")
 	}
 	args, _ := row["args"].(string)
-	if _, err := EditorArguments(args, []string{"file"}); err != nil {
+	var err error
+	if collection == CompareCollection {
+		_, err = CompareArguments(args, "first", "second")
+	} else {
+		_, err = EditorArguments(args, []string{"file"})
+	}
+	if err != nil {
 		return err
 	}
 	row["path"] = program
@@ -64,6 +80,14 @@ func NormalizeEditor(row map[string]any) error {
 // EditorArguments uses double quotes and Windows backslash-before-quote rules.
 // Expansion happens after splitting, so file paths are never parsed as syntax.
 func EditorArguments(input string, files []string) ([]string, error) {
+	return programArguments(input, map[string][]string{SelectedFilesToken: files})
+}
+
+func CompareArguments(input, first, second string) ([]string, error) {
+	return programArguments(input, map[string][]string{FirstFileToken: {first}, SecondFileToken: {second}})
+}
+
+func programArguments(input string, replacements map[string][]string) ([]string, error) {
 	var words []string
 	var word strings.Builder
 	quoted, started := false, false
@@ -116,20 +140,24 @@ func EditorArguments(input string, files []string) ([]string, error) {
 		words = append(words, word.String())
 	}
 	var result []string
-	tokens := 0
+	tokens := map[string]int{}
 	for _, arg := range words {
-		if arg == SelectedFilesToken {
+		if files, ok := replacements[arg]; ok {
 			result = append(result, files...)
-			tokens++
+			tokens[arg]++
 			continue
 		}
-		if strings.Contains(arg, SelectedFilesToken) {
-			return nil, fmt.Errorf("File token must stand alone")
+		for token := range replacements {
+			if strings.Contains(arg, token) {
+				return nil, fmt.Errorf("File token must stand alone")
+			}
 		}
 		result = append(result, arg)
 	}
-	if tokens != 1 {
-		return nil, fmt.Errorf("Use one %%SelectedFiles%% token")
+	for token := range replacements {
+		if tokens[token] != 1 {
+			return nil, fmt.Errorf("Use one %s token", token)
+		}
 	}
 	return result, nil
 }
@@ -145,24 +173,7 @@ func EditorLaunches(rules []EditorRule, files []string) ([]EditorLaunch, int, er
 	grouped := make([][]string, len(rules))
 	unmatched := 0
 	for _, file := range files {
-		extension := strings.ToLower(strings.TrimPrefix(filepath.Ext(filepath.Base(file)), "."))
-		if strings.HasPrefix(filepath.Base(file), ".") && strings.Count(filepath.Base(file), ".") == 1 {
-			extension = ""
-		}
-		match, fallback := -1, -1
-		for i, rule := range rules {
-			for _, ext := range rule.Extensions {
-				if ext == "*" && fallback < 0 {
-					fallback = i
-				}
-				if strings.EqualFold(strings.TrimPrefix(ext, "."), extension) && match < 0 {
-					match = i
-				}
-			}
-		}
-		if match < 0 {
-			match = fallback
-		}
+		match := MatchProgram(rules, file)
 		if match < 0 {
 			unmatched++
 			continue
@@ -181,4 +192,25 @@ func EditorLaunches(rules []EditorRule, files []string) ([]EditorLaunch, int, er
 		launches = append(launches, EditorLaunch{rules[i].Program, args})
 	}
 	return launches, unmatched, nil
+}
+
+// MatchProgram prefers the first specific extension rule over any wildcard.
+func MatchProgram(rules []EditorRule, file string) int {
+	name := filepath.Base(file)
+	extension := strings.TrimPrefix(filepath.Ext(name), ".")
+	if strings.HasPrefix(name, ".") && strings.Count(name, ".") == 1 {
+		extension = ""
+	}
+	fallback := -1
+	for i, rule := range rules {
+		for _, ext := range rule.Extensions {
+			if ext == "*" && fallback < 0 {
+				fallback = i
+			}
+			if strings.EqualFold(strings.TrimPrefix(ext, "."), extension) {
+				return i
+			}
+		}
+	}
+	return fallback
 }

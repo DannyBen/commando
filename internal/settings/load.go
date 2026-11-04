@@ -124,8 +124,8 @@ func loadCollection(c Catalogue, key string, raw any) ([]map[string]any, error) 
 			}
 		}
 		normalized := item.Item(key)
-		if key == EditorCollection {
-			if err := NormalizeEditor(normalized); err != nil {
+		if key == EditorCollection || key == CompareCollection {
+			if err := NormalizeProgram(normalized, key); err != nil {
 				failures = append(failures, fmt.Errorf("%w: %s: %v", ErrValue, key, err))
 				continue
 			}

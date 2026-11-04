@@ -722,6 +722,30 @@ control = "input"
 [feedback]
 label = "Interface"
 
+[programs.compare]
+identity = "id"
+label = "Compare"
+title = "Compare"
+
+[programs.compare.ext]
+label = "Extensions"
+description = "Source-file extensions, or * for the fallback compare program."
+control = "input"
+
+[programs.compare.path]
+label = "Program"
+description = "Choose the compare executable."
+control = "file"
+
+[programs.compare.args]
+label = "Arg"
+description = "%FirstFile% is the source; %SecondFile% is the chosen comparison file."
+control = "input"
+
+[programs.compare.id]
+label = "ID"
+visible = false
+
 [feedback.type_to_select]
 label = "Type to select"
 title = "Type to select"

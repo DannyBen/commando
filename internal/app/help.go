@@ -47,8 +47,8 @@ func paletteHelpID(id string) string {
 	if _, ok := panelFocusNumber(id); ok {
 		return "palette.panel.focus"
 	}
-	if _, ok := editorRuleBindingID(id); ok {
-		return "palette.settings.programs.editors.rules"
+	if collection, ok := programRuleCollection(id); ok {
+		return "palette.settings." + collection + ".rules"
 	}
 	return "palette." + id
 }
