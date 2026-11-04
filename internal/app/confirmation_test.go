@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/settings"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 func TestReassignmentFirstEnterAfterQuickCapture(t *testing.T) {
@@ -78,9 +80,14 @@ func TestReassignmentStagesAndSavesBothCommands(t *testing.T) {
 	if question == nil || question.message != "Ctrl+V is assigned to Paste." || question.selected != 0 || !router.Source().Focused(question) || v.settingsWidget() != s {
 		t.Fatalf("question=%+v focused=%v widget=%p expected=%p", question, router.Source().Focused(question), v.settingsWidget(), s)
 	}
+	recorder := &recordedSounds{}
+	v.sounds = recorder
 	send(pressed(key.NameReturn))
 	if v.settingsInteraction() != s || !router.Source().Focused(&v.focus) || s.capturing || !s.dirty {
 		t.Fatalf("accept current=%T focused=%v capturing=%v dirty=%v", v.interaction.current, router.Source().Focused(&v.focus), s.capturing, s.dirty)
+	}
+	if !slices.Equal(recorder.played, []sound.Name{sound.Click}) {
+		t.Fatal("reassignment did not leave its cue to the accepted edit", recorder.played)
 	}
 	draft := view{settingsValues: s.draft}
 	paste := draft.resolveCommandBindings(commandByID(v, "entry.paste"))
@@ -101,6 +108,42 @@ func TestReassignmentStagesAndSavesBothCommands(t *testing.T) {
 	check := view{settingsValues: loaded}
 	if check.resolveCommandBindings(*s.bindingCommand).effectiveShortcut(0).String() != "Ctrl+V" || check.resolveCommandBindings(commandByID(v, "entry.paste")).effectiveShortcut(0).String() != "Shift+Insert" {
 		t.Fatal("saved reassignment did not survive reload")
+	}
+}
+
+func TestSaveAndReassignConfirmationLeavesSoundToSaveResult(t *testing.T) {
+	for _, failure := range []bool{false, true} {
+		v := newPreviewView()
+		send, _ := panelInputFrames(v)
+		_, s := openShortcutWidget(t, v, send, "Next metadata column")
+		if err := s.draft.Set(bindingSettingsCatalogue(), s.fields[0].Key, settings.Value{Text: "Ctrl+C"}); err != nil {
+			t.Fatal(err)
+		}
+		v.loader = &directoryLoader{requests: make(chan loadRequest, 1)}
+		v.prepareSettingsSave = func(settings.Values) func() (string, error) {
+			return func() (string, error) { return "", nil }
+		}
+		send(modified(key.NameReturn, key.ModCtrl), key.Event{Name: key.NameReturn, Modifiers: key.ModCtrl, State: key.Release})
+		if q := v.confirmationInteraction(); q == nil || q.acceptLabel != "Save and reassign" {
+			t.Fatal("conflicting save did not ask for reassignment")
+		}
+		recorder := &recordedSounds{}
+		v.sounds = recorder
+		send(pressed(key.NameReturn))
+		if len(v.loader.requests) != 1 || !s.pending || len(recorder.played) != 0 {
+			t.Fatal("confirmation sounded before the save result", recorder.played)
+		}
+		result := loadResult{request: <-v.loader.requests}
+		want := []sound.Name{sound.Closed}
+		if failure {
+			result.err = os.ErrPermission
+			want = nil
+		}
+		v.acceptLoad(result)
+		send()
+		if !slices.Equal(recorder.played, want) || failure && (v.settingsInteraction() != s || s.errorText == "") {
+			t.Fatal("save result lost its sound or error ownership", recorder.played)
+		}
 	}
 }
 

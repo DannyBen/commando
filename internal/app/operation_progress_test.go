@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -13,6 +14,68 @@ import (
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/sound"
 )
+
+func TestRemovalConfirmationLeavesSoundToOperationResult(t *testing.T) {
+	for _, permanent := range []bool{false, true} {
+		for _, failure := range []bool{false, true} {
+			v := newPreviewView()
+			v.loader = &directoryLoader{requests: make(chan loadRequest, 1)}
+			for _, name := range []string{"single_files", "directories", "multiple_entries"} {
+				setGuard(t, v, permanent, name, "ON")
+			}
+			recorder := &recordedSounds{}
+			v.sounds = recorder
+			send, advance := panelInputFrames(v)
+			event := pressed(key.NameDeleteForward)
+			if permanent {
+				event = modified(key.NameDeleteForward, key.ModShift)
+			}
+			send(event)
+			if v.confirmationInteraction() == nil || !slices.Equal(recorder.played, []sound.Name{sound.Opened}) {
+				t.Fatal("removal did not open and announce its confirmation", recorder.played)
+			}
+			recorder.played = nil
+			send(pressed(key.NameReturn))
+			if len(v.loader.requests) != 1 || len(recorder.played) != 0 {
+				t.Fatal("confirmation competed with the pending removal result", recorder.played)
+			}
+			request := <-v.loader.requests
+			if len(request.removal.names) < 2 {
+				t.Fatal("test requires a multiple-entry deletion")
+			}
+			result := loadResult{request: request, removed: browser.RemovalResult{Names: request.removal.names}}
+			want := sound.MessageSuccess
+			if failure {
+				result.err = os.ErrPermission
+				result.removed.Names = nil
+				want = sound.MessageError
+			}
+			v.acceptLoad(result)
+			send()
+			advance(time.Second)
+			if !slices.Equal(recorder.played, []sound.Name{want}) {
+				t.Fatal("removal did not announce exactly one result", recorder.played)
+			}
+		}
+	}
+}
+
+func TestCancelledRemovalConfirmationStillAnnouncesClose(t *testing.T) {
+	for _, cancel := range []key.Event{pressed(key.NameEscape), pressed(key.NameReturn)} {
+		v := newPreviewView()
+		v.loader = &directoryLoader{requests: make(chan loadRequest, 1)}
+		setGuard(t, v, false, "multiple_entries", "ON (Cancel default)")
+		recorder := &recordedSounds{}
+		v.sounds = recorder
+		send, _ := panelInputFrames(v)
+		send(pressed(key.NameDeleteForward))
+		recorder.played = nil
+		send(cancel)
+		if !v.interaction.idle() || len(v.loader.requests) != 0 || !slices.Equal(recorder.played, []sound.Name{sound.Closed}) {
+			t.Fatal("cancelling removal lost its Close cue or submitted work", recorder.played)
+		}
+	}
+}
 
 func TestQuietOperationProgressPreview(t *testing.T) {
 	directory := os.Getenv("COMMANDO_PREVIEW_MESSAGES")

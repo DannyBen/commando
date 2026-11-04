@@ -48,7 +48,7 @@ func (v *view) startInlineActions(panel, row int, title, detail string, options 
 
 func (a *inlineActionSession) count() int { return len(a.headers) + len(a.options) }
 
-func (v *view) stopInlineActions() *inlineActionSession {
+func (v *view) stopInlineActions(accept bool) *inlineActionSession {
 	a := v.inlineInteraction()
 	p := &v.panels[a.panel]
 	p.list.Position, p.reveal = a.previousPosition, a.previousReveal
@@ -57,12 +57,12 @@ func (v *view) stopInlineActions() *inlineActionSession {
 		p.markRange = nil
 	}
 	p.rows = make(map[int]*fileRow)
-	v.finishInteraction(a)
+	v.resolveInteraction(a, accept)
 	return a
 }
 
 func (v *view) cancelInlineActions() {
-	a := v.stopInlineActions()
+	a := v.stopInlineActions(false)
 	if a.cancel != nil {
 		a.cancel()
 	}
@@ -72,7 +72,7 @@ func (v *view) chooseInlineAction() {
 	if len(v.inlineInteraction().options) == 0 || v.inlineInteraction().canChoose != nil && !v.inlineInteraction().canChoose() {
 		return
 	}
-	a := v.stopInlineActions()
+	a := v.stopInlineActions(true)
 	if a.choose != nil {
 		a.choose(a.selected)
 	}

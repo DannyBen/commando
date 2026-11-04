@@ -15,7 +15,41 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"github.com/dannyben/commando/internal/browser"
+	"github.com/dannyben/commando/internal/sound"
 )
+
+func TestPanelTransferAcceptanceLeavesSoundToResult(t *testing.T) {
+	for _, move := range []bool{false, true} {
+		v := newPreviewView()
+		v.loader = &directoryLoader{requests: make(chan loadRequest, 1)}
+		recorder := &recordedSounds{}
+		v.sounds = recorder
+		send, _ := panelInputFrames(v)
+		invoke := key.NameF5
+		if move {
+			invoke = key.NameF6
+		}
+		send(pressed(invoke))
+		if v.inlineInteraction() == nil {
+			t.Fatal("transfer did not open its destination chooser")
+		}
+		recorder.played = nil
+		send(pressed(key.NameReturn))
+		if len(v.loader.requests) != 1 || v.inlineInteraction() != nil || len(recorder.played) != 0 {
+			t.Fatal("destination choice competed with the pending transfer", recorder.played)
+		}
+		result := loadResult{request: <-v.loader.requests, transferMove: move}
+		result.transferred.Summary.Completed = 1
+		if result.request.transfer.snapshot.Move != move {
+			t.Fatal("destination choice changed copy/move mode")
+		}
+		v.acceptLoad(result)
+		send()
+		if !slices.Equal(recorder.played, []sound.Name{sound.MessageSuccess}) {
+			t.Fatal("transfer did not announce just its result", recorder.played)
+		}
+	}
+}
 
 func forbidTransferClipboard(t *testing.T, v *view) {
 	t.Helper()

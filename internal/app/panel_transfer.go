@@ -88,7 +88,7 @@ func (v *view) choosePanelDestination(source, target, excluded int, options []st
 				return
 			}
 			selected = v.inlineInteraction().selected
-			v.stopInlineActions()
+			v.stopInlineActions(true)
 			v.active = next
 			offer(next)
 		}

@@ -88,6 +88,15 @@ func (v *view) finishInteraction(session interactionSession) bool {
 	return true
 }
 
+// Accepting a decision hands sound ownership to the chosen action, including
+// asynchronous results. Cancellation retains the session's normal closing cue.
+func (v *view) resolveInteraction(session interactionSession, accept bool) bool {
+	if accept {
+		return v.interaction.finish(session)
+	}
+	return v.finishInteraction(session)
+}
+
 // Open/Close is opt-in for actual widgets; ordinary sessions default to Click.
 func openingSoundEvent(session interactionSession) interactionEvent {
 	if owner, ok := session.(interface{ openingEvent() interactionEvent }); ok {
