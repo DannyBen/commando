@@ -43,12 +43,19 @@ func (v *view) withFileIcon(gtx layout.Context, p *panel, item entry, cut bool, 
 	return v.withRowIcon(gtx, p, item, cut, false, content)
 }
 
-func (v *view) withRowIcon(gtx layout.Context, p *panel, item entry, cut, sample bool, content layout.Widget) layout.Dimensions {
+func (v *view) fileIconSize(gtx layout.Context) int {
 	if !v.settingsValues.Get(settings.CatalogueDefault, settingIconsEnabled).Bool ||
 		v.loader == nil && v.fileIcons == nil || v.loader != nil && v.loader.readFileIcon == nil && v.loader.readFileTypeIcon == nil {
+		return 0
+	}
+	return max(1, min(gtx.Dp(16), v.textHeight(gtx, v.appearance.TextSize)))
+}
+
+func (v *view) withRowIcon(gtx layout.Context, p *panel, item entry, cut, sample bool, content layout.Widget) layout.Dimensions {
+	size := v.fileIconSize(gtx)
+	if size == 0 {
 		return content(gtx)
 	}
-	size := max(1, min(gtx.Dp(16), v.textHeight(gtx, v.appearance.TextSize)))
 	key := fileIconKey{path: filepath.Join(p.path, item.file.Name), size: size, directory: item.file.Directory}
 	if sample || p.archiveFolder != "" {
 		key = sampleFileIconKey(item.file, size)
