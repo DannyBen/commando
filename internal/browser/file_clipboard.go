@@ -15,6 +15,7 @@ type FileClipboard struct {
 	Shell    bool              // Windows Shell selection without filesystem paths; copy-only.
 	Paths    []string
 	ImagePNG []byte // Captured image when no file selection is present.
+	Text     string // Captured text when no file or image selection is present.
 	Move     bool
 	Sequence uint32
 }

@@ -1226,7 +1226,7 @@ lines = [
 
 ["palette.entry.paste"]
 lines = [
-  "Copy or move clipboard files here, or save a clipboard image as a file",
+  "Copy or move clipboard files here, or save an image as PNG or a URL as a shortcut",
 ]
 
 ["palette.entry.paste_shortcut"]

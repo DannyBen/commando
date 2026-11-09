@@ -32,7 +32,7 @@ func (v *view) acceptFileOperation(result loadResult) {
 		v.showFeedback(result.request.panel, feedback.Info, "Already in this folder")
 		return
 	}
-	if result.duplicatePlan != nil || len(result.clipboard.ImagePNG) > 0 && len(result.clipboard.Paths) == 0 {
+	if result.duplicatePlan != nil || result.request.fileDraft != nil || len(result.clipboard.ImagePNG) > 0 && len(result.clipboard.Paths) == 0 {
 		p.feedback.Complete()
 		v.transferPending = true
 		v.pendingNameDraft = &result

@@ -31,7 +31,9 @@ func TestImagePasteNamesCapturedPNGAndReconcilesPanels(t *testing.T) {
 	v, root, _ := clipboardView(t)
 	captured := testImagePNG(t)
 	current := captured
-	v.loader.readClipboard = func() (browser.FileClipboard, error) { return browser.FileClipboard{ImagePNG: current}, nil }
+	v.loader.readClipboard = func() (browser.FileClipboard, error) {
+		return browser.FileClipboard{ImagePNG: current, Text: "https://example.com/image.png"}, nil
+	}
 	selectName(t, &v.panels[0], "a.txt")
 	v.panels[0].toggleMark(v.panels[0].selected)
 	selectName(t, &v.panels[2], "z.txt")
@@ -164,12 +166,12 @@ func TestImagePasteArrivalDefersBehindEditorAndCancelsAfterLeavingPane(t *testin
 	}
 }
 
-func TestFilePasteTakesPriorityOverImageRepresentation(t *testing.T) {
+func TestFilePasteTakesPriorityOverOtherRepresentations(t *testing.T) {
 	for _, sameFolder := range []bool{false, true} {
 		v, root, target := clipboardView(t)
 		captured := testImagePNG(t)
 		v.loader.readClipboard = func() (browser.FileClipboard, error) {
-			return browser.FileClipboard{Paths: []string{filepath.Join(root, "a.txt")}, ImagePNG: captured}, nil
+			return browser.FileClipboard{Paths: []string{filepath.Join(root, "a.txt")}, ImagePNG: captured, Text: "https://example.com/file"}, nil
 		}
 		if !sameFolder {
 			v.active = 1

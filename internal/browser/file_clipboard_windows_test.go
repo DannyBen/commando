@@ -120,6 +120,45 @@ func TestWindowsImageClipboardRoundTrip(t *testing.T) {
 	}
 }
 
+func TestWindowsTextClipboardRoundTrip(t *testing.T) {
+	if os.Getenv("COMMANDO_TEST_CLIPBOARD") != "1" {
+		t.Skip("requires COMMANDO_TEST_CLIPBOARD=1 on a Windows desktop; replaces clipboard")
+	}
+	for _, text := range []string{"https://example.com/path?q=1#section", "https://example.com/שלום?q=🎵", "ordinary text"} {
+		words, err := windows.UTF16FromString(text)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data := make([]byte, len(words)*2)
+		for i, word := range words {
+			binary.LittleEndian.PutUint16(data[i*2:], word)
+		}
+		err = withFileClipboard(true, func() error {
+			handle, err := clipboardMemory(data)
+			if err != nil {
+				return err
+			}
+			if ok, _, err := emptyClipboard.Call(); ok == 0 {
+				globalFree.Call(handle)
+				return err
+			}
+			if ok, _, err := setClipboardData.Call(13, handle); ok == 0 {
+				globalFree.Call(handle)
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		sequence := FileClipboardSequence()
+		snapshot, err := ReadFileClipboard()
+		if err != nil || snapshot.Text != text || len(snapshot.Paths) > 0 || len(snapshot.ImagePNG) > 0 || snapshot.Sequence != sequence || FileClipboardSequence() != sequence {
+			t.Fatal("text snapshot changed or clipboard replaced", snapshot, err)
+		}
+	}
+}
+
 func TestWindowsArchiveClipboardIsPrivateAndReplaceable(t *testing.T) {
 	if os.Getenv("COMMANDO_TEST_CLIPBOARD") != "1" {
 		t.Skip("requires COMMANDO_TEST_CLIPBOARD=1 on a Windows desktop; replaces clipboard")

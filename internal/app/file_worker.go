@@ -106,12 +106,19 @@ func (l *directoryLoader) fileOperation(request loadRequest) loadResult {
 		result.clipboard = snapshot
 		return result
 	}
+	if !request.transfer.shortcuts && len(snapshot.Paths) == 0 {
+		if name, data := browser.URLShortcut(snapshot.Text); name != "" {
+			result.request.fileDraft = &fileDraftRequest{name: name, data: data}
+			return result
+		}
+	}
 	if len(snapshot.Paths) == 0 {
 		result.err = browser.ErrNoClipboardFiles
 		return result
 	}
-	// File selections take precedence over any alternate image representation.
+	// File selections take precedence over alternate image or text representations.
 	snapshot.ImagePNG = nil
+	snapshot.Text = ""
 	result.clipboard, result.transferMove = snapshot, snapshot.Move
 	if request.transfer.shortcuts {
 		result.transferMove = false

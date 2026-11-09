@@ -73,10 +73,10 @@ func (v *view) offerNameDraft(gtx layout.Context) {
 	if panel != v.active {
 		v.pendingNameDraft, v.transferPending = nil, false
 		message := "Copy cancelled"
-		if len(result.clipboard.ImagePNG) > 0 {
+		if len(result.clipboard.ImagePNG) > 0 || result.request.fileDraft != nil && result.request.transfer != nil {
 			message = "Paste cancelled"
 		}
-		if result.request.fileDraft != nil {
+		if result.request.fileDraft != nil && result.request.transfer == nil {
 			message = "Save cancelled"
 		}
 		v.showFeedback(panel, feedback.Info, message)

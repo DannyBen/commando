@@ -88,6 +88,12 @@ func ReadFileClipboard() (snapshot FileClipboard, err error) {
 			}
 			var imageErr error
 			snapshot.ImagePNG, dib, imageErr = readClipboardImageLocked()
+			if imageErr == ErrNoClipboardFiles {
+				snapshot.Text = readClipboardTextLocked()
+				if snapshot.Text != "" {
+					imageErr = nil
+				}
+			}
 			snapshot.Sequence = FileClipboardSequence()
 			return imageErr
 		}
