@@ -21,7 +21,7 @@ func TestDoubleClickOpensFileAndPreservesMarks(t *testing.T) {
 	opened := make(chan string, 3)
 	v.openFile = func(path string) error { opened <- path; return nil }
 	v.panels[0].marks = map[int]bool{1: true, 3: true}
-	send, _ := panelInputFrames(v)
+	router, send := clipboardFrames(v)
 	height := v.panels[0].rows[2].size.Y
 	point := f32.Pt(20, float32(68+2*height+height/2))
 	rowClick(send, point, time.Second, 0)
@@ -38,6 +38,9 @@ func TestDoubleClickOpensFileAndPreservesMarks(t *testing.T) {
 		t.Fatal("double click did not open file")
 	}
 	assertMarks(t, &v.panels[0], 1, 3)
+	if !router.Source().Focused(&v.focus) {
+		t.Fatal("opening a file lost browsing keyboard focus")
+	}
 	rowClick(send, point, time.Second+200*time.Millisecond, 0)
 	if len(opened) != 0 {
 		t.Fatal("triple click opened file again")
@@ -58,7 +61,7 @@ func TestDoubleClickNavigatesFoldersParentsAndDrives(t *testing.T) {
 				v.panels[0].drives = true
 				v.panels[0].items[1].file = browser.Entry{Name: "Drive", Directory: true, Path: tc.want}
 			}
-			send, _ := panelInputFrames(v)
+			router, send := clipboardFrames(v)
 			height := v.panels[0].rows[tc.row].size.Y
 			point := f32.Pt(20, float32(68+tc.row*height+height/2))
 			rowClick(send, point, time.Second, 0)
@@ -74,7 +77,39 @@ func TestDoubleClickNavigatesFoldersParentsAndDrives(t *testing.T) {
 			default:
 				t.Fatal("double click did not navigate")
 			}
+			if !router.Source().Focused(&v.focus) {
+				t.Fatal("double click navigation lost browsing keyboard focus")
+			}
 		})
+	}
+}
+
+func TestDoubleClickFolderRetainsBrowsingKeyboardFocus(t *testing.T) {
+	v, root, _ := clipboardView(t)
+	p := &v.panels[0]
+	selectName(t, p, "folder")
+	router, send := clipboardFrames(v)
+	height := p.rows[p.selected].size.Y
+	point := f32.Pt(20, float32(68+p.selected*height+height/2))
+	rowClick(send, point, time.Second, 0)
+	rowClick(send, point, time.Second+100*time.Millisecond, 0)
+	waitLoaded(t, v, 0)
+	send()
+	if p.path != filepath.Join(root, "folder") {
+		t.Fatal("double click did not enter folder")
+	}
+	if !router.Source().Focused(&v.focus) {
+		t.Fatal("double click lost browsing keyboard focus")
+	}
+	send(pressed(key.NameUpArrow))
+	if p.selected != 0 {
+		t.Fatal("keyboard navigation stopped after double click")
+	}
+	send(pressed(key.NameDeleteBackward))
+	waitLoaded(t, v, 0)
+	send(pressed("`"))
+	if p.path != root || v.paletteInteraction() == nil || !router.Source().Focused(&v.commandSearch) {
+		t.Fatal("parent navigation or palette stopped after double click")
 	}
 }
 

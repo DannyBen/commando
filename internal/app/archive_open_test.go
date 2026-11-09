@@ -45,7 +45,7 @@ func TestArchiveOpenUsesCurrentFileAcrossInputRoutes(t *testing.T) {
 					}
 				})
 				v.openFile = func(path string) error { opened <- path; <-release; return nil }
-				send, _ := panelInputFrames(v)
+				router, send := clipboardFrames(v)
 				position := p.list.Position
 				switch route {
 				case "enter":
@@ -65,6 +65,10 @@ func TestArchiveOpenUsesCurrentFileAcrossInputRoutes(t *testing.T) {
 				close(release)
 				v.active = 1
 				waitLoaded(t, v, 0)
+				send()
+				if !router.Source().Focused(&v.focus) {
+					t.Fatal("opening archive file lost browsing keyboard focus")
+				}
 				var path string
 				select {
 				case path = <-opened:

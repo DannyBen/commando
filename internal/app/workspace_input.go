@@ -106,7 +106,9 @@ panelInput:
 					if !v.chooseSettingsFile(gtx) {
 						v.activateSelected()
 					}
-					return // Opening may replace the listing and its row controls.
+					// Opening may replace row controls. Finish the shared input
+					// update so browsing focus remains registered for this frame.
+					break panelInput
 				}
 			}
 		}
