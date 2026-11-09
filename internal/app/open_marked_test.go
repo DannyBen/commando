@@ -22,7 +22,7 @@ func TestOpenMarkedFilesUsesSeparateRequestsAndContinuesAfterFailure(t *testing.
 				selectName(t, p, name)
 				p.toggleMark(p.selected)
 			}
-			selectName(t, p, "folder") // Current and marked folders must not navigate.
+			selectName(t, p, "a.txt")
 			before := maps.Clone(p.marks)
 			opened := make(chan string, 3)
 			release := make(chan struct{})
@@ -63,7 +63,7 @@ func TestOpenMarkedFilesUsesSeparateRequestsAndContinuesAfterFailure(t *testing.
 				}
 			}
 			next("a.txt")
-			if !maps.Equal(p.marks, before) || p.items[p.selected].name != "folder" || p.path != root || p.loading {
+			if !maps.Equal(p.marks, before) || p.items[p.selected].name != "a.txt" || p.path != root || p.loading {
 				t.Fatal("opening changed marks, current row, or location")
 			}
 			p.clearMarks() // The submitted batch must retain its original targets.
@@ -84,6 +84,80 @@ func TestOpenMarkedFilesUsesSeparateRequestsAndContinuesAfterFailure(t *testing.
 			default:
 			}
 		})
+	}
+}
+
+func TestOpenFolderWithMarksNavigatesAcrossInputRoutes(t *testing.T) {
+	for _, location := range []string{"native", "archive"} {
+		for _, current := range []string{"marked folder", "unmarked folder", "parent"} {
+			for _, route := range []string{"Return", "Enter", "palette"} {
+				t.Run(location+"/"+current+"/"+route, func(t *testing.T) {
+					var v *view
+					var root, folder, file, wantPath, wantArchive string
+					if location == "archive" {
+						v, root = archiveView(t)
+						folder, file, wantPath, wantArchive = "docs", "a2.txt", root, "docs"
+					} else {
+						v, root, _ = clipboardView(t)
+						folder, file, wantPath = "folder", "a.txt", filepath.Join(root, "folder")
+					}
+					p := &v.panels[0]
+					selectName(t, p, file)
+					p.toggleMark(p.selected)
+					selectName(t, p, folder)
+					if current != "unmarked folder" {
+						p.toggleMark(p.selected)
+					}
+					if current == "parent" {
+						selectName(t, p, "..")
+						wantPath, wantArchive = filepath.Dir(root), ""
+					}
+					opened := make(chan string, 3)
+					v.openFile = func(path string) error { opened <- path; return nil }
+					send, _ := panelInputFrames(v)
+					switch route {
+					case "Return":
+						send(pressed(key.NameReturn))
+					case "Enter":
+						send(pressed(key.NameEnter))
+					default:
+						send(pressed("`"), key.EditEvent{Text: "Entry Open"})
+						send(pressed(key.NameReturn))
+					}
+					waitLoaded(t, v, 0)
+					if p.path != wantPath || p.archiveFolder != wantArchive || len(p.marks) != 0 {
+						t.Fatal("folder did not navigate and clear listing marks", p.path, p.archiveFolder, p.marks)
+					}
+					select {
+					case path := <-opened:
+						t.Fatal("folder navigation also opened marked file", path)
+					default:
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestOpenMarkedFilesFromUnmarkedFileSkipsCurrentFileAndFolders(t *testing.T) {
+	v, root, _ := clipboardView(t)
+	p := &v.panels[0]
+	markClipboardItems(t, p) // Mark folder and a.txt; leave the current z.txt unmarked.
+	before := maps.Clone(p.marks)
+	opened := make(chan string, 3)
+	v.openFile = func(path string) error { opened <- path; return nil }
+	send, _ := panelInputFrames(v)
+	send(pressed(key.NameReturn))
+	select {
+	case path := <-opened:
+		if path != filepath.Join(root, "a.txt") {
+			t.Fatal("opened unmarked current file or marked folder", path)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("marked file was not opened")
+	}
+	if !maps.Equal(p.marks, before) || p.path != root || p.items[p.selected].name != "z.txt" || p.loading {
+		t.Fatal("opening changed marks, current row, or location")
 	}
 }
 
@@ -114,7 +188,7 @@ func TestOpenMarkedArchiveFilesSkipsFoldersAndContinuesAfterFailure(t *testing.T
 		selectName(t, p, name)
 		p.toggleMark(p.selected)
 	}
-	selectName(t, p, "docs")
+	selectName(t, p, "a2.txt")
 	marks, selected := maps.Clone(p.marks), p.selected
 	before, err := os.ReadFile(archive)
 	if err != nil {

@@ -1215,8 +1215,8 @@ lines = [
 
 ["palette.entry.open"]
 lines = [
-  "Without marks, open the current folder, browse a ZIP, or launch a file in its default app",
-  "With marks, launch each marked file separately; skip marked folders",
+  "On a folder, enter it regardless of marks; without marks, open the current entry",
+  "On a file with marks, launch the marked files and skip marked folders",
 ]
 
 ["palette.entry.pack_zip"]

@@ -334,14 +334,15 @@ func (v *view) acceptLoad(result loadResult) {
 	}
 }
 
-// Enter and the palette act on marks; double-click still activates its row.
+// Enter and the palette enter the current folder or open marked files.
+// Double-click always activates its row.
 func (v *view) openEntries() {
-	p := &v.panels[v.active]
-	if len(p.marks) == 0 || v.settingsSelecting() {
-		v.activateSelected()
+	if !openReady(v) {
 		return
 	}
-	if !openReady(v) {
+	p := &v.panels[v.active]
+	if p.items[p.selected].file.Directory || len(p.marks) == 0 || v.settingsSelecting() {
+		v.activateSelected()
 		return
 	}
 	var names, paths []string
