@@ -77,6 +77,7 @@ function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   document.querySelector('#brand-logo').src = `assets/logo-${theme}.svg`;
   document.querySelector('#overview-image').src = `assets/overview-${theme}.png`;
+  document.querySelector('#artifact-stamp').src = `assets/sector-seven-artifact${theme === 'dark' ? '-dark' : ''}.svg`;
   document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0b0d12' : '#f5f3ef';
   themeToggle.querySelector('.theme-icon').textContent = theme === 'dark' ? '☾' : '☀';
   themeToggle.querySelector('.theme-name').textContent = `${theme === 'dark' ? 'Dark' : 'Light'} theme`;
@@ -110,7 +111,8 @@ function updateThemeToggleVisibility() {
   const distance = featurePalette.getBoundingClientRect().top;
   const opacity = Math.max(0, Math.min(1, (distance - 64) / 240));
   themeToggle.style.opacity = opacity;
-  themeToggle.inert = opacity === 0;
+  themeToggle.tabIndex = opacity === 0 ? -1 : 0;
+  themeToggle.style.pointerEvents = opacity === 0 ? 'none' : '';
 }
 
 function queueThemeToggleVisibility() {
@@ -179,6 +181,12 @@ search.addEventListener('input', filterFeatures);
 filterFeatures();
 
 document.addEventListener('keydown', event => {
+  if (event.key.toLowerCase() === 't' && event.altKey && !event.ctrlKey && !event.metaKey) {
+    event.preventDefault();
+    if (!event.repeat) themeToggle.click();
+    return;
+  }
+
   if (event.key === '/' && !event.ctrlKey && !event.altKey && !event.metaKey &&
       !event.target.closest('input, textarea, [contenteditable]')) {
     event.preventDefault();

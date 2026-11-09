@@ -216,6 +216,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .empty-state { margin: 0; padding: 40px 22px; color: var(--muted-color); text-align: center; &[hidden] { display: none; } }
 .site-footer {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 18px 32px;
@@ -229,6 +230,15 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
   nav { display: flex; flex-wrap: wrap; gap: 12px 24px; }
   a { color: var(--text-color); text-decoration: none; }
   a:hover { color: var(--accent-light); text-decoration: underline; }
+}
+
+.artifact-stamp {
+  display: block;
+  width: 252px;
+  max-width: 70%;
+  margin-left: auto;
+
+  img { display: block; width: 100%; height: auto; }
 }
 
 @media (max-width: 640px) {
