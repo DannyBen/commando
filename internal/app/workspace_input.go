@@ -191,6 +191,12 @@ func (v *view) browseKey(gtx layout.Context, ke key.Event) {
 		}
 		return
 	}
+	if ke.Name == key.NameDeleteBackward && ke.Modifiers == 0 && p.filter != "" {
+		p.prefix = ""
+		p.setFilter("")
+		v.announceInteraction(eventCancelled)
+		return
+	}
 	for _, command := range v.shortcutCommands() {
 		if !command.matches(ke) {
 			continue

@@ -3,6 +3,7 @@ package app
 import (
 	"image"
 	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 	"time"
@@ -159,6 +160,70 @@ func TestFilterEditorAndPanelFocus(t *testing.T) {
 	send(pressed(key.NameEscape))
 	if !v.interaction.idle() || v.panels[0].filter != "" {
 		t.Fatal("Escape in editor did not clear filter and finish session")
+	}
+}
+
+func TestBackspaceClearsListFilterBeforeParentNavigation(t *testing.T) {
+	for _, query := range []string{"visible", "no matches"} {
+		t.Run(query, func(t *testing.T) {
+			v, reads := visibilityView(t)
+			p := &v.panels[0]
+			root := p.path
+			v.panels[1].setFilter("txt")
+			send, _ := panelInputFrames(v)
+			send(key.EditEvent{Text: "/"})
+			send(key.EditEvent{Text: query + "x"})
+			send(key.SelectionEvent{Start: len(query) + 1, End: len(query) + 1})
+			send(pressed(key.NameDeleteBackward))
+			if v.filterInteraction() == nil || v.filterEditor.Text() != query || p.filter != query || p.path != root {
+				t.Fatalf("Backspace did not edit the filter text: session=%T editor=%q filter=%q path=%q root=%q", v.interaction.current, v.filterEditor.Text(), p.filter, p.path, root)
+			}
+			send(pressed(key.NameReturn))
+			if !v.interaction.idle() || p.filter != query {
+				t.Fatal("Enter did not return to the filtered list")
+			}
+			p.markAll()
+			marks := p.selectedNames()
+			if query == "visible" {
+				send(key.EditEvent{Text: "v"})
+				send(pressed(key.NameDeleteBackward))
+				if p.prefix != "" || p.filter != query || p.path != root || p.loading {
+					t.Fatal("Backspace did not clear the active typing prefix before the filter")
+				}
+			}
+			selected, before := p.items[p.selected].name, reads.Load()
+			send(pressed(key.NameDeleteBackward))
+			if p.filter != "" || p.path != root || p.loading || reads.Load() != before || len(p.items) != 8 {
+				t.Fatal("Backspace navigated or reread instead of clearing the cached filter")
+			}
+			if p.items[p.selected].name != selected || !slices.Equal(p.selectedNames(), marks) || v.panels[1].filter != "txt" || v.active != 0 {
+				t.Fatal("clearing filter changed the current entry, marks, or another panel")
+			}
+			send(pressed(key.NameDeleteBackward))
+			waitLoaded(t, v, 0)
+			if p.path != filepath.Dir(root) || reads.Load() != before+1 {
+				t.Fatal("second Backspace did not navigate to the parent")
+			}
+		})
+	}
+}
+
+func TestBackspaceClearsArchiveListFilterBeforeLeavingArchive(t *testing.T) {
+	v, archive := archiveView(t)
+	p := &v.panels[0]
+	send, _ := panelInputFrames(v)
+	send(key.EditEvent{Text: "/"})
+	send(key.EditEvent{Text: "a"}, pressed(key.NameReturn))
+	selectName(t, p, "a2.txt")
+	p.toggleMark(p.selected)
+	send(pressed(key.NameDeleteBackward))
+	if p.filter != "" || p.path != archive || p.archiveFolder != "." || p.loading || p.items[p.selected].name != "a2.txt" || !p.marks[p.selected] {
+		t.Fatal("Backspace left the archive or lost selection/marks instead of clearing its filter")
+	}
+	send(pressed(key.NameDeleteBackward))
+	waitLoaded(t, v, 0)
+	if p.path != filepath.Dir(archive) || p.archiveFolder != "" {
+		t.Fatal("second Backspace did not leave the archive")
 	}
 }
 

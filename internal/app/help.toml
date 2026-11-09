@@ -1531,7 +1531,7 @@ lines = [
 ["editing.filter"]
 lines = [
   "Show only filenames containing this text, ignoring letter case.",
-  "Enter keeps the filter and returns to browsing; Escape clears it.",
+  "Enter returns to the filtered list; Backspace while browsing or Escape clears the filter.",
 ]
 
 ["editing.deep_filter"]
