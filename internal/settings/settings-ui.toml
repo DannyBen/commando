@@ -699,6 +699,49 @@ control = "folder"
 [programs]
 label = "Programs"
 
+[programs.actions]
+identity = "id"
+label = "Actions"
+title = "Actions"
+
+[programs.actions.id]
+label = "ID"
+visible = false
+
+[programs.actions.name]
+label = "Name"
+description = "The command name shown in the palette."
+
+[programs.actions.target]
+label = "Applies to"
+control = "choice"
+choices = ["Folders", "Files", "Both"]
+description = "Use marked entries or the current entry in this panel. Both accepts all file types and folders."
+
+[programs.actions.mode]
+label = "Mode"
+control = "choice"
+choices = ["Selected", "Here", "Auto"]
+visible = false
+description = "Selected uses folder entries. Here uses the open folder. Auto uses folder entries, otherwise the open folder."
+
+[programs.actions.ext]
+label = "Extensions"
+description = "Space-separated file extensions, or * for all files. Applies only to Files actions."
+
+[programs.actions.path]
+label = "Program"
+control = "file"
+description = "Choose an executable. To run a shell command, choose its shell explicitly."
+
+[programs.actions.args]
+label = "Arguments"
+description = "%Entry% runs once per entry; %Entries% runs once with all entries. Tokens must be whole arguments."
+
+[programs.actions.terminal]
+label = "Run in terminal"
+description = "Open an interactive Windows console for this program."
+
 [programs.editors]
 identity = "id"
 label = "Editors"

@@ -25,6 +25,8 @@ func helpRequirements(c settings.Catalogue, paletteCommands, paletteSettings []c
 	}
 	// Existing-rule editing is supported even when no editor rules are saved.
 	add("palette.settings", "palette.settings.programs.editors.rules")
+	add("palette.settings", "palette.settings.programs.actions.rules")
+	add("palette.commands", "palette.programs.actions.run")
 	widgets := map[string]bool{}
 	for _, widget := range c.UI.Widgets {
 		if widget.Visible {
@@ -40,6 +42,7 @@ func helpRequirements(c settings.Catalogue, paletteCommands, paletteSettings []c
 	// These controls are supplied by the app rather than settings-ui.toml.
 	add("settings."+settingThemeSelect, "settings."+settingThemeSelect)
 	add("settings."+settingThemeCustomize, "settings."+settingThemeElement)
+	add("settings."+settings.ActionCollection, "settings."+settings.ActionCollection+".mode")
 	for _, id := range []string{
 		"settings.actions.save", "settings.actions.cancel", "settings.actions.reset", "settings.actions.delete",
 		"settings.saving", "settings.selecting",
@@ -125,7 +128,7 @@ func TestHelpCoverageDetectsCatalogueAdditionsWithoutFallbacks(t *testing.T) {
 		t.Fatal("adding the missing entry did not turn coverage green", missing)
 	}
 	missing, total = missingHelp(requirements, defaultHelp, "palette.commands")
-	if total != 2 || len(missing) != 1 || missing[0].id != "palette.new.command" {
+	if total != 3 || len(missing) != 1 || missing[0].id != "palette.new.command" {
 		t.Fatal("new command was missed or numbered panels required duplicate help", missing, total)
 	}
 	for _, area := range []string{"found", "settings.appearance.theme.generato"} {

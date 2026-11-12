@@ -27,7 +27,14 @@ func bindingSettingsCatalogue() settings.Catalogue {
 	catalogue.DynamicDefinition = dynamicBindingDefinition
 	catalogue.DynamicGroup = func(group string) bool {
 		commandID := strings.TrimPrefix(group, "keybindings.")
-		if commandID == "settings."+settings.EditorCollection+".rules" || commandID == "settings."+settings.CompareCollection+".rules" {
+		switch commandID {
+		case "settings." + settings.EditorCollection + ".rules",
+			"settings." + settings.CompareCollection + ".rules",
+			"settings." + settings.ActionCollection + ".rules",
+			settings.ActionCollection, strings.TrimSuffix(customActionCommandPrefix, "."):
+			return true
+		}
+		if _, ok := customActionIdentity(commandID); ok {
 			return true
 		}
 		if _, ok := programRuleCollection(commandID); ok {

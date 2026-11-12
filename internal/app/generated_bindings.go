@@ -35,6 +35,7 @@ func (v *view) shortcutCommands() []command {
 // ownership until cleared. Only live panels appear in the palette and dispatch.
 func bindingCommands(values settings.Values) []command {
 	catalogue := slices.Clone(commands)
+	catalogue = append(catalogue, (&view{settingsValues: values}).customActionCommands()...)
 	for _, c := range (&view{settingsValues: values}).settingsCatalogue() {
 		if c.id != "" {
 			catalogue = append(catalogue, c)
@@ -59,6 +60,9 @@ func dynamicBindingDefinition(field string) (settings.Definition, bool) {
 		if _, ok := programRuleCollection(id); ok && field == bindingSettingKey(id, slot) {
 			return bindingDefinition(command{id: id}, slot), true
 		}
+		if _, ok := customActionIdentity(id); ok && field == bindingSettingKey(id, slot) {
+			return bindingDefinition(command{id: id}, slot), true
+		}
 		if number, ok := panelFocusNumber(id); ok && field == bindingSettingKey(id, slot) {
 			return bindingDefinition(panelFocusCommand(number), slot), true
 		}
@@ -69,7 +73,7 @@ func dynamicBindingDefinition(field string) (settings.Definition, bool) {
 const editorRuleCommandPrefix = "settings.programs.editors.rules."
 
 func programRuleCollection(commandID string) (string, bool) {
-	for _, collection := range []string{settings.EditorCollection, settings.CompareCollection} {
+	for _, collection := range []string{settings.EditorCollection, settings.CompareCollection, settings.ActionCollection} {
 		prefix := "settings." + collection + ".rules."
 		if strings.HasPrefix(commandID, prefix) && settings.ValidIdentity(strings.TrimPrefix(commandID, prefix)) {
 			return collection, true
@@ -79,7 +83,7 @@ func programRuleCollection(commandID string) (string, bool) {
 }
 
 func pruneRuleBindings(values *settings.Values) {
-	for _, collection := range []string{settings.EditorCollection, settings.CompareCollection} {
+	for _, collection := range []string{settings.EditorCollection, settings.CompareCollection, settings.ActionCollection} {
 		live := map[string]bool{}
 		for _, row := range values.Collection(collection) {
 			id, _ := row["id"].(string)
@@ -89,6 +93,14 @@ func pruneRuleBindings(values *settings.Values) {
 		for id := range values.Item(strings.TrimSuffix(prefix, ".")) {
 			if !live[id] {
 				values.Reset(prefix + id)
+			}
+		}
+		if collection == settings.ActionCollection {
+			prefix = "keybindings." + customActionCommandPrefix
+			for id := range values.Item(strings.TrimSuffix(prefix, ".")) {
+				if !live[id] {
+					values.Reset(prefix + id)
+				}
 			}
 		}
 	}

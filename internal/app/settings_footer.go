@@ -41,6 +41,12 @@ func settingsFooter(s *settingsSession) widgetFooter {
 	if field.Key == settings.CompareCollection+".args" {
 		hint = "%FirstFile% Source · %SecondFile% Target"
 	}
+	if field.Key == settings.ActionCollection+".args" {
+		hint = "%Entry% Each entry · %Entries% All entries"
+	}
+	if field.Key == settings.ActionCollection+".ext" {
+		hint = "Space-separated extensions · * All files"
+	}
 	if s.selecting {
 		hint = "Browse panels · Ctrl+Enter Save · Esc Return"
 		if field.Control == "file" {

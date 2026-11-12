@@ -180,6 +180,10 @@ func (v *view) acceptLoad(result loadResult) {
 		v.acceptUnpack(result)
 		return
 	}
+	if result.request.customAction != nil {
+		v.acceptCustomAction(result)
+		return
+	}
 	if result.request.terminal != nil {
 		v.acceptTerminalLaunch(result)
 		return

@@ -22,6 +22,9 @@ func settingsFieldSteps(field settings.Field) bool {
 
 // Moving between value controls uses the same draft validation as Tab.
 func (v *view) focusSettingsField(gtx layout.Context, s *settingsSession, index int) bool {
+	if index < 0 || index >= len(s.fields) || s.fields[index].Key == "" {
+		return false
+	}
 	if s.editing && !v.applySettingDraft(gtx) {
 		v.focusInteraction(gtx)
 		return false

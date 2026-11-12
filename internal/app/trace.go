@@ -62,6 +62,8 @@ func (r loadRequest) traceKind() (diagnostics.Mask, string) {
 		return diagnostics.Shell, "clipboard"
 	case r.terminal != nil:
 		return diagnostics.Shell, "terminal"
+	case r.customAction != nil:
+		return diagnostics.Shell, "custom_action"
 	case r.archiveOpen != nil:
 		return diagnostics.Shell, "archive_open"
 	case r.editor != nil:

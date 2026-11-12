@@ -44,6 +44,9 @@ func (c helpCatalogue) resolve(ids ...string) (string, helpTip) {
 // User-created instances share explanations without losing the option of an
 // exact entry. Coverage requires the family, not an arbitrary sample instance.
 func paletteHelpID(id string) string {
+	if _, ok := customActionIdentity(id); ok {
+		return "palette.programs.actions.run"
+	}
 	if _, ok := panelFocusNumber(id); ok {
 		return "palette.panel.focus"
 	}

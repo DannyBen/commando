@@ -93,6 +93,10 @@ func loadCollection(c Catalogue, key string, raw any) ([]map[string]any, error) 
 	result := make([]map[string]any, 0, len(rows))
 	var failures []error
 	for _, row := range rows {
+		if key == ActionCollection {
+			row = clone(row)
+			migrateAction(row)
+		}
 		identity := c.CollectionIdentities[key]
 		rawID, hasID := row[identity]
 		if identity != "" {
@@ -124,6 +128,12 @@ func loadCollection(c Catalogue, key string, raw any) ([]map[string]any, error) 
 			}
 		}
 		normalized := item.Item(key)
+		if key == ActionCollection {
+			if err := NormalizeAction(normalized); err != nil {
+				failures = append(failures, fmt.Errorf("%w: %s: %v", ErrValue, key, err))
+				continue
+			}
+		}
 		if key == EditorCollection || key == CompareCollection {
 			if err := NormalizeProgram(normalized, key); err != nil {
 				failures = append(failures, fmt.Errorf("%w: %s: %v", ErrValue, key, err))

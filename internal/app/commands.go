@@ -42,6 +42,9 @@ func (v *view) commandCatalogue() []command {
 			c.mask = c.presentation(v)
 		}
 		catalogue = append(catalogue, v.resolveCommandBindings(c))
+		if c.group == "Programs" && (i == len(commands)-1 || commands[i+1].group != "Programs") {
+			catalogue = append(catalogue, v.customActionCommands()...)
+		}
 		if c.group == "Panel" && (i == len(commands)-1 || commands[i+1].group != "Panel") {
 			for index := range v.panels {
 				catalogue = append(catalogue, v.resolveCommandBindings(panelFocusCommand(index+1)))

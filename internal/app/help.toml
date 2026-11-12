@@ -1592,3 +1592,36 @@ lines = [
   "Up/Down moves the highlighted comparison target; Left/Right or Tab changes panels.",
   "Click a file to target it; Enter or Compare launches; Escape cancels.",
 ]
+
+["palette.programs.actions.run"]
+lines = ["Run this action on marked entries or the current entry in this panel.", "Folder mode chooses Selected, Here or Auto. Ctrl+E assigns shortcuts."]
+
+["palette.settings.programs.actions.new"]
+lines = ["Add a named action, available in the command palette and through shortcuts."]
+
+["palette.settings.programs.actions.rules"]
+lines = ["Change or remove this action. Its run command appears in the ordinary palette."]
+
+["settings.programs.actions"]
+lines = ["Define a program action without changing Open, Edit, Compare or Terminal here."]
+
+["settings.programs.actions.name"]
+lines = ["Enter the action name shown in the command palette."]
+
+["settings.programs.actions.target"]
+lines = ["Files uses extensions; Folders uses its mode; Both accepts files and folders without extension restrictions.", "Single-folder launches start inside that folder; other launches use the open folder."]
+
+["settings.programs.actions.ext"]
+lines = ["Enter space-separated file extensions, or * for all files. Applies only to Files actions.", "Files actions ignore folders; every target file must match these extensions."]
+
+["settings.programs.actions.path"]
+lines = ["Choose an executable or enter its path. Programs launch directly without an implicit shell.", "For shell commands or scripts, choose cmd.exe or another shell and provide its arguments explicitly."]
+
+["settings.programs.actions.args"]
+lines = ["Use %Entry% once to run per entry, or %Entries% once to send all entries together. Tokens must be whole arguments.", "Folders in Here mode may omit the token and arguments. Double quotes group literal arguments."]
+
+["settings.programs.actions.terminal"]
+lines = ["Open a new interactive Windows console for this program. Choose a shell explicitly for shell commands."]
+
+["settings.programs.actions.mode"]
+lines = ["Selected uses marked folders or the current folder entry, ignoring files. Here always uses the open folder.", "Auto uses Selected when it supplies folders; otherwise it uses Here, once."]

@@ -43,6 +43,7 @@ type loadRequest struct {
 	transfer           *transferRequest
 	settingsSave       *settingsSaveRequest
 	terminal           *terminalRequest
+	customAction       *customActionRequest
 	editor             *editorRequest
 	archiveOpen        *archiveOpenRequest
 	unpack             *unpackRequest
@@ -88,6 +89,7 @@ type loadResult struct {
 	mutationDirectory        string
 	settingsMessage          string
 	editorsStarted           int
+	actionsStarted           int
 	externalOpen             bool
 	fontFamilies             []string
 	pathMissing              bool
@@ -120,6 +122,7 @@ type directoryLoader struct {
 	renameEntry           func(string, string, string) error
 	launchEditor          func(string, []string, string) error
 	launchTerminal        func(string, bool, uintptr) error
+	launchAction          func(string, []string, string, bool) error
 	folderShortcutTarget  func(string) (string, error)
 	readFavorites         func(string) ([]browser.Entry, error)
 	createFavorite        func(string, string, string) (browser.Entry, error)
@@ -158,6 +161,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		renameEntry:           browser.Rename,
 		launchEditor:          browser.LaunchEditor,
 		launchTerminal:        browser.LaunchTerminal,
+		launchAction:          browser.LaunchAction,
 		folderShortcutTarget:  browser.FolderShortcutTarget,
 		readFavorites:         browser.ReadFavorites,
 		createFavorite:        browser.CreateFavorite,
@@ -289,6 +293,22 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 						err = errors.Join(err, browser.OpenArchive(browser.Location{Path: request.path, Folder: request.archiveFolder}, name, request.archiveOpen.open))
 					}
 					publish(loadResult{request: request, err: err})
+					if invalidate != nil {
+						invalidate()
+					}
+					continue
+				}
+				if request.customAction != nil {
+					action := request.customAction
+					result := loadResult{request: request}
+					for _, launch := range action.launches {
+						if err := l.launchAction(action.program, launch.arguments, launch.directory, action.terminal); err != nil {
+							result.err = err
+							break
+						}
+						result.actionsStarted++
+					}
+					publish(result)
 					if invalidate != nil {
 						invalidate()
 					}

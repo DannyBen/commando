@@ -45,6 +45,14 @@ func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 			}, true)
 		}))
 		for i, field := range s.fields {
+			if field.Key == "" {
+				children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return v.band(gtx, rowHeight, v.appearance.Colors.Surface, func(layout.Context) layout.Dimensions {
+						return layout.Dimensions{}
+					}, false)
+				}))
+				continue
+			}
 			d, _ := settings.CatalogueDefault.Definition(field.Key)
 			path := field.IsPath()
 			focused := i == s.selected && !s.selecting && !s.actionsFocused && v.settingsInteraction() == s

@@ -160,7 +160,11 @@ func (v *view) settingsCatalogue() []command {
 			add(-1, "New")
 			for i, row := range rows {
 				extensions, _ := row["ext"].([]string)
-				add(i, strings.Join(extensions, " "))
+				name := strings.Join(extensions, " ")
+				if key == settings.ActionCollection {
+					name, _ = row["name"].(string)
+				}
+				add(i, name)
 			}
 			continue
 		}
@@ -612,6 +616,12 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 			rows = append(rows[:s.item], rows[s.item+1:]...)
 		} else {
 			row := s.draft.Item(s.collection)
+			if s.collection == settings.ActionCollection {
+				if err := settings.NormalizeAction(row); err != nil {
+					s.errorText = err.Error()
+					return
+				}
+			}
 			if s.collection == settings.EditorCollection || s.collection == settings.CompareCollection {
 				if err := settings.NormalizeProgram(row, s.collection); err != nil {
 					s.errorText = err.Error()
@@ -902,7 +912,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			if s.actionsFocused {
 				row = len(s.fields)
 			}
-			next := widgetRowNext(row, len(s.fields)+1, direction)
+			next := s.nextRow(row, len(s.fields)+1, direction, false)
 			if next == row {
 				continue
 			}
@@ -960,7 +970,7 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 			if ke.Modifiers == key.ModShift {
 				direction = -1
 			}
-			next := (index + direction + len(s.fields) + len(s.actionLabels())) % (len(s.fields) + len(s.actionLabels()))
+			next := s.nextRow(index, len(s.fields)+len(s.actionLabels()), direction, true)
 			s.actionsFocused = next >= len(s.fields)
 			if s.actionsFocused {
 				s.action = next - len(s.fields)
@@ -1106,6 +1116,7 @@ func (v *view) startCollectionWidget(collection string, index int, label string)
 			_ = s.draft.Set(settings.CatalogueDefault, field.Key, d.Default)
 		}
 	}
+	s.projectActionFields()
 }
 func (v *view) widgetValues() *settings.Values {
 	if s := v.settingsWidget(); s != nil && (s.collection != "" || s.bindingCommand != nil || s.deferred) {
@@ -1149,6 +1160,25 @@ func (v *view) setWidgetValue(key string, value settings.Value) error {
 	}
 	if s := v.settingsInteraction(); s != nil && (before != values.Get(c, key) || !explicit) {
 		s.dirty = true
+		if key == settings.ActionCollection+".target" {
+			s.projectActionFields()
+		}
 	}
 	return nil
+}
+
+// Placeholder rows occupy space but never take keyboard focus.
+func (s *settingsSession) nextRow(row, count, direction int, cycle bool) int {
+	next := row
+	for range count {
+		if cycle {
+			next = (next + direction + count) % count
+		} else {
+			next = widgetRowNext(next, count, direction)
+		}
+		if next >= len(s.fields) || s.fields[next].Key != "" {
+			return next
+		}
+	}
+	return row
 }

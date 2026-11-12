@@ -134,6 +134,16 @@ created = false
 path = ""
 
 # Item template. No editor rules are installed by default.
+[[programs.actions]]
+id = ""
+name = ""
+target = "Both"
+mode = "Selected"
+ext = ["*"]
+path = ""
+args = "%Entries%"
+terminal = false
+
 [[programs.editors]]
 id = ""
 ext = []
