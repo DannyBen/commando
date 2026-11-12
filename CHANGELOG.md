@@ -1,6 +1,17 @@
 Changelog
 ========================================
 
+v0.7.7 - 2026-11-12
+----------------------------------------
+
+- Paste URL to create a shortcut [`b3935c3`](https://github.com/dannyben/commando/commit/b3935c3)
+- Enter a folder even when there are marked files [`82ddd8a`](https://github.com/dannyben/commando/commit/82ddd8a)
+- Fix keyboard focus after double-clicking entries [`1f938b6`](https://github.com/dannyben/commando/commit/1f938b6)
+- Clear the list filter before Backspace navigates to the parent folder [`5b02704`](https://github.com/dannyben/commando/commit/5b02704)
+- Settings > Programs > Actions [`de0754b`](https://github.com/dannyben/commando/commit/de0754b)
+- Compare [`v0.7.6..v0.7.7`](https://github.com/dannyben/commando/compare/v0.7.6..v0.7.7)
+
+
 v0.7.6 - 2026-11-04
 ----------------------------------------
 
