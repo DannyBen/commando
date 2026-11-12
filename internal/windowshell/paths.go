@@ -33,6 +33,7 @@ func siblingPaths(paths []string, allowRoot bool) ([]string, error) {
 // Result describes the native API outcome, not verification of filesystem
 // changes made by a destination application or shell extension.
 type Result struct {
+	Captured     *CapturedCommand
 	Action       string
 	Cancelled    bool
 	Effect       uint32
@@ -44,9 +45,18 @@ type Result struct {
 }
 
 type MenuOptions struct {
+	Capture     bool // Return a registered command without invoking the selected action.
 	Background  bool // Request the single folder's background menu, including drive roots.
 	Extended    bool
 	ClientPoint *image.Point // nil uses the cursor captured before preparation.
+}
+
+// CapturedCommand contains a static registry command for review, never a menu
+// index whose identity would expire when this menu is released.
+type CapturedCommand struct {
+	Name, Command string
+	Directory     bool
+	Extensions    []string
 }
 
 type MenuTimings struct {

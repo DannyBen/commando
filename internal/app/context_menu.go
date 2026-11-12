@@ -36,6 +36,10 @@ func (v *view) startContextMenu(gtx layout.Context, index, row int, mouse bool) 
 }
 
 func (v *view) startItemShellAction(gtx layout.Context, index, row int, mouse bool, action shellAction) {
+	if s := v.settingsInteraction(); s != nil && s.importing {
+		v.captureActionMenu(gtx, s, index, row, mouse, action)
+		return
+	}
 	if !v.canStartInteraction(index, actionMutation) || !v.nativeItemsAvailable(index, row, mouse, action) {
 		return
 	}

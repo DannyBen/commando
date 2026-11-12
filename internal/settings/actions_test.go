@@ -13,6 +13,8 @@ func TestCustomActionArgumentExecutionAndLiteralPaths(t *testing.T) {
 		want  [][]string
 	}{
 		{`--wait %Entry%`, [][]string{{"--wait", paths[0]}, {"--wait", paths[1]}}},
+		{`--file="%Entry%"`, [][]string{{"--file=" + paths[0]}, {"--file=" + paths[1]}}},
+		{`"codex://new?path=%Entry%"`, [][]string{{"codex://new?path=" + paths[0]}, {"codex://new?path=" + paths[1]}}},
 		{`--send %Entries%`, [][]string{{"--send", paths[0], paths[1]}}},
 		{`"two words" "" "%Entries%"`, [][]string{{"two words", "", paths[0], paths[1]}}},
 		{`/K codex`, [][]string{{"/K", "codex"}}},
@@ -23,10 +25,43 @@ func TestCustomActionArgumentExecutionAndLiteralPaths(t *testing.T) {
 			t.Fatalf("%q: got %#v, %v; want %#v", tc.input, got, err, tc.want)
 		}
 	}
-	for _, input := range []string{`%Entry% %Entries%`, `%Entry% %Entry%`, `%Entries% %Entries%`, `--file=%Entry%`, `--files=%Entries%`, `"unclosed %Entry%`} {
+	for _, input := range []string{`%Entry% %Entries%`, `%Entry% %Entry%`, `%Entries% %Entries%`, `--file=%Entry% %Entry%`, `%Entry%:%Entry%`, `--files=%Entries%`, `"unclosed %Entry%`} {
 		if _, err := ActionArguments(input, paths); err == nil {
 			t.Fatalf("accepted invalid arguments %q", input)
 		}
+	}
+}
+
+func TestEmbeddedEntryKeepsReplacementLiteral(t *testing.T) {
+	paths := []string{`C:\folder with spaces\`, `C:\שלום & %Entry% %Entries%\file.txt`}
+	args, err := ActionArguments(`--file="%Entry%" "literal argument"`, paths)
+	want := [][]string{{"--file=" + paths[0], "literal argument"}, {"--file=" + paths[1], "literal argument"}}
+	if err != nil || !reflect.DeepEqual(args, want) {
+		t.Fatal("embedded replacement was reparsed or expanded recursively", args, err)
+	}
+	if _, err := ActionArguments(`--files=%Entries%`, paths[:1]); err == nil {
+		t.Fatal("embedded Entries accepted for a single selected item")
+	}
+}
+
+func TestEmbeddedEntryActionSettingsRoundTrip(t *testing.T) {
+	values, err := Parse([]byte(`[[programs.actions]]
+id = 'codex'
+name = 'Codex here'
+target = 'Folders'
+path = 'explorer.exe'
+args = '"codex://new?path=%Entry%"'
+`), CatalogueDefault)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err := Save(dir, values); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := Load(dir, CatalogueDefault)
+	if err != nil || !reflect.DeepEqual(restored.ActionRules(), values.ActionRules()) {
+		t.Fatal("embedded Entry action did not survive save/reload", restored.ActionRules(), err)
 	}
 }
 

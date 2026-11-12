@@ -135,6 +135,9 @@ func (h *Host) Drag(paths []string) (Result, error) {
 // Menu and command callbacks remain on the native thread throughout.
 func (h *Host) ContextMenu(paths []string, options MenuOptions) (Result, error) {
 	r := Result{Action: "menu", ThreadID: h.thread}
+	if options.Capture && (options.Background || len(paths) != 1) {
+		return r, fmt.Errorf("Choose one file or folder")
+	}
 	start := time.Now()
 	extended := options.Extended
 	if err := h.begin(); err != nil {
@@ -203,6 +206,10 @@ func (h *Host) ContextMenu(paths []string, options MenuOptions) (Result, error) 
 	if command == 0 {
 		r.Cancelled = true
 		return r, nil
+	}
+	if options.Capture {
+		r.Captured, err = captureMenuCommand(menu, hm, command, paths)
+		return r, err // Capture never enters InvokeCommand, including unsupported choices.
 	}
 	info := invokeInfo{Mask: 0x4000 | 0x100 | 0x20000000, Window: h.hwnd,
 		Verb: command - 1, VerbW: command - 1, Show: windows.SW_SHOWNORMAL, Point: point}

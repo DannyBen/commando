@@ -158,6 +158,13 @@ func (v *view) settingsCatalogue() []command {
 					soundEvent: eventSoundOwned, execute: func(v *view) { v.startCollectionWidget(key, index, name) }}))
 			}
 			add(-1, "New")
+			if key == settings.ActionCollection {
+				catalogue = append(catalogue, v.resolveCommandBindings(command{
+					id: actionImportCommand, group: group, name: "New from context menu",
+					available:  func(v *view) bool { return v.shellExecutor != nil && v.canOfferInteraction(v.active, actionMutation) },
+					soundEvent: eventSoundOwned, execute: func(v *view) { v.startActionImport() },
+				}))
+			}
 			for i, row := range rows {
 				extensions, _ := row["ext"].([]string)
 				name := strings.Join(extensions, " ")
@@ -215,6 +222,7 @@ type settingsSession struct {
 	themeLibraryResult *loadResult // Choices arriving during text editing wait.
 	bindingCommand     *command
 	capturing          bool
+	importing          bool // Choose a shell action while retaining this settings transaction.
 	returnHeld         bool
 }
 
@@ -237,6 +245,9 @@ func (s *settingsSession) canSuspendFor(next interactionSession) bool {
 	}
 	if !s.selecting {
 		return false
+	}
+	if native, ok := next.(*nativeSession); ok {
+		return s.importing && native.request.action == shellMenu && native.request.options.Capture
 	}
 	switch next.(type) {
 	case *locationSession, *filterSession:
@@ -586,6 +597,10 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 	if s == nil || s.pending {
 		return
 	}
+	if save && s.importing {
+		s.errorText = "Choose an action first"
+		return
+	}
 	if save && s.capturing {
 		s.errorText = "Finish shortcut capture"
 		return
@@ -730,7 +745,7 @@ func settingsSaveError(err error) string {
 
 func (v *view) updateSettingsSelection() {
 	s := v.settingsInteraction()
-	if s == nil || !s.selecting {
+	if s == nil || !s.selecting || s.importing {
 		return
 	}
 	p := &v.panels[v.active]
@@ -779,6 +794,10 @@ func (v *view) updateSettingsWidget(gtx layout.Context) {
 	v.offerThemeLibrary(s)
 	defer v.offerThemeLibrary(s)
 	if action, ok := s.actions.update(gtx); ok {
+		if s.importing {
+			v.finishSettingsWidget(gtx, false)
+			return
+		}
 		s.action, s.actionsFocused = action, true
 		v.activateSettingsAction(gtx, action)
 		if v.settingsInteraction() != s {

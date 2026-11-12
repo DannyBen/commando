@@ -147,8 +147,13 @@ func programArguments(input string, replacements map[string][]string) ([]string,
 			tokens[arg]++
 			continue
 		}
-		for token := range replacements {
-			if strings.Contains(arg, token) {
+		for token, files := range replacements {
+			if count := strings.Count(arg, token); count > 0 {
+				if token == EntryToken && len(files) == 1 {
+					tokens[token] += count
+					arg = strings.ReplaceAll(arg, token, files[0])
+					continue
+				}
 				return nil, fmt.Errorf("File token must stand alone")
 			}
 		}

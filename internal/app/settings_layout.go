@@ -14,6 +14,9 @@ import (
 
 func (v *view) layoutSettingsWidget(gtx layout.Context) layout.Dimensions {
 	s := v.settingsWidget()
+	if s.importing {
+		return v.layoutActionImport(gtx, s)
+	}
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
 	if len(s.fields) > 0 && s.fields[0].Widget == settingThemeEffects {
 		paintOverlayBackdrop(gtx, v.locationBarHeight(gtx, textHeight), v.appearance.Colors, v.appearance.OverlayBackdropOpacity)

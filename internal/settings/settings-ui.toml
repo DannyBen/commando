@@ -736,7 +736,7 @@ description = "Choose an executable. To run a shell command, choose its shell ex
 
 [programs.actions.args]
 label = "Arguments"
-description = "%Entry% runs once per entry; %Entries% runs once with all entries. Tokens must be whole arguments."
+description = "%Entry% runs once per entry and can appear inside an argument; %Entries% runs once with all entries and must be a whole argument."
 
 [programs.actions.terminal]
 label = "Run in terminal"

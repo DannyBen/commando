@@ -77,6 +77,10 @@ func (v *view) completeNative(completion shellCompletion) bool {
 		return false
 	}
 	traceShellCompletion(completion)
+	if completion.session.request.options.Capture {
+		v.completeActionImport(completion)
+		return true
+	}
 	if completion.err != nil {
 		message := "Cannot open context menu"
 		switch completion.session.request.action {
@@ -135,6 +139,9 @@ func (v *view) finishNative() {
 }
 
 func (v *view) nativeItemsAvailable(index, row int, mouse bool, action shellAction) bool {
+	if s := v.settingsInteraction(); s != nil && s.importing {
+		return v.actionImportMenuAvailable(index, row, action)
+	}
 	if v.shellExecutor == nil || !v.canOfferInteraction(index, actionMutation) {
 		return false
 	}

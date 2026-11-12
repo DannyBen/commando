@@ -202,7 +202,10 @@ func (v *view) helpContextIDs() []string {
 	case nil, *nativeSession, *favoriteSession:
 		ids = append(ids, "browsing.introduction")
 	case *settingsSession:
-		if s.pending {
+		if s.importing {
+			ids = append(ids, "settings.programs.actions.import")
+			break
+		} else if s.pending {
 			ids = append(ids, "settings.saving")
 		} else if s.selecting {
 			ids = append(ids, "settings.selecting")
@@ -372,7 +375,9 @@ func (v *view) escape(gtx layout.Context) {
 	}
 	v.dismissFeedback()
 	if s := v.settingsInteraction(); s != nil {
-		if s.capturing {
+		if s.importing {
+			v.finishSettingsWidget(gtx, false)
+		} else if s.capturing {
 			v.setShortcutCapture(s, false)
 			s.errorText = ""
 			v.focusInteraction(gtx)

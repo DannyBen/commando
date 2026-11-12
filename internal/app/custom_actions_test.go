@@ -22,10 +22,14 @@ func customActionRow(id, name, target, args string) map[string]any {
 }
 
 func TestCustomActionPaletteAndShortcutUseOnlyOriginatingPanelMarks(t *testing.T) {
-	for _, token := range []string{settings.EntryToken, settings.EntriesToken} {
-		t.Run(token, func(t *testing.T) {
+	for _, tc := range []struct{ token, prefix string }{
+		{settings.EntryToken, ""},
+		{settings.EntriesToken, ""},
+		{"codex://new?path=" + settings.EntryToken, "codex://new?path="},
+	} {
+		t.Run(tc.token, func(t *testing.T) {
 			v, root := compareView(t, 3)
-			row := customActionRow("send", "Send test", settings.ActionFiles, "--send "+token)
+			row := customActionRow("send", "Send test", settings.ActionFiles, "--send "+tc.token)
 			row["terminal"] = true
 			v.settingsValues.SetCollection(settings.ActionCollection, []map[string]any{row})
 			p := &v.panels[0]
@@ -58,8 +62,8 @@ func TestCustomActionPaletteAndShortcutUseOnlyOriginatingPanelMarks(t *testing.T
 				}
 				waitLoaded(t, v, 0)
 				want := [][]string{{"--send", filepath.Join(root, "alpha file.txt"), filepath.Join(root, "beta file.md")}}
-				if token == settings.EntryToken {
-					want = [][]string{{"--send", filepath.Join(root, "alpha file.txt")}, {"--send", filepath.Join(root, "beta file.md")}}
+				if tc.token != settings.EntriesToken {
+					want = [][]string{{"--send", tc.prefix + filepath.Join(root, "alpha file.txt")}, {"--send", tc.prefix + filepath.Join(root, "beta file.md")}}
 				}
 				if len(calls) != len(want) {
 					t.Fatal("wrong invocation count", len(calls), len(want))

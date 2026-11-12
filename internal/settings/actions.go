@@ -94,7 +94,8 @@ func migrateAction(row map[string]any) {
 	}
 }
 
-// ActionArguments infers batching from a whole argument token. Parsing precedes
+// ActionArguments runs once per entry with Entry, or once with all Entries. Entry may
+// appear inside an argument; Entries must be a whole argument. Parsing precedes
 // substitution, so paths never become argument syntax. Tokenless commands run
 // once and are reserved for actions targeting the current folder.
 func ActionArguments(input string, paths []string) ([][]string, error) {

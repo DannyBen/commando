@@ -1605,6 +1605,12 @@ lines = ["Change or remove this action. Its run command appears in the ordinary 
 ["settings.programs.actions"]
 lines = ["Define a program action without changing Open, Edit, Compare or Terminal here."]
 
+["settings.programs.actions.import"]
+lines = ["Right-click a file or folder and choose an action. It will not run.", "Browse panels to find an example. Review before saving; Escape cancels."]
+
+["palette.settings.programs.actions.import"]
+lines = ["Choose a context-menu action on an example file or folder, then review its program and arguments before saving."]
+
 ["settings.programs.actions.name"]
 lines = ["Enter the action name shown in the command palette."]
 
@@ -1618,7 +1624,7 @@ lines = ["Enter space-separated file extensions, or * for all files. Applies onl
 lines = ["Choose an executable or enter its path. Programs launch directly without an implicit shell.", "For shell commands or scripts, choose cmd.exe or another shell and provide its arguments explicitly."]
 
 ["settings.programs.actions.args"]
-lines = ["Use %Entry% once to run per entry, or %Entries% once to send all entries together. Tokens must be whole arguments.", "Folders in Here mode may omit the token and arguments. Double quotes group literal arguments."]
+lines = ["Use %Entry% once to run per entry, including inside an argument such as --file=%Entry%. Use %Entries% once as a whole argument to send all entries together.", "Folders in Here mode may omit the token and arguments. Double quotes group literal arguments."]
 
 ["settings.programs.actions.terminal"]
 lines = ["Open a new interactive Windows console for this program. Choose a shell explicitly for shell commands."]
