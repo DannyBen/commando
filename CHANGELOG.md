@@ -1,6 +1,22 @@
 Changelog
 ========================================
 
+v0.8.0 - 2026-11-13
+----------------------------------------
+
+- Settings > Programs > Actions > New from context menu [`dcd0a0e`](https://github.com/dannyben/commando/commit/dcd0a0e)
+- Normalize Entry commands as Actions [`d6f5b8e`](https://github.com/dannyben/commando/commit/d6f5b8e)
+- Improve command palette width [`0069e01`](https://github.com/dannyben/commando/commit/0069e01)
+- Commands wrap in narrow window [`3afefe3`](https://github.com/dannyben/commando/commit/3afefe3)
+- Semicolon to open Actions menu [`0720414`](https://github.com/dannyben/commando/commit/0720414)
+- Refactor sound handling to avoid overlaps [`55d8f0e`](https://github.com/dannyben/commando/commit/55d8f0e)
+- Add git integration [`473ccfa`](https://github.com/dannyben/commando/commit/473ccfa)
+- Auto-refresh git status [`77dac2d`](https://github.com/dannyben/commando/commit/77dac2d)
+- Show more colors in theme previews [`fb91434`](https://github.com/dannyben/commando/commit/fb91434)
+- Match commands by shortcut in command palette [`48c4ee9`](https://github.com/dannyben/commando/commit/48c4ee9)
+- Compare [`v0.7.7..v0.8.0`](https://github.com/dannyben/commando/compare/v0.7.7..v0.8.0)
+
+
 v0.7.7 - 2026-11-12
 ----------------------------------------
 
