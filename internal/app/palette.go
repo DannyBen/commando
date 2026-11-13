@@ -27,6 +27,7 @@ type paletteSession struct {
 	commands         []command
 	settingsCommands []command
 	settingsMode     bool
+	actionsMode      bool
 	rowOffsets       []int
 	viewportHeight   int
 	list             widget.List
@@ -58,18 +59,35 @@ func (v *view) startPalette(gtx layout.Context) {
 	v.focusInteraction(gtx)
 }
 
+// Scope changes presentation only; identities and dispatch remain shared.
+func (s *paletteSession) catalogue() []command {
+	if s.settingsMode {
+		return s.settingsCommands
+	}
+	if !s.actionsMode {
+		return s.commands
+	}
+	var actions []command
+	for _, c := range s.commands {
+		if c.group == "Actions" {
+			c.mask.hideGroup = true
+			actions = append(actions, c)
+		}
+	}
+	return actions
+}
+
 func (s *paletteSession) filter(query string) {
 	s.query, s.selected, s.reveal = query, 0, true
 	s.results = nil
 	s.rowOffsets = nil
 	needle := strings.TrimSpace(query)
 	s.settingsMode = strings.HasPrefix(query, "@")
-	catalogue := s.commands
-	if s.settingsMode {
-		catalogue = s.settingsCommands
+	s.actionsMode = strings.HasPrefix(query, ";")
+	if s.settingsMode || s.actionsMode {
 		needle = strings.TrimSpace(query[1:])
 	}
-	for _, command := range catalogue {
+	for _, command := range s.catalogue() {
 		if command.mask.hidden {
 			continue
 		}

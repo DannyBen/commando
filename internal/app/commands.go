@@ -10,8 +10,9 @@ import (
 
 // Presentation changes palette discovery without changing global command identity.
 type commandPresentation struct {
-	name   string
-	hidden bool // Palette visibility does not affect bindings or execution.
+	name      string
+	hidden    bool // Palette visibility does not affect bindings or execution.
+	hideGroup bool // Scoped views omit the root without renaming the global command.
 }
 
 // IDs are persistent identities, independent of labels and catalogue order.
@@ -183,7 +184,8 @@ func defaultCommands() []command {
 			execute: func(v *view) {
 				v.queueLoad(loadRequest{panel: v.active, path: v.activeDataFolder, successMessage: "Data folder"})
 			}},
-		{id: "application.settings", group: "Application", name: "Settings", bindings: [2]commandBinding{{Default: shortcut{Name: "@"}}}, paletteQuery: "@"},
+		{id: "application.settings", group: "Menu", name: "Settings", bindings: [2]commandBinding{{Default: shortcut{Name: "@"}}}, paletteQuery: "@"},
+		{id: "application.actions", group: "Menu", name: "Actions", bindings: [2]commandBinding{{Default: shortcut{Name: ";"}}}, paletteQuery: ";"},
 	}
 	for i := range catalogue {
 		c := &catalogue[i]
@@ -256,6 +258,9 @@ func (c command) withSoundState(state func(*view) bool, event interactionEvent) 
 }
 
 func (c command) label() string {
+	if c.mask.hideGroup {
+		c.group = ""
+	}
 	if c.mask.name != "" {
 		c.name = c.mask.name
 	}

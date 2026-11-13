@@ -80,7 +80,7 @@ func TestArchiveCopyPathsAndLocationRoundTrip(t *testing.T) {
 
 func TestCopyPathsCurrentMarksAndPalette(t *testing.T) {
 	for _, marked := range []bool{false, true} {
-		for _, palette := range []bool{false, true} {
+		for _, palette := range []string{"", "Actions Copy paths", ";Copy paths"} {
 			v := newPreviewView()
 			p := &v.panels[0]
 			p.path = filepath.Join(t.TempDir(), "folder with spaces")
@@ -95,9 +95,9 @@ func TestCopyPathsCurrentMarksAndPalette(t *testing.T) {
 			selected, position := p.selected, p.list.Position
 			router, send := clipboardFrames(v)
 			position = p.list.Position
-			if palette {
+			if palette != "" {
 				send(pressed("`"))
-				send(replacePalette(v, "Actions Copy paths"))
+				send(replacePalette(v, palette))
 				if result := v.paletteInteraction().results[0].command; result.name != "Copy paths" || !result.allowed(v) {
 					t.Fatal("Copy paths missing or unavailable in palette")
 				}

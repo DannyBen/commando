@@ -81,7 +81,7 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 			groups = append(groups, root)
 		}
 	}
-	if !slices.Equal(groups, []string{"Actions", "Location", "Navigation", "View", "Panel", "Selection", "Appearance", "Theme", "Interface", "Application", "Settings"}) ||
+	if !slices.Equal(groups, []string{"Actions", "Location", "Navigation", "View", "Panel", "Selection", "Appearance", "Theme", "Interface", "Application", "Menu", "Settings"}) ||
 		s.results[0].command.label() != "Actions › Edit" || s.results[1].command.label() != "Actions › Compare…" || s.results[2].command.label() != "Actions › Open" || s.results[3].command.label() != "Actions › Rename…" {
 		t.Fatalf("blank search lost reviewed browsing order: %v", groups)
 	}
@@ -113,7 +113,7 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 }
 
 func TestPaletteSettingsDiscoveryRetainsSearchAndKeyboardFlow(t *testing.T) {
-	for _, query := range []string{"", "Application Settings"} {
+	for _, query := range []string{"", "Menu Settings"} {
 		t.Run("query="+query, func(t *testing.T) {
 			v := newPreviewView()
 			v.active = 1
@@ -128,7 +128,7 @@ func TestPaletteSettingsDiscoveryRetainsSearchAndKeyboardFlow(t *testing.T) {
 				send(key.EditEvent{Text: query})
 			}
 			result := s.results[s.selected].command
-			if result.label() != "Application › Settings" || result.shortcut() != "@" {
+			if result.label() != "Menu › Settings" || result.shortcut() != "@" {
 				t.Fatal("Settings was not discoverable with its shortcut", result.label(), result.shortcut())
 			}
 			send(pressed(key.NameReturn))

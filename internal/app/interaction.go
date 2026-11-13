@@ -254,6 +254,8 @@ func (v *view) helpContextIDs() []string {
 		}
 		if s.settingsMode {
 			ids = append(ids, "palette.settings")
+		} else if s.actionsMode {
+			ids = append(ids, "palette.actions")
 		}
 		ids = append(ids, "palette")
 	case *locationSession:

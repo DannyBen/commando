@@ -43,40 +43,53 @@ func TestFilterBindingChangesInvocationAndRetainsQuery(t *testing.T) {
 	}
 }
 
-func TestSettingsBindingKeepsPalettePrefixSyntaxIndependent(t *testing.T) {
-	v := newPreviewView()
-	setTestShortcut(t, v, "application.settings", 0, "Ctrl+,")
-	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@font"})
-	if v.paletteInteraction() != nil || v.panels[0].prefix != "@font" {
-		t.Fatal("old at-sign shortcut still opened settings")
-	}
-	send(modified(",", key.ModCtrl))
-	p := v.paletteInteraction()
-	if p == nil || !p.settingsMode || v.commandSearch.Text() != "@" {
-		t.Fatal("replacement settings shortcut did not seed the fixed @ prefix")
-	}
-	send(replacePalette(v, ""))
-	send(key.EditEvent{Text: "@font"})
-	if v.paletteInteraction() != p || !p.settingsMode || p.query != "@font" {
-		t.Fatal("rebinding settings changed the palette's @ syntax")
-	}
-	send(pressed(key.NameEscape))
-	setTestShortcut(t, v, "application.settings", 0, "none")
-	send(modified(",", key.ModCtrl))
-	if v.paletteInteraction() != nil {
-		t.Fatal("cleared settings shortcut still opened the palette")
-	}
-	send(pressed("`"))
-	send(key.EditEvent{Text: "@"})
-	if !v.paletteInteraction().settingsMode {
-		t.Fatal("clearing a browsing shortcut disabled palette syntax")
-	}
-	send(pressed(key.NameEscape))
-	v.settingsValues.Reset(bindingSettingKey("application.settings", 0))
-	send(key.EditEvent{Text: "@font"})
-	if p = v.paletteInteraction(); p == nil || !p.settingsMode || p.query != "@font" {
-		t.Fatal("reset did not restore @ invocation and its initial search")
+func TestScopedPaletteBindingsKeepPrefixSyntaxIndependent(t *testing.T) {
+	for _, tc := range []struct{ id, prefix, query string }{
+		{"application.settings", "@", "font"},
+		{"application.actions", ";", "copy"},
+	} {
+		t.Run(tc.id, func(t *testing.T) {
+			v := newPreviewView()
+			setTestShortcut(t, v, tc.id, 0, "Ctrl+,")
+			send, _ := panelInputFrames(v)
+			isScoped := func(p *paletteSession) bool {
+				return p != nil && (tc.prefix == "@" && p.settingsMode || tc.prefix == ";" && p.actionsMode)
+			}
+			send(key.EditEvent{Text: tc.prefix + tc.query})
+			if v.paletteInteraction() != nil || v.panels[0].prefix != tc.prefix+tc.query {
+				t.Fatal("old symbol still opened the scoped palette")
+			}
+			send(modified(",", key.ModCtrl))
+			p := v.paletteInteraction()
+			if !isScoped(p) || v.commandSearch.Text() != tc.prefix {
+				t.Fatal("replacement shortcut did not seed the fixed prefix")
+			}
+			send(replacePalette(v, tc.prefix+tc.query))
+			if v.paletteInteraction() != p || !isScoped(p) || p.query != tc.prefix+tc.query {
+				t.Fatal("rebinding changed the palette's scope syntax")
+			}
+			send(pressed(key.NameEscape))
+			setTestShortcut(t, v, tc.id, 0, "none")
+			send(modified(",", key.ModCtrl))
+			if v.paletteInteraction() != nil {
+				t.Fatal("cleared shortcut still opened the palette")
+			}
+			send(pressed("`"), key.EditEvent{Text: tc.prefix})
+			if !isScoped(v.paletteInteraction()) {
+				t.Fatal("clearing a browsing shortcut disabled palette syntax")
+			}
+			send(pressed(key.NameEscape))
+			v.settingsValues.Reset(bindingSettingKey(tc.id, 0))
+			send(key.EditEvent{Text: tc.prefix + tc.query})
+			if p = v.paletteInteraction(); !isScoped(p) || p.query != tc.prefix+tc.query {
+				t.Fatal("reset did not restore symbol invocation and its initial search")
+			}
+			send(pressed(key.NameEscape), modified("D", key.ModAlt))
+			send(key.EditEvent{Range: key.Range{End: len(v.location.Text())}, Text: "folder" + tc.prefix + "name"})
+			if v.paletteInteraction() != nil || v.location.Text() != "folder"+tc.prefix+"name" {
+				t.Fatal("scoped shortcut stole punctuation from the location editor")
+			}
+		})
 	}
 }
 
@@ -131,6 +144,7 @@ func TestSpecialBindingOverridesSurviveRestart(t *testing.T) {
 		bindingSettingKey("application.command_palette", 0): "Ctrl+K",
 		bindingSettingKey("application.command_palette", 1): "Ctrl+Shift+K",
 		bindingSettingKey("application.settings", 0):        "Ctrl+,",
+		bindingSettingKey("application.actions", 0):         "Ctrl+.",
 		bindingSettingKey("view.filter_files", 0):           "Ctrl+F",
 		bindingSettingKey("entry.paste", 1):                 "Ctrl+Shift+V",
 		bindingSettingKey("entry.context_menu", 0):          "Ctrl+Y",
@@ -240,7 +254,8 @@ func TestShortcutCaptureUsesTypedSymbolsForSpecialBindings(t *testing.T) {
 		query, text string
 		press       key.Event
 	}{
-		{"Application Settings", "@", modified("2", key.ModShift)},
+		{"Menu Settings", "@", modified("2", key.ModShift)},
+		{"Menu Actions", ";", pressed(";")},
 		{"Filter", "/", pressed("/")},
 		{"Command palette", "`", pressed("`")},
 	} {

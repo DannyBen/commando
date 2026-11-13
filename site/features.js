@@ -14,8 +14,14 @@ window.commandoFeatures = [
       {id: "application.toggle_help", title: "Application › Toggle help", keys: ["F1"], description: "Show or hide help for the current context.", search: "documentation guidance shortcuts"},
       {id: "application.command_palette", title: "Application › Command palette", keys: ["`", "Ctrl+Shift+P"], description: "Find commands, shortcuts, and settings by typing their names.", search: "search discover find actions"},
       {id: "application.open_data_folder", title: "Application › Open data folder", query: "data folder", description: "Open the folder containing Commando settings and saved state.", search: "configuration local appdata preferences"},
-      {id: "application.settings", title: "Application › Settings", keys: ["@"], description: "Search settings by name or category and open their controls.", search: "preferences configure options appearance"},
       {id: "settings.application.data_folder", kind: "setting", title: "Application › Data folder", query: "@data folder", description: "Choose a new data folder; existing files are copied and the change takes effect after restart.", search: "settings location storage state appdata migrate"},
+    ],
+  },
+  {
+    category: "Menu",
+    items: [
+      {id: "application.settings", title: "Menu › Settings", keys: ["@"], description: "Search settings only; settings also appear in the main command palette.", search: "preferences configure options appearance"},
+      {id: "application.actions", title: "Menu › Actions", keys: [";"], description: "Search only file, folder, and custom actions. Start a palette search with ; for the same view.", search: "scoped context entries current folder semicolon"},
     ],
   },
   {

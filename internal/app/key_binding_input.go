@@ -49,7 +49,7 @@ func (v *view) dispatchTextShortcut(gtx layout.Context, text string) bool {
 				continue
 			}
 			// A palette query command may receive its prefix and initial search
-			// together. The prefix remains @ even when its invocation key changes.
+			// together. Query syntax stays fixed when its invocation key changes.
 			v.executeCommand(gtx, c)
 			if c.paletteQuery != "" && v.paletteInteraction() != nil {
 				v.openPaletteQuery(gtx, c.paletteQuery+strings.TrimPrefix(text, trigger))

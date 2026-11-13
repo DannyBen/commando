@@ -14,7 +14,7 @@ type helpRequirement struct{ area, id string }
 func helpRequirements(c settings.Catalogue, paletteCommands, paletteSettings []command) []helpRequirement {
 	byID := map[string]helpRequirement{}
 	add := func(area, id string) { byID[id] = helpRequirement{area, id} }
-	for _, id := range []string{"help", "browsing.introduction", "palette", "palette.settings", "settings"} {
+	for _, id := range []string{"help", "browsing.introduction", "palette", "palette.settings", "palette.actions", "settings"} {
 		add("foundation", id)
 	}
 	for _, command := range paletteCommands {

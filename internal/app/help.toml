@@ -20,7 +20,13 @@ lines = [
 ["palette"]
 lines = [
   "Type to find a command.",
-  "Start your search with @ to find settings.",
+  "Start with @ for settings or ; for actions only.",
+]
+
+["palette.actions"]
+lines = [
+  "Search actions for entries and the open folder.",
+  "Remove the ; prefix to search all commands and settings.",
 ]
 
 ["palette.settings"]
@@ -1120,6 +1126,11 @@ lines = [
 ["palette.application.open_data_folder"]
 lines = [
   "Open the folder containing Commando settings and saved state",
+]
+
+["palette.application.actions"]
+lines = [
+  "Search only file, folder and custom actions",
 ]
 
 ["palette.application.settings"]

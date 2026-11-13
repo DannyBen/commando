@@ -191,6 +191,7 @@ func TestPaletteWrappingPreviews(t *testing.T) {
 				{"bindings", "Application increase"},
 				{"metadata", "View metadata"},
 				{"mixed", ""},
+				{"actions", ";"},
 			} {
 				v := newPreviewView()
 				v.panels = v.panels[:1]

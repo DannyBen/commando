@@ -26,11 +26,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 	// Measure the full catalogue so filtering never changes the surface width.
 	contentWidth := 0
 	shortcutGap := v.textWidth(gtx, "   ", v.appearance.TextSize)
-	catalogue := s.commands
-	if s.settingsMode {
-		catalogue = s.settingsCommands
-	}
-	for _, command := range catalogue {
+	for _, command := range s.catalogue() {
 		if command.mask.hidden {
 			continue
 		}
@@ -90,6 +86,8 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 							message := "No commands found"
 							if s.settingsMode {
 								message = "No settings found"
+							} else if s.actionsMode {
+								message = "No actions found"
 							}
 							return v.label(gtx, message, v.appearance.TextSize, v.appearance.Colors.Foreground, text.Start)
 						})
