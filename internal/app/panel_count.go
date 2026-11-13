@@ -23,6 +23,8 @@ func panelsCanChange(v *view) bool {
 func (p panel) clone() panel {
 	p.driveSpace = nil
 	p.driveSpaces = maps.Clone(p.driveSpaces)
+	p.gitStatus = maps.Clone(p.gitStatus)
+	p.gitRead = nil
 	p.items, p.entries = slices.Clone(p.items), slices.Clone(p.entries)
 	p.rows = make(map[int]*fileRow)
 	p.emptySpace = nil
@@ -44,6 +46,9 @@ func (p panel) clone() panel {
 
 func (v *view) insertPanel(index int, p panel, cutPath, cutLocation string) {
 	p.folderSizes = v.folderSizes
+	if p.gitStatus == nil {
+		v.prepareGitRead(&p, p.gitOptions)
+	}
 	// Alias caches have one slot per live panel. Keep the clipboard itself
 	// untouched while inserting, removing, or restoring pane models.
 	for len(v.cutPanelPaths) < len(v.panels) {
@@ -86,6 +91,7 @@ func (v *view) closePanel() {
 		return
 	}
 	index := v.active
+	v.panels[index].cancelGitRead()
 	v.clearDeepSearch(index)
 	closed := closedPanel{panel: v.panels[index], index: index, clipboardSequence: v.cutClipboard.Sequence}
 	closed.panel.filenameScroll, closed.panel.filenameScrollID = textMarquee{}, ""

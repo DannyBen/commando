@@ -59,10 +59,8 @@ func (v *view) updateAutoRefresh(gtx layout.Context) {
 		if p.drives {
 			request.path, request.homeDirectory = "", v.favoritesDirectory()
 		}
-		select {
-		case v.loader.requests <- request:
+		if v.loader.enqueue(request) {
 			p.refreshing, p.refreshNeeded = true, false
-		default:
 		}
 	}
 }

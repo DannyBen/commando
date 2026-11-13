@@ -13,9 +13,14 @@ import (
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/diagnostics"
 	"github.com/dannyben/commando/internal/feedback"
+	"github.com/dannyben/commando/internal/settings"
 )
 
 func newLocationView(locations []panelState, active int, invalidate func(), dataFolder ...string) *view {
+	return newConfiguredLocationView(locations, active, invalidate, settings.Values{}, dataFolder...)
+}
+
+func newConfiguredLocationView(locations []panelState, active int, invalidate func(), values settings.Values, dataFolder ...string) *view {
 	panels := make([]panel, len(locations))
 	for i, location := range locations {
 		panels[i].path, panels[i].drives, panels[i].selected = location.Path, location.Drives, -1
@@ -24,6 +29,7 @@ func newLocationView(locations []panelState, active int, invalidate func(), data
 		}
 	}
 	v := newView(panels)
+	v.settingsValues = values
 	if len(dataFolder) > 0 {
 		v.activeDataFolder = dataFolder[0]
 	}
@@ -82,9 +88,11 @@ func (v *view) queueLoad(request loadRequest) bool {
 	if v.loader == nil || p.loading {
 		return false
 	}
+	request.git = v.gitOptions()
 	if !v.loader.submit(request) {
 		return false
 	}
+	p.cancelGitRead()
 	p.loading, p.err = true, nil
 	p.navigating = !request.refresh
 	progress := "Reading folder"
@@ -120,6 +128,10 @@ func (v *view) acceptLoad(result loadResult) {
 		}
 	}
 	defer v.beginSoundAction()()
+	if result.request.gitRead != nil {
+		v.acceptGitRead(result)
+		return
+	}
 	if result.request.deepSearch != nil {
 		v.acceptDeepSearch(result)
 		return
@@ -238,6 +250,9 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	p.loading, p.err = false, result.err
+	p.cancelGitRead()
+	// The listing is ready; optional metadata will arrive independently.
+	p.gitStatus = nil
 	p.navigating = false
 	if result.request.follow && os.IsNotExist(result.err) {
 		p.err = nil
@@ -287,6 +302,7 @@ func (v *view) acceptLoad(result loadResult) {
 		p.path = result.directory.Path
 	}
 	p.entries = slices.Clone(result.directory.Entries)
+	v.prepareGitRead(p, result.request.git)
 	p.prepareDriveSpaces()
 	files := p.visibleEntries()
 	p.items = make([]entry, len(files))

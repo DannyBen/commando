@@ -16,6 +16,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
+	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
 )
@@ -52,6 +53,8 @@ func (v *view) restoreSettings(values settings.Values, err error) {
 
 // Application bindings identify leaves; defaults and UI definitions live in TOML.
 const (
+	settingGitEnabled            = "programs.git.enabled"
+	settingGitPath               = "programs.git.path"
 	settingTraceMask             = "debug.trace.mask"
 	settingProtectedSystem       = "view.show_protected_system_files"
 	settingParentEntry           = "view.show_parent_entry"
@@ -494,6 +497,10 @@ func (v *view) applySettings() {
 	show := v.settingsValues.Get(c, settingProtectedSystem).Bool
 	showParent := v.settingsValues.Get(c, settingParentEntry).Bool
 	apply := func(p *panel) {
+		if p.gitOptions != v.gitOptions() {
+			p.cancelGitRead()
+			p.gitStatus = nil
+		}
 		if !v.metadataColumnEnabled(p.metadata) {
 			p.setMetadataColumn(v.nextMetadataColumn(p.metadata, 1))
 			if p.sortByMetadata {
@@ -685,7 +692,18 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		s.commit = values.Clone()
 	}
 	if save && v.prepareSettingsSave != nil {
-		request := &settingsSaveRequest{session: s, run: v.prepareSettingsSave(s.commit.Clone())}
+		run := v.prepareSettingsSave(s.commit.Clone())
+		if len(s.fields) > 0 && s.fields[0].Widget == "programs.git" && s.commit.Get(settings.CatalogueDefault, settingGitEnabled).Bool {
+			executable := s.commit.Get(settings.CatalogueDefault, settingGitPath).Text
+			saveSettings := run
+			run = func() (string, error) {
+				if _, err := browser.FindGitExecutable(executable); err != nil {
+					return "", err
+				}
+				return saveSettings()
+			}
+		}
+		request := &settingsSaveRequest{session: s, run: run}
 		s.pending = true
 		s.selecting = false
 		if v.loader != nil {
@@ -747,6 +765,9 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 }
 
 func settingsSaveError(err error) string {
+	if errors.Is(err, browser.ErrGitUnavailable) {
+		return browser.ErrGitUnavailable.Error()
+	}
 	if errors.Is(err, os.ErrPermission) {
 		return "Settings save: access denied"
 	}

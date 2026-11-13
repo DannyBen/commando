@@ -12,6 +12,8 @@ import (
 // same. A recovered ancestor is a new listing, even when names happen to match.
 func (p *panel) reconcileDirectoryListing(directory browser.Directory) {
 	if !p.sameLocation(directory) {
+		p.cancelGitRead()
+		p.gitStatus = nil
 		p.filter = ""
 		p.clearMarks()
 		p.items, p.entries, p.selected = nil, nil, -1

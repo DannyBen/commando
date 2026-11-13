@@ -100,7 +100,7 @@ func Run() error {
 			gioapp.Size(unit.Dp(windowWidth), unit.Dp(windowHeight)),
 			gioapp.MinSize(unit.Dp(minWindowWidth), unit.Dp(360)))
 		w.Option(native.options()...)
-		v := newLocationView(locations, saved.ActivePanel, w.Invalidate, dataDir)
+		v := newConfiguredLocationView(locations, saved.ActivePanel, w.Invalidate, settingsValues, dataDir)
 		v.visited = visited
 		v.helpHidden = saved.HelpHidden
 		v.defaultDataFolder = baseDir

@@ -16,6 +16,8 @@ import (
 )
 
 type loadRequest struct {
+	git                gitOptions
+	gitRead            *gitRead
 	receipt            *loadReceipt // Final results are accepted once on the UI thread.
 	panel              int
 	path, selectName   string
@@ -65,6 +67,8 @@ type loadRequest struct {
 type loadReceipt struct{ accepted bool }
 
 type loadResult struct {
+	gitStatus                map[string]browser.GitStatus
+	gitErr                   error
 	driveSpace               browser.DriveSpace
 	driveSpaceKnown          bool
 	folderSizes              folderSizeCache
@@ -105,6 +109,12 @@ type loadResult struct {
 }
 
 type directoryLoader struct {
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	readGitStatus         func(context.Context, string, string) (map[string]browser.GitStatus, error)
+	gitReads              chan *gitRead
+	gitMu                 sync.Mutex // Coordinates foreground enqueue with Git cancellation.
+	gitCancel             context.CancelFunc
 	readDriveSpace        func(string) (browser.DriveSpace, bool)
 	folderCacheDir        string // Directory worker owns the persisted cache.
 	folderSizes           folderSizeCache
@@ -145,6 +155,8 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		count = max(1, panelCount[0])
 	}
 	l := &directoryLoader{
+		readGitStatus:         browser.ReadGitStatus,
+		gitReads:              make(chan *gitRead, 1),
 		readDriveSpace:        browser.ReadFixedDriveSpace,
 		calculateSize:         browser.CalculateSize,
 		removeArchiveSources:  browser.RemoveArchiveSources,
@@ -170,6 +182,7 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 		readFavorites:         browser.ReadFavorites,
 		createFavorite:        browser.CreateFavorite,
 	}
+	l.ctx, l.cancel = context.WithCancel(context.Background())
 	go func() {
 		defer close(l.stopped)
 		for {
@@ -181,6 +194,8 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 			select {
 			case <-l.done:
 				return
+			case read := <-l.gitReads:
+				l.runGitRead(read)
 			case request := <-l.requests:
 				if request.deepSearch != nil {
 					l.runDeepSearch(request)
@@ -466,7 +481,14 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 	return l
 }
 
-func (l *directoryLoader) close() { l.stopOnce.Do(func() { close(l.done) }) }
+func (l *directoryLoader) close() {
+	l.stopOnce.Do(func() {
+		close(l.done)
+		if l.cancel != nil {
+			l.cancel()
+		}
+	})
+}
 
 // Missing locations can recover at their closest surviving ancestor. Other
 // read failures retain their usual feedback rather than changing the location.

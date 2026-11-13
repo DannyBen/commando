@@ -22,6 +22,9 @@ type entry struct {
 }
 
 type panel struct {
+	gitStatus           map[string]browser.GitStatus
+	gitOptions          gitOptions
+	gitRead             *gitRead
 	driveSpace          *driveSpaceRequest
 	driveSpaces         map[string]browser.DriveSpace
 	folderSizes         folderSizeCache // Shared measurements, independent of the directory listing.

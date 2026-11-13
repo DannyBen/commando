@@ -50,6 +50,7 @@ func (v *view) layout(gtx layout.Context) layout.Dimensions {
 	)
 	v.submitFileIcons()
 	v.submitDriveSpaces()
+	v.submitGitReads()
 	area := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
 	pass := pointer.PassOp{}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &v.feedbackPointer)

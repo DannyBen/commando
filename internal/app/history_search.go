@@ -74,7 +74,7 @@ func (v *view) updateHistorySearch(gtx layout.Context, s *locationSession) bool 
 		return true
 	}
 	request := loadRequest{panel: s.panel, path: parent, selectName: name, suggestedPath: target,
-		historySearch: s, action: actionBrowse}
+		historySearch: s, action: actionBrowse, git: v.gitOptions()}
 	if v.loader.submit(request) {
 		p.loading, p.navigating = true, true
 	}

@@ -144,7 +144,11 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					if a := v.inlineInteraction(); a != nil && a.fileTarget != nil && a.fileTarget.sourcePanel == index && samePath(p.nativeFilePath(storedRow), a.fileTarget.sourcePath) {
 						edge = v.appearance.Colors.Edge
 					}
-					return v.fileRowSurface(gtx, size, bg, edge, func(gtx layout.Context) layout.Dimensions {
+					gitEdge := color.NRGBA{}
+					if storedRow >= 0 {
+						gitEdge = v.gitEdgeColor(p, p.items[storedRow].file)
+					}
+					return v.fileRowSurfaceEdges(gtx, size, bg, edge, gitEdge, func(gtx layout.Context) layout.Dimensions {
 						if naming {
 							metadata := ""
 							item := entry{file: browser.Entry{Name: v.nameEditor.Text(), Directory: v.nameInteraction().noun() == "folder"}}
@@ -274,9 +278,17 @@ func (p *panel) positionLabel() string {
 // Shared by real listings and passive theme previews, including mark and
 // inactive-selection bars. Input handling belongs to the surrounding file row.
 func (v *view) fileRowSurface(gtx layout.Context, size image.Point, background, edge color.NRGBA, content layout.Widget) layout.Dimensions {
+	return v.fileRowSurfaceEdges(gtx, size, background, edge, color.NRGBA{}, content)
+}
+
+func (v *view) fileRowSurfaceEdges(gtx layout.Context, size image.Point, background, leftEdge, rightEdge color.NRGBA, content layout.Widget) layout.Dimensions {
 	paint.FillShape(gtx.Ops, background, clip.Rect{Max: size}.Op())
-	if edge.A != 0 {
-		paint.FillShape(gtx.Ops, edge, clip.Rect{Max: image.Pt(gtx.Dp(3), size.Y)}.Op())
+	width := min(size.X, gtx.Dp(3))
+	if leftEdge.A != 0 {
+		paint.FillShape(gtx.Ops, leftEdge, clip.Rect{Max: image.Pt(width, size.Y)}.Op())
+	}
+	if rightEdge.A != 0 {
+		paint.FillShape(gtx.Ops, rightEdge, clip.Rect{Min: image.Pt(size.X-width, 0), Max: size}.Op())
 	}
 	gtx.Constraints = layout.Exact(size)
 	return v.textOn(background, content)(gtx)

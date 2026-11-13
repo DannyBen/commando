@@ -152,6 +152,28 @@ lines = [
   "Choose which diagnostic events to record",
 ]
 
+["palette.settings.programs.git"]
+lines = [
+  "Show Git file status using an installed Git executable",
+]
+
+["settings.programs.git"]
+lines = [
+  "Right edges use Success for added files and Warning for changed files, including staged changes.",
+  "Folders summarize descendants; changes take priority over additions. Update on entry or [key:view.refresh].",
+]
+
+["settings.programs.git.enabled"]
+lines = [
+  "Enable Git file indicators. Save, then refresh the directory to load status.",
+]
+
+["settings.programs.git.path"]
+lines = [
+  "Choose an installed Git executable, or leave blank to search PATH.",
+  "Save checks that the executable is available before enabling integration.",
+]
+
 ["palette.settings.feedback.notifications"]
 lines = [
   "Adjust notification animation",

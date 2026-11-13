@@ -57,11 +57,8 @@ func (l *directoryLoader) submit(request loadRequest) bool {
 	} else if request.action == actionClipboard && l.busy.Load() != 0 {
 		return false
 	}
-	select {
-	case l.requests <- request:
+	if l.enqueue(request) {
 		return true
-	case <-l.done:
-	default:
 	}
 	// A workspace can grow beyond its initial queue capacity. Never block the
 	// UI behind a worker waiting for the UI to consume its results.
@@ -69,6 +66,27 @@ func (l *directoryLoader) submit(request loadRequest) bool {
 		l.busy.Add(-1)
 	}
 	return false
+}
+
+// Foreground work interrupts an optional Git scan before waiting on the worker.
+// The same lock prevents a scan starting between this check and the enqueue.
+func (l *directoryLoader) enqueue(request loadRequest) bool {
+	l.gitMu.Lock()
+	defer l.gitMu.Unlock()
+	select {
+	case <-l.done:
+		return false
+	default:
+	}
+	select {
+	case l.requests <- request:
+		if l.gitCancel != nil {
+			l.gitCancel()
+		}
+		return true
+	default:
+		return false
+	}
 }
 
 func (l *directoryLoader) complete(request loadRequest) {

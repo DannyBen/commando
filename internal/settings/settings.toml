@@ -133,6 +133,10 @@ created = false
 [application.data_folder]
 path = ""
 
+[programs.git]
+enabled = false
+path = ""
+
 # Item template. No editor rules are installed by default.
 [[programs.actions]]
 id = ""

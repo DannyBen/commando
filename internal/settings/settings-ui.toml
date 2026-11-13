@@ -699,6 +699,21 @@ control = "folder"
 [programs]
 label = "Programs"
 
+[programs.git]
+label = "Git integration"
+title = "Git integration"
+live = false
+
+[programs.git.enabled]
+label = "Enabled"
+description = "Show right edges in Success for added files and Warning for changes; folders summarize their contents."
+control = "toggle"
+
+[programs.git.path]
+label = "Git executable"
+description = "Choose git.exe, or leave blank to find Git on PATH."
+control = "file"
+
 [programs.actions]
 identity = "id"
 label = "Actions"
