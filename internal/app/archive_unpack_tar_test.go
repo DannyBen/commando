@@ -69,7 +69,7 @@ func TestTARUnpackUsesSharedCommandsAndKeepsExternalOpening(t *testing.T) {
 				t.Fatal("Enter did not open the archive externally")
 			}
 			if extension == ".tgz" {
-				send(pressed("`"), key.EditEvent{Text: "Entry Unpack archive"})
+				send(pressed("`"), key.EditEvent{Text: "Actions Unpack archive"})
 				send(pressed(key.NameReturn))
 			} else {
 				send(modified(key.NameF6, key.ModAlt))

@@ -52,7 +52,7 @@ func TestArchiveOpenUsesCurrentFileAcrossInputRoutes(t *testing.T) {
 					send(pressed(key.NameReturn))
 				case "palette":
 					send(pressed("`"))
-					send(key.EditEvent{Text: "Entry Open"}, pressed(key.NameReturn))
+					send(key.EditEvent{Text: "Actions Open"}, pressed(key.NameReturn))
 				case "double-click":
 					height := p.rows[p.selected].size.Y
 					point := f32.Pt(20, float32(68+p.selected*height+height/2))

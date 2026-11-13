@@ -53,7 +53,7 @@ func TestArchivePaletteMasksPreserveOriginalShortcutDialogName(t *testing.T) {
 	if len(palette.results) != 1 || palette.results[0].command.id != "entry.recycle" || palette.results[0].command.shortcut() != "Ctrl+F9 / Ctrl+F10" {
 		t.Fatal("palette did not retain Recycle identity and bindings")
 	}
-	if widget.title != "Entry › Recycle › Shortcuts" || widget.bindingCommand.name != "Recycle" || widget.bindingCommand.id != "entry.recycle" {
+	if widget.title != "Actions › Recycle › Shortcuts" || widget.bindingCommand.name != "Recycle" || widget.bindingCommand.id != "entry.recycle" {
 		t.Fatal("shortcut dialog presented mask as a separate command", widget.title)
 	}
 	// Editing the masked entry saves the original global binding key.
@@ -71,7 +71,7 @@ func TestArchivePaletteMasksPreserveOriginalShortcutDialogName(t *testing.T) {
 	v.parentFolder()
 	waitLoaded(t, v, 0)
 	c := v.resolveCommandBindings(commandByID(v, "entry.recycle"))
-	if c.label() != "Entry › Recycle" || c.effectiveShortcut(0).Name != "F11" || c.effectiveShortcut(0).Modifiers != key.ModCtrl {
+	if c.label() != "Actions › Recycle" || c.effectiveShortcut(0).Name != "F11" || c.effectiveShortcut(0).Modifiers != key.ModCtrl {
 		t.Fatal("masked edit did not change the original command globally", c.shortcut())
 	}
 	send(pressed("`"))
@@ -79,7 +79,7 @@ func TestArchivePaletteMasksPreserveOriginalShortcutDialogName(t *testing.T) {
 	for _, result := range v.paletteInteraction().results {
 		visible[result.command.id] = result.command.label()
 	}
-	if visible["entry.recycle"] != "Entry › Recycle" || visible["entry.delete_permanently"] != "Entry › Delete permanently…" {
+	if visible["entry.recycle"] != "Actions › Recycle" || visible["entry.delete_permanently"] != "Actions › Delete permanently…" {
 		t.Fatal("normal folder retained archive presentation")
 	}
 

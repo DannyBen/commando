@@ -51,7 +51,7 @@ func TestSingleDuplicateUsesInlineNameEditor(t *testing.T) {
 			router, send := clipboardFrames(v)
 			if !paste {
 				for _, command := range v.commandCatalogue() {
-					if command.id == "entry.duplicate" && command.label() != "Entry › Duplicate…" {
+					if command.id == "entry.duplicate" && command.label() != "Actions › Duplicate…" {
 						t.Fatal("single duplicate did not advertise its name editor")
 					}
 				}
@@ -175,7 +175,7 @@ func TestBatchDuplicateAndSameFolderCutPaste(t *testing.T) {
 		c := attachTestFileClipboard(v)
 		markClipboardItems(t, &v.panels[0])
 		for _, command := range v.commandCatalogue() {
-			if command.id == "entry.duplicate" && command.label() != "Entry › Duplicate" {
+			if command.id == "entry.duplicate" && command.label() != "Actions › Duplicate" {
 				t.Fatal("batch duplicate advertised an input step")
 			}
 		}

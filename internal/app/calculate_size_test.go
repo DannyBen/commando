@@ -78,7 +78,7 @@ func TestCalculateSizePaletteAndBoundShortcut(t *testing.T) {
 			send, advance := panelInputFrames(v)
 			if route == "palette" {
 				send(pressed("`"))
-				send(replacePalette(v, "Entry Calculate size"))
+				send(replacePalette(v, "Actions Calculate size"))
 				s := v.paletteInteraction()
 				if len(s.results) != 1 || s.results[0].command.id != "entry.calculate_size" {
 					t.Fatal("command missing from palette")

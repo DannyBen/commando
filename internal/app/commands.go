@@ -42,7 +42,7 @@ func (v *view) commandCatalogue() []command {
 			c.mask = c.presentation(v)
 		}
 		catalogue = append(catalogue, v.resolveCommandBindings(c))
-		if c.group == "Programs" && (i == len(commands)-1 || commands[i+1].group != "Programs") {
+		if c.group == "Actions" && (i == len(commands)-1 || commands[i+1].group != "Actions") {
 			catalogue = append(catalogue, v.customActionCommands()...)
 		}
 		if c.group == "Panel" && (i == len(commands)-1 || commands[i+1].group != "Panel") {
@@ -70,42 +70,45 @@ var commands = defaultCommands()
 
 func defaultCommands() []command {
 	catalogue := []command{
-		cmd("file.edit", "File", "Edit", key.NameF4, 0, editorReady),
-		cmd("file.compare", "File", "Compare…", "V", key.ModCtrl|key.ModAlt, compareReady),
-		cmd("entry.open", "Entry", "Open", key.NameReturn, 0, openReady),
-		cmd("entry.rename", "Entry", "Rename…", key.NameF2, 0, renameReady),
-		cmd("entry.copy", "Entry", "Copy", "C", key.ModCtrl, copyReady),
-		cmd("entry.copy_filenames", "Entry", "Copy filenames", "C", key.ModCtrl|key.ModShift, textClipboardReady),
-		cmd("entry.copy_paths", "Entry", "Copy paths", "C", key.ModCtrl|key.ModAlt, textClipboardReady),
-		cmd("entry.cut", "Entry", "Cut", "X", key.ModCtrl, clipboardReady),
-		cmd("entry.paste", "Entry", "Paste", "V", key.ModCtrl, pasteReady),
-		cmd("entry.paste_shortcut", "Entry", "Paste shortcut", "V", key.ModCtrl|key.ModShift, mutationReady),
-		cmd("entry.duplicate", "Entry", "Duplicate", "D", key.ModCtrl, duplicateReady).withPresentation(func(v *view) commandPresentation {
+		cmd("file.edit", "Actions", "Edit", key.NameF4, 0, editorReady),
+		cmd("file.compare", "Actions", "Compare…", "V", key.ModCtrl|key.ModAlt, compareReady),
+		cmd("entry.open", "Actions", "Open", key.NameReturn, 0, openReady),
+		cmd("entry.rename", "Actions", "Rename…", key.NameF2, 0, renameReady),
+		cmd("entry.copy", "Actions", "Copy", "C", key.ModCtrl, copyReady),
+		cmd("entry.copy_filenames", "Actions", "Copy filenames", "C", key.ModCtrl|key.ModShift, textClipboardReady),
+		cmd("entry.copy_paths", "Actions", "Copy paths", "C", key.ModCtrl|key.ModAlt, textClipboardReady),
+		cmd("entry.cut", "Actions", "Cut", "X", key.ModCtrl, clipboardReady),
+		cmd("entry.paste", "Actions", "Paste", "V", key.ModCtrl, pasteReady),
+		cmd("entry.paste_shortcut", "Actions", "Paste shortcut", "V", key.ModCtrl|key.ModShift, mutationReady),
+		cmd("entry.duplicate", "Actions", "Duplicate", "D", key.ModCtrl, duplicateReady).withPresentation(func(v *view) commandPresentation {
 			if len(v.panels[v.active].selectedNames()) == 1 {
 				return commandPresentation{name: "Duplicate…"}
 			}
 			return commandPresentation{}
 		}),
-		cmd("entry.pack_zip", "Entry", "Pack to ZIP…", key.NameF5, key.ModAlt, packReady),
-		cmd("entry.unpack_zip", "Entry", "Unpack archive…", key.NameF6, key.ModAlt, unpackReady),
-		cmd("entry.copy_to_panel", "Entry", "Copy to panel…", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, false) }),
-		cmd("entry.move_to_panel", "Entry", "Move to panel…", key.NameF6, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, true) }),
-		cmd("entry.copy_left", "Entry", "Copy to left", "[", 0, func(v *view) bool { return panelTransferReady(v, -1, false) }),
-		cmd("entry.copy_right", "Entry", "Copy to right", "]", 0, func(v *view) bool { return panelTransferReady(v, 1, false) }),
-		cmd("entry.move_left", "Entry", "Move to left", "{", 0, func(v *view) bool { return panelTransferReady(v, -1, true) }),
-		cmd("entry.move_right", "Entry", "Move to right", "}", 0, func(v *view) bool { return panelTransferReady(v, 1, true) }),
-		cmd("entry.recycle", "Entry", "Recycle", key.NameDeleteForward, 0, removalReady).withPresentation(func(v *view) commandPresentation { return v.removalPresentation(false) }),
-		cmd("entry.delete_permanently", "Entry", "Delete permanently", key.NameDeleteForward, key.ModShift, removalReady).withPresentation(func(v *view) commandPresentation { return v.removalPresentation(true) }),
-		cmd("entry.new_file", "Entry", "New file…", "N", key.ModCtrl, createReady),
-		cmd("entry.new_folder", "Entry", "New folder…", "N", key.ModCtrl|key.ModShift, createReady),
-		cmd("entry.context_menu", "Entry", "Context menu", "/", key.ModAlt, func(v *view) bool {
+		cmd("entry.pack_zip", "Actions", "Pack to ZIP…", key.NameF5, key.ModAlt, packReady),
+		cmd("entry.unpack_zip", "Actions", "Unpack archive…", key.NameF6, key.ModAlt, unpackReady),
+		cmd("entry.copy_to_panel", "Actions", "Copy to panel…", key.NameF5, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, false) }),
+		cmd("entry.move_to_panel", "Actions", "Move to panel…", key.NameF6, 0, func(v *view) bool { return len(v.panels) > 1 && panelSourceReady(v, true) }),
+		cmd("entry.copy_left", "Actions", "Copy to left", "[", 0, func(v *view) bool { return panelTransferReady(v, -1, false) }),
+		cmd("entry.copy_right", "Actions", "Copy to right", "]", 0, func(v *view) bool { return panelTransferReady(v, 1, false) }),
+		cmd("entry.move_left", "Actions", "Move to left", "{", 0, func(v *view) bool { return panelTransferReady(v, -1, true) }),
+		cmd("entry.move_right", "Actions", "Move to right", "}", 0, func(v *view) bool { return panelTransferReady(v, 1, true) }),
+		cmd("entry.recycle", "Actions", "Recycle", key.NameDeleteForward, 0, removalReady).withPresentation(func(v *view) commandPresentation { return v.removalPresentation(false) }),
+		cmd("entry.delete_permanently", "Actions", "Delete permanently", key.NameDeleteForward, key.ModShift, removalReady).withPresentation(func(v *view) commandPresentation { return v.removalPresentation(true) }),
+		cmd("entry.new_file", "Actions", "New file…", "N", key.ModCtrl, createReady),
+		cmd("entry.new_folder", "Actions", "New folder…", "N", key.ModCtrl|key.ModShift, createReady),
+		cmd("entry.context_menu", "Actions", "Context menu", "/", key.ModAlt, func(v *view) bool {
 			return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false, shellMenu)
 		}),
 
-		cmd("entry.properties", "Entry", "Properties", key.NameF12, 0, func(v *view) bool {
+		cmd("entry.properties", "Actions", "Properties", key.NameF12, 0, func(v *view) bool {
 			return v.nativeItemsAvailable(v.active, v.panels[v.active].selected, false, shellProperties)
 		}),
-		cmd("entry.calculate_size", "Entry", "Calculate size", "", 0, calculateSizeReady),
+		cmd("entry.calculate_size", "Actions", "Calculate size", "", 0, calculateSizeReady),
+
+		cmd("programs.terminal_here", "Actions", "Terminal here", "T", key.ModCtrl, terminalReady),
+		cmd("programs.terminal_here_admin", "Actions", "Terminal here (Admin)", "", 0, terminalReady),
 
 		cmd("location.favorite", "Location", "Favorite…", "B", key.ModCtrl, favoriteReady),
 		cmd("navigation.parent_folder", "Navigation", "Parent folder", key.NameDeleteBackward, 0, func(v *view) bool { return folderReady(v) && v.loader != nil }),
@@ -154,9 +157,6 @@ func defaultCommands() []command {
 		cmd("selection.toggle_mark_and_advance", "Selection", "Toggle mark and advance", insertKey, 0, selectedReady),
 		cmd("selection.mark_all", "Selection", "Mark all", "A", key.ModCtrl, nil),
 		cmd("selection.clear_filter_or_marks", "Selection", "Clear filter or marks", key.NameEscape, 0, nil),
-
-		cmd("programs.terminal_here", "Programs", "Terminal here", "T", key.ModCtrl, terminalReady),
-		cmd("programs.terminal_here_admin", "Programs", "Terminal here (Admin)", "", 0, terminalReady),
 
 		toggleSettingCommand("appearance.toggle_icons", "Appearance", "icons", settingIconsEnabled),
 		toggleSettingCommand("appearance.toggle_auto_color", "Theme", "file colors", settingAutoColorEnabled),
@@ -315,7 +315,7 @@ func (v *view) executeCommand(gtx layout.Context, c command) {
 	if !c.allowed(v) {
 		return
 	}
-	if c.group == "Entry" && c.id != "entry.open" {
+	if strings.HasPrefix(c.id, "entry.") && c.id != "entry.open" {
 		v.clearDeepSearch(v.active)
 	}
 	defer v.beginSoundAction()()

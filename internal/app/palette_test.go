@@ -79,8 +79,8 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 			groups = append(groups, result.command.group)
 		}
 	}
-	if !slices.Equal(groups, []string{"File", "Entry", "Location", "Navigation", "View", "Panel", "Selection", "Programs", "Appearance", "Theme", "Interface", "Application"}) ||
-		s.results[0].command.label() != "File › Edit" || s.results[1].command.label() != "File › Compare…" || s.results[2].command.label() != "Entry › Open" || s.results[3].command.label() != "Entry › Rename…" {
+	if !slices.Equal(groups, []string{"Actions", "Location", "Navigation", "View", "Panel", "Selection", "Appearance", "Theme", "Interface", "Application"}) ||
+		s.results[0].command.label() != "Actions › Edit" || s.results[1].command.label() != "Actions › Compare…" || s.results[2].command.label() != "Actions › Open" || s.results[3].command.label() != "Actions › Rename…" {
 		t.Fatalf("blank search lost reviewed browsing order: %v", groups)
 	}
 	send(key.EditEvent{Text: "view"})
@@ -186,7 +186,7 @@ func TestPaletteSearchPreservesPanelsAndRestoresFocus(t *testing.T) {
 			}
 			send(key.EditEvent{Text: "cpy"})
 			s := v.paletteInteraction()
-			if s.query != "cpy" || len(s.results) == 0 || s.results[0].command.label() != "Entry › Copy" || !slices.Equal(s.results[0].match.Indices, []int{8, 10, 11}) {
+			if s.query != "cpy" || len(s.results) == 0 || s.results[0].command.label() != "Actions › Copy" || !slices.Equal(s.results[0].match.Indices, []int{10, 12, 13}) {
 				t.Fatalf("unexpected fuzzy results: %+v", s.results)
 			}
 			send(pressed(key.NameDownArrow), pressed(key.NameTab), modified(key.NameTab, key.ModShift), modified(key.NameLeftArrow, key.ModShift), modified("N", key.ModCtrl))

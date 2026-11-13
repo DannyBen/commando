@@ -31,7 +31,7 @@ func TestPackZIPKeyboardPaletteDestinationsAndCompletion(t *testing.T) {
 			send, _ := panelInputFrames(v)
 			if mode == "palette" {
 				send(pressed("`"))
-				send(replacePalette(v, "Entry Pack to ZIP"))
+				send(replacePalette(v, "Actions Pack to ZIP"))
 				send(pressed(key.NameReturn))
 			} else {
 				send(modified(key.NameF5, key.ModAlt))

@@ -212,7 +212,7 @@ func TestPaletteDeleteInvocationCannotAcceptItsOwnConfirmation(t *testing.T) {
 	}
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
-	send(key.EditEvent{Text: "Entry Delete permanently"})
+	send(key.EditEvent{Text: "Actions Delete permanently"})
 	send(pressed(key.NameReturn))
 	q := v.confirmationInteraction()
 	if q == nil {

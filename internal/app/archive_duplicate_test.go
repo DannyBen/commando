@@ -143,7 +143,7 @@ func TestArchiveDuplicatePaletteTargetsOpenSubfolder(t *testing.T) {
 	forbidTransferClipboard(t, v)
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
-	send(key.EditEvent{Text: "Entry Duplicate"}, pressed(key.NameReturn))
+	send(key.EditEvent{Text: "Actions Duplicate"}, pressed(key.NameReturn))
 	waitLoaded(t, v, 0)
 	send()
 	if v.nameInteraction() == nil || v.nameEditor.Text() != "report - Copy.txt" {

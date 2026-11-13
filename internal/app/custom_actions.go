@@ -42,7 +42,7 @@ func (v *view) customActionCommands() []command {
 		}
 		id := rule.ID
 		catalogue = append(catalogue, v.resolveCommandBindings(command{
-			id: customActionCommandPrefix + id, group: "Programs › Actions", name: rule.Name,
+			id: customActionCommandPrefix + id, group: "Actions", name: rule.Name,
 			available: func(v *view) bool {
 				rule, ok := v.customActionRule(id)
 				return ok && terminalReady(v) && len(v.panels[v.active].customActionTargets(rule)) > 0

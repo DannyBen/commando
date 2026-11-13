@@ -19,7 +19,7 @@ func TestURLPasteUsesSharedDraftAndCapturedURL(t *testing.T) {
 		v.loader.readClipboard = func() (browser.FileClipboard, error) { return browser.FileClipboard{Text: current}, nil }
 		router, send := clipboardFrames(v)
 		if palette {
-			send(pressed("`"), key.EditEvent{Text: "Entry Paste"})
+			send(pressed("`"), key.EditEvent{Text: "Actions Paste"})
 			send(pressed(key.NameReturn))
 		} else {
 			send(modified("V", key.ModCtrl))

@@ -25,7 +25,7 @@ func TestCopyFilenamesCurrentMarksAndPalette(t *testing.T) {
 			position := p.list.Position
 			if palette {
 				send(pressed("`"))
-				send(replacePalette(v, "Entry Copy filenames"))
+				send(replacePalette(v, "Actions Copy filenames"))
 				if result := v.paletteInteraction().results[0].command; result.id != "entry.copy_filenames" || !result.allowed(v) {
 					t.Fatal("Copy filenames missing or unavailable in palette")
 				}

@@ -48,7 +48,7 @@ func TestOpenMarkedFilesUsesSeparateRequestsAndContinuesAfterFailure(t *testing.
 			case "Enter":
 				send(pressed(key.NameEnter))
 			default:
-				send(pressed("`"), key.EditEvent{Text: "Entry Open"})
+				send(pressed("`"), key.EditEvent{Text: "Actions Open"})
 				send(pressed(key.NameReturn))
 			}
 			next := func(want string) {
@@ -121,7 +121,7 @@ func TestOpenFolderWithMarksNavigatesAcrossInputRoutes(t *testing.T) {
 					case "Enter":
 						send(pressed(key.NameEnter))
 					default:
-						send(pressed("`"), key.EditEvent{Text: "Entry Open"})
+						send(pressed("`"), key.EditEvent{Text: "Actions Open"})
 						send(pressed(key.NameReturn))
 					}
 					waitLoaded(t, v, 0)

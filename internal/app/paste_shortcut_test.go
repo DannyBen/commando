@@ -35,7 +35,7 @@ func TestPasteShortcutKeyboardAndPalettePreserveClipboard(t *testing.T) {
 			}
 			send, _ := panelInputFrames(v)
 			if palette {
-				send(pressed("`"), key.EditEvent{Text: "Entry Paste shortcut"})
+				send(pressed("`"), key.EditEvent{Text: "Actions Paste shortcut"})
 				send(pressed(key.NameReturn))
 			} else {
 				send(modified("V", key.ModCtrl|key.ModShift))

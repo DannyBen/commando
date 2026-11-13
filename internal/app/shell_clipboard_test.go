@@ -40,7 +40,7 @@ func TestShellClipboardPasteUsesSharedWorkerAndPreservesClipboard(t *testing.T) 
 			case "Shift+Insert":
 				send(modified(insertKey, key.ModShift))
 			default:
-				send(pressed("`"), key.EditEvent{Text: "Entry Paste"})
+				send(pressed("`"), key.EditEvent{Text: "Actions Paste"})
 				send(pressed(key.NameReturn))
 			}
 			waitLoaded(t, v, 1)

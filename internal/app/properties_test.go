@@ -25,7 +25,7 @@ func TestDrivePropertiesUsesExistingCommandAndNativeSession(t *testing.T) {
 		}
 		if palette {
 			send(pressed("`"))
-			send(replacePalette(v, "Entry Properties"), pressed(key.NameReturn))
+			send(replacePalette(v, "Actions Properties"), pressed(key.NameReturn))
 		} else {
 			send(pressed(key.NameF12))
 		}
@@ -56,7 +56,7 @@ func TestPropertiesUsesSelectionAndSharedNativeSession(t *testing.T) {
 			send, _ := panelInputFrames(v)
 			if palette {
 				send(pressed("`"))
-				send(replacePalette(v, "Entry Properties"), pressed(key.NameReturn))
+				send(replacePalette(v, "Actions Properties"), pressed(key.NameReturn))
 			} else {
 				send(pressed(key.NameF12))
 			}

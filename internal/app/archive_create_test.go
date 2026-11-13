@@ -133,7 +133,7 @@ func TestArchiveCreationCollisionRetryCancelAndPalette(t *testing.T) {
 	waitLoaded(t, v, 0)
 	send()
 	send(pressed("`"))
-	send(key.EditEvent{Text: "Entry New folder"}, pressed(key.NameReturn))
+	send(key.EditEvent{Text: "Actions New folder"}, pressed(key.NameReturn))
 	if v.nameInteraction() == nil {
 		t.Fatal("palette creation is unavailable in ZIP")
 	}

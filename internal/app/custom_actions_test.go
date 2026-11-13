@@ -56,6 +56,10 @@ func TestCustomActionPaletteAndShortcutUseOnlyOriginatingPanelMarks(t *testing.T
 				if pass == 0 {
 					send(pressed("`"))
 					send(key.EditEvent{Text: "Send test"})
+					results := v.paletteInteraction().results
+					if len(results) != 1 || results[0].command.label() != "Actions › Send test" {
+						t.Fatal("custom action was not listed once directly under Actions", results)
+					}
 					send(pressed(key.NameReturn))
 				} else {
 					send(modified("J", key.ModCtrl|key.ModAlt))

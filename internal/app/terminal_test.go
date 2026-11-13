@@ -73,7 +73,7 @@ func TestTerminalKeyPaletteAndBusyPolicy(t *testing.T) {
 	}
 	v.acceptLoad(loadResult{request: request})
 	send(pressed("`"))
-	send(key.EditEvent{Text: "Programs Terminal here Admin"}, pressed(key.NameReturn))
+	send(key.EditEvent{Text: "Actions Terminal here Admin"}, pressed(key.NameReturn))
 	request = <-v.loader.requests
 	if request.terminal == nil || !request.terminal.admin || !v.interaction.idle() {
 		t.Fatal("palette did not launch the admin command")

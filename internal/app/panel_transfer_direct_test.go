@@ -168,7 +168,7 @@ func TestDirectTransferPaletteAndConfigurableBindings(t *testing.T) {
 	selectName(t, &v.panels[0], "a.txt")
 	send, _ := panelInputFrames(v)
 	send(pressed("`"))
-	send(key.EditEvent{Text: "Entry Copy to right"})
+	send(key.EditEvent{Text: "Actions Copy to right"})
 	s := v.paletteInteraction()
 	if len(s.results) == 0 || s.results[0].command.id != "entry.copy_right" {
 		t.Fatal("direct transfer missing from palette")
