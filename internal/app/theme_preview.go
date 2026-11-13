@@ -29,7 +29,7 @@ func (v *view) settingsPanelPreview(index int) panelPreview {
 	}
 	group := s.fields[0].Widget
 	if group == settingThemeGenerator || group == settingThemeSelect || group == "appearance.contrast_guard" || isThemeWidget(s) {
-		return panelPreview{textSelection: true, rows: themePreviewRows(), messages: []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}}
+		return panelPreview{activeHeader: true, textSelection: true, rows: themePreviewRows(), messages: []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}}
 	}
 	switch group {
 	case settingActiveHeader:
@@ -51,6 +51,8 @@ func (v *view) settingsPanelPreview(index int) panelPreview {
 type previewFileRow struct {
 	file                  browser.Entry
 	selected, marked, cut bool
+	git                   browser.GitStatus
+	invalid               bool
 }
 
 func previewFile(name string) browser.Entry {
@@ -65,10 +67,10 @@ func themePreviewRows() []previewFileRow {
 	hidden := previewFile("hidden-notes.txt")
 	hidden.Hidden = true
 	return []previewFileRow{
-		{file: folder},
-		{file: previewFile("notes.txt"), marked: true},
-		{file: previewFile("photo.jpg"), selected: true},
-		{file: previewFile("cut-archive.zip"), selected: true, marked: true, cut: true},
+		{file: folder, git: browser.GitNew},
+		{file: previewFile("invalid-name.txt"), marked: true, git: browser.GitChanged, invalid: true},
+		{file: previewFile("photo.jpg"), selected: true, git: browser.GitNew},
+		{file: previewFile("cut-archive.zip"), selected: true, marked: true, cut: true, git: browser.GitChanged},
 		{file: hidden, cut: true},
 		{file: previewFile(".config"), marked: true},
 	}
@@ -121,11 +123,14 @@ func (preview panelPreview) layoutRows(v *view, gtx layout.Context, mode metadat
 		rowGTX := gtx
 		rowGTX.Constraints = layout.Exact(image.Pt(size.X, height))
 		bg, name, metadata := v.appearance.entryColors(row.file, row.selected, row.cut)
+		if row.invalid {
+			name = v.appearance.Colors.Error
+		}
 		edge := color.NRGBA{}
 		if row.marked {
 			edge = v.appearance.Colors.Edge
 		}
-		v.fileRowSurface(rowGTX, rowGTX.Constraints.Max, bg, edge, func(gtx layout.Context) layout.Dimensions {
+		v.fileRowSurfaceEdges(rowGTX, rowGTX.Constraints.Max, bg, edge, v.gitEdgeColor(row.git), func(gtx layout.Context) layout.Dimensions {
 			item := entry{name: row.file.Name, size: formatSize(row.file.Bytes), file: row.file}
 			if row.file.Directory {
 				item.size = "—"

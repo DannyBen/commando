@@ -20,7 +20,7 @@ import (
 )
 
 func TestSettingsPanelPreviewProfilesAndIsolation(t *testing.T) {
-	for _, group := range []string{settingThemeGenerator, settingThemeSelect, settingThemeCustomize, "appearance.contrast_guard", "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
+	for _, group := range []string{settingThemeGenerator, settingThemeSelect, settingThemeCustomize, colorPrefix + "info", colorPrefix + "success", colorPrefix + "warning", colorPrefix + "error", "appearance.contrast_guard", "appearance.autocolor", "appearance.autocolor.selection", "appearance.autocolor.special_files"} {
 		for count := 1; count <= 3; count++ {
 			v := newView(samplePanels()[:count])
 			v.startSettingsWidget(group)
@@ -28,21 +28,21 @@ func TestSettingsPanelPreviewProfilesAndIsolation(t *testing.T) {
 			if len(preview.rows) == 0 {
 				t.Fatal("missing synthetic preview", group)
 			}
-			theme := group == settingThemeGenerator || group == settingThemeSelect || group == settingThemeCustomize || group == "appearance.contrast_guard"
+			theme := group == settingThemeGenerator || group == settingThemeSelect || group == settingThemeCustomize || isThemeColorWidget(group) || group == "appearance.contrast_guard"
 			if theme {
-				if !preview.textSelection || !reflect.DeepEqual(preview.messages, []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}) {
+				if !preview.activeHeader || !preview.textSelection || !reflect.DeepEqual(preview.messages, []feedback.Kind{feedback.Info, feedback.Success, feedback.Warning, feedback.Error}) {
 					t.Fatal("theme preview lost full samples", group)
 				}
 			} else if preview.textSelection || len(preview.messages) != 0 {
 				t.Fatal("Auto Colors preview contains unrelated samples", group)
 			}
 			for i := 1; i < count; i++ {
-				if other := v.settingsPanelPreview(i); len(other.rows) != 0 || other.textSelection || len(other.messages) != 0 {
+				if other := v.settingsPanelPreview(i); len(other.rows) != 0 || other.activeHeader || other.textSelection || len(other.messages) != 0 {
 					t.Fatal("preview leaked to another panel", group)
 				}
 			}
 			v.finishSettingsWidget(layout.Context{}, false)
-			if preview := v.settingsPanelPreview(0); len(preview.rows) != 0 || preview.textSelection || len(preview.messages) != 0 {
+			if preview := v.settingsPanelPreview(0); len(preview.rows) != 0 || preview.activeHeader || preview.textSelection || len(preview.messages) != 0 {
 				t.Fatal("preview survived dismissal", group)
 			}
 		}
@@ -57,7 +57,8 @@ func TestSettingsPanelPreviewProfilesAndIsolation(t *testing.T) {
 }
 
 func TestThemePreviewSamplesCoverDirectoryStates(t *testing.T) {
-	var folder, normal, selected, cut, marked, hidden, dot bool
+	var folder, normal, selected, cut, marked, hidden, dot, invalid bool
+	git := map[browser.GitStatus]map[bool]bool{browser.GitNew: {}, browser.GitChanged: {}}
 	for _, row := range themePreviewRows() {
 		folder = folder || row.file.Directory
 		normal = normal || (!row.selected && !row.cut)
@@ -66,9 +67,18 @@ func TestThemePreviewSamplesCoverDirectoryStates(t *testing.T) {
 		marked = marked || row.marked
 		hidden = hidden || row.file.Hidden
 		dot = dot || strings.HasPrefix(row.file.Name, ".")
+		invalid = invalid || row.invalid
+		if states := git[row.git]; states != nil {
+			states[row.selected] = true
+		}
 	}
-	if !folder || !normal || !selected || !cut || !marked || !hidden || !dot {
+	if !folder || !normal || !selected || !cut || !marked || !hidden || !dot || !invalid {
 		t.Fatal("theme preview lacks representative directory states")
+	}
+	for status, selected := range git {
+		if !selected[false] || !selected[true] {
+			t.Fatalf("Git state %v needs normal and selected preview rows", status)
+		}
 	}
 }
 
@@ -78,8 +88,10 @@ func TestThemePreviewRenderingPreservesBrowsingAndEditorState(t *testing.T) {
 	p := &v.panels[0]
 	p.filter = "existing query"
 	p.feedback.Show(feedback.Warning, "Real warning")
+	p.gitStatus = map[string]browser.GitStatus{"real-file.txt": browser.GitChanged}
 	message := p.feedback.Current()
 	selected, marks := p.selected, maps.Clone(p.marks)
+	gitStatus, gitOptions, follow := maps.Clone(p.gitStatus), v.gitOptions(), v.followMe
 	items := append([]entry(nil), p.items...)
 	v.startSettingsWidget(settingThemeGenerator)
 	send, _ := panelInputFrames(v)
@@ -97,6 +109,9 @@ func TestThemePreviewRenderingPreservesBrowsingAndEditorState(t *testing.T) {
 	if p.filter != "existing query" || p.selected != selected || !maps.Equal(p.marks, marks) || !reflect.DeepEqual(p.items, items) || p.feedback.Current() != message {
 		t.Fatal("preview mutated real browsing state")
 	}
+	if !maps.Equal(p.gitStatus, gitStatus) || v.gitOptions() != gitOptions || v.followMe != follow {
+		t.Fatal("synthetic Git or Follow Me samples changed real integration state")
+	}
 	v.finishSettingsWidget(layout.Context{}, false)
 	if p.filter != "existing query" || p.selected != selected || !maps.Equal(p.marks, marks) || p.feedback.Current() != message {
 		t.Fatal("dismissal did not reveal original state")
@@ -108,12 +123,18 @@ func TestThemePanelPreviewsRender(t *testing.T) {
 	if dir == "" {
 		t.Skip("optional panel previews")
 	}
-	for count := 1; count <= 3; count++ {
-		v := newView(samplePanels()[:count])
-		v.applySettings()
-		v.startSettingsWidget(settingThemeGenerator)
-		if err := renderViewPNG(filepath.Join(dir, fmt.Sprintf("theme-panels-%d.png", count)), v); err != nil {
-			t.Fatal(err)
+	for _, theme := range builtInThemes {
+		for count := 1; count <= 3; count++ {
+			v := newView(samplePanels()[:count])
+			v.settingsValues = theme.values.Clone()
+			v.applySettings()
+			v.startSettingsWidget(settingThemeGenerator)
+			for _, size := range []image.Point{image.Pt(800, 480), image.Pt(360, 260)} {
+				name := fmt.Sprintf("%s-theme-panels-%d-%dx%d.png", theme.name, count, size.X, size.Y)
+				if err := renderSizedViewPNG(filepath.Join(dir, name), v, size); err != nil {
+					t.Fatal(err)
+				}
+			}
 		}
 	}
 }

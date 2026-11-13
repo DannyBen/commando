@@ -37,8 +37,8 @@ func (v *view) fileGitStatus(p *panel, file browser.Entry) browser.GitStatus {
 	return p.gitStatus[transferNameKey(file.Name)]
 }
 
-func (v *view) gitEdgeColor(p *panel, file browser.Entry) color.NRGBA {
-	switch v.fileGitStatus(p, file) {
+func (v *view) gitEdgeColor(status browser.GitStatus) color.NRGBA {
+	switch status {
 	case browser.GitNew:
 		return v.appearance.Colors.Success
 	case browser.GitChanged:

@@ -70,7 +70,7 @@ func TestGitEdgesKeepRowGeometry(t *testing.T) {
 				bg, fg, metadata := v.appearance.entryColors(item.file, selected, false)
 				var constraints layout.Constraints
 				var scroll textMarquee
-				got := v.fileRowSurfaceEdges(gtx, gtx.Constraints.Max, bg, v.appearance.Colors.Edge, v.gitEdgeColor(p, item.file), func(gtx layout.Context) layout.Dimensions {
+				got := v.fileRowSurfaceEdges(gtx, gtx.Constraints.Max, bg, v.appearance.Colors.Edge, v.gitEdgeColor(v.fileGitStatus(p, item.file)), func(gtx layout.Context) layout.Dimensions {
 					constraints = gtx.Constraints
 					return v.rowContents(gtx, item, fg, metadata, metadataSize, v.appearance.entryTextRoles(item.file, selected, false), false, &scroll)
 				})
@@ -109,7 +109,7 @@ func TestGitEdgePixels(t *testing.T) {
 				var ops op.Ops
 				gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: scale, PxPerSp: scale}, Constraints: layout.Exact(image.Pt(width, height))}
 				bg, _, _ := v.appearance.entryColors(file, selected, false)
-				v.fileRowSurfaceEdges(gtx, gtx.Constraints.Max, bg, v.appearance.Colors.Error, v.gitEdgeColor(p, file), func(gtx layout.Context) layout.Dimensions {
+				v.fileRowSurfaceEdges(gtx, gtx.Constraints.Max, bg, v.appearance.Colors.Error, v.gitEdgeColor(v.fileGitStatus(p, file)), func(gtx layout.Context) layout.Dimensions {
 					return layout.Dimensions{Size: gtx.Constraints.Max}
 				})
 				if err := window.Frame(&ops); err != nil {

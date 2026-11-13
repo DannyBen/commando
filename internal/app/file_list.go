@@ -39,9 +39,6 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 				metadataRole = contrastPrimary
 			}
 			return v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), background, func(gtx layout.Context) layout.Dimensions {
-				if preview.textSelection {
-					return v.themePreviewSelection(gtx)
-				}
 				if p.filter != "" || p.deep != nil || v.filterInteraction() != nil && v.filterInteraction().panel == index {
 					return v.filterContents(gtx, index)
 				}
@@ -62,6 +59,12 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					return v.label(gtx, "NAME", v.appearance.SmallTextSize, filename, text.Start)
 				}, trailing)
 			}, false)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if preview.textSelection {
+				return v.band(gtx, smallTextHeight+gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical)), v.appearance.Colors.Surface, v.themePreviewSelection, false)
+			}
+			return layout.Dimensions{}
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			if len(preview.rows) > 0 {
@@ -146,7 +149,7 @@ func (v *view) panel(gtx layout.Context, index int) layout.Dimensions {
 					}
 					gitEdge := color.NRGBA{}
 					if storedRow >= 0 {
-						gitEdge = v.gitEdgeColor(p, p.items[storedRow].file)
+						gitEdge = v.gitEdgeColor(v.fileGitStatus(p, p.items[storedRow].file))
 					}
 					return v.fileRowSurfaceEdges(gtx, size, bg, edge, gitEdge, func(gtx layout.Context) layout.Dimensions {
 						if naming {
