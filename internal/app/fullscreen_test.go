@@ -44,7 +44,7 @@ func TestFullScreenBindingsAndPalette(t *testing.T) {
 		t.Fatal("unbinding or reassigning Alt+Enter failed")
 	}
 	send(pressed("`"))
-	send(key.EditEvent{Text: "Toggle full screen"})
+	send(key.EditEvent{Text: "Window Full screen"})
 	if s := v.paletteInteraction(); len(s.results) == 0 || s.results[0].command.id != "application.toggle_full_screen" {
 		t.Fatal("fullscreen command missing from palette")
 	}

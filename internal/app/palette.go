@@ -77,6 +77,41 @@ func (s *paletteSession) catalogue() []command {
 	return actions
 }
 
+func (c command) matchQuery(query string) (fuzzy.Result, bool) {
+	label := c.label()
+	match, ok := fuzzy.Match(query, label)
+	if c.searchName == "" {
+		return match, ok
+	}
+	full := c
+	full.name = c.searchName
+	alternative, found := fuzzy.Match(query, full.label())
+	if !found || ok && match.Score >= alternative.Score {
+		return match, ok
+	}
+	visible, searchable := []rune(label), []rune(full.label())
+	prefix := 0
+	for prefix < min(len(visible), len(searchable)) && visible[prefix] == searchable[prefix] {
+		prefix++
+	}
+	// Keep visible highlights; a hidden-extension match highlights +N.
+	indices, hidden := []int(nil), false
+	for _, index := range alternative.Indices {
+		if index < prefix {
+			indices = append(indices, index)
+		} else {
+			hidden = true
+		}
+	}
+	if hidden {
+		for index := prefix; index < len(visible); index++ {
+			indices = append(indices, index)
+		}
+	}
+	alternative.Indices = indices
+	return alternative, true
+}
+
 func (s *paletteSession) filter(query string) {
 	s.query, s.selected, s.reveal = query, 0, true
 	s.results = nil
@@ -91,7 +126,7 @@ func (s *paletteSession) filter(query string) {
 		if command.mask.hidden {
 			continue
 		}
-		if match, ok := fuzzy.Match(needle, command.label()); ok {
+		if match, ok := command.matchQuery(needle); ok {
 			s.results = append(s.results, commandMatch{command: command, match: match})
 		}
 	}

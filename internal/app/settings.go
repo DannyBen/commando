@@ -111,6 +111,14 @@ func settingsGroupLabel(key string) string {
 	}
 	return ""
 }
+func extensionCommandName(extensions []string) string {
+	name := strings.Join(extensions[:min(3, len(extensions))], " ")
+	if len(extensions) > 3 {
+		name += fmt.Sprintf(" +%d", len(extensions)-3)
+	}
+	return name
+}
+
 func (v *view) settingsCatalogue() []command {
 	var catalogue []command
 	themeAdded := false
@@ -143,7 +151,7 @@ func (v *view) settingsCatalogue() []command {
 		if slices.Contains(settings.CatalogueDefault.Collections, key) {
 			group := settingsGroupLabel(widget.Parent) + " › " + widget.Label
 			rows := v.settingsValues.Collection(key)
-			add := func(index int, name string) {
+			add := func(index int, name, searchName string) {
 				// Collection rows use stable IDs independently of their labels and order.
 				id := ""
 				if index < 0 {
@@ -153,11 +161,11 @@ func (v *view) settingsCatalogue() []command {
 						id = "settings." + key + ".rules." + value
 					}
 				}
-				catalogue = append(catalogue, v.resolveCommandBindings(command{id: id, group: group, name: name,
+				catalogue = append(catalogue, v.resolveCommandBindings(command{id: id, group: group, name: name, searchName: searchName,
 					available:  func(v *view) bool { return v.canOfferInteraction(v.active, actionMutation) },
 					soundEvent: eventSoundOwned, execute: func(v *view) { v.startCollectionWidget(key, index, name) }}))
 			}
-			add(-1, "New")
+			add(-1, "New", "")
 			if key == settings.ActionCollection {
 				catalogue = append(catalogue, v.resolveCommandBindings(command{
 					id: actionImportCommand, group: group, name: "New from context menu",
@@ -166,12 +174,17 @@ func (v *view) settingsCatalogue() []command {
 				}))
 			}
 			for i, row := range rows {
-				extensions, _ := row["ext"].([]string)
-				name := strings.Join(extensions, " ")
+				name, searchName := "", ""
 				if key == settings.ActionCollection {
 					name, _ = row["name"].(string)
+				} else {
+					extensions, _ := row["ext"].([]string)
+					name = extensionCommandName(extensions)
+					if len(extensions) > 3 {
+						searchName = strings.Join(extensions, " ")
+					}
 				}
-				add(i, name)
+				add(i, name, searchName)
 			}
 			continue
 		}

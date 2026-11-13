@@ -32,8 +32,8 @@ func TestWindowSizeCommandsBindingsAndPalette(t *testing.T) {
 			}
 		}
 		c := commandByID(v, tc.id)
-		if c.group != "Application" || !c.allowed(v) {
-			t.Fatalf("%s missing from Application", tc.id)
+		if c.group != "Window" || !c.allowed(v) {
+			t.Fatalf("%s missing from Window", tc.id)
 		}
 	}
 	if !slices.Equal(requests, []windowResizeRequest{
@@ -43,7 +43,7 @@ func TestWindowSizeCommandsBindingsAndPalette(t *testing.T) {
 		t.Fatal("shortcut request order changed", requests)
 	}
 	send(pressed("`"))
-	send(replacePalette(v, "Application Increase window width"))
+	send(replacePalette(v, "Window Increase width"))
 	if s := v.paletteInteraction(); len(s.results) == 0 || s.results[0].command.id != "application.increase_width" {
 		t.Fatal("window width command missing from palette")
 	}

@@ -81,7 +81,7 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 			groups = append(groups, root)
 		}
 	}
-	if !slices.Equal(groups, []string{"Actions", "Location", "Navigation", "View", "Panel", "Selection", "Appearance", "Theme", "Interface", "Application", "Menu", "Settings"}) ||
+	if !slices.Equal(groups, []string{"Actions", "Location", "Navigation", "View", "Panel", "Selection", "Appearance", "Theme", "Interface", "Window", "Application", "Menu", "Settings"}) ||
 		s.results[0].command.label() != "Actions › Edit" || s.results[1].command.label() != "Actions › Compare…" || s.results[2].command.label() != "Actions › Open" || s.results[3].command.label() != "Actions › Rename…" {
 		t.Fatalf("blank search lost reviewed browsing order: %v", groups)
 	}
@@ -584,7 +584,7 @@ func TestPalettePreview(t *testing.T) {
 	if directory == "" {
 		t.Skip("optional headless palette preview")
 	}
-	for _, query := range []string{"", "panel", "Navigation", "Application", "settings", "Settings Programs Actions New from context menu", "@programs actions new from context menu", "terminal", "xyz", "@xyz"} {
+	for _, query := range []string{"", "panel", "Navigation", "Window", "Application", "settings", "Settings Programs Actions New from context menu", "@programs actions new from context menu", "terminal", "xyz", "@xyz"} {
 		v := newPreviewView()
 		var ops op.Ops
 		v.startPalette(layout.Context{Ops: &ops})

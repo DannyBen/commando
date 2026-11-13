@@ -210,6 +210,7 @@ lines = [
 ["palette.settings.programs.editors.rules"]
 lines = [
   "Change or remove this editor rule",
+  "+N counts additional extensions; every extension remains searchable.",
 ]
 
 ["palette.settings.view.metadata_columns"]
@@ -1584,7 +1585,7 @@ lines = [
 lines = ["Add a compare program for source-file extensions, or * as a fallback."]
 
 ["palette.settings.programs.compare.rules"]
-lines = ["Edit this compare program's extensions, executable and arguments."]
+lines = ["Edit this compare program's extensions, executable and arguments.", "+N counts additional extensions; every extension remains searchable."]
 
 ["settings.programs.compare"]
 lines = ["Choose a compare program for each source-file extension, or use * as a fallback."]

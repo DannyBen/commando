@@ -8,8 +8,11 @@ let themeOverride = null;
 
 for (const group of window.commandoFeatures) {
   for (const feature of group.items) {
+    const kind = feature.kind === 'setting' ? 'setting'
+      : feature.title.startsWith('Actions › ') ? 'action' : 'command';
     const row = document.createElement('li');
     row.className = 'feature-row';
+    row.dataset.kind = kind;
     row.dataset.search = `${feature.id} ${feature.search || ''}`;
     row.dataset[feature.kind === 'setting' ? 'settingId' : 'commandId'] = feature.id;
 
@@ -44,14 +47,10 @@ for (const group of window.commandoFeatures) {
         access.append(badge);
       });
     } else {
-      if (feature.kind === 'setting') {
-        const type = document.createElement('span');
-        type.className = 'feature-type';
-        type.textContent = 'Setting';
-        access.append(type, ' · ');
-      } else {
-        access.append('search ');
-      }
+      const type = document.createElement('span');
+      type.className = 'feature-type';
+      type.textContent = kind === 'setting' ? 'Setting' : kind === 'action' ? 'Action' : 'Search';
+      access.append(type, ' · ');
       const query = document.createElement('code');
       query.textContent = feature.query;
       access.append(query);
@@ -157,13 +156,15 @@ async function linkLatestZip() {
 linkLatestZip();
 
 function filterFeatures() {
-  const terms = search.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const query = search.value.trim().toLocaleLowerCase();
+  const kind = query.startsWith('@') ? 'setting' : query.startsWith(';') ? 'action' : '';
+  const terms = (kind ? query.slice(1) : query).trim().split(/\s+/).filter(Boolean);
   let visible = 0;
 
   for (const row of rows) {
     const text = `${row.textContent} ${row.dataset.search || ''}`.toLocaleLowerCase();
     const words = text.match(/[\p{L}\p{N}]+/gu) || [];
-    row.hidden = !terms.every(term => /^[\p{L}\p{N}]+$/u.test(term)
+    row.hidden = (kind && row.dataset.kind !== kind) || !terms.every(term => /^[\p{L}\p{N}]+$/u.test(term)
       ? words.some(word => word.startsWith(term))
       : text.includes(term));
     if (!row.hidden) visible++;

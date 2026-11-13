@@ -23,6 +23,7 @@ type command struct {
 	id            string
 	group         string
 	name          string
+	searchName    string // Optional full name retained for matching compact labels.
 	bindings      [2]commandBinding
 	overrides     [2]bindingOverride
 	available     func(*view) bool
@@ -170,11 +171,11 @@ func defaultCommands() []command {
 		toggleSettingCommand("feedback.toggle_sound", "Interface", "sound", settingSoundEnabled),
 		toggleSettingCommand("feedback.toggle_notification_animation", "Interface", "notification animation", settingNotificationAnimation),
 
-		cmd("application.toggle_full_screen", "Application", "Toggle full screen", key.NameReturn, key.ModAlt, func(v *view) bool { return v.toggleFullScreen != nil }),
-		cmd("application.increase_width", "Application", "Increase window width", "=", key.ModCtrl, windowSizingReady),
-		cmd("application.decrease_width", "Application", "Decrease window width", "-", key.ModCtrl, windowSizingReady),
-		cmd("application.increase_height", "Application", "Increase window height", "=", key.ModCtrl|key.ModShift, windowSizingReady),
-		cmd("application.decrease_height", "Application", "Decrease window height", "-", key.ModCtrl|key.ModShift, windowSizingReady),
+		cmd("application.toggle_full_screen", "Window", "Full screen", key.NameReturn, key.ModAlt, func(v *view) bool { return v.toggleFullScreen != nil }),
+		cmd("application.increase_width", "Window", "Increase width", "=", key.ModCtrl, windowSizingReady),
+		cmd("application.decrease_width", "Window", "Decrease width", "-", key.ModCtrl, windowSizingReady),
+		cmd("application.increase_height", "Window", "Increase height", "=", key.ModCtrl|key.ModShift, windowSizingReady),
+		cmd("application.decrease_height", "Window", "Decrease height", "-", key.ModCtrl|key.ModShift, windowSizingReady),
 		cmd(helpCommandID, "Application", "Toggle help", key.NameF1, 0, nil),
 		cmd("application.command_palette", "Application", "Command palette", "`", 0, nil),
 		{id: "application.open_data_folder", group: "Application", name: "Open data folder",
