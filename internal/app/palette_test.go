@@ -503,7 +503,9 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 		}
 		send(pressed(key.NameEnd))
 		pos := s.list.Position
-		if s.selected != len(s.results)-1 || s.selected < pos.First || s.selected >= pos.First+pos.Count || pos.OffsetLast < 0 {
+		height := s.rowOffsets[s.selected+1] - s.rowOffsets[s.selected]
+		if s.selected != len(s.results)-1 || s.selected < pos.First || s.selected >= pos.First+pos.Count ||
+			height <= s.viewportHeight && pos.OffsetLast < 0 || height > s.viewportHeight && (pos.First != s.selected || pos.Offset != 0) {
 			t.Fatalf("selection not revealed at text size %g: selected=%d position=%+v", tc.fontSize, s.selected, pos)
 		}
 		send(pressed(key.NameHome))

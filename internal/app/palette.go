@@ -27,6 +27,8 @@ type paletteSession struct {
 	commands         []command
 	settingsCommands []command
 	settingsMode     bool
+	rowOffsets       []int
+	viewportHeight   int
 	list             widget.List
 	rows             map[int]*clickTarget
 	surface          overlay
@@ -59,6 +61,7 @@ func (v *view) startPalette(gtx layout.Context) {
 func (s *paletteSession) filter(query string) {
 	s.query, s.selected, s.reveal = query, 0, true
 	s.results = nil
+	s.rowOffsets = nil
 	needle := strings.TrimSpace(query)
 	s.settingsMode = strings.HasPrefix(query, "@")
 	catalogue := s.commands
@@ -237,9 +240,15 @@ func (v *view) updatePalette(gtx layout.Context) {
 		case key.NameEnd:
 			s.selected = len(s.results) - 1
 		case key.NamePageUp:
-			s.selected -= max(1, s.list.Position.Count-1)
+			if s.pageWithinRow(-1) {
+				continue
+			}
+			s.selected = s.pageSelection(-1)
 		case key.NamePageDown:
-			s.selected += max(1, s.list.Position.Count-1)
+			if s.pageWithinRow(1) {
+				continue
+			}
+			s.selected = s.pageSelection(1)
 		}
 		s.selected = max(0, min(s.selected, len(s.results)-1))
 		if s.selected != previous {

@@ -2,6 +2,7 @@ package app
 
 import (
 	"image"
+	"slices"
 	"strings"
 
 	"gioui.org/layout"
@@ -16,6 +17,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 	v.updatePaletteSearch(gtx)
 	s := v.paletteInteraction()
 	textHeight := v.textHeight(gtx, v.appearance.TextSize)
+	smallHeight := v.textHeight(gtx, v.appearance.SmallTextSize)
 	list := material.List(v.theme, &s.list)
 	list.AnchorStrategy = material.Occupy
 	list.Indicator.MinorWidth = 3
@@ -42,14 +44,30 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 	width := contentWidth + gtx.Dp(2*max(0, v.appearance.ContentPaddingHorizontal)+2) + gtx.Dp(list.Width())
 	width = max(gtx.Dp(v.appearance.OverlayMinWidth), min(gtx.Dp(v.appearance.OverlayMaxWidth), width))
 	return s.surface.layout(gtx, v.locationBarHeight(gtx, textHeight), width, v.appearance.Colors, v.appearance.OverlayBackdropOpacity, func(gtx layout.Context) layout.Dimensions {
-		rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
+		padding := gtx.Dp(max(0, v.appearance.RowPaddingVertical))
+		rowHeight := max(1, textHeight+2*padding)
+		rowWidth := max(1, gtx.Constraints.Max.X-gtx.Dp(list.Width())-2*gtx.Dp(max(0, v.appearance.ContentPaddingHorizontal)))
+		rows := make([]paletteRow, len(s.results))
+		offsets := make([]int, len(rows)+1)
+		for i, result := range s.results {
+			rows[i] = v.measurePaletteRow(gtx, result.command, rowWidth, shortcutGap, textHeight, smallHeight, padding)
+			offsets[i+1] = offsets[i] + rows[i].height
+		}
+		if !slices.Equal(s.rowOffsets, offsets) {
+			s.reveal = true
+		}
+		s.rowOffsets = offsets
 		searchHeight := textHeight + gtx.Dp(2*max(0, v.appearance.SearchPaddingVertical))
 		footerHeight := v.textHeight(gtx, v.appearance.SmallTextSize) + gtx.Dp(2*max(0, v.appearance.HeaderFooterPaddingVertical))
 		// Leave the panel footers visible. Tall text still gets one usable row
 		// when space permits; the outer clip bounds tiny windows safely.
 		available := max(0, gtx.Constraints.Max.Y-searchHeight-footerHeight-gtx.Dp(32))
-		listHeight := min(max(1, len(s.results))*rowHeight, max(rowHeight, available*3/4))
+		listHeight := min(max(rowHeight, offsets[len(rows)]), max(rowHeight, available*3/4))
 		listHeight = min(listHeight, max(0, gtx.Constraints.Max.Y-searchHeight-footerHeight))
+		if s.viewportHeight != listHeight {
+			s.reveal = true
+		}
+		s.viewportHeight = listHeight
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, searchHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
@@ -78,13 +96,14 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 					})
 				}
 				if s.reveal {
-					top := s.list.Position.First*rowHeight + s.list.Position.Offset
-					if y := s.selected * rowHeight; y < top {
-						s.list.ScrollTo(s.selected)
-					} else if bottom := (s.selected + 1) * rowHeight; bottom > top+listHeight {
-						top = max(0, bottom-listHeight)
-						s.list.Position.First, s.list.Position.Offset = top/rowHeight, top%rowHeight
+					top := offsets[min(s.list.Position.First, len(rows))] + s.list.Position.Offset
+					start, bottom := offsets[s.selected], offsets[s.selected+1]
+					if start < top || bottom-start > listHeight {
+						top = start
+					} else if bottom > top+listHeight {
+						top = bottom - listHeight
 					}
+					s.scrollToOffset(top)
 					s.reveal = false
 				}
 				return list.Layout(gtx, len(s.results), func(gtx layout.Context, row int) layout.Dimensions {
@@ -92,7 +111,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 						s.rows[row] = new(clickTarget)
 					}
 					return s.rows[row].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						size := image.Pt(gtx.Constraints.Max.X, rowHeight)
+						size := image.Pt(gtx.Constraints.Max.X, rows[row].height)
 						state := s.rows[row].state(gtx, row == s.selected)
 						available := s.results[row].command.allowed(v)
 						state.Enabled = state.Enabled && available
@@ -111,21 +130,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 						return v.contentInset().Layout(gtx, v.textAs(role, v.textOn(bg, func(gtx layout.Context) layout.Dimensions {
 							return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 								gtx.Constraints.Min.Y = 0
-								result := s.results[row]
-								shortcut := result.command.shortcut()
-								if shortcut == "" {
-									return v.highlightedLabel(gtx, result.command.label(), result.match.Indices, v.appearance.TextSize, fg)
-								}
-								shortcutWidth := min(gtx.Constraints.Max.X, shortcutGap+v.textWidth(gtx, shortcut, v.appearance.SmallTextSize))
-								return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-									layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-										return v.highlightedLabel(gtx, result.command.label(), result.match.Indices, v.appearance.TextSize, fg)
-									}),
-									layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-										gtx.Constraints.Min.X, gtx.Constraints.Max.X = shortcutWidth, shortcutWidth
-										return v.label(gtx, shortcut, v.appearance.SmallTextSize, fg, text.End)
-									}),
-								)
+								return v.layoutPaletteRow(gtx, rows[row], s.results[row], fg, textHeight, smallHeight)
 							})
 						})))
 					})
