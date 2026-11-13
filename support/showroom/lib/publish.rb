@@ -2,6 +2,7 @@
 
 require 'fileutils'
 require_relative 'config'
+require_relative '../../site_assets'
 
 module Showroom
   # Publishes approved scene frames and videos to the static site.
@@ -29,6 +30,7 @@ module Showroom
           FileUtils.cp(source, File.join(@assets, target))
         end
       end
+      SiteAssets.new(File.dirname(@assets)).run
       puts "Published #{sources.length} showcase assets to #{@assets}"
     end
 

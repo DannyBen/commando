@@ -19,6 +19,9 @@ class PublishTest < Minitest::Test
     File.write(File.join(@root, 'config/showroom.yml'), YAML.dump(config))
     @output = File.join(@root, 'out/light')
     @assets = File.join(@base, 'site/assets')
+    FileUtils.mkdir_p(File.dirname(@assets))
+    File.write(File.join(@base, 'site/index.html'),
+               '<script id="asset-versions" type="application/json">{}</script><img src="assets/overview-light.png">')
   end
 
   def teardown
@@ -54,6 +57,8 @@ class PublishTest < Minitest::Test
     Showroom::Publish.new(@root).run
 
     assert_equal 'overview', File.read(File.join(@assets, 'overview-light.png'))
+    assert_includes File.read(File.join(@base, 'site/index.html')),
+                    "assets/overview-light.png?v=#{Digest::SHA256.hexdigest('overview')[0, 12]}"
     Showroom::Publish::POSTERS.each_key do |scene|
       assert_equal scene, File.read(File.join(@assets, "#{scene}-light.mp4"))
       assert File.size?(File.join(@assets, "#{scene}-light.jpg"))

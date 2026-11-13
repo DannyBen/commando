@@ -5,6 +5,11 @@ const empty = document.querySelector('#empty-state');
 const themeToggle = document.querySelector('#theme-toggle');
 const systemTheme = matchMedia('(prefers-color-scheme: dark)');
 let themeOverride = null;
+const assetVersions = JSON.parse(document.querySelector('#asset-versions')?.textContent || '{}');
+
+function assetUrl(path) {
+  return assetVersions[path] ? `${path}?v=${assetVersions[path]}` : path;
+}
 
 for (const group of window.commandoFeatures) {
   for (const feature of group.items) {
@@ -74,9 +79,9 @@ try {
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  document.querySelector('#brand-logo').src = `assets/logo-${theme}.svg`;
-  document.querySelector('#overview-image').src = `assets/overview-${theme}.png`;
-  document.querySelector('#artifact-stamp').src = `assets/sector-seven-artifact${theme === 'dark' ? '-dark' : ''}.svg`;
+  document.querySelector('#brand-logo').src = assetUrl(`assets/logo-${theme}.svg`);
+  document.querySelector('#overview-image').src = assetUrl(`assets/overview-${theme}.png`);
+  document.querySelector('#artifact-stamp').src = assetUrl(`assets/sector-seven-artifact${theme === 'dark' ? '-dark' : ''}.svg`);
   document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0b0d12' : '#f5f3ef';
   themeToggle.querySelector('.theme-icon').textContent = theme === 'dark' ? '☾' : '☀';
   themeToggle.querySelector('.theme-name').textContent = `${theme === 'dark' ? 'Dark' : 'Light'} theme`;

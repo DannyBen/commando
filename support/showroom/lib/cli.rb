@@ -13,6 +13,7 @@ module Showroom
       Generate Commando showcase screenshots and videos.
 
       Usage:
+        showroom all
         showroom shot [SCENE]
         showroom vid [SCENE]
         showroom gif [SCENE]
@@ -20,6 +21,7 @@ module Showroom
         showroom (-h | --help)
 
       Commands:
+        all    Regenerate all site screenshots and videos, then copy to site assets.
         shot   Capture screenshots using the Go renderer.
         vid    Assemble existing screenshots; never runs the renderer.
         gif    Convert existing video masters using Gifski.
@@ -54,7 +56,9 @@ module Showroom
     end
 
     def self.dispatch(args, scene, root)
-      if args['shot']
+      if args['all']
+        all(root)
+      elsif args['shot']
         Runner.new(root).run("config/scenes/#{scene}.rb")
       elsif args['vid']
         Video.new(root).run(scene)
@@ -63,6 +67,17 @@ module Showroom
       else
         Gif.new(root).run(scene)
       end
+    end
+
+    def self.all(root)
+      runner = Runner.new(root)
+      runner.run('config/scenes/overview.rb')
+      video = Video.new(root)
+      Publish::POSTERS.each_key do |scene|
+        runner.run("config/scenes/#{scene}.rb")
+        video.run(scene)
+      end
+      Publish.new(root).run
     end
   end
 end
