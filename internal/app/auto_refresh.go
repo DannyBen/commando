@@ -100,4 +100,9 @@ func (v *view) acceptAutoRefresh(result loadResult) {
 	if unchanged {
 		p.prefix, p.prefixAt = prefix, prefixAt
 	}
+	// Publish the listing first; coalesced Git metadata stays optional and quiet.
+	v.prepareGitRead(p, v.gitOptions())
+	if p.gitRead != nil {
+		p.gitRead.automatic = true
+	}
 }

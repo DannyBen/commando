@@ -25,6 +25,7 @@ type panel struct {
 	gitStatus           map[string]browser.GitStatus
 	gitOptions          gitOptions
 	gitRead             *gitRead
+	gitReadAt           time.Time
 	driveSpace          *driveSpaceRequest
 	driveSpaces         map[string]browser.DriveSpace
 	folderSizes         folderSizeCache // Shared measurements, independent of the directory listing.

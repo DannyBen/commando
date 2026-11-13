@@ -5,10 +5,14 @@ import (
 	"errors"
 	"time"
 
+	"gioui.org/layout"
+	"gioui.org/op"
 	"github.com/dannyben/commando/internal/browser"
 	"github.com/dannyben/commando/internal/diagnostics"
 	"github.com/dannyben/commando/internal/feedback"
 )
+
+const gitRefreshInterval = time.Second
 
 // This identity follows its panel through moves. Only the UI uses submitted;
 // the worker reads the immutable path, options and cancellation context.
@@ -18,6 +22,7 @@ type gitRead struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	submitted bool
+	automatic bool
 }
 
 func (p *panel) cancelGitRead() {
@@ -39,14 +44,18 @@ func (v *view) prepareGitRead(p *panel, options gitOptions) {
 
 // Submit after drawing the directory, behind ordinary worker requests. A full
 // background queue leaves the read pending for a later frame.
-func (v *view) submitGitReads() {
+func (v *view) submitGitReads(gtx layout.Context) {
 	if v.loader == nil || !v.actionAllowed(actionMutation) || len(v.loader.requests) != 0 {
 		return
 	}
 	for i := range v.panels {
 		p := &v.panels[i]
 		read := p.gitRead
-		if read == nil || read.submitted || p.loading {
+		if read == nil || read.submitted || p.loading || p.refreshing || p.refreshNeeded {
+			continue
+		}
+		if due := p.gitReadAt.Add(gitRefreshInterval); read.automatic && gtx.Now.Before(due) {
+			gtx.Execute(op.InvalidateCmd{At: due})
 			continue
 		}
 		select {
@@ -54,6 +63,7 @@ func (v *view) submitGitReads() {
 			return
 		case v.loader.gitReads <- read:
 			read.submitted = true
+			p.gitReadAt = gtx.Now
 		default:
 		}
 		return
@@ -111,7 +121,7 @@ func (v *view) acceptGitRead(result loadResult) {
 		p.cancelGitRead()
 		if result.gitErr == nil {
 			p.gitStatus = gitStatusNames(result.gitStatus)
-		} else if !errors.Is(result.gitErr, browser.ErrGitUnavailable) && !v.interaction.protectsListing(i) {
+		} else if !read.automatic && !errors.Is(result.gitErr, browser.ErrGitUnavailable) && !v.interaction.protectsListing(i) {
 			v.showFeedback(i, feedback.Error, result.gitErr.Error())
 		}
 		return

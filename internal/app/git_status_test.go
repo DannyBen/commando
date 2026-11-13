@@ -223,12 +223,12 @@ func TestGitSettingsAndRefresh(t *testing.T) {
 	if p.gitStatus[transferNameKey("new.txt")] != browser.GitNew {
 		t.Fatal("cloned panel shares Git status storage")
 	}
-	// Even an automatic read carrying enabled options must not run Git.
+	// Automatic refresh publishes the listing before its optional Git read.
 	p.refreshing = true
-	v.loader.submit(loadRequest{panel: 0, path: root, autoRefresh: true, git: v.gitOptions()})
+	v.loader.submit(loadRequest{panel: 0, path: root, autoRefresh: true, action: actionBrowse})
 	v.acceptLoad(<-v.loader.results)
-	if calls != 1 || !maps.Equal(p.gitStatus, gitStatusNames(statuses)) || !p.marks[0] {
-		t.Fatal("automatic refresh ran Git or changed independent panel metadata")
+	if calls != 1 || !maps.Equal(p.gitStatus, gitStatusNames(statuses)) || !p.marks[0] || p.gitRead == nil || !p.gitRead.automatic {
+		t.Fatalf("automatic refresh did not defer Git or changed independent panel metadata: calls=%d status=%v marks=%v read=%+v pending=%v", calls, p.gitStatus, p.marks, p.gitRead, p.refreshNeeded)
 	}
 	statuses = map[string]browser.GitStatus{}
 	send(refreshKey())
@@ -293,7 +293,7 @@ func TestGitNavigationStartupAndShutdown(t *testing.T) {
 	}
 	v.load(0, t.TempDir(), "")
 	waitLoaded(t, v, 0)
-	v.submitGitReads()
+	v.submitGitReads(layout.Context{Now: time.Now()})
 	select {
 	case <-entered:
 	case <-time.After(3 * time.Second):
@@ -337,7 +337,7 @@ func waitGitLoaded(t *testing.T, v *view, index int) {
 	deadline := time.NewTimer(3 * time.Second)
 	defer deadline.Stop()
 	for v.panels[index].gitRead != nil {
-		v.submitGitReads()
+		v.submitGitReads(layout.Context{Now: time.Now()})
 		select {
 		case result := <-v.loader.results:
 			v.acceptLoad(result)

@@ -159,8 +159,8 @@ lines = [
 
 ["settings.programs.git"]
 lines = [
-  "Right edges use Success for added files and Warning for changed files, including staged changes.",
-  "Folders summarize descendants; changes take priority over additions. Update on entry or [key:view.refresh].",
+  "Right edges: Success for added files, Warning for changed files. Folders summarize descendants; changes take priority.",
+  "Update on entry and local directory changes. Use [key:view.refresh] after staging, commits or deeper changes.",
 ]
 
 ["settings.programs.git.enabled"]
