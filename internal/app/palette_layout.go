@@ -2,6 +2,7 @@ package app
 
 import (
 	"image"
+	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -21,7 +22,8 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 	list.Indicator.Color, list.Indicator.HoverColor = v.appearance.Colors.Scrollbar, v.appearance.Colors.ScrollbarHover
 	list.Track.Color = v.appearance.Colors.ScrollbarTrack
 	// Measure the full catalogue so filtering never changes the surface width.
-	labelWidth, shortcutWidth := 0, 0
+	contentWidth := 0
+	shortcutGap := v.textWidth(gtx, "   ", v.appearance.TextSize)
 	catalogue := s.commands
 	if s.settingsMode {
 		catalogue = s.settingsCommands
@@ -30,12 +32,14 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 		if command.mask.hidden {
 			continue
 		}
-		labelWidth = max(labelWidth, v.textWidth(gtx, command.label(), v.appearance.TextSize))
-		shortcutWidth = max(shortcutWidth, v.textWidth(gtx, command.shortcut(), v.appearance.SmallTextSize))
+		width := v.textWidth(gtx, command.label(), v.appearance.TextSize)
+		if shortcut := command.shortcut(); shortcut != "" {
+			width += shortcutGap + v.textWidth(gtx, shortcut, v.appearance.SmallTextSize)
+		}
+		contentWidth = max(contentWidth, width)
 	}
-	shortcutWidth += gtx.Dp(12)
 	// Row insets, the border and the list's occupied scrollbar track.
-	width := labelWidth + shortcutWidth + gtx.Dp(2*max(0, v.appearance.ContentPaddingHorizontal)+2) + gtx.Dp(list.Width())
+	width := contentWidth + gtx.Dp(2*max(0, v.appearance.ContentPaddingHorizontal)+2) + gtx.Dp(list.Width())
 	width = max(gtx.Dp(v.appearance.OverlayMinWidth), min(gtx.Dp(v.appearance.OverlayMaxWidth), width))
 	return s.surface.layout(gtx, v.locationBarHeight(gtx, textHeight), width, v.appearance.Colors, v.appearance.OverlayBackdropOpacity, func(gtx layout.Context) layout.Dimensions {
 		rowHeight := max(1, textHeight+2*gtx.Dp(max(0, v.appearance.RowPaddingVertical)))
@@ -46,7 +50,6 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 		available := max(0, gtx.Constraints.Max.Y-searchHeight-footerHeight-gtx.Dp(32))
 		listHeight := min(max(1, len(s.results))*rowHeight, max(rowHeight, available*3/4))
 		listHeight = min(listHeight, max(0, gtx.Constraints.Max.Y-searchHeight-footerHeight))
-		shortcutWidth := min(shortcutWidth, gtx.Constraints.Max.X/2)
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, searchHeight, v.appearance.Colors.Surface, func(gtx layout.Context) layout.Dimensions {
@@ -109,11 +112,20 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 							return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 								gtx.Constraints.Min.Y = 0
 								result := s.results[row]
-								return v.columnLayout(gtx, shortcutWidth, func(gtx layout.Context) layout.Dimensions {
+								shortcut := result.command.shortcut()
+								if shortcut == "" {
 									return v.highlightedLabel(gtx, result.command.label(), result.match.Indices, v.appearance.TextSize, fg)
-								}, func(gtx layout.Context) layout.Dimensions {
-									return v.label(gtx, result.command.shortcut(), v.appearance.SmallTextSize, fg, text.End)
-								})
+								}
+								shortcutWidth := min(gtx.Constraints.Max.X, shortcutGap+v.textWidth(gtx, shortcut, v.appearance.SmallTextSize))
+								return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+									layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+										return v.highlightedLabel(gtx, result.command.label(), result.match.Indices, v.appearance.TextSize, fg)
+									}),
+									layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+										gtx.Constraints.Min.X, gtx.Constraints.Max.X = shortcutWidth, shortcutWidth
+										return v.label(gtx, shortcut, v.appearance.SmallTextSize, fg, text.End)
+									}),
+								)
 							})
 						})))
 					})
@@ -122,7 +134,7 @@ func (v *view) layoutPalette(gtx layout.Context) layout.Dimensions {
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.band(gtx, footerHeight, v.appearance.Colors.Footer, func(gtx layout.Context) layout.Dimensions {
 					hint := "Enter Run   Esc Close"
-					if s.settingsMode {
+					if len(s.results) > 0 && strings.HasPrefix(s.results[s.selected].command.id, "settings.") {
 						hint = "Enter Edit   Esc Close"
 					}
 					if len(s.results) > 0 && !s.results[s.selected].command.allowed(v) {

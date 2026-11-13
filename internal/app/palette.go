@@ -139,7 +139,7 @@ func (v *view) choosePalette(gtx layout.Context) {
 	}
 	v.dismissFeedback()
 	v.executeCommand(gtx, command)
-	if widget := v.settingsInteraction(); s.settingsMode && widget != nil {
+	if widget := v.settingsInteraction(); widget != nil {
 		widget.palette = s
 	}
 	v.focusInteraction(gtx)

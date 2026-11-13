@@ -25,10 +25,9 @@ func panelFocusNumber(id string) (int, bool) {
 	return number, err == nil && number > 0 && id == "panel.focus_"+strconv.Itoa(number)
 }
 
-// Runtime dispatch also includes settings widgets, while the palette keeps
-// its ordinary and @ catalogues separate.
+// Runtime dispatch shares the complete palette catalogue, including settings widgets.
 func (v *view) shortcutCommands() []command {
-	return append(v.commandCatalogue(), v.settingsCatalogue()...)
+	return v.commandCatalogue()
 }
 
 // Conflict checks include absent numbered panels: their saved bindings retain

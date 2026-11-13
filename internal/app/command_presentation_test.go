@@ -103,8 +103,8 @@ func TestArchivePaletteHidesPermanentDeleteWithoutDisablingItsBindings(t *testin
 		send, _ := panelInputFrames(v)
 		send(pressed("`"), key.EditEvent{Text: "delete"})
 		p := v.paletteInteraction()
-		if len(p.results) != 1 || p.results[0].command.id != "entry.recycle" {
-			t.Fatal("palette retained redundant deletion action", p.results)
+		if len(p.results) != 2 || p.results[0].command.id != "entry.recycle" || p.results[1].command.id != "settings.guards.delete_confirmation" {
+			t.Fatal("palette lost archive deletion or its matching setting", p.results)
 		}
 		p.filter("")
 		for _, result := range p.results {

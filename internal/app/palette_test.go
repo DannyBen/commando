@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -75,11 +76,12 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 	s := v.paletteInteraction()
 	var groups []string
 	for _, result := range s.results {
-		if len(groups) == 0 || groups[len(groups)-1] != result.command.group {
-			groups = append(groups, result.command.group)
+		root, _, _ := strings.Cut(result.command.group, " › ")
+		if len(groups) == 0 || groups[len(groups)-1] != root {
+			groups = append(groups, root)
 		}
 	}
-	if !slices.Equal(groups, []string{"Actions", "Location", "Navigation", "View", "Panel", "Selection", "Appearance", "Theme", "Interface", "Application"}) ||
+	if !slices.Equal(groups, []string{"Actions", "Location", "Navigation", "View", "Panel", "Selection", "Appearance", "Theme", "Interface", "Application", "Settings"}) ||
 		s.results[0].command.label() != "Actions › Edit" || s.results[1].command.label() != "Actions › Compare…" || s.results[2].command.label() != "Actions › Open" || s.results[3].command.label() != "Actions › Rename…" {
 		t.Fatalf("blank search lost reviewed browsing order: %v", groups)
 	}
@@ -111,7 +113,7 @@ func TestPaletteGroupedBrowsingAndSearch(t *testing.T) {
 }
 
 func TestPaletteSettingsDiscoveryRetainsSearchAndKeyboardFlow(t *testing.T) {
-	for _, query := range []string{"", "settings"} {
+	for _, query := range []string{"", "Application Settings"} {
 		t.Run("query="+query, func(t *testing.T) {
 			v := newPreviewView()
 			v.active = 1
@@ -119,7 +121,9 @@ func TestPaletteSettingsDiscoveryRetainsSearchAndKeyboardFlow(t *testing.T) {
 			send(pressed("`"))
 			s := v.paletteInteraction()
 			if query == "" {
-				send(pressed(key.NameEnd))
+				s.selected = slices.IndexFunc(s.results, func(result commandMatch) bool {
+					return result.command.id == "application.settings"
+				})
 			} else {
 				send(key.EditEvent{Text: query})
 			}
@@ -514,6 +518,31 @@ func TestPaletteSizingAndSelectionReveal(t *testing.T) {
 	}
 }
 
+func TestPaletteWidthUsesActualCommandBindingPairs(t *testing.T) {
+	v := newPreviewView()
+	send, _ := paletteFrames(v, image.Pt(1200, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
+	send(pressed("`"))
+	s := v.paletteInteraction()
+	s.commands = []command{
+		{id: "long", group: "Settings", name: strings.Repeat("Long ", 12)},
+		cmd("short", "Actions", "Open", key.NameF4, 0, nil),
+	}
+	s.filter("")
+	send()
+	before := s.surface.bounds
+	// A longer binding on the short command still fits inside the longest row.
+	// It must not be added to the unrelated, unbound setting's width.
+	s.commands[1].bindings = [2]commandBinding{
+		{Default: shortcut{Name: "F12", Modifiers: key.ModCtrl | key.ModShift | key.ModAlt}},
+		{Default: shortcut{Name: "F11", Modifiers: key.ModCtrl | key.ModShift | key.ModAlt}},
+	}
+	s.filter("")
+	send()
+	if s.surface.bounds != before {
+		t.Fatal("unrelated long label and binding were combined into a wider palette", before, s.surface.bounds)
+	}
+}
+
 func TestPaletteHomeEndPreserveSearch(t *testing.T) {
 	v := newPreviewView()
 	send, router := paletteFrames(v, image.Pt(800, 480), unit.Metric{PxPerDp: 1, PxPerSp: 1})
@@ -553,7 +582,7 @@ func TestPalettePreview(t *testing.T) {
 	if directory == "" {
 		t.Skip("optional headless palette preview")
 	}
-	for _, query := range []string{"", "panel", "settings", "terminal", "xyz", "@xyz"} {
+	for _, query := range []string{"", "panel", "Navigation", "Application", "settings", "Settings Programs Actions New from context menu", "@programs actions new from context menu", "terminal", "xyz", "@xyz"} {
 		v := newPreviewView()
 		var ops op.Ops
 		v.startPalette(layout.Context{Ops: &ops})
@@ -565,6 +594,11 @@ func TestPalettePreview(t *testing.T) {
 		}
 		if err := renderViewPNG(filepath.Join(directory, name+".png"), v); err != nil {
 			t.Fatal(err)
+		}
+		if query == "Settings Programs Actions New from context menu" {
+			if err := renderSizedViewPNG(filepath.Join(directory, "palette-settings-narrow.png"), v, image.Pt(480, 480)); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }

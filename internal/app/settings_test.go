@@ -6,6 +6,7 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"gioui.org/f32"
@@ -170,7 +171,13 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 	send(pressed("`"))
 	s = v.paletteInteraction()
 	if s.settingsMode || len(s.results) != len(v.commandCatalogue()) {
-		t.Fatal("ordinary palette included settings")
+		t.Fatal("ordinary palette did not include the complete catalogue")
+	}
+	for _, setting := range v.settingsCatalogue() {
+		index := slices.IndexFunc(s.results, func(result commandMatch) bool { return result.command.id == setting.id })
+		if index < 0 || s.results[index].command.label() != "Settings › "+setting.label() || s.results[index].command.shortcut() != setting.shortcut() {
+			t.Fatal("master palette lost setting identity, path or shortcuts", setting.id)
+		}
 	}
 	v.commandSearch.SetText("@")
 	s.filter("@")
@@ -182,42 +189,50 @@ func TestPaletteSettingsPrefix(t *testing.T) {
 }
 
 func TestSettingsWidgetLivePreviewRevertAndCommit(t *testing.T) {
-	v := newPreviewView()
-	send, _ := panelInputFrames(v)
-	send(key.EditEvent{Text: "@file colors"})
-	send(pressed(key.NameReturn))
-	send(pressed(key.NameTab))
-	send(pressed(key.NameRightArrow))
-	if v.appearance.FilenameColors.filenameLightness != 0.37 {
-		t.Fatal("adjustment did not preview live")
-	}
-	send(pressed(key.NameTab))
-	send(pressed(key.NameLeftArrow))
-	if v.appearance.FilenameColors.filenameSaturation != 0.99 {
-		t.Fatal("Tab did not navigate controls")
-	}
-	v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
-	send(pressed(key.NameReturn))
-	if v.paletteInteraction() == nil || v.settingsValues.Overridden(settingLightness) || v.settingsValues.Overridden(settingSaturation) || v.appearance.FilenameColors.filenameLightness != 0.36 {
-		t.Fatal("Cancel did not restore inherited original values")
-	}
-	send(pressed(key.NameEscape))
-	send(key.EditEvent{Text: "@file colors"})
-	send(pressed(key.NameReturn))
-	send(pressed(key.NameTab))
-	send(pressed(key.NameRightArrow))
-	send(modified(key.NameReturn, key.ModCtrl))
-	if !v.interaction.idle() || v.settingText(settingLightness) != "37" {
-		t.Fatal("Ctrl+Enter did not commit and close")
-	}
-	send(key.EditEvent{Text: "@file colors"})
-	send(pressed(key.NameReturn))
-	send(pressed(key.NameTab))
-	send(pressed(key.NameRightArrow))
-	v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
-	send(pressed(key.NameReturn))
-	if v.settingText(settingLightness) != "37" || !v.settingsValues.Overridden(settingLightness) {
-		t.Fatal("revert lost prior committed override")
+	for _, query := range []string{"@file colors", "settings theme file colors"} {
+		t.Run(query, func(t *testing.T) {
+			v := newPreviewView()
+			send, _ := panelInputFrames(v)
+			send(pressed("`"))
+			send(key.EditEvent{Text: query})
+			send(pressed(key.NameReturn))
+			send(pressed(key.NameTab))
+			send(pressed(key.NameRightArrow))
+			if v.appearance.FilenameColors.filenameLightness != 0.37 {
+				t.Fatal("adjustment did not preview live")
+			}
+			send(pressed(key.NameTab))
+			send(pressed(key.NameLeftArrow))
+			if v.appearance.FilenameColors.filenameSaturation != 0.99 {
+				t.Fatal("Tab did not navigate controls")
+			}
+			v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
+			send(pressed(key.NameReturn))
+			if v.paletteInteraction() == nil || v.settingsValues.Overridden(settingLightness) || v.settingsValues.Overridden(settingSaturation) || v.appearance.FilenameColors.filenameLightness != 0.36 {
+				t.Fatal("Cancel did not restore inherited original values")
+			}
+			send(pressed(key.NameEscape))
+			send(pressed("`"))
+			send(key.EditEvent{Text: query})
+			send(pressed(key.NameReturn))
+			send(pressed(key.NameTab))
+			send(pressed(key.NameRightArrow))
+			send(modified(key.NameReturn, key.ModCtrl))
+			if !v.interaction.idle() || v.settingText(settingLightness) != "37" {
+				t.Fatal("Ctrl+Enter did not commit and close")
+			}
+			send(pressed("`"))
+			send(key.EditEvent{Text: query})
+			send(pressed(key.NameReturn))
+			send(pressed(key.NameTab))
+			send(pressed(key.NameRightArrow))
+			v.settingsInteraction().actionsFocused, v.settingsInteraction().action = true, 1
+			send(pressed(key.NameReturn))
+			if v.settingText(settingLightness) != "37" || !v.settingsValues.Overridden(settingLightness) {
+				t.Fatal("revert lost prior committed override")
+			}
+
+		})
 	}
 }
 

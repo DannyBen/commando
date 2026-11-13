@@ -51,6 +51,10 @@ func (v *view) commandCatalogue() []command {
 			}
 		}
 	}
+	for _, c := range v.settingsCatalogue() {
+		c.group = "Settings › " + c.group
+		catalogue = append(catalogue, c)
+	}
 	return catalogue
 }
 

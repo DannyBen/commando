@@ -10,7 +10,7 @@ func TestCommandCatalogueIdentitiesAndDefaultAliases(t *testing.T) {
 	v := newPreviewView()
 	ids := make(map[string]bool)
 	bindings := make(map[shortcut]string)
-	for _, c := range append(v.commandCatalogue(), v.settingsCatalogue()...) {
+	for _, c := range v.commandCatalogue() {
 		if c.id == "" || ids[c.id] {
 			t.Fatalf("missing or duplicate command ID: %q (%s)", c.id, c.label())
 		}

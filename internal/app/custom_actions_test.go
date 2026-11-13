@@ -57,8 +57,8 @@ func TestCustomActionPaletteAndShortcutUseOnlyOriginatingPanelMarks(t *testing.T
 					send(pressed("`"))
 					send(key.EditEvent{Text: "Send test"})
 					results := v.paletteInteraction().results
-					if len(results) != 1 || results[0].command.label() != "Actions › Send test" {
-						t.Fatal("custom action was not listed once directly under Actions", results)
+					if len(results) != 2 || results[0].command.label() != "Actions › Send test" || results[1].command.id != "settings.programs.actions.rules.send" {
+						t.Fatal("custom action and its setting were not listed once", results)
 					}
 					send(pressed(key.NameReturn))
 				} else {
@@ -362,7 +362,7 @@ func TestCustomActionSettingsAndRunBindingsRetainIdentity(t *testing.T) {
 	send(pressed("`"))
 	send(key.EditEvent{Text: "Renamed action"})
 	p := v.paletteInteraction()
-	if p == nil || len(p.results) != 1 || p.results[0].command.shortcut() != "Ctrl+Alt+J" {
+	if p == nil || len(p.results) != 2 || p.results[0].command.shortcut() != "Ctrl+Alt+J" || p.results[1].command.shortcut() != "Ctrl+Alt+K" {
 		t.Fatal("run command lost its binding after rename/reorder/reload")
 	}
 	send(modified("E", key.ModCtrl))
