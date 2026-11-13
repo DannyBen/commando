@@ -35,12 +35,11 @@ func TestNotificationAnimationOffKeepsMessagesAndSounds(t *testing.T) {
 		baseline := len(recorded.played)
 		now := time.Unix(1000, 0)
 		v.showFeedback(1, tc.kind, "Operation result")
-		for i, elapsed := range []time.Duration{0, time.Second, 24 * time.Hour} {
+		for _, elapsed := range []time.Duration{0, time.Second, 24 * time.Hour} {
 			frame, owns := v.panels[1].feedback.Frame(now.Add(elapsed), v.appearance.Feedback)
-			if !owns || frame.Text != "Operation result" || !frame.Next.IsZero() || frame.Started != (i == 0) {
+			if !owns || frame.Text != "Operation result" || !frame.Next.IsZero() || frame.Started {
 				t.Fatalf("Animation Off did not keep complete steady feedback: %+v", frame)
 			}
-			v.playFeedbackSound(frame)
 		}
 		if len(recorded.played) != baseline+1 || recorded.played[baseline] != tc.cue {
 			t.Fatal("Animation Off changed semantic message sound")

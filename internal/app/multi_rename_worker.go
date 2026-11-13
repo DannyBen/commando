@@ -143,7 +143,7 @@ func (v *view) acceptMultiRename(result loadResult) {
 	}
 	s.pending, s.editor.ReadOnly = false, false
 	if len(result.renamed) > 0 || result.err == nil {
-		v.finishInteraction(s)
+		v.handoffInteraction(s)
 		v.interaction.focusPending = true
 	} else {
 		v.previewMultiRename(s)

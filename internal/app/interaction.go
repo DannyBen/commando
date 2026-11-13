@@ -69,11 +69,6 @@ func (v *view) finishInteraction(session interactionSession) bool {
 	if !v.interaction.finish(session) {
 		return false
 	}
-	// A completed name mutation already announced its result on the worker
-	// completion. Closing its editor on the next frame must stay quiet.
-	if name, ok := session.(*nameSession); ok && name.finished {
-		return true
-	}
 	// Only sessions explicitly opening a UI element get a corresponding Close.
 	// Editing, inline choices and other sessions use the generic click fallback.
 	event := openingSoundEvent(session)
@@ -88,11 +83,17 @@ func (v *view) finishInteraction(session interactionSession) bool {
 	return true
 }
 
+// Conclude an interaction with finishInteraction; transfer ownership to a
+// command, another session or an operation result with this silent handoff.
+func (v *view) handoffInteraction(session interactionSession) bool {
+	return v.interaction.finish(session)
+}
+
 // Accepting a decision hands sound ownership to the chosen action, including
 // asynchronous results. Cancellation retains the session's normal closing cue.
 func (v *view) resolveInteraction(session interactionSession, accept bool) bool {
 	if accept {
-		return v.interaction.finish(session)
+		return v.handoffInteraction(session)
 	}
 	return v.finishInteraction(session)
 }

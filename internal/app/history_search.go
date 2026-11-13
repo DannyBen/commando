@@ -103,7 +103,7 @@ func (v *view) submitHistorySearch(gtx layout.Context, s *locationSession) {
 	if target == "" {
 		return
 	}
-	v.interaction.finish(s)
+	v.handoffInteraction(s)
 	v.focusInteraction(gtx)
 	p := &v.panels[s.panel]
 	if p.loading {

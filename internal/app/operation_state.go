@@ -39,6 +39,11 @@ func (v *view) mutationsBusy() bool {
 // The worker count remains held until the UI has reconciled its result. Reads
 // and clipboard captures can precede a mutation in the same input event batch.
 func (l *directoryLoader) submit(request loadRequest) bool {
+	// Streaming searches and drive-space reads publish multiple independent
+	// results. Other requests have one conclusion, apart from quiet progress.
+	if request.deepSearch == nil && request.driveSpace == nil {
+		request.receipt = &loadReceipt{}
+	}
 	select {
 	case <-l.done:
 		return false

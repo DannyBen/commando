@@ -34,7 +34,7 @@ func (v *view) applySoundSettings() {
 // Every semantic event shares this gate; profile names belong to settings UI.
 func (v *view) playSound(cue sound.Name) {
 	if action := v.soundAction; action != nil {
-		action.offer(cue, soundPriority(cue))
+		action.offer(cue, cue.Priority())
 		return
 	}
 	options := v.currentSoundSettings()

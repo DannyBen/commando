@@ -17,10 +17,8 @@ import (
 
 func (v *view) showFeedback(index int, kind feedback.Kind, text string) {
 	v.panels[index].feedback.Show(kind, text)
-	if v.soundAction != nil {
-		v.playFeedbackSound(feedback.Frame{Kind: kind, Started: true})
-		v.panels[index].feedback.Acknowledge()
-	}
+	v.announceFeedback(kind)
+	v.panels[index].feedback.Acknowledge()
 }
 
 func (v *view) operationProgress(index int, text string) {
@@ -47,6 +45,7 @@ func (v *view) backgroundFeedback(index int) func(feedback.Kind, string) {
 }
 
 func (v *view) pollFeedback() {
+	defer v.beginSoundAction()()
 	for i := range v.panels {
 		select {
 		case message := <-v.panels[i].pendingFeedback:
@@ -149,7 +148,6 @@ func (v *view) panelFooter(gtx layout.Context, index, height int) layout.Dimensi
 	return v.band(gtx, height, background, func(gtx layout.Context) layout.Dimensions {
 		return v.trailingLayout(gtx, func(gtx layout.Context) layout.Dimensions {
 			if ownsFooter {
-				v.playFeedbackSound(frame)
 				return v.feedbackLabel(gtx, frame.Text, foreground)
 			}
 			return v.label(gtx, status, v.appearance.SmallTextSize, foreground, text.Start)
@@ -159,12 +157,10 @@ func (v *view) panelFooter(gtx layout.Context, index, height int) layout.Dimensi
 	}, false)
 }
 
-func (v *view) playFeedbackSound(frame feedback.Frame) {
-	if v.sounds == nil || !frame.Started {
-		return
-	}
+// Message creation owns its announcement. Rendering and animation stay silent.
+func (v *view) announceFeedback(kind feedback.Kind) {
 	event := eventMessageInfo
-	switch frame.Kind {
+	switch kind {
 	case feedback.Success:
 		event = eventMessageSuccess
 	case feedback.Warning:

@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"image"
+	"slices"
 	"testing"
 	"time"
 
@@ -52,7 +53,7 @@ func drawLoadingFrame(v *view, now time.Time) {
 		Constraints: layout.Exact(image.Pt(800, 480))})
 }
 
-func TestDirectoryReadProgressIsDelayedAndUsesNormalInfoFeedback(t *testing.T) {
+func TestDirectoryReadProgressIsQuietAndArrivalOwnsSound(t *testing.T) {
 	for _, delay := range []time.Duration{500 * time.Millisecond, 2 * time.Second} {
 		t.Run(delay.String(), func(t *testing.T) {
 			v := newPreviewView()
@@ -69,13 +70,13 @@ func TestDirectoryReadProgressIsDelayedAndUsesNormalInfoFeedback(t *testing.T) {
 				t.Fatal("directory progress ignored the configured delay")
 			}
 			drawLoadingFrame(v, due.Add(-time.Nanosecond))
-			if v.panels[0].feedback.Current() != nil || len(recorded.played) != 1 || recorded.played[0] != sound.DirectoryNavigation {
-				t.Fatal("pending read displayed progress or lost its immediate directory cue")
+			if v.panels[0].feedback.Current() != nil || len(recorded.played) != 0 {
+				t.Fatal("pending read displayed progress or announced before arrival")
 			}
 			drawLoadingFrame(v, due)
 			message := v.panels[0].feedback.Current()
-			if message == nil || message.Kind != feedback.Info || message.Text != "Reading folder" || len(recorded.played) != 2 || recorded.played[1] != sound.MessageInfo {
-				t.Fatal("slow read did not start normal Info feedback and sound")
+			if message == nil || message.Kind != feedback.Info || message.Text != "Reading folder" || len(recorded.played) != 0 {
+				t.Fatal("slow read lost progress or announced an unfinished operation")
 			}
 			frame, _ = v.panels[0].feedback.Frame(due, v.appearance.Feedback)
 			if frame.Text != "█" || frame.Started {
@@ -83,12 +84,12 @@ func TestDirectoryReadProgressIsDelayedAndUsesNormalInfoFeedback(t *testing.T) {
 			}
 			drawLoadingFrame(v, due.Add(15*time.Millisecond))
 			frame, _ = v.panels[0].feedback.Frame(due.Add(15*time.Millisecond), v.appearance.Feedback)
-			if frame.Text != "R█" || len(recorded.played) != 2 {
+			if frame.Text != "R█" || len(recorded.played) != 0 {
 				t.Fatal("slow-read animation restarted or replayed sound")
 			}
 			finish()
 			drawLoadingFrame(v, due.Add(time.Hour))
-			if v.panels[0].feedback.Current() != nil || len(recorded.played) != 2 || v.panels[0].items[0].name != "result.txt" {
+			if v.panels[0].feedback.Current() != nil || !slices.Equal(recorded.played, []sound.Name{sound.DirectoryNavigation}) || v.panels[0].items[0].name != "result.txt" {
 				t.Fatal("completion did not clear progress and install the listing")
 			}
 		})
@@ -140,10 +141,13 @@ func TestRefreshDelaysProgressWithoutDirectoryNavigationCue(t *testing.T) {
 		t.Fatal("manual refresh played a directory cue or displayed early progress")
 	}
 	drawLoadingFrame(v, frame.Next)
-	if len(recorded.played) != 1 || recorded.played[0] != sound.MessageInfo {
-		t.Fatal("slow refresh did not play the delayed Info cue")
+	if len(recorded.played) != 0 || v.panels[0].feedback.Current() == nil {
+		t.Fatal("slow refresh lost its progress or played a progress cue")
 	}
 	finish()
+	if len(recorded.played) != 0 {
+		t.Fatal("refresh announced navigation on completion")
+	}
 }
 
 func TestRejectedDirectoryReadDoesNotScheduleFeedbackOrPlaySound(t *testing.T) {

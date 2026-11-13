@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -17,8 +18,8 @@ func TestPendingAudioIsReplacedAndStopDropsIt(t *testing.T) {
 	if len(p.requests) != 1 {
 		t.Fatal("audio accumulated in a queue")
 	}
-	if request := <-p.requests; request.name != Click || request.volume != 30 {
-		t.Fatal("newest cue did not replace pending audio")
+	if request := <-p.requests; request.name != Closed || request.volume != 50 {
+		t.Fatal("equal priority did not replace, or lower priority replaced pending audio")
 	}
 	p.Play(Opened, 50)
 	p.Stop()
@@ -34,6 +35,7 @@ type testPlayback struct {
 	packet              chan []byte
 	quit, done, stopped chan struct{}
 	once                sync.Once
+	finished            atomic.Bool
 }
 
 func (p *testPlayback) Play() {
@@ -50,12 +52,33 @@ func (p *testPlayback) PauseAndStopReading() {
 }
 func (p *testPlayback) SetVolume(volume float64) { p.volume = volume }
 func (p *testPlayback) Err() error               { return nil }
+func (p *testPlayback) IsPlaying() bool {
+	select {
+	case <-p.stopped:
+		return false
+	default:
+		return !p.finished.Load()
+	}
+}
 
-type testOutput struct{ players chan *testPlayback }
+type testOutput struct {
+	players chan *testPlayback
+	checks  chan struct{}
+	current *testPlayback // Accessed only by the audio worker.
+	overlap atomic.Bool
+}
 
-func (o *testOutput) err() error { return nil }
+func (o *testOutput) err() error { o.checks <- struct{}{}; return nil }
 func (o *testOutput) newPlayer(r io.Reader) audioPlayback {
+	if o.current != nil {
+		select {
+		case <-o.current.stopped:
+		default:
+			o.overlap.Store(true)
+		}
+	}
 	p := &testPlayback{reader: r, packet: make(chan []byte, 1), quit: make(chan struct{}), done: make(chan struct{}), stopped: make(chan struct{})}
+	o.current = p
 	o.players <- p
 	return p
 }
@@ -73,7 +96,7 @@ func testPlayer(t *testing.T) (*Player, *testOutput) {
 		}
 		p.sounds[name] = data
 	}
-	o := &testOutput{players: make(chan *testPlayback, 4)}
+	o := &testOutput{players: make(chan *testPlayback, 4), checks: make(chan struct{}, 1024)}
 	go func() { defer close(p.done); p.runOutput(o) }()
 	t.Cleanup(p.Close)
 	return p, o

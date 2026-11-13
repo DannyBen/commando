@@ -21,6 +21,7 @@ import (
 	"gioui.org/unit"
 	"github.com/dannyben/commando/internal/feedback"
 	"github.com/dannyben/commando/internal/settings"
+	"github.com/dannyben/commando/internal/sound"
 )
 
 func paletteFrames(v *view, size image.Point, metric unit.Metric) (func(...event.Event), *input.Router) {
@@ -48,6 +49,8 @@ func TestPaletteOpensActiveDataFolderInOriginatingPanel(t *testing.T) {
 	waitLoaded(t, v, 1)
 	v.active = 1
 	v.activeDataFolder = data
+	recorder := &recordedSounds{}
+	v.sounds = recorder
 	// A saved folder change must not redirect this command before restart.
 	if err := v.settingsValues.Set(settings.CatalogueDefault, settingDataFolder, settings.Value{Text: t.TempDir()}); err != nil {
 		t.Fatal(err)
@@ -59,13 +62,18 @@ func TestPaletteOpensActiveDataFolderInOriginatingPanel(t *testing.T) {
 	if len(s.results) == 0 || s.results[0].command.label() != "Application › Open data folder" || s.results[0].command.shortcut() != "" {
 		t.Fatal("data-folder command is missing or has a shortcut")
 	}
+	recorder.played = nil
 	send(pressed(key.NameReturn))
 	waitLoaded(t, v, 1)
+	send()
 	if v.panels[1].path != data || v.panels[0].path != left || v.active != 1 || !v.interaction.idle() || !router.Source().Focused(&v.focus) {
 		t.Fatal("data-folder command lost its active folder, panel context or browsing focus")
 	}
 	if message := v.panels[1].feedback.Current(); message == nil || message.Kind != feedback.Info || message.Text != "Data folder" {
 		t.Fatal("data-folder command did not identify the folder through Info feedback")
+	}
+	if !slices.Equal(recorder.played, []sound.Name{sound.MessageInfo}) {
+		t.Fatal("data-folder dispatch and completion played competing sounds", recorder.played)
 	}
 }
 

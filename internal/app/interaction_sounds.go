@@ -63,12 +63,22 @@ func (v *view) announceInteraction(event interactionEvent) {
 		if event == eventCancelled && v.soundAction != nil {
 			// Preserve a real widget's Close; other cancellation owns its Info result.
 			if !v.soundAction.widgetClosed {
-				v.soundAction.offer(cue, 95)
+				v.concludeSound(cue)
 			}
 			return
 		}
 		v.playSound(cue)
 	}
+}
+
+// A known outcome owns incidental feedback from the same gesture. Warnings
+// and errors remain authoritative; profile gating happens after this choice.
+func (v *view) concludeSound(cue sound.Name) {
+	if action := v.soundAction; action != nil && sound.Allows(cue, sound.All) &&
+		(action.cue == "" || action.priority >= sound.PriorityNotification) {
+		action.cue, action.priority = "", 0
+	}
+	v.playSound(cue)
 }
 
 // Resize cues describe the resulting size, independently of the command's

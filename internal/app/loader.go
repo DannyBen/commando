@@ -16,6 +16,7 @@ import (
 )
 
 type loadRequest struct {
+	receipt            *loadReceipt // Final results are accepted once on the UI thread.
 	panel              int
 	path, selectName   string
 	homeDirectory      string
@@ -26,6 +27,7 @@ type loadRequest struct {
 	archiveFolder      string
 	suggestedPath      string // Visible location completion captured at submission.
 	successMessage     string
+	announceNavigation bool // User navigation announces arrival; startup and background reads stay quiet.
 	refresh            bool
 	follow             bool // Read exactly this folder; a missing counterpart stays put.
 	autoRefresh        bool
@@ -59,6 +61,8 @@ type loadRequest struct {
 	themeLibrary       *settingsSession
 	icons              []fileIconKey
 }
+
+type loadReceipt struct{ accepted bool }
 
 type loadResult struct {
 	driveSpace               browser.DriveSpace

@@ -187,7 +187,7 @@ func (v *view) choosePalette(gtx layout.Context) {
 		return
 	}
 	// Dispatch is a handoff, not a user closing the palette.
-	v.interaction.finish(s)
+	v.handoffInteraction(s)
 	if command.id != "view.deep_filter" {
 		for i := range v.panels {
 			v.clearDeepSearch(i)

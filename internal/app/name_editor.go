@@ -141,7 +141,7 @@ func (v *view) stopName(gtx layout.Context) {
 		p.list.Position, p.reveal = r.previousPosition, r.previousReveal
 		p.rows = make(map[int]*fileRow)
 	}
-	v.finishInteraction(r)
+	v.resolveInteraction(r, r.finished) // A worker result already owns a finished mutation.
 	if r.favorite != nil && !r.finished {
 		v.panels[r.panel] = r.favorite.previous
 	}

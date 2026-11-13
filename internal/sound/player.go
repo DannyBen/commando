@@ -13,15 +13,18 @@ import (
 type playback struct {
 	name   Name
 	volume float64
+	reset  bool // An explicit Stop remains effective if a new cue replaces it.
 }
 
 // Player owns the audio device on one worker. Playback never blocks the UI;
-// pending cues are replaced rather than accumulating behind the animation.
+// One pending cue retains the strongest/latest request. One active cue admits
+// only higher/equal-priority replacements. Explicit Stop clears both.
 type Player struct {
 	requests chan playback
 	stop     chan struct{}
 	done     chan struct{}
 	once     sync.Once
+	mu       sync.Mutex // Serialize submissions, including replacement of pending cues.
 	sounds   map[Name][]byte
 }
 
@@ -42,19 +45,32 @@ func NewPlayer() *Player {
 	return p
 }
 
-func (p *Player) Play(name Name, volume float64) { p.submit(playback{name, volume}) }
+func (p *Player) Play(name Name, volume float64) {
+	if Allows(name, All) && masterGain(volume) > 0 {
+		p.submit(playback{name: name, volume: volume})
+	}
+}
 
 // Stop drops pending audio and interrupts the current cue on the worker.
-func (p *Player) Stop() { p.submit(playback{}) }
+func (p *Player) Stop() { p.submit(playback{reset: true}) }
 
 func (p *Player) submit(request playback) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	select {
 	case <-p.stop:
 		return
 	default:
 	}
 	select {
-	case <-p.requests:
+	case pending := <-p.requests:
+		if !request.reset {
+			if pending.name != "" && pending.name.Priority() < request.name.Priority() {
+				request = pending
+			} else {
+				request.reset = pending.reset
+			}
+		}
 	default:
 	}
 	select {
@@ -91,6 +107,7 @@ func (p *Player) run() {
 
 type audioPlayback interface {
 	Play()
+	IsPlaying() bool
 	PauseAndStopReading()
 	SetVolume(float64)
 	Err() error
@@ -103,6 +120,7 @@ type audioOutput interface {
 
 func (p *Player) runOutput(output audioOutput) {
 	var active audioPlayback
+	var priority Priority
 	stop := func() {
 		if active != nil {
 			// Join any in-flight read before retiring the player.
@@ -117,17 +135,21 @@ func (p *Player) runOutput(output audioOutput) {
 		case <-p.stop:
 			return
 		case request := <-p.requests:
-			stop()
 			if err := output.err(); err != nil {
 				traceAudioError(err)
 				return
 			}
+			if !request.reset && active != nil && active.IsPlaying() && request.name.Priority() > priority {
+				continue // Lower-priority requests are discarded, never deferred.
+			}
+			stop()
 			pcm := p.sounds[request.name]
 			gain := masterGain(request.volume)
 			if len(pcm) == 0 || gain == 0 {
 				continue
 			}
 			active = output.newPlayer(bytes.NewReader(pcm))
+			priority = request.name.Priority()
 			active.SetVolume(float64(gain))
 			active.Play()
 		}

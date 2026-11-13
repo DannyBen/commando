@@ -709,7 +709,7 @@ func (v *view) finishSettingsWidget(gtx layout.Context, save bool) {
 		v.settingsValues = s.commit.Clone()
 		v.applySettings()
 	}
-	v.finishInteraction(s)
+	v.resolveInteraction(s, save && s.afterSave != nil)
 	if save && s.afterSave != nil {
 		s.afterSave()
 		v.focusInteraction(gtx)
@@ -735,7 +735,7 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 		v.settingsValues = s.commit.Clone()
 		v.applySettings()
 	}
-	v.finishInteraction(s)
+	v.resolveInteraction(s, s.afterSave != nil || message != "")
 	if s.afterSave != nil {
 		s.afterSave()
 		return

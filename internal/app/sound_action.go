@@ -7,16 +7,16 @@ import (
 
 // An action collects intentions, not audio. Only its strongest outcome reaches
 // the player. Nested commands share ownership; unrelated inputs never share a
-// time window or a timer. The player replaces active audio rather than mixing.
+// time window or a timer. Playback uses the same priorities across actions.
 type soundAction struct {
 	cue          sound.Name
-	priority     int
+	priority     sound.Priority
 	widgetClosed bool // Generic cancellation must not replace an actual UI Close.
 	handoff      bool // Moving an existing interaction is neither closing nor opening it.
 }
 
-func (a *soundAction) offer(cue sound.Name, priority int) {
-	if sound.Allows(cue, sound.All) && (a.cue == "" || priority >= a.priority) {
+func (a *soundAction) offer(cue sound.Name, priority sound.Priority) {
+	if sound.Allows(cue, sound.All) && (a.cue == "" || priority <= a.priority) {
 		a.cue, a.priority = cue, priority
 	}
 }
@@ -35,36 +35,11 @@ func (v *view) beginSoundAction() func() {
 	}
 }
 
-func soundPriority(cue sound.Name) int {
-	switch cue {
-	case sound.MessageError:
-		return 120
-	case sound.MessageWarning:
-		return 110
-	case sound.Enabled, sound.Disabled:
-		return 90
-	case sound.Opened, sound.Closed:
-		return 70
-	case sound.MessageSuccess:
-		return 85
-	case sound.MessageInfo:
-		return 80
-	case sound.DirectoryNavigation:
-		return 40
-	case sound.Navigation:
-		return 20
-	case sound.Click:
-		return 10
-	default:
-		return 60 // Specialized cues, including panel-size pitches.
-	}
-}
-
 func (v *view) announceBoolean(enabled bool) {
 	if enabled {
-		v.announceInteraction(eventEnabled)
+		v.concludeSound(interactionSounds[eventEnabled])
 	} else {
-		v.announceInteraction(eventDisabled)
+		v.concludeSound(interactionSounds[eventDisabled])
 	}
 }
 

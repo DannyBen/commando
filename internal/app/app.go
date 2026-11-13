@@ -107,6 +107,9 @@ func Run() error {
 		v.activeDataFolder = dataDir
 		store.restoreLocation(&settingsValues)
 		v.traceOverride = traceOverride
+		sounds := sound.NewPlayer()
+		defer sounds.Close()
+		v.sounds = sounds
 		v.restoreSettings(settingsValues, settingsErr)
 		if folderErr != nil {
 			v.showFeedback(v.active, feedback.Error, "Cannot read data folder")
@@ -132,9 +135,6 @@ func Run() error {
 		v.nativeKeys = keys
 		v.updateNativeBindings()
 		v.shellExecutor = native.shellExecutor(w)
-		sounds := sound.NewPlayer()
-		defer sounds.Close()
-		v.sounds = sounds
 		var ops op.Ops
 		for {
 			e := w.Event()

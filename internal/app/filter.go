@@ -142,7 +142,7 @@ func (v *view) updateFilter(gtx layout.Context) {
 	for _, ke := range keys {
 		v.dismissFeedback()
 		if ke.Modifiers != 0 && ke.Name != key.NameTab {
-			v.interaction.finish(v.filterInteraction()) // Handoff; the next command owns audio.
+			v.handoffInteraction(v.filterInteraction())
 			v.focusInteraction(gtx)
 			v.browseKey(gtx, ke)
 			return
@@ -172,7 +172,7 @@ func (v *view) updateFilter(gtx layout.Context) {
 			}
 			v.selectBrowsingRow(v.panels[v.active].selected+delta, false, true)
 		default:
-			v.interaction.finish(v.filterInteraction())
+			v.handoffInteraction(v.filterInteraction())
 			v.focusInteraction(gtx)
 			v.browseKey(gtx, ke)
 			return

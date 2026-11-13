@@ -71,6 +71,7 @@ func (v *view) refreshPanel() {
 
 func (v *view) queueLoad(request loadRequest) bool {
 	request.action = actionBrowse
+	request.announceNavigation = !request.refresh && !request.follow && request.fileDraft == nil && v.sounds != nil
 	if request.path == "" {
 		request.homeDirectory = v.favoritesDirectory()
 	}
@@ -91,9 +92,6 @@ func (v *view) queueLoad(request loadRequest) bool {
 		progress = "Opening shortcut"
 	}
 	p.feedback.ProgressAt(progress, time.Now().Add(v.appearance.FeedbackProgressDelay))
-	if !request.refresh && !request.shortcut && !request.follow && v.sounds != nil {
-		v.announceInteraction(eventDirectoryNavigation)
-	}
 	return true
 }
 
@@ -113,6 +111,14 @@ func (v *view) pollLoads() {
 }
 
 func (v *view) acceptLoad(result loadResult) {
+	if receipt := result.request.receipt; receipt != nil {
+		if receipt.accepted {
+			return
+		}
+		if result.progress == "" {
+			defer func() { receipt.accepted = true }()
+		}
+	}
 	defer v.beginSoundAction()()
 	if result.request.deepSearch != nil {
 		v.acceptDeepSearch(result)
@@ -225,14 +231,11 @@ func (v *view) acceptLoad(result loadResult) {
 		return
 	}
 	p := &v.panels[result.request.panel]
-	if result.request.shortcut {
-		if result.externalOpen {
-			p.loading, p.navigating = false, false
-			p.feedback.Complete()
-			v.openPath(result.request.panel, result.request.path)
-			return
-		}
-		v.announceInteraction(eventDirectoryNavigation)
+	if result.request.shortcut && result.externalOpen {
+		p.loading, p.navigating = false, false
+		p.feedback.Complete()
+		v.openPath(result.request.panel, result.request.path)
+		return
 	}
 	p.loading, p.err = false, result.err
 	p.navigating = false
@@ -332,6 +335,8 @@ func (v *view) acceptLoad(result loadResult) {
 		v.showFeedback(result.request.panel, feedback.Warning, "Path not found")
 	} else if result.request.successMessage != "" {
 		v.showFeedback(result.request.panel, feedback.Info, result.request.successMessage)
+	} else if result.request.announceNavigation {
+		v.announceInteraction(eventDirectoryNavigation)
 	}
 	if result.request.fileDraft != nil {
 		v.pendingNameDraft = &result
