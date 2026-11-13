@@ -17,7 +17,7 @@ window.commandoFeatures = [
     category: "Application",
     items: [
       {id: "application.toggle_help", title: "Application › Toggle help", keys: ["F1"], description: "Show or hide help for the current context.", search: "documentation guidance shortcuts"},
-      {id: "application.command_palette", title: "Application › Command palette", keys: ["`", "Ctrl+Shift+P"], description: "Find commands, shortcuts, and settings by typing their names.", search: "search discover find actions"},
+      {id: "application.command_palette", title: "Application › Command palette", keys: ["`", "Ctrl+Shift+P"], description: "Find commands and settings by name or assigned shortcut.", search: "search discover find actions key bindings"},
       {id: "application.open_data_folder", title: "Application › Open data folder", query: "open data", description: "Open the folder containing Commando settings and saved state.", search: "configuration local appdata preferences"},
       {id: "settings.application.data_folder", kind: "setting", title: "Settings › Application › Data folder", query: "@folder", description: "Choose a new data folder; existing files are copied and the change takes effect after restart.", search: "settings location storage state appdata migrate"},
     ],
@@ -144,6 +144,7 @@ window.commandoFeatures = [
   {
     category: "Programs",
     items: [
+      {id: "settings.programs.git", kind: "setting", title: "Settings › Programs › Git integration", query: "@git", description: "Enable read-only Git indicators for added and changed files and folders. Use Git from PATH or choose its executable.", search: "git.exe version control repository status modified untracked success warning refresh"},
       {id: "settings.programs.actions.new", kind: "setting", title: "Settings › Programs › Actions › New", query: "@actions new", description: "Add a named program action for files, folders, or both, with per-entry or batch execution.", search: "custom command executable arguments entry entries selected here auto terminal shortcuts"},
       {id: "settings.programs.actions.import", kind: "setting", title: "Settings › Programs › Actions › New from context menu", query: "@context", description: "Capture a context-menu action without running it, then review the program and arguments before saving.", search: "import windows shell right click file folder custom command executable"},
       {id: "settings.programs.actions.rules", kind: "setting", title: "Settings › Programs › Actions › [action name]", query: "@programs actions", description: "Edit or remove a named action. Saved actions run from the ordinary palette and support custom shortcuts.", search: "custom command program edit delete executable arguments key bindings"},

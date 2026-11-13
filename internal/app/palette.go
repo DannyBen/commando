@@ -13,8 +13,9 @@ import (
 )
 
 type commandMatch struct {
-	command command
-	match   fuzzy.Result
+	command       command
+	match         fuzzy.Result
+	shortcutMatch bool // Match indices refer to the displayed bindings, not the label.
 }
 
 // Search and its results belong to one foreground session. The originating
@@ -122,16 +123,32 @@ func (s *paletteSession) filter(query string) {
 	if s.settingsMode || s.actionsMode {
 		needle = strings.TrimSpace(query[1:])
 	}
+	shortcut, searchShortcut := paletteShortcutQuery(needle)
+	// Explicit combinations beat incidental fuzzy matches in command names.
+	preferShortcut := searchShortcut && shortcut.Modifiers != 0
 	for _, command := range s.catalogue() {
 		if command.mask.hidden {
 			continue
 		}
-		if match, ok := command.matchQuery(needle); ok {
+		match, found := command.matchQuery(needle)
+		if searchShortcut {
+			if binding, ok := command.matchShortcut(shortcut); ok && (!found || preferShortcut) {
+				s.results = append(s.results, commandMatch{command: command, match: binding, shortcutMatch: true})
+				continue
+			}
+		}
+		if found {
 			s.results = append(s.results, commandMatch{command: command, match: match})
 		}
 	}
 	if needle != "" {
 		slices.SortStableFunc(s.results, func(a, b commandMatch) int {
+			if a.shortcutMatch != b.shortcutMatch {
+				if a.shortcutMatch == preferShortcut {
+					return -1
+				}
+				return 1
+			}
 			if a.match.Score > b.match.Score {
 				return -1
 			}

@@ -131,14 +131,18 @@ func (v *view) measurePaletteRow(gtx layout.Context, c command, width, gap, text
 
 func (v *view) layoutPaletteRow(gtx layout.Context, row paletteRow, result commandMatch, fg color.NRGBA, textHeight, smallHeight int) layout.Dimensions {
 	width := gtx.Constraints.Max.X
+	nameIndices, shortcutIndices := result.match.Indices, []int(nil)
+	if result.shortcutMatch {
+		nameIndices, shortcutIndices = nil, nameIndices
+	}
 	first := gtx
 	first.Constraints.Max.X = row.firstWidth
-	v.layoutPaletteLines(first, row.label[:1], result.match.Indices, v.appearance.TextSize, fg, text.Start, textHeight)
+	v.layoutPaletteLines(first, row.label[:1], nameIndices, v.appearance.TextSize, fg, text.Start, textHeight)
 	binding := op.Offset(image.Pt(0, max(0, (textHeight-smallHeight)/2))).Push(gtx.Ops)
-	v.layoutPaletteLines(gtx, row.shortcut, nil, v.appearance.SmallTextSize, fg, text.End, smallHeight)
+	v.layoutPaletteLines(gtx, row.shortcut, shortcutIndices, v.appearance.SmallTextSize, fg, text.End, smallHeight)
 	binding.Pop()
 	continuation := op.Offset(image.Pt(0, row.headerHeight)).Push(gtx.Ops)
-	v.layoutPaletteLines(gtx, row.label[1:], result.match.Indices, v.appearance.TextSize, fg, text.Start, textHeight)
+	v.layoutPaletteLines(gtx, row.label[1:], nameIndices, v.appearance.TextSize, fg, text.Start, textHeight)
 	continuation.Pop()
 	return layout.Dimensions{Size: image.Pt(width, row.headerHeight+(len(row.label)-1)*textHeight)}
 }
@@ -148,15 +152,19 @@ func (v *view) layoutPaletteLines(gtx layout.Context, lines []paletteLine, indic
 	for i, line := range lines {
 		position := op.Offset(image.Pt(0, i*height)).Push(gtx.Ops)
 		gtx.Constraints = layout.Exact(image.Pt(width, height))
-		if alignment == text.End {
-			v.label(gtx, line.text, size, fg, alignment)
-		} else {
-			var matches []int
-			for _, index := range indices {
-				if index >= line.offset && index < line.offset+utf8.RuneCountInString(line.text) {
-					matches = append(matches, index-line.offset)
-				}
+		var matches []int
+		for _, index := range indices {
+			if index >= line.offset && index < line.offset+utf8.RuneCountInString(line.text) {
+				matches = append(matches, index-line.offset)
 			}
+		}
+		if alignment == text.End && len(matches) == 0 {
+			v.label(gtx, line.text, size, fg, alignment)
+		} else if alignment == text.End {
+			layout.E.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return v.highlightedLabel(gtx, line.text, matches, size, fg)
+			})
+		} else {
 			v.highlightedLabel(gtx, line.text, matches, size, fg)
 		}
 		position.Pop()

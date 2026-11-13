@@ -189,6 +189,8 @@ func TestPaletteWrappingPreviews(t *testing.T) {
 			for _, fixture := range []struct{ name, query string }{
 				{"settings", "Settings Programs Actions New from context menu"},
 				{"bindings", "Window increase"},
+				{"shortcut-search", "ctrl shift plus"},
+				{"function-search", "f5"},
 				{"metadata", "View metadata"},
 				{"mixed", ""},
 				{"actions", ";"},

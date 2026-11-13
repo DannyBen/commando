@@ -19,7 +19,7 @@ lines = [
 
 ["palette"]
 lines = [
-  "Type to find a command.",
+  "Search by name or shortcut.",
   "Start with @ for settings or ; for actions only.",
 ]
 
