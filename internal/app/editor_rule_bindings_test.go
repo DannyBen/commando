@@ -80,7 +80,7 @@ func TestSavedEditorRuleShortcutWidgetUsesSharedSaveAndConflicts(t *testing.T) {
 	send(pressed(key.NameReturn))
 	send(modified("Y", key.ModCtrl))
 	send(modified(key.NameReturn, key.ModCtrl))
-	waitEditorRuleSave(t, v, s)
+	waitSettingsSave(t, v, s)
 	send()
 	if v.paletteInteraction() != p || p.results[p.selected].command.shortcut() != "Ctrl+Y" {
 		t.Fatal("shortcut save did not restore palette")
@@ -92,7 +92,7 @@ func TestSavedEditorRuleShortcutWidgetUsesSharedSaveAndConflicts(t *testing.T) {
 	}
 }
 
-func waitEditorRuleSave(t *testing.T, v *view, s *settingsSession) {
+func waitSettingsSave(t *testing.T, v *view, s *settingsSession) {
 	t.Helper()
 	deadline := time.NewTimer(3 * time.Second)
 	defer deadline.Stop()
@@ -188,7 +188,7 @@ func TestNewEditorRuleGetsSameIdentityInRuntimeAndSavedSettings(t *testing.T) {
 	s.draft.SetItem(settings.EditorCollection, map[string]any{"ext": []string{"rb"}, "path": "ruby.exe", "args": settings.SelectedFilesToken})
 	send()
 	send(modified(key.NameReturn, key.ModCtrl))
-	waitEditorRuleSave(t, v, s)
+	waitSettingsSave(t, v, s)
 	rows := v.settingsValues.Collection(settings.EditorCollection)
 	if len(rows) != 3 {
 		t.Fatal("new rule was not saved")

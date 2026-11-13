@@ -36,14 +36,14 @@ func TestGitExecutableValidationStaysInSettings(t *testing.T) {
 	s := v.settingsInteraction()
 	send, _ := panelInputFrames(v)
 	send(modified(key.NameReturn, key.ModCtrl))
-	v.acceptLoad(<-v.loader.results)
+	waitSettingsSave(t, v, s)
 	if saved || v.settingsInteraction() != s || s.pending || s.errorText != "Git executable not found" || v.panels[0].feedback.Current() != nil {
 		t.Fatal("missing Git did not stay in the editable Settings dialog")
 	}
 	// Turning integration off must remain possible without a working executable.
 	v.previewSettingValue(settingGitEnabled, settings.Value{Bool: false})
 	send(modified(key.NameReturn, key.ModCtrl))
-	v.acceptLoad(<-v.loader.results)
+	waitSettingsSave(t, v, s)
 	if !saved || v.settingsInteraction() != nil || v.gitOptions().enabled {
 		t.Fatal("could not disable integration after executable validation failed")
 	}

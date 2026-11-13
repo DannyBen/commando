@@ -182,7 +182,7 @@ func TestCompareWidgetUsesSharedPickerSaveAndRuleBindings(t *testing.T) {
 		t.Fatal("compare program was not chosen")
 	}
 	send(modified(key.NameReturn, key.ModCtrl))
-	waitEditorRuleSave(t, v, s)
+	waitSettingsSave(t, v, s)
 	loaded, err := settings.Load(root, bindingSettingsCatalogue())
 	if err != nil || len(loaded.ProgramRules(settings.CompareCollection)) != 3 {
 		t.Fatal("compare rule did not save", err)
