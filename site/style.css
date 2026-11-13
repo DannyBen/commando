@@ -126,6 +126,20 @@ a { color: inherit; }
 
   img { display: block; width: 100%; height: auto; }
 }
+.feature-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 16px;
+  color: var(--muted-color);
+  font-size: 14px;
+  text-decoration: none;
+
+  &:hover { color: var(--accent-light); }
+  svg { flex: none; }
+  kbd { color: var(--subtle-color); }
+}
 .hero-actions { display: flex; justify-content: center; flex-wrap: wrap; align-items: start; gap: 18px; }
 .hero-action { display: grid; justify-items: center; gap: 7px; }
 .action-note { color: var(--muted-color); font-size: 12px; line-height: 1.3; }

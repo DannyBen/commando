@@ -172,14 +172,33 @@ function filterFeatures() {
 
   count.textContent = `${visible} shown`;
   empty.hidden = visible !== 0;
-  if (terms.length) {
-    const palette = document.querySelector('.feature-palette');
-    window.scrollTo({top: window.scrollY + palette.getBoundingClientRect().top, behavior: 'instant'});
-  }
+  if (query) scrollToPalette();
 }
 
-search.addEventListener('input', filterFeatures);
-filterFeatures();
+function scrollToPalette() {
+  window.scrollTo({top: window.scrollY + featurePalette.getBoundingClientRect().top, behavior: 'instant'});
+}
+
+function updateSearchHash() {
+  const query = search.value.trim();
+  const hash = query ? `#features?${new URLSearchParams({q: query})}` : '#features';
+  if (location.hash !== hash) history.replaceState(history.state, '', hash);
+}
+
+function restoreSearchHash() {
+  if (location.hash !== '#features' && !location.hash.startsWith('#features?')) return false;
+  search.value = new URLSearchParams(location.hash.slice('#features?'.length)).get('q') || '';
+  filterFeatures();
+  if (location.hash.startsWith('#features?')) requestAnimationFrame(scrollToPalette);
+  return true;
+}
+
+search.addEventListener('input', () => {
+  filterFeatures();
+  updateSearchHash();
+});
+window.addEventListener('hashchange', restoreSearchHash);
+if (!restoreSearchHash()) filterFeatures();
 
 document.addEventListener('keydown', event => {
   if (event.key.toLowerCase() === 't' && event.altKey && !event.ctrlKey && !event.metaKey) {
@@ -197,5 +216,6 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && document.activeElement === search && search.value) {
     search.value = '';
     filterFeatures();
+    updateSearchHash();
   }
 });
