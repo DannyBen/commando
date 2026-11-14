@@ -49,11 +49,16 @@ func TestMissingGitDisablesPersistsAndRequiresValidPathToEnable(t *testing.T) {
 	}
 	v.submitGitReads(layout.Context{Now: time.Now()})
 	waitGitLoaded(t, v, 0)
-	select {
-	case result := <-v.loader.results:
-		v.acceptLoad(result) // The shared direct-settings save.
-	case <-time.After(3 * time.Second):
-		t.Fatal("automatic Git disable did not save")
+	// A cancelled read from the other panel can arrive before the save result.
+	deadline := time.NewTimer(3 * time.Second)
+	defer deadline.Stop()
+	for v.directSettingsSave != nil {
+		select {
+		case result := <-v.loader.results:
+			v.acceptLoad(result)
+		case <-deadline.C:
+			t.Fatal("automatic Git disable did not save")
+		}
 	}
 	loaded, err := settings.LoadAndRepair(data, catalogue)
 	if err != nil {
@@ -70,10 +75,11 @@ func TestMissingGitDisablesPersistsAndRequiresValidPathToEnable(t *testing.T) {
 			t.Fatal("disabled Git retained pending work or markers on another panel")
 		}
 	}
+	readsBeforeNavigation := calls.Load()
 	v.load(0, root, "")
 	waitLoaded(t, v, 0)
 	v.submitGitReads(layout.Context{Now: time.Now()})
-	if calls.Load() != 1 || v.panels[0].gitRead != nil {
+	if calls.Load() != readsBeforeNavigation || v.panels[0].gitRead != nil {
 		t.Fatal("directory navigation retried the missing executable")
 	}
 	v.startSettingsWidget("programs.git")
