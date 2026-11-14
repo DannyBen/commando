@@ -45,7 +45,8 @@ func (v *view) prepareGitRead(p *panel, options gitOptions) {
 // Submit after drawing the directory, behind ordinary worker requests. A full
 // background queue leaves the read pending for a later frame.
 func (v *view) submitGitReads(gtx layout.Context) {
-	if v.loader == nil || !v.actionAllowed(actionMutation) || len(v.loader.requests) != 0 {
+	v.disableUnavailableGit()
+	if v.loader == nil || v.gitDisablePending != nil || !v.actionAllowed(actionMutation) || len(v.loader.requests) != 0 {
 		return
 	}
 	for i := range v.panels {
@@ -121,10 +122,32 @@ func (v *view) acceptGitRead(result loadResult) {
 		p.cancelGitRead()
 		if result.gitErr == nil {
 			p.gitStatus = gitStatusNames(result.gitStatus)
-		} else if !read.automatic && !errors.Is(result.gitErr, browser.ErrGitUnavailable) && !v.interaction.protectsListing(i) {
+		} else if errors.Is(result.gitErr, browser.ErrGitUnavailable) {
+			v.gitDisablePending = &read.options
+			v.disableUnavailableGit()
+		} else if !read.automatic && !v.interaction.protectsListing(i) {
 			v.showFeedback(i, feedback.Error, result.gitErr.Error())
 		}
 		return
 	}
 	read.cancel() // Its panel was closed or replaced while the read was pending.
+}
+
+// Apply through the ordinary direct-settings command once foreground edits and
+// worker mutations are finished. A corrected configuration supersedes the error.
+func (v *view) disableUnavailableGit() {
+	options := v.gitDisablePending
+	if options == nil {
+		return
+	}
+	if !options.enabled || *options != v.gitOptions() {
+		v.gitDisablePending = nil
+		return
+	}
+	if !v.canStartInteraction(v.active, actionMutation) {
+		return
+	}
+	v.gitDisablePending = nil
+	v.toggleBooleanSetting(settingGitEnabled)
+	v.showFeedback(v.active, feedback.Error, "Git integration disabled")
 }

@@ -749,6 +749,9 @@ func (v *view) acceptSettingsSave(s *settingsSession, message string, err error)
 		s.errorText = settingsSaveError(err)
 		return
 	}
+	if len(s.fields) > 0 && s.fields[0].Widget == "programs.git" {
+		v.gitDisablePending = nil // Successful validation supersedes an earlier lookup failure.
+	}
 	if s.bindingCommand != nil || s.deferred {
 		v.settingsValues = s.commit.Clone()
 		v.applySettings()

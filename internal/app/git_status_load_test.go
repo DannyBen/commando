@@ -15,6 +15,146 @@ import (
 	"github.com/dannyben/commando/internal/settings"
 )
 
+func TestMissingGitDisablesPersistsAndRequiresValidPathToEnable(t *testing.T) {
+	root, data := t.TempDir(), t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, ".git"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	v := newView([]panel{{path: root}, {path: root}})
+	missing := filepath.Join(root, "missing-git")
+	for field, value := range map[string]settings.Value{
+		settingGitEnabled: {Bool: true}, settingGitPath: {Text: missing},
+	} {
+		if err := v.settingsValues.Set(settings.CatalogueDefault, field, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	v.loader = newDirectoryLoader(browser.ReadLocation, nil)
+	defer v.loader.close()
+	var calls atomic.Int32
+	v.loader.readGitStatus = func(ctx context.Context, path, executable string) (map[string]browser.GitStatus, error) {
+		calls.Add(1)
+		return browser.ReadGitStatus(ctx, path, executable)
+	}
+	catalogue := bindingSettingsCatalogue()
+	v.prepareSettingsSave = func(values settings.Values) func() (string, error) {
+		return func() (string, error) { return "", catalogue.Save(data, values) }
+	}
+	for i := range v.panels {
+		v.prepareGitRead(&v.panels[i], v.gitOptions())
+		v.panels[i].gitStatus = map[string]browser.GitStatus{"old.txt": browser.GitChanged}
+	}
+	v.submitGitReads(layout.Context{Now: time.Now()})
+	waitGitLoaded(t, v, 0)
+	select {
+	case result := <-v.loader.results:
+		v.acceptLoad(result) // The shared direct-settings save.
+	case <-time.After(3 * time.Second):
+		t.Fatal("automatic Git disable did not save")
+	}
+	loaded, err := settings.LoadAndRepair(data, catalogue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.gitOptions().enabled || loaded.Get(catalogue, settingGitEnabled).Bool || loaded.Get(catalogue, settingGitPath).Text != missing {
+		t.Fatal("missing executable did not persist Disabled while retaining its path")
+	}
+	if message := v.panels[0].feedback.Current(); message == nil || message.Kind != feedback.Error || message.Text != "Git integration disabled" {
+		t.Fatal("automatic disable did not explain the settings change in the footer")
+	}
+	for i := range v.panels {
+		if v.panels[i].gitRead != nil || v.panels[i].gitStatus != nil {
+			t.Fatal("disabled Git retained pending work or markers on another panel")
+		}
+	}
+	v.load(0, root, "")
+	waitLoaded(t, v, 0)
+	v.submitGitReads(layout.Context{Now: time.Now()})
+	if calls.Load() != 1 || v.panels[0].gitRead != nil {
+		t.Fatal("directory navigation retried the missing executable")
+	}
+	v.startSettingsWidget("programs.git")
+	s := v.settingsInteraction()
+	if v.widgetValues().Get(catalogue, settingGitEnabled).Bool {
+		t.Fatal("Git dialog did not show Disabled")
+	}
+	v.previewSettingValue(settingGitEnabled, settings.Value{Bool: true})
+	send, _ := panelInputFrames(v)
+	send(modified(key.NameReturn, key.ModCtrl))
+	waitSettingsSave(t, v, s)
+	if v.settingsInteraction() != s || s.errorText != browser.ErrGitUnavailable.Error() || v.gitOptions().enabled {
+		t.Fatal("invalid path did not prevent re-enabling Git in Settings")
+	}
+}
+
+func TestGitFailureWaitsForSettingsAndDoesNotDisableCorrectedConfiguration(t *testing.T) {
+	for _, correction := range []string{"cancel", "path", "installed"} {
+		v := newPreviewView()
+		if err := v.settingsValues.Set(settings.CatalogueDefault, settingGitEnabled, settings.Value{Bool: true}); err != nil {
+			t.Fatal(err)
+		}
+		missing := filepath.Join(t.TempDir(), "git.exe")
+		if err := v.settingsValues.Set(settings.CatalogueDefault, settingGitPath, settings.Value{Text: missing}); err != nil {
+			t.Fatal(err)
+		}
+		v.loader = newDirectoryLoader(browser.ReadLocation, nil)
+		v.prepareSettingsSave = func(settings.Values) func() (string, error) {
+			return func() (string, error) { return "", nil }
+		}
+		v.prepareGitRead(&v.panels[0], v.gitOptions())
+		read := v.panels[0].gitRead
+		v.startSettingsWidget("programs.git")
+		s := v.settingsInteraction()
+		v.acceptGitRead(loadResult{request: loadRequest{gitRead: read}, gitErr: browser.ErrGitUnavailable})
+		if !v.gitOptions().enabled || v.settingsInteraction() != s || v.gitDisablePending == nil {
+			t.Fatal("background failure changed an open settings transaction")
+		}
+		send, _ := panelInputFrames(v)
+		if correction != "cancel" {
+			if correction == "installed" {
+				// Validation checks availability; this fixture is never executed.
+				if err := os.WriteFile(missing, []byte("fixture"), 0700); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				program, err := os.Executable()
+				if err != nil {
+					t.Fatal(err)
+				}
+				v.previewSettingValue(settingGitPath, settings.Value{Text: program})
+			}
+			send(modified(key.NameReturn, key.ModCtrl))
+			waitSettingsSave(t, v, s)
+		} else {
+			send(pressed(key.NameEscape))
+		}
+		v.submitGitReads(layout.Context{Now: time.Now()})
+		if v.gitOptions().enabled != (correction != "cancel") || v.gitDisablePending != nil {
+			t.Fatal("pending failure disabled a corrected path or failed to disable the unchanged path", correction)
+		}
+		v.finishOperations()
+	}
+}
+
+func TestRepositoryGitErrorsDoNotDisableIntegration(t *testing.T) {
+	for _, err := range []error{browser.ErrGitTimeout, browser.ErrGitUntrusted, browser.ErrGitStatus} {
+		v := newPreviewView()
+		if err := v.settingsValues.Set(settings.CatalogueDefault, settingGitEnabled, settings.Value{Bool: true}); err != nil {
+			t.Fatal(err)
+		}
+		v.loader = newDirectoryLoader(browser.ReadLocation, nil)
+		v.prepareGitRead(&v.panels[0], v.gitOptions())
+		v.acceptGitRead(loadResult{request: loadRequest{gitRead: v.panels[0].gitRead}, gitErr: err})
+		if !v.gitOptions().enabled || v.gitDisablePending != nil {
+			t.Fatal("repository error disabled Git globally", err)
+		}
+		v.loader.close()
+	}
+}
+
 func TestWatcherGitRefreshCoalescesKeepsMarkersAndStaysQuiet(t *testing.T) {
 	v, root, watch := automaticRefreshView(t)
 	v.panels = v.panels[:1]

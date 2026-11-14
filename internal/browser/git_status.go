@@ -55,7 +55,12 @@ func ReadGitStatus(ctx context.Context, directory, executable string) (map[strin
 		case errors.Is(err, errGitOutputLimit):
 			return nil, errGitOutputLimit
 		case errors.Is(err, os.ErrNotExist), errors.Is(err, exec.ErrNotFound):
-			return nil, ErrGitUnavailable
+			// The working directory may have disappeared instead of Git.
+			// Only an unavailable executable can disable integration globally.
+			if _, lookupErr := FindGitExecutable(program); lookupErr != nil {
+				return nil, ErrGitUnavailable
+			}
+			return nil, ErrGitStatus
 		case err != nil:
 			message := stderr.String()
 			if strings.Contains(message, "not a git repository") || strings.Contains(message, "must be run in a work tree") {

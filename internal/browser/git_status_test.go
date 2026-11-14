@@ -232,6 +232,38 @@ func TestGitUnavailableAndOutputLimit(t *testing.T) {
 	}
 }
 
+func TestGitCommandDistinguishesMissingFolderFromMissingExecutable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a shell executable fixture")
+	}
+	for _, tc := range []struct {
+		name, command string
+		want          error
+	}{
+		{"folder", `mv "$PWD" "$PWD-moved"`, ErrGitStatus},
+		{"executable", `rm "$0"`, ErrGitUnavailable},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			parent := t.TempDir()
+			root, program := filepath.Join(parent, "repo"), filepath.Join(parent, "git")
+			if err := os.MkdirAll(filepath.Join(root, ".git"), 0700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			// Remove the folder or executable between rev-parse and status.
+			script := "#!/bin/sh\n" + tc.command + " || exit 1\nprintf '\\n'\n"
+			if err := os.WriteFile(program, []byte(script), 0700); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ReadGitStatus(context.Background(), root, program); !errors.Is(err, tc.want) {
+				t.Fatalf("missing %s: got %v, want %v", tc.name, err, tc.want)
+			}
+		})
+	}
+}
+
 func TestGitWorktreeMarkers(t *testing.T) {
 	root := t.TempDir()
 	nested := filepath.Join(root, "nested", "child")

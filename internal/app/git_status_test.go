@@ -245,10 +245,14 @@ func TestGitSettingsAndRefresh(t *testing.T) {
 	send(refreshKey())
 	waitLoaded(t, v, 0)
 	waitGitLoaded(t, v, 0)
-	if p.gitStatus != nil || len(p.items) != 2 || p.err != nil || p.feedback.Current() != nil {
-		t.Fatal("missing Git retained badges, failed the listing or showed directory feedback")
+	if p.gitStatus != nil || len(p.items) != 2 || p.err != nil || v.gitOptions().enabled || p.feedback.Current() == nil || p.feedback.Current().Text != "Git integration disabled" {
+		t.Fatal("missing Git did not disable integration or disturbed the listing")
 	}
 	gitErr = nil
+	if err := v.settingsValues.Set(settings.CatalogueDefault, settingGitEnabled, settings.Value{Bool: true}); err != nil {
+		t.Fatal(err)
+	}
+	v.applySettings()
 	send(refreshKey())
 	waitLoaded(t, v, 0)
 	waitGitLoaded(t, v, 0)
