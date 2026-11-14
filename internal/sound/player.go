@@ -1,7 +1,6 @@
 package sound
 
 import (
-	"bytes"
 	"encoding/binary"
 	"io"
 	"math"
@@ -18,7 +17,8 @@ type playback struct {
 
 // Player owns the audio device on one worker. Playback never blocks the UI;
 // One pending cue retains the strongest/latest request. One active cue admits
-// only higher/equal-priority replacements. Explicit Stop clears both.
+// only higher/equal-priority replacements, releasing the outgoing sound.
+// Explicit Stop clears active and releasing audio.
 type Player struct {
 	requests chan playback
 	stop     chan struct{}
@@ -120,14 +120,23 @@ type audioOutput interface {
 
 func (p *Player) runOutput(output audioOutput) {
 	var active audioPlayback
+	var source *releaseReader
+	var releasing []audioPlayback
 	var priority Priority
+	retire := func(player audioPlayback) {
+		// Join any in-flight read before retiring the player.
+		player.PauseAndStopReading()
+		traceAudioError(player.Err())
+	}
 	stop := func() {
 		if active != nil {
-			// Join any in-flight read before retiring the player.
-			active.PauseAndStopReading()
-			traceAudioError(active.Err())
-			active = nil
+			retire(active)
+			active, source = nil, nil
 		}
+		for _, player := range releasing {
+			retire(player)
+		}
+		releasing = nil
 	}
 	defer stop()
 	for {
@@ -142,13 +151,34 @@ func (p *Player) runOutput(output audioOutput) {
 			if !request.reset && active != nil && active.IsPlaying() && request.name.Priority() > priority {
 				continue // Lower-priority requests are discarded, never deferred.
 			}
-			stop()
+			// Keep outgoing players reachable until their release has played.
+			live := releasing[:0]
+			for _, player := range releasing {
+				if player.IsPlaying() {
+					live = append(live, player)
+				} else {
+					retire(player)
+				}
+			}
+			clear(releasing[len(live):])
+			releasing = live
+			if request.reset {
+				stop()
+			} else if active != nil {
+				if active.IsPlaying() && source.release() {
+					releasing = append(releasing, active)
+				} else {
+					retire(active)
+				}
+				active, source = nil, nil
+			}
 			pcm := p.sounds[request.name]
 			gain := masterGain(request.volume)
 			if len(pcm) == 0 || gain == 0 {
 				continue
 			}
-			active = output.newPlayer(bytes.NewReader(pcm))
+			source = newReleaseReader(pcm)
+			active = output.newPlayer(source)
 			priority = request.name.Priority()
 			active.SetVolume(float64(gain))
 			active.Play()

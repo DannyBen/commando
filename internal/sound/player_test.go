@@ -74,7 +74,10 @@ func (o *testOutput) newPlayer(r io.Reader) audioPlayback {
 		select {
 		case <-o.current.stopped:
 		default:
-			o.overlap.Store(true)
+			source := o.current.reader.(*releaseReader)
+			source.mu.Lock()
+			o.overlap.Store(o.overlap.Load() || source.releaseStart < 0)
+			source.mu.Unlock()
 		}
 	}
 	p := &testPlayback{reader: r, packet: make(chan []byte, 1), quit: make(chan struct{}), done: make(chan struct{}), stopped: make(chan struct{})}
@@ -124,6 +127,34 @@ func assertPlaybackStopped(t *testing.T, player *testPlayback) {
 		t.Fatal("retired player still reading")
 	}
 }
+
+func assertPlaybackReleasing(t *testing.T, player *testPlayback) {
+	t.Helper()
+	select {
+	case <-player.stopped:
+		t.Fatal("replacement abruptly stopped the outgoing sound")
+	default:
+	}
+	source := player.reader.(*releaseReader)
+	source.mu.Lock()
+	released := source.releaseStart >= 0
+	source.mu.Unlock()
+	if !released {
+		t.Fatal("replacement did not release the outgoing sound")
+	}
+}
+
+func assertPlaybackReleased(t *testing.T, player *testPlayback) {
+	t.Helper()
+	assertPlaybackReleasing(t, player)
+	source := player.reader.(*releaseReader)
+	tail, err := io.ReadAll(source)
+	if err != nil || len(tail) < 2 || binary.LittleEndian.Uint16(tail[len(tail)-2:]) != 0 {
+		t.Fatal("outgoing sound did not finish its release at silence", err)
+	}
+	player.finished.Store(true)
+}
+
 func TestPlaybackUsesCachedPCMAndReplacesActiveSound(t *testing.T) {
 	p, o := testPlayer(t)
 	before := bytes.Clone(p.sounds[Opened])
@@ -142,7 +173,7 @@ func TestPlaybackUsesCachedPCMAndReplacesActiveSound(t *testing.T) {
 	}
 	p.Play(Closed, 100)
 	second, _ := nextPlayback(t, o)
-	assertPlaybackStopped(t, first)
+	assertPlaybackReleased(t, first)
 	if second.volume != 1 {
 		t.Fatal("replacement lost master volume")
 	}
@@ -170,4 +201,44 @@ func TestStopJoinsReading(t *testing.T) {
 		t.Fatal("Stop started another sound")
 	default:
 	}
+}
+
+func TestStopClearsReleasingSoundsAsWellAsCurrentSound(t *testing.T) {
+	p, o := testPlayer(t)
+	p.Play(Opened, 100)
+	first, _ := nextPlayback(t, o)
+	p.Play(Closed, 100)
+	second, _ := nextPlayback(t, o)
+	assertPlaybackReleasing(t, first)
+	p.Stop()
+	select {
+	case <-second.stopped:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop did not stop current playback")
+	}
+	select {
+	case <-first.stopped:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop did not stop the outgoing release")
+	}
+	p.Close()
+	if len(o.players) != 0 {
+		t.Fatal("Stop queued another sound")
+	}
+}
+
+func TestCompletedReleaseIsRetiredOnNextReplacement(t *testing.T) {
+	p, o := testPlayer(t)
+	p.Play(Opened, 100)
+	first, _ := nextPlayback(t, o)
+	p.Play(Closed, 100)
+	second, _ := nextPlayback(t, o)
+	assertPlaybackReleased(t, first)
+	p.Play(Opened, 100)
+	third, _ := nextPlayback(t, o)
+	assertPlaybackStopped(t, first)
+	assertPlaybackReleased(t, second)
+	p.Close()
+	assertPlaybackStopped(t, second)
+	assertPlaybackStopped(t, third)
 }

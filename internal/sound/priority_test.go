@@ -67,10 +67,10 @@ func TestActivePriorityAcrossCuePairs(t *testing.T) {
 						t.Fatal("higher/equal-priority replacement was lost")
 					}
 				}
-				assertPlaybackStopped(t, active)
+				assertPlaybackReleased(t, active)
 				p.Close()
 				if o.overlap.Load() || len(o.players) != 0 {
-					t.Fatal("playback overlapped or discarded audio was replayed")
+					t.Fatal("unreleased playback overlapped or discarded audio was replayed")
 				}
 			})
 		}
@@ -133,7 +133,7 @@ func TestInvalidOrMutedRequestsLeavePlaybackAlone(t *testing.T) {
 	p.Play(MessageError, -1)
 	p.Play(MessageError, 100) // Barrier after requests which must be ignored.
 	player, _ := nextPlayback(t, o)
-	assertPlaybackStopped(t, active)
+	assertPlaybackReleased(t, active)
 	if player.volume != 1 || len(o.players) != 0 {
 		t.Fatal("invalid or muted request affected active playback")
 	}
