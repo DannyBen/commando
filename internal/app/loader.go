@@ -271,6 +271,12 @@ func newDirectoryLoader(read func(string) (browser.Directory, error), invalidate
 						} else if l.readFileIcon != nil {
 							icons[i] = l.readFileIcon(key.path, key.size)
 						}
+						// A listed item can disappear before the shell resolves its
+						// artwork. Keep its ordinary type icon instead of caching a blank.
+						if icons[i] == nil && !key.sample && l.readFileTypeIcon != nil {
+							fallback := sampleFileIconKey(browser.Entry{Name: filepath.Base(key.path), Directory: key.directory}, key.size)
+							icons[i] = l.readFileTypeIcon(fallback.path, fallback.size, fallback.directory)
+						}
 					}
 					publish(loadResult{request: request, icons: icons})
 					if invalidate != nil {

@@ -57,6 +57,57 @@ func TestFileIconsLoadWithoutChangingRowHeightAndReuseResults(t *testing.T) {
 	}
 }
 
+func TestFileIconsFallBackToTypeArtworkWhenPathDisappears(t *testing.T) {
+	for _, file := range []browser.Entry{{Name: ".agents", Directory: true}, {Name: "removed.txt"}} {
+		v := newPreviewView()
+		v.loader = newDirectoryLoader(browser.ReadLocation, nil)
+		custom := image.NewRGBA(image.Rect(0, 0, 16, 16))
+		fallback := image.NewRGBA(image.Rect(0, 0, 16, 16))
+		var realCalls, fallbackCalls atomic.Int32
+		v.loader.readFileIcon = func(path string, size int) image.Image {
+			if filepath.Base(path) == "custom" {
+				return custom
+			}
+			realCalls.Add(1)
+			return nil // Listed successfully, but gone before the icon lookup.
+		}
+		v.loader.readFileTypeIcon = func(name string, size int, directory bool) image.Image {
+			fallbackCalls.Add(1)
+			want := "sample.txt"
+			if file.Directory {
+				want = "folder"
+			}
+			if name != want || directory != file.Directory || size != 16 {
+				t.Errorf("fallback lookup = %q, %d, %v", name, size, directory)
+			}
+			return fallback
+		}
+		var ops op.Ops
+		gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Exact(image.Pt(400, 24))}
+		row := func(gtx layout.Context) layout.Dimensions { return layout.Dimensions{Size: gtx.Constraints.Max} }
+		for pass := 0; pass < 2; pass++ {
+			v.fileIconWanted = nil
+			v.withFileIcon(gtx, &v.panels[0], entry{file: file}, false, row)
+			v.withFileIcon(gtx, &v.panels[0], entry{file: browser.Entry{Name: "custom"}}, false, row)
+			v.submitFileIcons()
+			if pass == 0 {
+				select {
+				case result := <-v.loader.results:
+					if len(result.icons) != 2 || result.icons[0] != fallback || result.icons[1] != custom {
+						t.Error("missing artwork did not fall back or custom artwork was replaced")
+					}
+					v.acceptFileIcons(result)
+				case <-time.After(3 * time.Second):
+					t.Error("icon load did not complete")
+				}
+			} else if v.fileIconPending || realCalls.Load() != 1 || fallbackCalls.Load() != 1 {
+				t.Error("cached fallback requested repeated lookups")
+			}
+		}
+		v.loader.close()
+	}
+}
+
 func TestParentIconsUseActualParentPathAndSharedCache(t *testing.T) {
 	folder := t.TempDir()
 	root := filepath.VolumeName(folder) + string(filepath.Separator)
